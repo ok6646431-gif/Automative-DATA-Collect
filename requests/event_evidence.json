@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "discovery_status": "PARTIAL",
+  "acceptance_iteration": 2,
   "events": [
     {
       "event_id": "lottechem-2012-restructure",
