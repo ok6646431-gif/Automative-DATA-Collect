@@ -22,7 +22,7 @@ def main(req_path):
     try:
         rf=requests.post(FACTS,data={"pDoCode":""},headers=headers,timeout=(5,15)); rf.raise_for_status(); (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
         for y in years:
-            for term in terms:
+            for term in cfg.get("search_terms_by_year",{}).get(str(y),terms):
                 status["requests"]+=1
                 try:
                     r=requests.post(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":"","pSearchWord":term},headers=headers,timeout=(5,15)); r.raise_for_status()

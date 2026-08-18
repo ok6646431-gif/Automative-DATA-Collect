@@ -42,7 +42,7 @@ def main(req_path):
         except Exception as e:
             status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"}); (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False)); return 72
         for y in years:
-            for term in terms:
+            for term in cfg.get("search_terms_by_year",{}).get(str(y),terms):
                 for page in range(1,max_pages+1):
                     status["requests"]+=1
                     try:
