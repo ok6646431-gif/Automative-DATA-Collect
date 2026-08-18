@@ -84,21 +84,31 @@ def _chem_plan(raw: Dict[str, Any], minimum: int, reviews: List[Dict[str, Any]])
     available = sorted({_year(x, "CHEM_STATS.available_survey_rounds") for x in raw.get("available_survey_rounds", [])})
     requested = sorted({_year(x, "CHEM_STATS.requested_survey_rounds") for x in raw.get("requested_survey_rounds", [])})
     prefer_full = bool(raw.get("prefer_full_history", True))
+
+    def meets(values: List[int]) -> bool:
+        return len(values) >= 3 and values[-1] - values[0] + 1 >= minimum
+
     if prefer_full and available:
         years = available
     else:
         years = [x for x in requested if not available or x in available]
-        if years and years[-1] - years[0] + 1 < minimum:
+        if years and not meets(years):
             older = [x for x in available if x < years[0]]
+            newer = [x for x in available if x > years[-1]]
             for value in reversed(older):
                 years.insert(0, value)
-                if years[-1] - years[0] + 1 >= minimum:
+                if meets(years):
                     break
+            if not meets(years):
+                for value in newer:
+                    years.append(value)
+                    if meets(years):
+                        break
     if not years:
         raise DiscoveryValidationError("CHEM_STATS needs disclosed survey rounds; annual years are never manufactured")
-    if years[-1] - years[0] + 1 < minimum:
+    if not meets(years):
         reviews.append(_review("SURVEY_ROUND_SPAN_SHORT", "CHEM_STATS",
-                               f"Disclosed rounds span {years[0]}..{years[-1]}, less than {minimum} years."))
+                               f"Disclosed rounds {years[0]}..{years[-1]} ({len(years)} rounds) do not meet the minimum of 3 rounds spanning {minimum} inclusive calendar years."))
     plan = {"years": years}
     for key in ("max_pages", "request_delay_ms"):
         if key in raw:
@@ -183,8 +193,24 @@ def compile_discovery(discovery: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[s
             reviews.append(_review("SITE_IDENTITY_UNRESOLVED", site.get("candidate_id", "site_candidate"),
                                    "Discovery did not resolve this site candidate.", site.get("source_locator")))
     exclusion_evidence = discovery.get("related_entity_exclusions", [])
-    exclusions = _unique([x.get("name") if isinstance(x, dict) else x for x in exclusion_evidence
-                          if (x.get("name") if isinstance(x, dict) else x)])
+    exclusions = []
+    for item in exclusion_evidence:
+        if isinstance(item, dict):
+            name = item.get("name")
+            state = item.get("verification_state", "UNVERIFIED")
+            locator = item.get("source_locator")
+        else:
+            name = item
+            state = "UNVERIFIED"
+            locator = None
+        if not name:
+            continue
+        if state == "VERIFIED":
+            if name not in exclusions:
+                exclusions.append(name)
+        else:
+            reviews.append(_review("RELATED_ENTITY_EXCLUSION_NOT_VERIFIED", str(name),
+                                   "Related-entity exclusion is preserved as evidence but is not active until VERIFIED.", locator))
     profile = {
         "profile_version": "2.0", "discovery_schema_version": discovery["schema_version"],
         "request_id": discovery["request_id"], "requested_company_name": discovery["requested_company_name"],
