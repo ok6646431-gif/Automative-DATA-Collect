@@ -10,8 +10,8 @@ on:
 
 jobs:
   collect:
-    runs-on: windows-latest
-    timeout-minutes: 25
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,11 +22,9 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        shell: pwsh
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
 
       - name: Collect PRTR
-        shell: pwsh
         run: python collectors/prtr_collect.py requests/current.json
 
       - name: Upload raw and parsed artifact
