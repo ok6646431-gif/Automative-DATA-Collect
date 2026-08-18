@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "sources": {
+    "ENVINFO": {
+      "label": "환경정보공개시스템",
+      "execution_class": "stable",
+      "identity_key": "compId",
+      "raw_artifact": "HTML",
+      "cadence": "annual",
+      "detail_required": true
+    },
+    "PRTR": {
+      "label": "화학물질 배출이동량(PRTR)",
+      "execution_class": "icis",
+      "identity_key": "entrps_id",
+      "raw_artifact": "HTML",
+      "cadence": "annual",
+      "detail_required": true
+    },
+    "CHEM_STATS": {
+      "label": "화학물질 통계 정보공개",
+      "execution_class": "icis",
+      "identity_key": "bplcId",
+      "raw_artifact": "HTML",
+      "cadence": "biennial",
+      "detail_required": true
+    },
+    "CLEANSYS_AIR": {
+      "label": "CleanSYS 대기 TMS",
+      "execution_class": "stable",
+      "identity_key": "fact_code",
+      "raw_artifact": "JSON",
+      "cadence": "annual",
+      "detail_required": false
+    },
+    "SOOSIRO_WATER": {
+      "label": "SOOSIRO 수질 TMS",
+      "execution_class": "stable",
+      "identity_key": "FACT_CODE",
+      "raw_artifact": "JSON",
+      "cadence": "annual+daily",
+      "detail_required": false,
+      "daily_public_from": 2024
+    }
+  },
+  "terminal_statuses": [
+    "DATA_FOUND",
+    "NO_MATCH",
+    "SHORT_COVERAGE",
+    "OK_HISTORICAL_ONLY"
+  ],
+  "retryable_statuses": [
+    "REMOTE_HOST_UNREACHABLE",
+    "REQUEST_OR_PARSE_FAILED"
+  ]
+}

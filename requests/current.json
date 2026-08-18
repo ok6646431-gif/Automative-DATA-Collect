@@ -1,0 +1,50 @@
+{
+  "request_id": "lgchem-complete-collector-proof-v4-20260818",
+  "company_display_name": "LG화학",
+  "sources": {
+    "ENVINFO": {
+      "start_year": 2024,
+      "end_year": 2024,
+      "search_terms": ["LG화학"],
+      "page_size": 200,
+      "collect_details": true,
+      "max_details": 30,
+      "request_delay_ms": 60
+    },
+    "PRTR": {
+      "start_year": 2024,
+      "end_year": 2024,
+      "max_pages": 5,
+      "request_delay_ms": 60,
+      "collect_details": true,
+      "search_terms": [
+        {"term": "LG화학", "year_start": 2024, "year_end": 2024},
+        {"term": "엘지화학", "year_start": 2024, "year_end": 2024}
+      ],
+      "site_address_anchors": {
+        "LGC_YEOSU": ["전라남도 여수시 여수산단2로 55"],
+        "LGC_DAESAN": ["충청남도 서산시 대산읍 독곶1로 54"],
+        "LGC_OCHANG": ["충청북도 청주시 흥덕구 옥산면 과학산업3로 29"],
+        "LGC_IKSAN_EP": ["전북 익산시 석암로 99"],
+        "LGC_GIMCHEON": ["경상북도 김천시 공단로 152-26"]
+      }
+    },
+    "CHEM_STATS": {
+      "years": [2024],
+      "search_terms": ["LG화학", "엘지화학"],
+      "max_pages": 5,
+      "request_delay_ms": 60,
+      "collect_details": true
+    },
+    "SOOSIRO_WATER": {
+      "search_terms": ["엘지화학", "LG화학"],
+      "annual_years": [2024, 2025],
+      "daily_years": [2024]
+    },
+    "CLEANSYS_AIR": {
+      "search_terms": ["엘지화학", "LG화학"],
+      "start_year": 2015,
+      "end_year": 2025
+    }
+  }
+}

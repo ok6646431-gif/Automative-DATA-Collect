@@ -1,0 +1,28 @@
+{
+  "profile_version": "1.0",
+  "request_id": "lgchem-orchestrator-proof-20260818",
+  "company_display_name": "LG화학",
+  "resolution_evidence": [
+    "LG화학 공식 연혁: 2017년 LG생명과학 합병",
+    "LG화학 공식 국내 사업장 공개자료",
+    "5개 공공 환경 Source의 2024 LG화학 실측 discovery"
+  ],
+  "aliases": [
+    {"term": "LG화학", "scope": "current", "year_start": 2001, "year_end": "auto"},
+    {"term": "엘지화학", "scope": "current", "year_start": 2001, "year_end": "auto"},
+    {"term": "LG생명과학", "scope": "predecessor", "year_start": 2002, "year_end": 2016},
+    {"term": "엘지생명과학", "scope": "predecessor", "year_start": 2002, "year_end": 2016}
+  ],
+  "related_entity_exclusions": [
+    "LG에너지솔루션",
+    "팜한농"
+  ],
+  "site_address_anchors": {},
+  "source_plan": {
+    "ENVINFO": {"start_year": 2024, "end_year": 2024, "page_size": 200, "max_details": 100},
+    "PRTR": {"start_year": 2024, "end_year": 2024, "max_pages": 10},
+    "CHEM_STATS": {"years": [2024], "max_pages": 10},
+    "CLEANSYS_AIR": {"start_year": 2015, "end_year": 2025},
+    "SOOSIRO_WATER": {"annual_years": [2024, 2025], "daily_years": [2024]}
+  }
+}
