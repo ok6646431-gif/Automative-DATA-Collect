@@ -8,13 +8,13 @@ from urllib3.util.retry import Retry
 
 BASE = "https://icis.mcee.go.kr"
 SEARCH = BASE + "/prtr/prtrInfo/entrpsSearch.do"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/151 Safari/537.36"
+UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36"
 
 
 def session():
     s = requests.Session()
     r = Retry(total=2, connect=2, read=2, backoff_factor=0.8,
-              status_forcelist=(429,500,502,503,504), allowed_methods=frozenset(["GET","POST"]))
+              status_forcelist=(429,500,502,503,504), allowed_methods=frozenset(["POST"]))
     s.mount("https://", HTTPAdapter(max_retries=r))
     s.headers.update({"User-Agent": UA, "Accept": "text/html,application/xhtml+xml,*/*;q=0.8"})
     return s
@@ -80,27 +80,27 @@ def main(req_path):
     out=Path("output/PRTR"); raw=out/"raw_html"; raw.mkdir(parents=True,exist_ok=True)
     s=session()
     status={"source_key":"PRTR","status":"RUNNING","requests":0,"errors":0,"rows":0}
+    start=int(cfg.get("start_year",2018))
+    end=cfg.get("end_year")
+    if end in (None,"auto"):
+        raise SystemExit("PRTR end_year must be resolved by orchestrator before collection")
+    years=list(range(start,int(end)+1))
     try:
-        g=s.get(SEARCH,timeout=(10,20)); g.raise_for_status()
-        years=sorted(set(int(x) for x in re.findall(r'<option\s+value="(20\d{2})"',g.text)))
-        start=int(cfg.get("start_year",2018)); end=cfg.get("end_year","auto")
-        if not years: years=list(range(start,2025))
-        years=[y for y in years if y>=start]
-        if end!="auto": years=[y for y in years if y<=int(end)]
         dedup={}
+        successful_responses=0
         for spec in cfg["search_terms"]:
-            ys=int(spec.get("year_start",start)); ye=spec.get("year_end","auto")
-            ye=max(years) if ye=="auto" else int(ye)
+            ys=int(spec.get("year_start",start)); ye=spec.get("year_end",end)
+            ye=int(end) if ye=="auto" else int(ye)
             term=spec["term"]
             for y in [x for x in years if ys<=x<=ye]:
                 for page in range(1,int(cfg.get("max_pages",50))+1):
                     status["requests"]+=1
                     try:
-                        r=s.post(SEARCH,data=form(y,term,page),headers={"Referer":SEARCH},timeout=(10,20))
-                        r.raise_for_status()
+                        r=s.post(SEARCH,data=form(y,term,page),headers={"Referer":SEARCH},timeout=(8,20))
+                        r.raise_for_status(); successful_responses += 1
                     except Exception as e:
                         status["errors"]+=1
-                        (out/"errors.log").open("a",encoding="utf-8").write(f"{y}\t{term}\t{page}\t{e}\n")
+                        (out/"errors.log").open("a",encoding="utf-8").write(f"{y}\t{term}\t{page}\t{type(e).__name__}\t{e}\n")
                         break
                     safe=re.sub(r"[^0-9A-Za-z가-힣]+","_",term).strip("_")
                     (raw/f"{y}_{safe}_p{page}.html").write_text(r.text,encoding="utf-8")
@@ -122,7 +122,10 @@ def main(req_path):
         cols=["search_year","entrps_id","company_name_raw","address_raw","release_total_raw","self_landfill_raw","transfer_total_raw","proposed_site_ids","search_terms_hit","match_status","source_url"]
         with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f:
             w=csv.DictWriter(f,fieldnames=cols); w.writeheader(); w.writerows(rows)
-        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"years":years})
+        if successful_responses == 0:
+            status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":"No successful HTTP response"})
+        else:
+            status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"years":years,"successful_responses":successful_responses})
     except Exception as e:
         status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":repr(e)})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8")
