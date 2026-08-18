@@ -74,29 +74,46 @@ def form(year, term, page=1, area=""):
     }
 
 
+def write_status(out, status):
+    (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8")
+    print(json.dumps(status,ensure_ascii=False))
+
+
 def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8"))
     cfg=req["sources"]["PRTR"]
     out=Path("output/PRTR"); raw=out/"raw_html"; raw.mkdir(parents=True,exist_ok=True)
-    s=session()
     status={"source_key":"PRTR","status":"RUNNING","requests":0,"errors":0,"rows":0}
     start=int(cfg.get("start_year",2018))
     end=cfg.get("end_year")
     if end in (None,"auto"):
-        raise SystemExit("PRTR end_year must be resolved by orchestrator before collection")
-    years=list(range(start,int(end)+1))
+        status.update({"status":"CONFIG_ERROR","fatal_error":"end_year must be resolved by orchestrator"})
+        write_status(out,status); return 20
+    end=int(end)
+    years=list(range(start,end+1))
+
+    # Fail fast once per source instead of repeating connect timeouts for every year/term.
+    first_term=cfg["search_terms"][0]["term"]
+    try:
+        r0=requests.post(SEARCH,data=form(end,first_term,1),headers={"User-Agent":UA,"Referer":SEARCH},timeout=(3,8))
+        r0.raise_for_status()
+    except Exception as e:
+        status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"})
+        write_status(out,status); return 22
+
+    s=session()
     try:
         dedup={}
         successful_responses=0
         for spec in cfg["search_terms"]:
             ys=int(spec.get("year_start",start)); ye=spec.get("year_end",end)
-            ye=int(end) if ye=="auto" else int(ye)
+            ye=end if ye=="auto" else int(ye)
             term=spec["term"]
             for y in [x for x in years if ys<=x<=ye]:
                 for page in range(1,int(cfg.get("max_pages",50))+1):
                     status["requests"]+=1
                     try:
-                        r=s.post(SEARCH,data=form(y,term,page),headers={"Referer":SEARCH},timeout=(8,20))
+                        r=s.post(SEARCH,data=form(y,term,page),headers={"Referer":SEARCH},timeout=(5,15))
                         r.raise_for_status(); successful_responses += 1
                     except Exception as e:
                         status["errors"]+=1
@@ -122,15 +139,11 @@ def main(req_path):
         cols=["search_year","entrps_id","company_name_raw","address_raw","release_total_raw","self_landfill_raw","transfer_total_raw","proposed_site_ids","search_terms_hit","match_status","source_url"]
         with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f:
             w=csv.DictWriter(f,fieldnames=cols); w.writeheader(); w.writerows(rows)
-        if successful_responses == 0:
-            status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":"No successful HTTP response"})
-        else:
-            status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"years":years,"successful_responses":successful_responses})
+        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"years":years,"successful_responses":successful_responses})
     except Exception as e:
         status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":repr(e)})
-    (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8")
-    print(json.dumps(status,ensure_ascii=False))
-    if status["status"]=="REQUEST_OR_PARSE_FAILED": sys.exit(21)
+    write_status(out,status)
+    return 21 if status["status"] in {"REQUEST_OR_PARSE_FAILED","REMOTE_HOST_UNREACHABLE"} else 0
 
 if __name__=="__main__":
-    main(sys.argv[1] if len(sys.argv)>1 else "requests/current.json")
+    sys.exit(main(sys.argv[1] if len(sys.argv)>1 else "requests/current.json"))
