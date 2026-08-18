@@ -1,15 +1,19 @@
-name: Enterprise environmental ICIS collection
+name: Enterprise environmental Master Orchestrator v1
 
 on:
   pull_request:
     paths:
+      - 'requests/company_profile.json'
       - 'requests/run_token.txt'
+      - 'orchestrator/**'
+      - 'collectors/**'
+      - '.github/workflows/collect.yml'
   workflow_dispatch:
 
 jobs:
-  icis_sources:
+  stable_sources:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,20 +21,143 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Collect PRTR
+      - name: Build standardized request
+        run: python orchestrator/request_builder.py requests/company_profile.json --out requests/current.generated.json
+      - name: Run parser regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Collect ENV-INFO
         continue-on-error: true
-        run: python collectors/prtr_collect.py requests/current.json
-      - name: Collect Chemical Statistics
+        run: python collectors/envinfo_collect.py requests/current.generated.json
+      - name: Collect SOOSIRO
         continue-on-error: true
-        run: python collectors/chem_stats_collect.py requests/current.json
-      - name: Upload ICIS artifact
+        run: python collectors/soosiro_collect.py requests/current.generated.json
+      - name: Collect CleanSYS
+        continue-on-error: true
+        run: python collectors/cleansys_collect.py requests/current.generated.json
+      - name: Upload stable sources
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: icis-sources
+          name: stable-sources
           path: output/
           if-no-files-found: warn
           retention-days: 7
-      - name: ICIS retry gate
+
+  icis_attempt_1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - run: python orchestrator/request_builder.py requests/company_profile.json --out requests/current.generated.json
+      - name: Collect PRTR
+        continue-on-error: true
+        run: python collectors/prtr_collect.py requests/current.generated.json
+      - name: Collect Chemical Statistics
+        continue-on-error: true
+        run: python collectors/chem_stats_collect.py requests/current.generated.json
+      - name: Upload ICIS attempt 1
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: icis-attempt-1
+          path: output/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: ICIS gate
         if: always()
         run: python collectors/icis_gate.py
+
+  icis_attempt_2:
+    needs: icis_attempt_1
+    if: ${{ always() && needs.icis_attempt_1.result == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - run: python orchestrator/request_builder.py requests/company_profile.json --out requests/current.generated.json
+      - name: Collect PRTR
+        continue-on-error: true
+        run: python collectors/prtr_collect.py requests/current.generated.json
+      - name: Collect Chemical Statistics
+        continue-on-error: true
+        run: python collectors/chem_stats_collect.py requests/current.generated.json
+      - name: Upload ICIS attempt 2
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: icis-attempt-2
+          path: output/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: ICIS gate
+        if: always()
+        run: python collectors/icis_gate.py
+
+  icis_attempt_3:
+    needs: icis_attempt_2
+    if: ${{ always() && needs.icis_attempt_2.result == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - run: python orchestrator/request_builder.py requests/company_profile.json --out requests/current.generated.json
+      - name: Collect PRTR
+        continue-on-error: true
+        run: python collectors/prtr_collect.py requests/current.generated.json
+      - name: Collect Chemical Statistics
+        continue-on-error: true
+        run: python collectors/chem_stats_collect.py requests/current.generated.json
+      - name: Upload ICIS attempt 3
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: icis-attempt-3
+          path: output/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: ICIS gate
+        if: always()
+        run: python collectors/icis_gate.py
+
+  package_and_validate:
+    needs: [stable_sources, icis_attempt_1, icis_attempt_2, icis_attempt_3]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download stable artifact
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: stable-sources
+          path: collected/stable
+      - name: Download ICIS attempts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+      - name: Assemble, validate and manifest
+        run: python orchestrator/package_run.py --stable collected/stable --icis collected/icis --out assembled
+      - name: Upload final orchestrated package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-final
+          path: assembled/
+          if-no-files-found: warn
+          retention-days: 14
