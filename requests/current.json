@@ -1,5 +1,5 @@
 {
-  "request_id": "lgchem-prtr-proof-20260818",
+  "request_id": "lgchem-hosted-proof-20260818",
   "company_display_name": "LG화학",
   "sources": {
     "PRTR": {
@@ -19,6 +19,15 @@
         "LGC_IKSAN_EP": ["전북 익산시 석암로 99"],
         "LGC_GIMCHEON": ["경상북도 김천시 공단로 152-26"]
       }
+    },
+    "SOOSIRO_WATER": {
+      "search_term": "엘지화학",
+      "proof_year": 2025
+    },
+    "CLEANSYS_AIR": {
+      "search_terms": ["엘지화학", "LG화학"],
+      "start_year": 2015,
+      "end_year": 2025
     }
   }
 }
