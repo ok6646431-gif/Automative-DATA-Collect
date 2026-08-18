@@ -62,7 +62,7 @@ def main(req_path):
     if end in (None,"auto"): status.update({"status":"CONFIG_ERROR","fatal_error":"end_year must be resolved"}); write_status(out,status); return 20
     end=int(end); years=list(range(start,end+1)); first_term=cfg["search_terms"][0]["term"]
     try:
-        r0=requests.post(SEARCH,data=form(end,first_term,1),headers={"User-Agent":UA,"Referer":SEARCH},timeout=(3,8)); r0.raise_for_status()
+        r0=requests.post(SEARCH,data=form(end,first_term,1),headers={"User-Agent":UA,"Referer":SEARCH},timeout=(8,20)); r0.raise_for_status()
     except Exception as e:
         status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"}); write_status(out,status); return 22
     s=session(); dedup={}; successful=0
@@ -73,7 +73,7 @@ def main(req_path):
                 for page in range(1,int(cfg.get("max_pages",50))+1):
                     status["requests"]+=1
                     try:
-                        r=s.post(SEARCH,data=form(y,term,page),headers={"Referer":SEARCH},timeout=(5,15)); r.raise_for_status(); successful+=1
+                        r=s.post(SEARCH,data=form(y,term,page),headers={"Referer":SEARCH},timeout=(8,20)); r.raise_for_status(); successful+=1
                     except Exception as e:
                         status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"SEARCH\t{y}\t{term}\t{page}\t{type(e).__name__}\t{e}\n"); break
                     fn=re.sub(r"[^0-9A-Za-z가-힣]+","_",term).strip("_"); (raw/f"{y}_{fn}_p{page}.html").write_text(r.text,encoding="utf-8")
@@ -92,7 +92,7 @@ def main(req_path):
                 y=row["search_year"]; eid=row["entrps_id"]
                 try:
                     status["requests"]+=1
-                    d=s.post(DETAIL,data={"pageIndex":"1","entrpsId":eid,"reportYear":str(y),"searchYear":str(y)},headers={"Referer":SEARCH},timeout=(5,20)); d.raise_for_status()
+                    d=s.post(DETAIL,data={"pageIndex":"1","entrpsId":eid,"reportYear":str(y),"searchYear":str(y)},headers={"Referer":SEARCH},timeout=(8,25)); d.raise_for_status()
                     txt=d.text; (details/f"{y}_{eid}.html").write_text(txt,encoding="utf-8")
                     valid=(str(eid) in txt and len(txt)>5000)
                     if valid: detail_ok+=1; flat.extend(table_rows(txt,y,eid))

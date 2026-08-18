@@ -37,9 +37,8 @@ def main(req_path):
     s=requests.Session(); s.headers.update({"User-Agent":UA,"X-Requested-With":"XMLHttpRequest","Accept":"application/json,text/javascript,*/*;q=0.01","Referer":BASE+"/pageLink.do"})
     status={"source_key":"CHEM_STATS","status":"RUNNING","requests":0,"errors":0,"years":years,"terms":terms}; dedup={}; successful=0
     try:
-        # One short preflight so runner-level ICIS egress failure is distinguishable from NO_MATCH.
         try:
-            p=s.post(DISCOVERY,data={"searchYear":str(max(years)),"bplcNm":terms[0],"pageNo":"1"},timeout=(3,8)); p.raise_for_status()
+            p=s.post(DISCOVERY,data={"searchYear":str(max(years)),"bplcNm":terms[0],"pageNo":"1"},timeout=(8,20)); p.raise_for_status()
         except Exception as e:
             status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"}); (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False)); return 72
         for y in years:
@@ -47,7 +46,7 @@ def main(req_path):
                 for page in range(1,max_pages+1):
                     status["requests"]+=1
                     try:
-                        r=s.post(DISCOVERY,data={"searchYear":str(y),"bplcNm":term,"pageNo":str(page)},timeout=(5,20)); r.raise_for_status(); successful+=1
+                        r=s.post(DISCOVERY,data={"searchYear":str(y),"bplcNm":term,"pageNo":str(page)},timeout=(8,25)); r.raise_for_status(); successful+=1
                     except Exception as e:
                         status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DISCOVERY\t{y}\t{term}\t{page}\t{type(e).__name__}\t{e}\n"); break
                     fn=safe(term); (raw/f"{y}_{fn}_p{page}.json").write_text(r.text,encoding="utf-8")
@@ -76,7 +75,7 @@ def main(req_path):
                 y=row["search_year"]; bid=next((v for k,v in row.items() if str(k).lower()=="bplcid"),None); term=str(row.get("search_terms_hit","")).split("|")[0]
                 try:
                     status["requests"]+=1
-                    d=s.get(DETAIL,params=detail_params(y,bid,term),headers={"Referer":BASE+"/pageLink.do"},timeout=(5,20)); d.raise_for_status()
+                    d=s.get(DETAIL,params=detail_params(y,bid,term),headers={"Referer":BASE+"/pageLink.do"},timeout=(8,25)); d.raise_for_status()
                     txt=d.text; (details/f"{y}_{safe(bid)}.html").write_text(txt,encoding="utf-8")
                     valid=(str(bid) in txt and len(txt)>5000)
                     if valid: detail_ok+=1; table_rows.extend(generic_tables(txt,y,bid))
