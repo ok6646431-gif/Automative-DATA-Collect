@@ -39,5 +39,17 @@ class TestRequestBuilder(unittest.TestCase):
         self.assertNotIn("옛회사",r["sources"]["ENVINFO"]["search_terms_by_year"]["2022"])
         self.assertNotIn("옛회사",r["sources"]["CHEM_STATS"]["search_terms_by_year"]["2022"])
 
+    def test_disabled_unbounded_alias_is_not_scheduled(self):
+        p={"request_id":"x","company_display_name":"새회사","aliases":[
+                {"term":"새회사","scope":"current","year_start":2020,"year_end":"auto"},
+                {"term":"기간미상","scope":"historical","year_start":0,"year_end":"auto","search_enabled":False}],
+           "source_plan":{"ENVINFO":{"start_year":2020,"end_year":2024},
+             "PRTR":{"start_year":2020,"end_year":2024},"CHEM_STATS":{"years":[2020,2022,2024]},
+             "CLEANSYS_AIR":{"start_year":2020,"end_year":2024},
+             "SOOSIRO_WATER":{"annual_years":[2020,2021,2022,2023,2024],"daily_years":[]}}}
+        r=build(p)
+        self.assertNotIn("기간미상",r["sources"]["ENVINFO"]["search_terms"])
+        self.assertFalse(any(x["term"] == "기간미상" for x in r["sources"]["PRTR"]["search_terms"]))
+
 
 if __name__=="__main__": unittest.main()

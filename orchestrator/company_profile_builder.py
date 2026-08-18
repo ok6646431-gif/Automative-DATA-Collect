@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 
 SOURCES = ("ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER")
-FULL_HISTORY_DEFAULTS = {"ENVINFO", "PRTR", "CLEANSYS_AIR", "SOOSIRO_WATER"}
+FULL_HISTORY_DEFAULTS = {"ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"}
 
 
 class DiscoveryValidationError(ValueError):
@@ -88,15 +88,15 @@ def _chem_plan(raw: Dict[str, Any], minimum: int, reviews: List[Dict[str, Any]])
         years = available
     else:
         years = [x for x in requested if not available or x in available]
-        if years and years[-1] - years[0] < minimum:
+        if years and years[-1] - years[0] + 1 < minimum:
             older = [x for x in available if x < years[0]]
             for value in reversed(older):
                 years.insert(0, value)
-                if years[-1] - years[0] >= minimum:
+                if years[-1] - years[0] + 1 >= minimum:
                     break
     if not years:
         raise DiscoveryValidationError("CHEM_STATS needs disclosed survey rounds; annual years are never manufactured")
-    if years[-1] - years[0] < minimum:
+    if years[-1] - years[0] + 1 < minimum:
         reviews.append(_review("SURVEY_ROUND_SPAN_SHORT", "CHEM_STATS",
                                f"Disclosed rounds span {years[0]}..{years[-1]}, less than {minimum} years."))
     plan = {"years": years}
@@ -108,7 +108,9 @@ def _chem_plan(raw: Dict[str, Any], minimum: int, reviews: List[Dict[str, Any]])
 
 def _aliases(discovery: Dict[str, Any], reviews: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     current = discovery["current_legal_name"]
-    facts = [{"name": current, "alias_type": "current_legal_name", "verification_state": "VERIFIED"}]
+    facts = [{"name": current, "alias_type": "current_legal_name",
+              "verification_state": discovery.get("company_verification_state", "UNVERIFIED"),
+              "confidence": discovery.get("confidence")}]
     facts += discovery.get("company_aliases", [])
     facts += discovery.get("historical_legal_names", [])
     aliases = []
@@ -127,10 +129,16 @@ def _aliases(discovery: Dict[str, Any], reviews: List[Dict[str, Any]]) -> List[D
                  "year_end": _year(end, f"active_period for {name}") if end is not None else "auto",
                  "alias_type": alias_type,
                  "verification_state": fact.get("verification_state", "UNVERIFIED") if isinstance(fact, dict) else "UNVERIFIED",
+                 "confidence": fact.get("confidence") if isinstance(fact, dict) else None,
                  "source_locator": fact.get("source_locator") if isinstance(fact, dict) else None}
         if scope == "historical" and (start is None or end is None):
+            # Preserve the unresolved fact, but never turn an unknown validity
+            # period into an unbounded collector search.
+            entry["search_enabled"] = False
             reviews.append(_review("HISTORICAL_ALIAS_PERIOD_UNRESOLVED", name,
                                    "Historical alias search period is not fully bounded.", entry["source_locator"]))
+        else:
+            entry["search_enabled"] = True
         if not any(a["term"] == name and a["year_start"] == entry["year_start"] and a["year_end"] == entry["year_end"] for a in aliases):
             aliases.append(entry)
     return aliases
@@ -171,7 +179,7 @@ def compile_discovery(discovery: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[s
     evidence = discovery.get("identity_evidence", [])
     sites = discovery.get("domestic_site_candidates", [])
     for site in sites:
-        if site.get("identity_status") in {"REVIEW_REQUIRED", "UNRESOLVED"}:
+        if site.get("identity_status", "UNRESOLVED") in {"CANDIDATE", "REVIEW_REQUIRED", "UNRESOLVED"}:
             reviews.append(_review("SITE_IDENTITY_UNRESOLVED", site.get("candidate_id", "site_candidate"),
                                    "Discovery did not resolve this site candidate.", site.get("source_locator")))
     exclusion_evidence = discovery.get("related_entity_exclusions", [])

@@ -19,6 +19,8 @@ def alias_overlap(alias, start, end):
 def aliases_for(profile, start, end, include_predecessor=True):
     out=[]
     for a in profile.get("aliases", []):
+        if a.get("search_enabled", True) is False:
+            continue
         if not include_predecessor and a.get("scope") == "predecessor":
             continue
         if alias_overlap(a,start,end):

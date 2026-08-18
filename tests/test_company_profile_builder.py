@@ -40,6 +40,17 @@ class TestCompanyProfileBuilder(unittest.TestCase):
         spec = next(x for x in build(profile)["sources"]["PRTR"]["search_terms"] if x["term"] == "과거산업")
         self.assertEqual((spec["year_start"], spec["year_end"]), (2014, 2019))
 
+    def test_unbounded_historical_name_is_preserved_but_not_searched(self):
+        data = discovery()
+        data["historical_legal_names"] = [{"name": "기간미상산업", "alias_type": "former_legal_name"}]
+        profile, summary = compile_discovery(data)
+        old = next(x for x in profile["aliases"] if x["term"] == "기간미상산업")
+        self.assertFalse(old["search_enabled"])
+        request = build(profile)
+        self.assertNotIn("기간미상산업", request["sources"]["ENVINFO"]["search_terms"])
+        self.assertTrue(any(x["code"] == "HISTORICAL_ALIAS_PERIOD_UNRESOLVED"
+                            for x in summary["unresolved_discovery_items"]))
+
     def test_rename_is_context_not_identity_merge(self):
         data = discovery()
         data["corporate_restructuring_evidence"] = [{"event_type": "rename", "source_locator": "evidence://rename"}]
@@ -85,6 +96,14 @@ class TestCompanyProfileBuilder(unittest.TestCase):
         profile, _ = compile_discovery(discovery())
         self.assertEqual(profile["source_plan"]["CHEM_STATS"]["years"], [2018, 2020, 2022, 2024])
         self.assertNotIn(2019, profile["source_plan"]["CHEM_STATS"]["years"])
+
+    def test_chemical_round_span_uses_inclusive_calendar_years(self):
+        data = discovery()
+        data["collection_policy"]["sources"]["CHEM_STATS"] = {
+            "available_survey_rounds": [2020, 2022, 2024], "prefer_full_history": True}
+        _, summary = compile_discovery(data)
+        self.assertFalse(any(x["code"] == "SURVEY_ROUND_SPAN_SHORT"
+                             for x in summary["unresolved_discovery_items"]))
 
     def test_structured_sources_prefer_full_history_and_water_modes_stay_separate(self):
         profile, _ = compile_discovery(discovery())
