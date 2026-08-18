@@ -1,12 +1,14 @@
 import argparse, csv, hashlib, json, shutil
 from pathlib import Path
 from postprocess import run_integration, stable_id
+from event_analysis import run_event_analysis
 
 BAD={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","CONFIG_ERROR"}
 SOURCES=["ENVINFO","PRTR","CHEM_STATS","CLEANSYS_AIR","SOOSIRO_WATER"]
 ROOT_ARTIFACTS=[
-    "Company_Profile.json","Coverage_Matrix.csv","Coverage_Status.csv","Integration_Summary.json",
-    "REVIEW_REQUIRED.json","Site_Master.csv","Source_Identity.csv","Validation_Queue.csv"
+    "Company_Profile.json","Event_Evidence.json","Coverage_Matrix.csv","Coverage_Status.csv","Integration_Summary.json",
+    "REVIEW_REQUIRED.json","Site_Master.csv","Source_Identity.csv","Validation_Queue.csv","Event_Registry.csv",
+    "Coverage_Event_Links.csv","Analysis_Ready_Index.csv"
 ]
 
 
@@ -112,21 +114,17 @@ def artifact_index(output,package_root):
             rows.append({"source":source,"path":str(rel),"bytes":p.stat().st_size,"sha256":sha256(p)})
     for name in ROOT_ARTIFACTS:
         p=package_root/name
-        if p.exists() and p.is_file():
-            rows.append({"source":"INTEGRATION","path":name,"bytes":p.stat().st_size,"sha256":sha256(p)})
+        if p.exists() and p.is_file(): rows.append({"source":"INTEGRATION","path":name,"bytes":p.stat().st_size,"sha256":sha256(p)})
     return rows
 
 
 def append_coverage_reviews(package_root,company_id):
-    coverage_path=package_root/"Coverage_Status.csv"
-    queue_path=package_root/"Validation_Queue.csv"
-    review_path=package_root/"REVIEW_REQUIRED.json"
+    coverage_path=package_root/"Coverage_Status.csv"; queue_path=package_root/"Validation_Queue.csv"; review_path=package_root/"REVIEW_REQUIRED.json"
     if not coverage_path.exists(): return 0
     with coverage_path.open(encoding="utf-8-sig",newline="") as f: coverage=list(csv.DictReader(f))
     with queue_path.open(encoding="utf-8-sig",newline="") as f: queue=list(csv.DictReader(f)) if queue_path.exists() else []
     fields=["validation_id","company_id","object_type","object_key","issue_type","severity","detected_by","evidence","recommended_action","status","resolved_by","resolved_at","notes"]
-    seen={r.get("validation_id") for r in queue}
-    added=[]
+    seen={r.get("validation_id") for r in queue}; added=[]
     for c in coverage:
         if c.get("coverage_status") not in {"SHORT_COVERAGE","NO_DATA"}: continue
         vid=stable_id("VAL_",company_id,"COVERAGE",c.get("source_key"),c.get("coverage_status"))
@@ -135,8 +133,7 @@ def append_coverage_reviews(package_root,company_id):
         queue.append(v); added.append(v); seen.add(vid)
     with queue_path.open("w",encoding="utf-8-sig",newline="") as f:
         w=csv.DictWriter(f,fieldnames=fields,extrasaction="ignore"); w.writeheader(); w.writerows(queue)
-    review=read_json(review_path) if review_path.exists() else []
-    rseen={r.get("validation_id") for r in review if isinstance(r,dict) and r.get("validation_id")}
+    review=read_json(review_path) if review_path.exists() else []; rseen={r.get("validation_id") for r in review if isinstance(r,dict) and r.get("validation_id")}
     for v in added:
         if v["validation_id"] not in rseen: review.append(v); rseen.add(v["validation_id"])
     review_path.write_text(json.dumps(review,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -144,16 +141,11 @@ def append_coverage_reviews(package_root,company_id):
 
 
 def main():
-    ap=argparse.ArgumentParser()
-    ap.add_argument("--stable",default="collected/stable")
-    ap.add_argument("--icis",default="collected/icis")
-    ap.add_argument("--profile",default="requests/company_profile.json")
-    ap.add_argument("--out",default="assembled")
-    args=ap.parse_args(); stable=Path(args.stable); icis=Path(args.icis); profile=Path(args.profile); out=Path(args.out); output=out/"output"
+    ap=argparse.ArgumentParser(); ap.add_argument("--stable",default="collected/stable"); ap.add_argument("--icis",default="collected/icis"); ap.add_argument("--profile",default="requests/company_profile.json"); ap.add_argument("--events",default="requests/event_evidence.json"); ap.add_argument("--out",default="assembled")
+    args=ap.parse_args(); stable=Path(args.stable); icis=Path(args.icis); profile=Path(args.profile); events=Path(args.events); out=Path(args.out); output=out/"output"
     if out.exists(): shutil.rmtree(out)
     output.mkdir(parents=True,exist_ok=True)
-    for s in ["ENVINFO","CLEANSYS_AIR","SOOSIRO_WATER"]:
-        copy_source(stable,output,s) or copy_source(stable/"output",output,s)
+    for s in ["ENVINFO","CLEANSYS_AIR","SOOSIRO_WATER"]: copy_source(stable,output,s) or copy_source(stable/"output",output,s)
     chosen=choose_icis(icis)
     if chosen:
         for s in ["PRTR","CHEM_STATS"]: copy_source(chosen,output,s)
@@ -161,37 +153,26 @@ def main():
     package_ok,statuses,source_review=validate(output)
     (out/"REVIEW_REQUIRED.json").write_text(json.dumps(source_review,ensure_ascii=False,indent=2),encoding="utf-8")
     if profile.exists(): shutil.copy2(profile,out/"Company_Profile.json")
+    if events.exists(): shutil.copy2(events,out/"Event_Evidence.json")
 
     with (out/"Coverage_Matrix.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","status","years","checks"]); w.writeheader()
-        for s,r in statuses.items():
-            w.writerow({"source":s,"status":r.get("status"),"years":"|".join(str(x) for x in r.get("years",[])),"checks":"|".join(str(x) for x in r.get("checks",[]))})
+        for s,r in statuses.items(): w.writerow({"source":s,"status":r.get("status"),"years":"|".join(str(x) for x in r.get("years",[])),"checks":"|".join(str(x) for x in r.get("checks",[]))})
 
     integration=run_integration(output,profile,out)
     append_coverage_reviews(out,integration["company_id"])
-    with (out/"Validation_Queue.csv").open(encoding="utf-8-sig",newline="") as f:
-        integration["validation_queue"]=sum(1 for _ in csv.DictReader(f))
+    integration.update(run_event_analysis(out,events if events.exists() else None))
+    with (out/"Validation_Queue.csv").open(encoding="utf-8-sig",newline="") as f: integration["validation_queue"]=sum(1 for _ in csv.DictReader(f))
     (out/"Integration_Summary.json").write_text(json.dumps(integration,ensure_ascii=False,indent=2),encoding="utf-8")
-    all_review=read_json(out/"REVIEW_REQUIRED.json")
-    validation="REVIEW_REQUIRED" if all_review else "PASS"
+    all_review=read_json(out/"REVIEW_REQUIRED.json"); validation="REVIEW_REQUIRED" if all_review else "PASS"
 
     idx=artifact_index(output,out)
     with (out/"Artifact_Index.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(idx)
 
-    manifest={
-        "schema_version":"1.1",
-        "package_health":"PASS" if package_ok else "FAIL",
-        "validation":validation,
-        "review_count":len(all_review),
-        "selected_icis_attempt":str(chosen) if chosen else None,
-        "sources":statuses,
-        "integration":integration,
-        "artifact_count":len(idx)
-    }
+    manifest={"schema_version":"1.2","package_health":"PASS" if package_ok else "FAIL","validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"sources":statuses,"integration":integration,"artifact_count":len(idx)}
     (out/"Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps({"package_health":manifest["package_health"],"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"artifacts":len(idx),"integration":integration},ensure_ascii=False))
-    # REVIEW_REQUIRED is a normal automation outcome; only structural/source-integrity failure fails the job.
     raise SystemExit(0 if package_ok else 81)
 
 if __name__=="__main__": main()
