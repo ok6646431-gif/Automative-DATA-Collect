@@ -67,10 +67,23 @@ class TestCompanyProfileBuilder(unittest.TestCase):
 
     def test_similar_related_company_is_excluded_with_evidence_preserved(self):
         data = discovery()
-        data["related_entity_exclusions"] = [{"name": "현재산업에너지", "reason": "separate entity", "source_locator": "evidence://x"}]
+        data["related_entity_exclusions"] = [{"name": "현재산업에너지", "reason": "separate entity",
+                                                "source_locator": "evidence://x", "verification_state": "VERIFIED"}]
         profile, summary = compile_discovery(data)
         self.assertEqual(profile["related_entity_exclusions"], ["현재산업에너지"])
         self.assertEqual(summary["related_entity_exclusions"][0]["source_locator"], "evidence://x")
+
+    def test_unverified_related_company_is_review_only(self):
+        data = discovery()
+        data["related_entity_exclusions"] = [
+            {"name": "현재산업에너지", "verification_state": "PARTIAL", "source_locator": "evidence://partial"},
+            "현재산업서비스",
+        ]
+        profile, summary = compile_discovery(data)
+        self.assertEqual(profile["related_entity_exclusions"], [])
+        self.assertEqual(profile["related_entity_exclusion_evidence"], data["related_entity_exclusions"])
+        codes = [x["code"] for x in summary["unresolved_discovery_items"]]
+        self.assertEqual(codes.count("RELATED_ENTITY_EXCLUSION_NOT_VERIFIED"), 2)
 
     def test_same_address_different_units_remain_separate_candidates(self):
         data = discovery()
@@ -104,6 +117,14 @@ class TestCompanyProfileBuilder(unittest.TestCase):
         _, summary = compile_discovery(data)
         self.assertFalse(any(x["code"] == "SURVEY_ROUND_SPAN_SHORT"
                              for x in summary["unresolved_discovery_items"]))
+
+    def test_chemical_two_rounds_do_not_meet_minimum(self):
+        data = discovery()
+        data["collection_policy"]["sources"]["CHEM_STATS"] = {
+            "available_survey_rounds": [2020, 2024], "prefer_full_history": True}
+        _, summary = compile_discovery(data)
+        self.assertTrue(any(x["code"] == "SURVEY_ROUND_SPAN_SHORT"
+                            for x in summary["unresolved_discovery_items"]))
 
     def test_structured_sources_prefer_full_history_and_water_modes_stay_separate(self):
         profile, _ = compile_discovery(discovery())
