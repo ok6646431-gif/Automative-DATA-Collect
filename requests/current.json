@@ -1,17 +1,15 @@
 {
-  "request_id": "lgchem-prtr-20260818",
+  "request_id": "lgchem-prtr-proof-20260818",
   "company_display_name": "LG화학",
   "sources": {
     "PRTR": {
-      "start_year": 2016,
+      "start_year": 2024,
       "end_year": 2024,
-      "max_pages": 30,
-      "request_delay_ms": 120,
+      "max_pages": 5,
+      "request_delay_ms": 80,
       "search_terms": [
-        {"term": "LG화학", "year_start": 2016, "year_end": 2024},
-        {"term": "엘지화학", "year_start": 2016, "year_end": 2024},
-        {"term": "LG생명과학", "year_start": 2016, "year_end": 2017},
-        {"term": "엘지생명과학", "year_start": 2016, "year_end": 2017}
+        {"term": "LG화학", "year_start": 2024, "year_end": 2024},
+        {"term": "엘지화학", "year_start": 2024, "year_end": 2024}
       ],
       "site_address_anchors": {
         "LGC_HQ_SEOUL": ["서울특별시 영등포구 여의대로 128"],
