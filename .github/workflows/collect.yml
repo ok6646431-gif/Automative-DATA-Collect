@@ -3,10 +3,7 @@ name: Enterprise environmental source collection
 on:
   pull_request:
     paths:
-      - 'requests/**'
-      - 'collectors/**'
-      - 'tests/**'
-      - '.github/workflows/collect.yml'
+      - 'requests/run_token.txt'
   workflow_dispatch:
 
 jobs:
@@ -31,9 +28,9 @@ jobs:
       - name: Run parser regression tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Capture ENV-INFO discovery structure
+      - name: Discover ENV-INFO request format
         continue-on-error: true
-        run: python collectors/envinfo_probe.py
+        run: python collectors/envinfo_discover.py requests/current.json
 
       - name: Collect SOOSIRO proof
         continue-on-error: true

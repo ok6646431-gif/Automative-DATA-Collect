@@ -1,7 +1,8 @@
 {
-  "request_id": "lgchem-hosted-proof-20260818",
+  "request_id": "lgchem-hosted-proof-20260818-v2",
   "company_display_name": "LG화학",
   "sources": {
+    "ENVINFO": {"search_term": "LG화학", "proof_year": 2024},
     "PRTR": {
       "start_year": 2024,
       "end_year": 2024,
@@ -20,14 +21,7 @@
         "LGC_GIMCHEON": ["경상북도 김천시 공단로 152-26"]
       }
     },
-    "SOOSIRO_WATER": {
-      "search_term": "엘지화학",
-      "proof_year": 2025
-    },
-    "CLEANSYS_AIR": {
-      "search_terms": ["엘지화학", "LG화학"],
-      "start_year": 2015,
-      "end_year": 2025
-    }
+    "SOOSIRO_WATER": {"search_term": "엘지화학", "proof_year": 2025},
+    "CLEANSYS_AIR": {"search_terms": ["엘지화학", "LG화학"], "start_year": 2015, "end_year": 2025}
   }
 }
