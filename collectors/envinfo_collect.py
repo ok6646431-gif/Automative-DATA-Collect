@@ -36,12 +36,14 @@ def main(req_path):
     dedup={}
     try:
         p=s.get(SEARCH_PAGE,timeout=(5,12)); p.raise_for_status(); (out/"search_page_raw.html").write_text(p.text,encoding="utf-8")
-        for term in terms:
+        term_map=cfg.get("search_terms_by_year",{})
+        jobs=[(y,y,term) for y in range(y1,y2+1) for term in term_map.get(str(y),terms)] if term_map else [(y1,y2,term) for term in terms]
+        for query_start,query_end,term in jobs:
             page=1; total=None
             while True:
                 status["requests"]+=1
-                r=s.post(SEARCH,data=search_payload(y1,y2,term,page,page_size),headers={"Referer":SEARCH_PAGE,"X-Requested-With":"XMLHttpRequest"},timeout=(5,20)); r.raise_for_status()
-                (raw/f"{y1}_{y2}_{safe(term)}_p{page}.json").write_text(r.text,encoding="utf-8")
+                r=s.post(SEARCH,data=search_payload(query_start,query_end,term,page,page_size),headers={"Referer":SEARCH_PAGE,"X-Requested-With":"XMLHttpRequest"},timeout=(5,20)); r.raise_for_status()
+                (raw/f"{query_start}_{query_end}_{safe(term)}_p{page}.json").write_text(r.text,encoding="utf-8")
                 d=r.json(); rows=rows_from_column_json(d)
                 if total is None:
                     tr=d.get("totalRows",[len(rows)]); total=int(tr[0]) if isinstance(tr,list) and tr else len(rows)

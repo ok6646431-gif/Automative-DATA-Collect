@@ -4,7 +4,29 @@ Enterprise environmental public-data collection and integration pipeline.
 
 ## Master Orchestrator v1.2
 
-Primary input contract: `requests/company_profile.json`.
+Primary collector input contract: `requests/company_profile.json`.
+
+The zero-touch bootstrap input is the versioned Discovery contract in
+`requests/company_discovery.schema.json` (see `requests/company_discovery.example.json`).
+The external control plane supplies evidence; this repository does not research or
+infer corporate facts. Compile it before request generation:
+
+```bash
+python orchestrator/company_profile_builder.py requests/company_discovery.json \
+  --out requests/company_profile.json \
+  --summary Company_Discovery_Summary.json
+python orchestrator/request_builder.py requests/company_profile.json \
+  --out requests/current.generated.json
+```
+
+The compiler preserves raw site/evidence fields, exclusions, restructuring and
+unresolved items. It never creates site-address anchors or canonical merges.
+Unknown identity remains `REVIEW_REQUIRED`. Annual sources receive independently
+derived windows (minimum five years, extended backward when necessary); known full
+structured history is preferred. Chemical Statistics receives only explicitly
+disclosed survey rounds, while SOOSIRO annual and daily periods stay separate.
+Historical aliases retain their active bounds, and generated requests include
+per-year search terms so a bounded former name is not queried outside its period.
 
 The profile contains the company name, resolved current/historical legal-name aliases, related-entity exclusions, and source-specific collection windows. In the ChatGPT control-plane workflow the user provides only the company name; company discovery resolves and writes this profile before GitHub Actions execution.
 

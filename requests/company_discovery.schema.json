@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/environment/company-discovery-1.0.schema.json",
+  "title": "Validated company Discovery evidence",
+  "type": "object",
+  "required": ["schema_version", "request_id", "requested_company_name", "current_legal_name", "collection_policy"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string", "minLength": 1},
+    "requested_company_name": {"type": "string", "minLength": 1},
+    "current_legal_name": {"type": "string", "minLength": 1},
+    "company_verification_state": {"enum": ["VERIFIED", "PARTIAL", "REVIEW_REQUIRED", "UNVERIFIED"]},
+    "confidence": {"type": ["number", "string", "null"]},
+    "company_aliases": {"type": "array", "items": {"$ref": "#/$defs/nameEvidence"}},
+    "historical_legal_names": {"type": "array", "items": {"$ref": "#/$defs/nameEvidence"}},
+    "corporate_restructuring_evidence": {"type": "array", "items": {"$ref": "#/$defs/restructuring"}},
+    "domestic_site_candidates": {"type": "array", "items": {"$ref": "#/$defs/site"}},
+    "identity_evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "related_entity_exclusions": {"type": "array", "items": {"oneOf": [{"type": "string"}, {"$ref": "#/$defs/exclusion"}]}},
+    "unresolved_items": {"type": "array", "items": {"type": "object"}},
+    "event_evidence_references": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+    "collection_policy": {
+      "type": "object", "required": ["sources"],
+      "properties": {
+        "minimum_history_years": {"type": "integer", "minimum": 1},
+        "sources": {
+          "type": "object",
+          "required": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
+          "properties": {
+            "ENVINFO": {"$ref": "#/$defs/annualPolicy"},
+            "PRTR": {"$ref": "#/$defs/annualPolicy"},
+            "CLEANSYS_AIR": {"$ref": "#/$defs/annualPolicy"},
+            "SOOSIRO_WATER": {"allOf": [{"$ref": "#/$defs/annualPolicy"}, {"type": "object", "properties": {"daily_available_years": {"type": "array", "items": {"type": "integer"}}}}]},
+            "CHEM_STATS": {"type": "object", "properties": {"available_survey_rounds": {"type": "array", "items": {"type": "integer"}}, "requested_survey_rounds": {"type": "array", "items": {"type": "integer"}}, "prefer_full_history": {"type": "boolean"}}}
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidence": {"type": "object", "properties": {"source_locator": {}, "source_value_raw": {}, "verification_state": {"type": "string"}, "confidence": {"type": ["number", "string", "null"]}}, "additionalProperties": true},
+    "nameEvidence": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "alias_type": {"type": "string"}, "active_period": {"$ref": "#/$defs/period"}, "source_locator": {}, "verification_state": {"type": "string"}, "confidence": {"type": ["number", "string", "null"]}}, "additionalProperties": true},
+    "period": {"type": "object", "properties": {"start_year": {"type": ["integer", "null"]}, "end_year": {"type": ["integer", "null"]}}},
+    "restructuring": {"type": "object", "required": ["event_type"], "properties": {"event_type": {"enum": ["merger", "spin_off", "rename", "business_transfer"]}, "effective_period": {"$ref": "#/$defs/period"}, "source_locator": {}, "verification_state": {"type": "string"}}, "additionalProperties": true},
+    "site": {"type": "object", "properties": {"candidate_id": {"type": "string"}, "site_name_raw": {}, "address_raw": {}, "business_unit_raw": {}, "source_id_raw": {}, "source_locator": {}, "verification_state": {"type": "string"}, "identity_status": {"enum": ["VERIFIED", "CANDIDATE", "REVIEW_REQUIRED", "UNRESOLVED"]}}, "additionalProperties": true},
+    "exclusion": {"type": "object", "required": ["name"], "properties": {"name": {"type": "string"}, "reason": {"type": "string"}, "source_locator": {}, "verification_state": {"type": "string"}}, "additionalProperties": true},
+    "annualPolicy": {"type": "object", "properties": {"available_history": {"$ref": "#/$defs/period"}, "requested_window": {"$ref": "#/$defs/period"}, "prefer_full_history": {"type": "boolean"}}, "additionalProperties": true}
+  },
+  "additionalProperties": true
+}

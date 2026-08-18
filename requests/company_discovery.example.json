@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "request_id": "synthetic-bootstrap-example",
+  "requested_company_name": "새한소재",
+  "current_legal_name": "새한소재 주식회사",
+  "company_verification_state": "VERIFIED",
+  "company_aliases": [
+    {"name": "새한소재", "alias_type": "current_alias", "verification_state": "VERIFIED", "source_locator": "evidence://identity/1"}
+  ],
+  "historical_legal_names": [
+    {"name": "대한소재", "alias_type": "former_legal_name", "active_period": {"start_year": 2010, "end_year": 2020}, "verification_state": "VERIFIED", "source_locator": "evidence://rename/1"}
+  ],
+  "corporate_restructuring_evidence": [
+    {"event_type": "rename", "effective_period": {"start_year": 2021, "end_year": 2021}, "verification_state": "VERIFIED", "source_locator": "evidence://rename/1"}
+  ],
+  "domestic_site_candidates": [
+    {"candidate_id": "candidate-1", "site_name_raw": "새한소재 제1공장", "address_raw": "원문 주소", "source_id_raw": "00-01", "source_locator": "evidence://site/1", "identity_status": "CANDIDATE", "verification_state": "PARTIAL"}
+  ],
+  "identity_evidence": [{"source_locator": "evidence://identity/1", "source_value_raw": "새한소재 주식회사", "verification_state": "VERIFIED"}],
+  "related_entity_exclusions": [{"name": "새한소재에너지", "reason": "separate legal entity", "source_locator": "evidence://exclusion/1", "verification_state": "VERIFIED"}],
+  "unresolved_items": [{"code": "SITE_UNIT_UNRESOLVED", "subject": "candidate-1", "detail": "Two operating units share the reported address."}],
+  "event_evidence_references": [{"source_locator": "requests/event_evidence.json#event-1", "verification_state": "PARTIAL"}],
+  "collection_policy": {
+    "minimum_history_years": 5,
+    "sources": {
+      "ENVINFO": {"available_history": {"start_year": 2018, "end_year": 2025}, "prefer_full_history": true},
+      "PRTR": {"requested_window": {"start_year": 2022, "end_year": 2025}, "prefer_full_history": false},
+      "CHEM_STATS": {"available_survey_rounds": [2018, 2020, 2022, 2024], "prefer_full_history": true},
+      "CLEANSYS_AIR": {"available_history": {"start_year": 2015, "end_year": 2025}, "prefer_full_history": true},
+      "SOOSIRO_WATER": {"available_history": {"start_year": 2017, "end_year": 2025}, "daily_available_years": [2024, 2025], "prefer_full_history": true}
+    }
+  }
+}

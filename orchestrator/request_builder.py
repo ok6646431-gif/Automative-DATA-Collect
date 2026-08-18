@@ -19,6 +19,8 @@ def alias_overlap(alias, start, end):
 def aliases_for(profile, start, end, include_predecessor=True):
     out=[]
     for a in profile.get("aliases", []):
+        if a.get("search_enabled", True) is False:
+            continue
         if not include_predecessor and a.get("scope") == "predecessor":
             continue
         if alias_overlap(a,start,end):
@@ -26,6 +28,12 @@ def aliases_for(profile, start, end, include_predecessor=True):
     if not out:
         out=[{"term": profile["company_display_name"], "scope":"current", "year_start":start, "year_end":end}]
     return out
+
+
+def terms_by_year(profile, years, include_predecessor=True):
+    """Compile bounded aliases for collectors that query individual periods."""
+    return {str(year): [a["term"] for a in aliases_for(profile, year, year, include_predecessor)]
+            for year in years}
 
 
 def build(profile):
@@ -37,7 +45,7 @@ def build(profile):
     terms=[]
     for a in aliases_for(profile,s,e):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"page_size":int(p.get("page_size",200)),"collect_details":True,"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
+    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"page_size":int(p.get("page_size",200)),"collect_details":True,"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
 
     p=plan["PRTR"]; s=int(p["start_year"]); e=int(p["end_year"]); specs=[]
     for a in aliases_for(profile,s,e):
@@ -49,19 +57,19 @@ def build(profile):
     terms=[]
     for a in aliases_for(profile,s,e):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["CHEM_STATS"]={"years":years,"search_terms":terms,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True}
+    req["sources"]["CHEM_STATS"]={"years":years,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,years),"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True}
 
     p=plan["CLEANSYS_AIR"]; s=int(p["start_year"]); e=int(p["end_year"])
     terms=[]
     for a in aliases_for(profile,s,e,include_predecessor=False):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"start_year":s,"end_year":e}
+    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"start_year":s,"end_year":e}
 
     p=plan["SOOSIRO_WATER"]; annual=[int(x) for x in p["annual_years"]]; daily=[int(x) for x in p.get("daily_years",[])]
     s=min(annual); e=max(annual); terms=[]
     for a in aliases_for(profile,s,e,include_predecessor=False):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"annual_years":annual,"daily_years":daily}
+    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"annual_years":annual,"daily_years":daily}
     return req
 
 
