@@ -1,0 +1,210 @@
+{
+  "schema_version": "1.0",
+  "request_id": "lottechem-blind-acceptance-20260819",
+  "requested_company_name": "롯데케미칼",
+  "current_legal_name": "롯데케미칼 주식회사",
+  "company_verification_state": "VERIFIED",
+  "confidence": "HIGH",
+  "company_aliases": [
+    {
+      "name": "롯데케미칼",
+      "alias_type": "current_alias",
+      "active_period": {"start_year": 2012, "end_year": null},
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH",
+      "source_locator": "https://www.lottechem.com/ko/company/about.do"
+    }
+  ],
+  "historical_legal_names": [
+    {
+      "name": "호남석유화학",
+      "alias_type": "former_legal_name",
+      "active_period": {"start_year": 1976, "end_year": 2012},
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH",
+      "source_locator": "https://www.lottechem.com/ko/media/news/102/view.do"
+    },
+    {
+      "name": "케이피케미칼",
+      "alias_type": "merger_predecessor",
+      "active_period": {"start_year": 2001, "end_year": 2012},
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH",
+      "source_locator": "https://www.lottechem.com/history/contentsid/1181/index.do"
+    },
+    {
+      "name": "롯데대산유화",
+      "alias_type": "merger_predecessor",
+      "active_period": {"start_year": 2005, "end_year": 2009},
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH",
+      "source_locator": "https://www.lottechem.com/history/appendix/17/index.do"
+    }
+  ],
+  "corporate_restructuring_evidence": [
+    {
+      "event_type": "rename",
+      "effective_period": {"start_year": 2012, "end_year": 2012},
+      "verification_state": "VERIFIED",
+      "source_locator": "https://www.lottechem.com/ko/media/news/102/view.do",
+      "description": "호남석유화학이 2012-12-27부터 롯데케미칼 사명을 전 사업장에 적용."
+    },
+    {
+      "event_type": "merger",
+      "effective_period": {"start_year": 2012, "end_year": 2012},
+      "verification_state": "VERIFIED",
+      "source_locator": "https://www.lottechem.com/history/contentsid/1181/index.do",
+      "description": "호남석유화학과 케이피케미칼이 2012-12-27 합병 완료."
+    },
+    {
+      "event_type": "merger",
+      "effective_period": {"start_year": 2009, "end_year": 2009},
+      "verification_state": "VERIFIED",
+      "source_locator": "https://www.lottechem.com/history/appendix/17/index.do",
+      "description": "호남석유화학이 2009-01-01 롯데대산유화를 흡수합병."
+    },
+    {
+      "event_type": "spin_off",
+      "effective_period": {"start_year": 2026, "end_year": 2026},
+      "verification_state": "VERIFIED",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "description": "기존 대산사업장이 2026년 6월 물적분할되어 롯데대산석화로 출범."
+    }
+  ],
+  "domestic_site_candidates": [
+    {
+      "candidate_id": "LOTTECHEM-HQ-SEOUL",
+      "site_name_raw": "서울본사",
+      "address_raw": "서울특별시 송파구 올림픽로 300, 롯데월드타워 14~16층",
+      "site_role": "HEADQUARTERS",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    },
+    {
+      "candidate_id": "LOTTECHEM-UIWANG",
+      "site_name_raw": "의왕사업장",
+      "address_raw": "경기도 의왕시 고산로 56",
+      "site_role": "BUSINESS_RND_SITE",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    },
+    {
+      "candidate_id": "LOTTECHEM-YEOSU-BASIC",
+      "site_name_raw": "기초화학 여수공장",
+      "address_raw": "전라남도 여수시 여수산단4로 53 (여수1공장)",
+      "site_role": "PRODUCTION",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    },
+    {
+      "candidate_id": "LOTTECHEM-YEOSU-ADVANCED",
+      "site_name_raw": "첨단소재 여수공장",
+      "address_raw": "전라남도 여수시 평여동 62",
+      "site_role": "PRODUCTION",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    },
+    {
+      "candidate_id": "LOTTECHEM-ULSAN",
+      "site_name_raw": "울산공장",
+      "address_raw": "울산광역시 남구 사평로 119 (울산1공장)",
+      "site_role": "PRODUCTION",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    },
+    {
+      "candidate_id": "LOTTECHEM-DAEGU-WATER",
+      "site_name_raw": "대구수처리공장",
+      "address_raw": "대구광역시 달성군 구지면 국가산단대로40길 35 롯데케미칼 대구공장",
+      "site_role": "PRODUCTION",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    },
+    {
+      "candidate_id": "LOTTECHEM-DAEJEON-RND",
+      "site_name_raw": "R&D 본부 (대전)",
+      "address_raw": "대전광역시 유성구 가정북로 115",
+      "site_role": "RND",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED",
+      "identity_status": "VERIFIED"
+    }
+  ],
+  "identity_evidence": [
+    {
+      "source_locator": "https://www.lottechem.com/ko/company/about.do",
+      "source_value_raw": "회사명: 롯데케미칼 주식회사",
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH"
+    },
+    {
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "source_value_raw": "롯데케미칼 국내사업장 및 2026년 6월 롯데대산석화 분할 현황",
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH"
+    }
+  ],
+  "related_entity_exclusions": [
+    {
+      "name": "롯데대산석화",
+      "reason": "2026년 6월 롯데케미칼 대산사업장에서 물적분할되어 출범한 별도 회사. 현재 법인 검색 결과와 혼합 금지.",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "verification_state": "VERIFIED"
+    }
+  ],
+  "unresolved_items": [],
+  "event_evidence_references": [
+    {
+      "source_locator": "requests/event_evidence.json#lottechem-2012-restructure",
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH"
+    },
+    {
+      "source_locator": "requests/event_evidence.json#lottechem-2026-daesan-spinoff",
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH"
+    }
+  ],
+  "collection_policy": {
+    "minimum_history_years": 5,
+    "sources": {
+      "ENVINFO": {
+        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "prefer_full_history": false,
+        "availability_basis": "Current disclosure cycle verified through 2024; use conservative five-year acceptance window rather than guessing older portal availability.",
+        "source_locator": "https://www.env-info.kr/member/open/companyTotalInfoSearch.do"
+      },
+      "PRTR": {
+        "available_history": {"start_year": 2001, "end_year": 2024},
+        "prefer_full_history": true,
+        "availability_basis": "Official ICIS PRTR year histories expose 2001 through 2024.",
+        "source_locator": "https://icis.mcee.go.kr/prtr/main.do"
+      },
+      "CHEM_STATS": {
+        "available_survey_rounds": [2020, 2022, 2024],
+        "prefer_full_history": true,
+        "availability_basis": "Use disclosed survey rounds only; no annual interpolation.",
+        "source_locator": "https://icis.mcee.go.kr/pageLink.do#none"
+      },
+      "CLEANSYS_AIR": {
+        "available_history": {"start_year": 2015, "end_year": 2025},
+        "prefer_full_history": true,
+        "availability_basis": "Structured collector history window already validated for the source.",
+        "source_locator": "CLEANSYS_AIR collector public endpoint"
+      },
+      "SOOSIRO_WATER": {
+        "available_history": {"start_year": 2020, "end_year": 2025},
+        "daily_available_years": [2024],
+        "prefer_full_history": true,
+        "availability_basis": "Include the 2020 COD-to-TOC transition period and preserve comparability review; daily collection remains a separate mode.",
+        "source_locator": "https://www.soosiro.or.kr"
+      }
+    }
+  }
+}
