@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "discovery_status": "PARTIAL",
+  "events": [
+    {
+      "event_type": "INTEGRATED_PERMIT",
+      "event_scope": "SITE",
+      "source_site_ref": {
+        "source_key": "ENVINFO",
+        "source_site_id": "SOURCE_NATIVE_SITE_ID"
+      },
+      "event_date_start": "YYYY-MM-DD",
+      "event_date_end": "",
+      "event_title": "Verified official event title",
+      "event_description": "Short evidence-based description without causal claims.",
+      "source_key": "OFFICIAL_PRIMARY_SOURCE",
+      "source_locator": "official-source locator or document/page reference",
+      "verification_status": "VERIFIED",
+      "affected_sources": [
+        "ENVINFO",
+        "PRTR",
+        "CHEM_STATS",
+        "CLEANSYS_AIR",
+        "SOOSIRO_WATER"
+      ],
+      "notes": "Do not infer missing event dates or weak site identity links."
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "EXAMPLE_GAP",
+      "source_key": "OFFICIAL_SOURCE",
+      "severity": "MEDIUM",
+      "reason": "Example only: inaccessible or incomplete official search coverage."
+    }
+  ]
+}
