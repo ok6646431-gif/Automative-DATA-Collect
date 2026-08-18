@@ -1,0 +1,26 @@
+{
+  "request_id": "lgchem-prtr-20260818",
+  "company_display_name": "LG화학",
+  "sources": {
+    "PRTR": {
+      "start_year": 2016,
+      "end_year": "auto",
+      "max_pages": 30,
+      "request_delay_ms": 120,
+      "search_terms": [
+        {"term": "LG화학", "year_start": 2016, "year_end": "auto"},
+        {"term": "엘지화학", "year_start": 2016, "year_end": "auto"},
+        {"term": "LG생명과학", "year_start": 2016, "year_end": 2017},
+        {"term": "엘지생명과학", "year_start": 2016, "year_end": 2017}
+      ],
+      "site_address_anchors": {
+        "LGC_HQ_SEOUL": ["서울특별시 영등포구 여의대로 128"],
+        "LGC_YEOSU": ["전라남도 여수시 여수산단2로 55"],
+        "LGC_DAESAN": ["충청남도 서산시 대산읍 독곶1로 54"],
+        "LGC_OCHANG": ["충청북도 청주시 흥덕구 옥산면 과학산업3로 29"],
+        "LGC_IKSAN_EP": ["전북 익산시 석암로 99"],
+        "LGC_GIMCHEON": ["경상북도 김천시 공단로 152-26"]
+      }
+    }
+  }
+}
