@@ -4,12 +4,12 @@
   "sources": {
     "PRTR": {
       "start_year": 2016,
-      "end_year": "auto",
+      "end_year": 2024,
       "max_pages": 30,
       "request_delay_ms": 120,
       "search_terms": [
-        {"term": "LG화학", "year_start": 2016, "year_end": "auto"},
-        {"term": "엘지화학", "year_start": 2016, "year_end": "auto"},
+        {"term": "LG화학", "year_start": 2016, "year_end": 2024},
+        {"term": "엘지화학", "year_start": 2016, "year_end": 2024},
         {"term": "LG생명과학", "year_start": 2016, "year_end": 2017},
         {"term": "엘지생명과학", "year_start": 2016, "year_end": 2017}
       ],
