@@ -11,6 +11,16 @@ ROOT_ARTIFACTS=[
     "Coverage_Event_Links.csv","Analysis_Ready_Index.csv"
 ]
 
+# Canonical row-stream files are legitimately zero bytes when their collector status
+# explicitly reports zero rows. This is different from an empty raw response, status
+# file, or other artifact, which must still fail structural validation.
+DECLARED_ROW_STREAM_COUNTS={
+    "PRTR":{"detail_table_rows.jsonl":"detail_table_rows"},
+    "CHEM_STATS":{"detail_table_rows.jsonl":"detail_table_rows"},
+    "CLEANSYS_AIR":{"annual_rows.jsonl":"annual_rows"},
+    "SOOSIRO_WATER":{"annual_rows.jsonl":"annual_rows","daily_rows.jsonl":"daily_rows"},
+}
+
 
 def read_json(p):
     return json.loads(Path(p).read_text(encoding="utf-8"))
@@ -21,6 +31,13 @@ def sha256(p):
     with open(p,"rb") as f:
         for b in iter(lambda:f.read(1024*1024),b""): h.update(b)
     return h.hexdigest()
+
+
+def declared_empty_row_stream(source,path,status_payload):
+    counter=DECLARED_ROW_STREAM_COUNTS.get(source,{}).get(Path(path).name)
+    if not counter: return False
+    try: return int(status_payload.get(counter,-1))==0
+    except (TypeError,ValueError): return False
 
 
 def good_icis(root):
@@ -97,7 +114,8 @@ def validate(root):
         if s=="CHEM_STATS" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
         zero=[]
         for p in (root/s).rglob("*"):
-            if p.is_file() and p.stat().st_size==0: zero.append(str(p.relative_to(root)))
+            if p.is_file() and p.stat().st_size==0 and not declared_empty_row_stream(s,p,st):
+                zero.append(str(p.relative_to(root)))
         if zero: checks.append("zero_byte_artifact")
         if checks: ok=False; review.append({"source":s,"issues":checks,"zero_byte":zero})
         normalized_years=years_from_source(root,s)
