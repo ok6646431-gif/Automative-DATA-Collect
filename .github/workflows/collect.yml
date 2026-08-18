@@ -46,6 +46,8 @@ jobs:
   icis_attempt_1:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      gate_outcome: ${{ steps.icis_gate.outcome }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -68,14 +70,18 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: ICIS gate
+        id: icis_gate
+        continue-on-error: true
         if: always()
         run: python collectors/icis_gate.py
 
   icis_attempt_2:
     needs: icis_attempt_1
-    if: ${{ always() && needs.icis_attempt_1.result == 'failure' }}
+    if: ${{ always() && needs.icis_attempt_1.outputs.gate_outcome == 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      gate_outcome: ${{ steps.icis_gate.outcome }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -98,14 +104,18 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: ICIS gate
+        id: icis_gate
+        continue-on-error: true
         if: always()
         run: python collectors/icis_gate.py
 
   icis_attempt_3:
     needs: icis_attempt_2
-    if: ${{ always() && needs.icis_attempt_2.result == 'failure' }}
+    if: ${{ always() && needs.icis_attempt_2.outputs.gate_outcome == 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      gate_outcome: ${{ steps.icis_gate.outcome }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -128,6 +138,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
       - name: ICIS gate
+        id: icis_gate
+        continue-on-error: true
         if: always()
         run: python collectors/icis_gate.py
 
