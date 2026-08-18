@@ -80,7 +80,9 @@ def validate(root):
     for s in SOURCES:
         sp=root/s/"status.json"
         if not sp.exists():
-            results[s]={"status":"MISSING_STATUS"}; ok=False; continue
+            results[s]={"status":"MISSING_STATUS","years":[],"checks":["missing_status"]}; ok=False
+            review.append({"source":s,"issues":["missing_status"],"zero_byte":[]})
+            continue
         st=read_json(sp); status=st.get("status")
         checks=[]
         if status in BAD: checks.append("terminal_failure")
@@ -92,7 +94,9 @@ def validate(root):
             if p.is_file() and p.stat().st_size==0: zero.append(str(p.relative_to(root)))
         if zero: checks.append("zero_byte_artifact")
         if checks: ok=False; review.append({"source":s,"issues":checks,"zero_byte":zero})
-        results[s]={"status":status,"years":years_from_source(root,s),"checks":checks,**{k:v for k,v in st.items() if k not in {"status"}}}
+        normalized_years=years_from_source(root,s)
+        status_payload={k:v for k,v in st.items() if k not in {"status","years","checks"}}
+        results[s]={"status":status,"years":normalized_years,"checks":checks,**status_payload}
     return ok,results,review
 
 
@@ -123,7 +127,8 @@ def main():
         w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(idx)
     with (out/"Coverage_Matrix.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","status","years","checks"]); w.writeheader()
-        for s,r in statuses.items(): w.writerow({"source":s,"status":r.get("status"),"years":"|".join(r.get("years",[])),"checks":"|".join(r.get("checks",[]))})
+        for s,r in statuses.items():
+            w.writerow({"source":s,"status":r.get("status"),"years":"|".join(str(x) for x in r.get("years",[])),"checks":"|".join(str(x) for x in r.get("checks",[]))})
     print(json.dumps({"validation":"PASS" if ok else "REVIEW_REQUIRED","selected_icis_attempt":str(chosen) if chosen else None,"artifacts":len(idx)},ensure_ascii=False))
     raise SystemExit(0 if ok else 81)
 
