@@ -9,7 +9,7 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,21 +28,25 @@ jobs:
       - name: Run parser regression tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Discover ENV-INFO request format
+      - name: Collect ENV-INFO
         continue-on-error: true
-        run: python collectors/envinfo_discover.py requests/current.json
+        run: python collectors/envinfo_collect.py requests/current.json
 
-      - name: Collect SOOSIRO proof
+      - name: Collect SOOSIRO
         continue-on-error: true
         run: python collectors/soosiro_collect.py requests/current.json
 
-      - name: Collect CleanSYS proof
+      - name: Collect CleanSYS
         continue-on-error: true
         run: python collectors/cleansys_collect.py requests/current.json
 
-      - name: Collect PRTR proof
+      - name: Collect PRTR
         continue-on-error: true
         run: python collectors/prtr_collect.py requests/current.json
+
+      - name: Collect Chemical Statistics
+        continue-on-error: true
+        run: python collectors/chem_stats_collect.py requests/current.json
 
       - name: Upload raw and parsed artifact
         if: always()
