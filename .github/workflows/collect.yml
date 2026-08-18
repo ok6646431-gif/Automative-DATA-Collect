@@ -31,7 +31,20 @@ jobs:
       - name: Run parser regression tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Collect PRTR
+      - name: Capture ENV-INFO discovery structure
+        continue-on-error: true
+        run: python collectors/envinfo_probe.py
+
+      - name: Collect SOOSIRO proof
+        continue-on-error: true
+        run: python collectors/soosiro_collect.py requests/current.json
+
+      - name: Collect CleanSYS proof
+        continue-on-error: true
+        run: python collectors/cleansys_collect.py requests/current.json
+
+      - name: Collect PRTR proof
+        continue-on-error: true
         run: python collectors/prtr_collect.py requests/current.json
 
       - name: Upload raw and parsed artifact
