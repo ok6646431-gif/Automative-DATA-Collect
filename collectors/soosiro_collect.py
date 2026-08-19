@@ -1,4 +1,4 @@
-import json, re, sys
+import json, re, sys, time
 from pathlib import Path
 
 import requests
@@ -9,6 +9,34 @@ FACTS=BASE+"/open/web/annual/factListJson"
 DAILY=BASE+"/open/web/daily/listJson"
 UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36"
 QUARTERS=["1분기","2분기","3분기","4분기"]
+TRANSIENT_STATUSES={408,429,500,502,503,504}
+
+def _post(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20):
+    """POST with bounded retry for transient transport/server failures only."""
+    last=None
+    for attempt in range(1, attempts+1):
+        try:
+            r=requests.post(url,data=data,headers=headers,timeout=(connect_timeout,read_timeout))
+            if r.status_code in TRANSIENT_STATUSES and attempt < attempts:
+                time.sleep(attempt)
+                continue
+            r.raise_for_status()
+            return r
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last=e
+            if attempt >= attempts:
+                raise
+            time.sleep(attempt)
+        except requests.HTTPError as e:
+            last=e
+            status=getattr(e.response,"status_code",None)
+            if status in TRANSIENT_STATUSES and attempt < attempts:
+                time.sleep(attempt)
+                continue
+            raise
+    if last:
+        raise last
+    raise RuntimeError("SOOSIRO request failed without response")
 
 def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8")); cfg=req.get("sources",{}).get("SOOSIRO_WATER",{})
@@ -20,12 +48,12 @@ def main(req_path):
     status={"source_key":"SOOSIRO_WATER","status":"RUNNING","annual_years":years,"daily_years":daily_years,"terms":terms,"requests":0,"errors":0}
     dedup={}; candidates={}
     try:
-        rf=requests.post(FACTS,data={"pDoCode":""},headers=headers,timeout=(5,15)); rf.raise_for_status(); (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
+        rf=_post(FACTS,data={"pDoCode":""},headers=headers); (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
         for y in years:
             for term in cfg.get("search_terms_by_year",{}).get(str(y),terms):
                 status["requests"]+=1
                 try:
-                    r=requests.post(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":"","pSearchWord":term},headers=headers,timeout=(5,15)); r.raise_for_status()
+                    r=_post(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":"","pSearchWord":term},headers=headers)
                     fn=re.sub(r"[^0-9A-Za-z가-힣]+","_",term).strip("_"); (raw/f"{y}_{fn}.json").write_text(r.text,encoding="utf-8")
                     obj=r.json(); rows=obj.get("list",[]) if isinstance(obj,dict) else []
                     for row in rows:
@@ -48,7 +76,8 @@ def main(req_path):
                     for q in QUARTERS:
                         status["requests"]+=1
                         try:
-                            r=requests.post(DAILY,data={"pSYear":str(y),"pQuarter":q,"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=dheaders,timeout=(5,15)); r.raise_for_status(); daily_success+=1
+                            r=_post(DAILY,data={"pSYear":str(y),"pQuarter":q,"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=dheaders)
+                            daily_success+=1
                             (draw/f"{y}_{fc}_{q}.json").write_text(r.text,encoding="utf-8")
                             obj=r.json(); rows=obj.get("list",[]) if isinstance(obj,dict) else []
                             for row in rows:
