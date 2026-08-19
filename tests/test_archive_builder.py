@@ -13,15 +13,21 @@ def write_csv(path, rows):
 
 
 class ArchiveBuilderTests(unittest.TestCase):
-    def test_builds_human_facing_structure_and_indexes_documents(self):
+    def test_builds_v2_user_and_system_layers(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
-            (root/"Company_Profile.json").write_text(json.dumps({"company_id":"COMP1","company_display_name":"테스트화학"},ensure_ascii=False),encoding="utf-8")
+            profile={
+                "company_id":"COMP1","company_display_name":"테스트화학",
+                "site_candidates":[{"site_name_raw":"테스트공장","identity_status":"CONFIRMED","verification_state":"VERIFIED"}]
+            }
+            (root/"Company_Profile.json").write_text(json.dumps(profile,ensure_ascii=False),encoding="utf-8")
             (root/"Integration_Summary.json").write_text(json.dumps({"company_id":"COMP1"}),encoding="utf-8")
             for name in ["Master_Manifest.json","REVIEW_REQUIRED.json"]:
                 (root/name).write_text("{}" if name.endswith("Manifest.json") else "[]",encoding="utf-8")
+            write_csv(root/"Validation_Queue.csv",[])
             write_csv(root/"Coverage_Status.csv",[{"source_key":"ENVINFO","coverage_status":"MEETS_MINIMUM","collected_start":"2020","collected_end":"2024","next_action":""}])
             write_csv(root/"Source_Identity.csv",[{"source_key":"ENVINFO","source_site_id":"C1","match_status":"CONFIRMED","canonical_site_id":"SITE1"}])
+
             env=root/"output"/"ENVINFO"; (env/"raw_attachments"/"2024"/"C1").mkdir(parents=True)
             att=env/"raw_attachments"/"2024"/"C1"/"조직도.png"; att.write_bytes(b"PNGDATA")
             write_csv(env/"attachment_index.csv",[{
@@ -30,9 +36,13 @@ class ArchiveBuilderTests(unittest.TestCase):
                 "document_category":"ORGANIZATION_ROLE","collection_status":"DOWNLOADED","error":""
             }])
             write_csv(env/"discovery.csv",[{"year":"2024","compId":"C1","compNm":"테스트공장"}])
-            (env/"raw_detail").mkdir(); (env/"raw_detail"/"2024_C1_테스트공장.html").write_text("<html>detail</html>",encoding="utf-8")
-            for source in ["PRTR","CHEM_STATS","CLEANSYS_AIR","SOOSIRO_WATER"]:
-                p=root/"output"/source; p.mkdir(parents=True); (p/"status.json").write_text("{}",encoding="utf-8")
+            (env/"raw_detail").mkdir(); (env/"raw_detail"/"2024_C1_테스트공장.html").write_text("<html><body>detail</body></html>",encoding="utf-8")
+
+            clean=root/"output"/"CLEANSYS_AIR"; clean.mkdir(parents=True); (clean/"annual_rows.jsonl").write_text("",encoding="utf-8"); (clean/"candidates.json").write_text("[]",encoding="utf-8")
+            water=root/"output"/"SOOSIRO_WATER"; water.mkdir(parents=True); (water/"annual_rows.jsonl").write_text("",encoding="utf-8"); (water/"daily_rows.jsonl").write_text("",encoding="utf-8"); (water/"fact_candidates.json").write_text("[]",encoding="utf-8")
+            prtr=root/"output"/"PRTR"; prtr.mkdir(parents=True); write_csv(prtr/"discovery.csv",[]); (prtr/"detail_table_rows.jsonl").write_text("",encoding="utf-8")
+            chem=root/"output"/"CHEM_STATS"; chem.mkdir(parents=True); write_csv(chem/"discovery.csv",[]); (chem/"detail_table_rows.jsonl").write_text("",encoding="utf-8")
+
             docs=root/"output"/"CORP_DOCS"; (docs/"raw_documents"/"SUSTAINABILITY_REPORT"/"2024").mkdir(parents=True)
             pdf=docs/"raw_documents"/"SUSTAINABILITY_REPORT"/"2024"/"D1_report.pdf"; pdf.write_bytes(b"%PDF-test")
             write_csv(docs/"document_index.csv",[{
@@ -40,15 +50,19 @@ class ArchiveBuilderTests(unittest.TestCase):
                 "coverage_start":"2024-01-01","coverage_end":"2024-12-31","publication_date":"2025-06-01","original_filename":"report.pdf","stored_path":str(pdf.relative_to(root)),
                 "source_locator":"https://official.example/report.pdf","retrieved_at":"2025-06-02T00:00:00Z","bytes":str(pdf.stat().st_size),"sha256":"dummy2","content_type":"application/pdf","verification_status":"VERIFIED","collection_status":"DOWNLOADED","notes":""
             }])
+
             summary=build_archive(root)
             archive=root/"Human_Archive"/"테스트화학_환경자료"
-            self.assertTrue((archive/"03_환경정보공개시스템"/"테스트공장"/"2024"/"ORGANIZATION_ROLE"/"조직도.png").exists())
-            self.assertFalse((archive/"03_환경정보공개시스템"/"원본"/"raw_attachments").exists())
-            self.assertTrue((archive/"04_지속가능경영보고서"/"2024"/"report.pdf").exists())
-            self.assertTrue((archive/"00_자료목록"/"Document_Index.csv").exists())
-            self.assertTrue((archive/"00_자료목록"/"핵심자료_목록.csv").exists())
+            self.assertTrue((archive/"01_사용자자료"/"03_환경정보공개시스템"/"테스트공장"/"첨부자료"/"2024_조직도.png").exists())
+            self.assertTrue((archive/"90_시스템원본"/"ENVINFO"/"raw_detail"/"2024_C1_테스트공장.html").exists())
+            self.assertTrue((archive/"01_사용자자료"/"04_지속가능경영보고서"/"테스트화학_지속가능경영보고서_2024.pdf").exists())
+            self.assertFalse((archive/"01_사용자자료"/"04_지속가능경영보고서"/"2024").exists())
+            self.assertTrue((archive/"01_사용자자료"/"01_TMS"/"대기_CleanSYS"/"CleanSYS_대기TMS_정리.xlsx").exists())
+            self.assertTrue((archive/"00_자료목록"/"전체자료목록.xlsx").exists())
+            self.assertTrue((archive/"00_자료목록"/"확인필요_REVIEW_REQUIRED.xlsx").exists())
             self.assertTrue((root/"Human_Archive.zip").exists())
-            self.assertEqual(summary["downloaded_documents"],2)
+            self.assertEqual(summary["schema_version"],"2.0")
+            self.assertEqual(summary["downloaded_documents"],1)
 
 
 if __name__=="__main__": unittest.main()
