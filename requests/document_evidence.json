@@ -1,124 +1,103 @@
 {
   "schema_version": "1.0",
-  "request_id": "lgensol-blind-archive-20260819-v1",
+  "request_id": "sec-ds-archive-20260819-v1",
   "discovery_status": "PARTIAL",
   "documents": [
     {
-      "document_id": "LGENSOL_ESG_2025",
+      "document_id": "SEC_SUSTAINABILITY_2026",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 LG에너지솔루션 ESG Report",
-      "report_year": 2025,
-      "source_url": "https://www.lgensol.com/upload/file/download/LG_Energy_Solution_2025_ESG_Report_KR%5B0%5D.pdf",
-      "source_locator": "https://www.lgensol.com/kr/esg/report-performance",
+      "title": "Samsung Electronics Sustainability Report 2026",
+      "report_year": 2026,
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_ENG.pdf",
+      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official LG Energy Solution ESG report archive Korean PDF."
+      "notes": "Official Samsung Semiconductor sustainability-report archive; report includes DX/DS organizational and environmental disclosure context."
     },
     {
-      "document_id": "LGENSOL_ESG_2024",
+      "document_id": "SEC_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 LG에너지솔루션 ESG Report",
+      "title": "Samsung Electronics Sustainability Report 2025",
+      "report_year": 2025,
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2025_ENG.pdf",
+      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SEC_SUSTAINABILITY_2024",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "Samsung Electronics Sustainability Report 2024",
       "report_year": 2024,
-      "source_url": "https://www.lgensol.com/upload/file/download/LG_Energy_Solution_2024_ESG_Report_KR.pdf",
-      "source_locator": "https://www.lgensol.com/kr/esg/report-performance",
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2024_ENG.pdf",
+      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "LGENSOL_ESG_2023",
+      "document_id": "SEC_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 LG에너지솔루션 ESG Report",
+      "title": "Samsung Electronics Sustainability Report 2023",
       "report_year": 2023,
-      "source_url": "https://www.lgensol.com/upload/file/sustainability/LG_Energy_Solution_2023_ESG_Report_KOR_FFF.pdf",
-      "source_locator": "https://www.lgensol.com/kr/esg/report-performance",
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2023_ENG.pdf",
+      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official report states quantitative data are disclosed from 2021 after the corporate spin-off."
+      "importance": "SUPPORTING"
     },
     {
-      "document_id": "LGENSOL_ESG_2022",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 LG에너지솔루션 ESG Report",
-      "report_year": 2022,
-      "source_url": "https://www.lgensol.com/upload/file/sustainability/2022_LGES_ESG_Report_KOR_FF.pdf",
-      "source_locator": "https://www.lgensol.com/kr/esg/report-performance",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "LGENSOL_ESG_2021",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 LG에너지솔루션 ESG Report",
-      "report_year": 2021,
-      "source_url": "https://www.lgensol.com/upload/file/sustainability/2021_LGES_ESG_Report_KOR.pdf",
-      "source_locator": "https://www.lgensol.com/kr/esg/report-performance",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "LGENSOL_BUSINESS_REPORT_2025",
-      "document_type": "BUSINESS_REPORT",
-      "title": "2025 LG에너지솔루션 사업보고서",
+      "document_id": "SEC_BUSINESS_REPORT_2025",
+      "document_type": "ANNUAL_REPORT",
+      "title": "삼성전자 2025 사업보고서 공시 페이지",
       "report_year": 2025,
-      "publication_date": "2026-03-12",
-      "source_url": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf",
-      "source_locator": "https://www.lgensol.com/kr/investors/data-business-report",
-      "expected_extension": "pdf",
+      "publication_date": "2026-03-10",
+      "source_url": "https://www.samsung.com/sec/ir/reports-disclosures/public-disclosure/3753/",
+      "source_locator": "https://www.samsung.com/sec/ir/reports-disclosures/public-disclosure/3753/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SEC_ENV_STRATEGY",
+      "document_type": "ENVIRONMENTAL_POLICY",
+      "title": "삼성전자 환경경영전략",
+      "source_url": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
+      "source_locator": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SEC_FACTS_FIGURES",
+      "document_type": "ENVIRONMENTAL_DISCLOSURE",
+      "title": "삼성전자 Sustainability Facts & Figures",
+      "source_url": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
+      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official business report is the primary corporate identity, spin-off and domestic-site evidence source for this blind test."
+      "notes": "Official quantitative sustainability disclosure page; useful for DS-vs-DX comparison context."
     },
     {
-      "document_id": "LGENSOL_ENV_MANAGEMENT",
-      "document_type": "ENVIRONMENT_POLICY",
-      "title": "LG에너지솔루션 환경경영",
-      "source_url": "https://www.lgensol.com/kr/esg/environment-management",
-      "source_locator": "https://www.lgensol.com/kr/esg/environment-management",
+      "document_id": "SEC_DS_LOCATIONS",
+      "document_type": "OTHER_OFFICIAL_DOCUMENT",
+      "title": "Samsung Semiconductor Korea Locations",
+      "source_url": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "notes": "Official location evidence for Giheung, Hwaseong, Pyeongtaek, Cheonan and Onyang DS scope."
     },
     {
-      "document_id": "LGENSOL_CLIMATE_ACTION",
-      "document_type": "ENVIRONMENT_STRATEGY",
-      "title": "LG에너지솔루션 기후행동",
-      "source_url": "https://www.lgensol.com/kr/esg/environment-climate-action",
-      "source_locator": "https://www.lgensol.com/kr/esg/environment-climate-action",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "LGENSOL_CIRCULAR_RESOURCES",
-      "document_type": "ENVIRONMENT_STRATEGY",
-      "title": "LG에너지솔루션 자원선순환",
-      "source_url": "https://www.lgensol.com/kr/esg/environment-resources",
-      "source_locator": "https://www.lgensol.com/kr/esg/environment-resources",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "LGENSOL_ENV_IMPACT_MANAGEMENT",
-      "document_type": "ENVIRONMENT_POLICY",
-      "title": "LG에너지솔루션 환경영향 관리",
-      "source_url": "https://www.lgensol.com/kr/esg/environment-impact-management",
-      "source_locator": "https://www.lgensol.com/kr/esg/environment-impact-management",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "LGENSOL_DOMESTIC_NETWORK",
-      "document_type": "SITE_NETWORK_INDEX",
-      "title": "LG에너지솔루션 사업장",
-      "source_url": "https://www.lgensol.com/kr/company/network-all",
-      "source_locator": "https://www.lgensol.com/kr/company/network-all",
+      "document_id": "SEC_DS_BUSINESS",
+      "document_type": "OTHER_OFFICIAL_DOCUMENT",
+      "title": "삼성전자 사업영역 Device Solutions",
+      "source_url": "https://www.samsung.com/sec/ir/ir-resources/ourbusiness/",
+      "source_locator": "https://www.samsung.com/sec/ir/ir-resources/ourbusiness/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING"
@@ -126,16 +105,10 @@
   ],
   "gaps": [
     {
-      "gap_id": "PRE_SPINOFF_2020_ESG_REPORT_NOT_USED_FOR_CURRENT_ENTITY_TREND",
-      "source_key": "LGENSOL_ESG_REPORT_ARCHIVE",
-      "severity": "MEDIUM",
-      "reason": "The official archive also lists a 2020 report, but the company was established on 2020-12-01 and the 2023 report explicitly describes post-spin-off quantitative disclosure from 2021. The 2020 report is therefore not used as current-entity trend evidence without a separate lineage review."
-    },
-    {
-      "gap_id": "OTHER_OFFICIAL_POLICY_FILES_NOT_EXHAUSTIVE",
-      "source_key": "LGENSOL_OFFICIAL_SITE",
+      "gap_id": "DS_SITE_POLICY_FILES_NOT_EXHAUSTIVE",
+      "source_key": "SAMSUNG_OFFICIAL",
       "severity": "LOW",
-      "reason": "Core environmental strategy pages and reports are collected, but this blind acceptance run does not claim exhaustive capture of every corporate policy/certificate file."
+      "reason": "This acquisition run collects core corporate reports, quantitative disclosure, environmental strategy and DS location evidence. It does not claim exhaustive capture of every site-specific certificate, policy or internal procedure."
     }
   ]
 }
