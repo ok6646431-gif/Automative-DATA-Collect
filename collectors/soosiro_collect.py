@@ -3,6 +3,11 @@ from pathlib import Path
 
 import requests
 
+try:
+    from .name_filter import matching_exclusion
+except ImportError:
+    from name_filter import matching_exclusion
+
 BASE="https://www.soosiro.or.kr"
 ANNUAL=BASE+"/open/web/annual/listJson"
 FACTS=BASE+"/open/web/annual/factListJson"
@@ -41,12 +46,13 @@ def _post(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20)
 def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8")); cfg=req.get("sources",{}).get("SOOSIRO_WATER",{})
     terms=cfg.get("search_terms") or [cfg.get("search_term",req.get("company_display_name",""))]
+    exclude_terms=cfg.get("exclude_terms",[])
     years=[int(x) for x in cfg.get("annual_years",[cfg.get("proof_year",2025)])]
     daily_years=[int(x) for x in cfg.get("daily_years",[])]
     out=Path("output/SOOSIRO_WATER"); raw=out/"raw_annual"; draw=out/"raw_daily"; raw.mkdir(parents=True,exist_ok=True); draw.mkdir(parents=True,exist_ok=True)
     headers={"User-Agent":UA,"Referer":BASE+"/open/web/annual?pMENU_NO=410","Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","Accept":"application/json,text/plain,*/*"}
     status={"source_key":"SOOSIRO_WATER","status":"RUNNING","annual_years":years,"daily_years":daily_years,"terms":terms,"requests":0,"errors":0}
-    dedup={}; candidates={}
+    dedup={}; candidates={}; excluded_rows=[]
     try:
         rf=_post(FACTS,data={"pDoCode":""},headers=headers); (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
         for y in years:
@@ -57,6 +63,11 @@ def main(req_path):
                     fn=re.sub(r"[^0-9A-Za-z가-힣]+","_",term).strip("_"); (raw/f"{y}_{fn}.json").write_text(r.text,encoding="utf-8")
                     obj=r.json(); rows=obj.get("list",[]) if isinstance(obj,dict) else []
                     for row in rows:
+                        source_name=" ".join(str(row.get(k) or "") for k in ("FACT_NAME","FACT_FNAME"))
+                        exclusion=matching_exclusion(source_name,exclude_terms)
+                        if exclusion:
+                            excluded_rows.append({"query_year":y,"search_term":term,"excluded_by":exclusion,**row})
+                            continue
                         fc=str(row.get("FACT_CODE","")); wn=str(row.get("WAST_NO","")); key=(str(row.get("YEAR",y)),fc,wn)
                         if key not in dedup: z=dict(row); z["search_terms_hit"]=term; dedup[key]=z
                         elif term not in dedup[key]["search_terms_hit"].split("|"): dedup[key]["search_terms_hit"]+="|"+term
@@ -66,6 +77,8 @@ def main(req_path):
         annual_rows=list(dedup.values())
         with (out/"annual_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in annual_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
+        with (out/"excluded_rows.jsonl").open("w",encoding="utf-8") as f:
+            for row in excluded_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
         (out/"fact_candidates.json").write_text(json.dumps(list(candidates.values()),ensure_ascii=False,indent=2),encoding="utf-8")
 
         daily_rows=[]; daily_success=0
@@ -86,8 +99,8 @@ def main(req_path):
                             status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DAILY\t{y}\t{fc}\t{q}\t{type(e).__name__}\t{e}\n")
         with (out/"daily_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in daily_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
-        status.update({"status":"DATA_FOUND" if annual_rows else "NO_MATCH","annual_rows":len(annual_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
-    except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
+        status.update({"status":"DATA_FOUND" if annual_rows else "NO_MATCH","annual_rows":len(annual_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
+    except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows)})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"]!="REQUEST_OR_PARSE_FAILED" else 31
 
