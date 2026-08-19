@@ -15,7 +15,7 @@ class EnvInfoAttachmentTests(unittest.TestCase):
             <tr><td>첨부파일</td><td><a href="javascript:downloadFile('FILE001','pdf');">녹색경영 전담조직 및 업무·역할·권한.pdf</a></td></tr>
             </tbody></table>
             <table><tbody><tr><td>규격 이행준수 및 효율적 운영여부 점검</td></tr>
-            <tr><td>첨부파일</td><td><a href="javascript:downloadFile('FILE002','pptx');">환경안전보건 경영시스템 내부심사 결과 보고서.pptx</a></td></tr>
+            <tr><td>첨부파일</td><td><a href="javascript:downloadFile('FILE002','PPTX');">환경안전보건 경영시스템 내부심사 결과 보고서.PPTX</a></td></tr>
             </tbody></table>
           </div>
         </body></html>
@@ -28,15 +28,17 @@ class EnvInfoAttachmentTests(unittest.TestCase):
         self.assertEqual(rows[0]["importance"], "CORE")
         self.assertEqual(rows[1]["document_category"], "INTERNAL_AUDIT")
         self.assertEqual(rows[1]["file_id"], "FILE002")
+        self.assertEqual(rows[1]["file_ext"], "PPTX")
 
     def test_duplicate_same_file_reference_is_deduped(self):
         html = '''<div id="inquiry04"><table><tbody>
-        <tr><td><a href="javascript:downloadFile('F1','png');">비상대응 조직도.png</a></td></tr>
-        <tr><td><a href="javascript:downloadFile('F1','png');">비상대응 조직도.png</a></td></tr>
+        <tr><td><a href="javascript:downloadFile('F1','PNG');">비상대응 조직도.PNG</a></td></tr>
+        <tr><td><a href="javascript:downloadFile('F1','PNG');">비상대응 조직도.PNG</a></td></tr>
         </tbody></table></div>'''
         rows = extract_attachments(html, 2024, "C1", "공장")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["document_category"], "ORGANIZATION_ROLE")
+        self.assertEqual(rows[0]["file_ext"], "PNG")
 
     def test_evidence_only_precedes_generic_chemical_keyword(self):
         category, importance = classify_attachment("유해화학물질 관리자 워크숍 서명지.pdf")
