@@ -44,25 +44,45 @@ def classify_text(text):
     text=str(text or "").lower()
     if any(k in text for k in ["수료증","서명지","참석자","참석 명단"]):
         return "CERTIFICATION_EVIDENCE","EVIDENCE_ONLY"
-    if any(k in text for k in ["내부심사","내부 심사","자체점검","점검보고","감사 결과"]):
-        return "INTERNAL_AUDIT","CORE"
+    # A true organization chart or explicit roles/responsibilities document remains an
+    # organization artifact even when it describes an emergency-response organization.
     if any(k in text for k in ["조직도","전담조직","업무.역할.권한","업무·역할·권한","업무 역할 권한","업무분장","책임과 권한"]):
         return "ORGANIZATION_ROLE","CORE"
-    if any(k in text for k in ["비상대응","사고대응","대응체계","비상사태","유누출","유·누출","누출 대응"]):
+    # Specific operational/emergency signals outrank broad ENV-INFO section labels such
+    # as '전담조직·교육훈련·내부심사 등'.
+    if any(k in text for k in ["비상대응","비상 대응","비상상황","비상 상황","사고대응","사고 대응","대응체계","대응 체계","비상사태","유누출","유·누출","누출 대응","소방훈련","소방 훈련","비상훈련","비상 훈련"]):
         return "EMERGENCY_RESPONSE","CORE"
-    if any(k in text for k in ["환경목표","환경 목표","환경방침","환경 방침","환경경영시스템","환경경영 시스템","환경안전보건방침","녹색경영 목표","녹색경영 비전","녹색경영 전략","목표관리"]):
-        return "ENV_POLICY_GOAL","CORE"
+    # Chemical-specific training/management is more informative than the generic section
+    # heading that may also contain the word '내부심사'.
     if any(k in text for k in ["유해화학물질","화학물질관리","화학물질 관리","msds"]):
         return "CHEMICAL_MANAGEMENT","SUPPORTING"
+    if any(k in text for k in ["내부심사","내부 심사","자체점검","점검보고","감사 결과"]):
+        return "INTERNAL_AUDIT","CORE"
+    if any(k in text for k in ["환경목표","환경 목표","환경방침","환경 방침","환경경영시스템","환경경영 시스템","환경안전보건방침","녹색경영 목표","녹색경영 비전","녹색경영 전략","목표관리"]):
+        return "ENV_POLICY_GOAL","CORE"
     if any(k in text for k in ["교육","워크숍","훈련"]):
         return "EDUCATION_TRAINING","SUPPORTING"
     return None
 
+def attachment_filename_semantic_text(filename):
+    text=str(filename or "")
+    # Some ENV-INFO filenames prepend the disclosure-section label itself, e.g.
+    # '(전담조직 교육훈련 내부심사 등)_유해화학물질 종사자교육.jpg'.  Strip only that
+    # generic parenthetical prefix so the actual document subject drives classification.
+    text=re.sub(
+        r"^\s*[\(\[](?=[^\)\]]*(?:전담조직|교육훈련|내부심사))[^\)\]]*[\)\]]\s*[_\-–—]*\s*",
+        "",text,flags=re.I
+    )
+    return text or str(filename or "")
+
 def classify_attachment(filename,context="",section_title=""):
-    # File names are the strongest classification signal. Section/context is fallback only.
-    for text in [filename, f"{section_title} {context}"]:
-        result=classify_text(text)
-        if result: return result
+    # File names are the strongest classification signal. Remove only known generic
+    # disclosure-prefix text, then fall back to full section/context when the filename
+    # itself has no useful semantic signal.
+    result=classify_text(attachment_filename_semantic_text(filename))
+    if result: return result
+    result=classify_text(f"{section_title} {context}")
+    if result: return result
     return "OTHER_ENVINFO_EVIDENCE","SUPPORTING"
 
 def section_titles(soup):
