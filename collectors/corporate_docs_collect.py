@@ -1,4 +1,4 @@
-import argparse, csv, hashlib, json, mimetypes, re, sys
+import argparse, csv, hashlib, json, mimetypes, re, sys, time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -11,6 +11,7 @@ BLOCKED_EXTENSIONS = {"exe", "msi", "bat", "cmd", "ps1", "sh", "scr", "com", "dl
 ALLOWED_EXTENSIONS = {"pdf", "html", "htm", "txt", "csv", "png", "jpg", "jpeg", "gif", "webp", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx"}
 MAX_FILE_BYTES = 100 * 1024 * 1024
 MAX_TOTAL_BYTES = 500 * 1024 * 1024
+DOWNLOAD_ATTEMPTS = 3
 FIELDS = [
     "document_id", "company_id", "canonical_site_id", "site_name_raw", "source_key", "document_type",
     "document_category", "importance", "title", "report_year", "coverage_start", "coverage_end",
@@ -92,6 +93,89 @@ def write_index(path, rows):
         w.writeheader(); w.writerows(rows)
 
 
+def is_http_url(value):
+    try:
+        return urlparse(str(value or "")).scheme in {"http", "https"}
+    except Exception:
+        return False
+
+
+def validate_payload(expected_ext, content_type, path):
+    """Reject obvious error/login HTML masquerading as declared binary documents."""
+    expected = str(expected_ext or "").lower().lstrip(".")
+    ctype = str(content_type or "").split(";")[0].strip().lower()
+    with Path(path).open("rb") as f:
+        head = f.read(4096).lstrip()
+    head_lower = head.lower()
+    looks_html = (
+        ctype in {"text/html", "application/xhtml+xml"}
+        or head_lower.startswith(b"<!doctype html")
+        or head_lower.startswith(b"<html")
+        or b"<html" in head_lower[:512]
+    )
+    if expected == "pdf":
+        if looks_html or not head.startswith(b"%PDF-"):
+            raise ValueError(f"expected PDF payload but received content_type={ctype or 'unknown'}")
+    elif expected in {"html", "htm"}:
+        if not looks_html:
+            raise ValueError(f"expected HTML payload but received content_type={ctype or 'unknown'}")
+    elif expected in {"png", "jpg", "jpeg", "gif", "webp"} and looks_html:
+        raise ValueError(f"expected image payload but received HTML content_type={ctype or 'unknown'}")
+    elif expected in {"doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx"} and looks_html:
+        raise ValueError(f"expected office-document payload but received HTML content_type={ctype or 'unknown'}")
+
+
+def preflight(session, doc, source_url):
+    """Visit a verified source page first when it is a distinct HTTP locator.
+
+    Some institutional download endpoints require cookies and/or a Referer established
+    by the public source page. Preflight failure is non-fatal; the download itself is
+    still attempted and independently validated.
+    """
+    locator = str(doc.get("source_locator") or "")
+    if not is_http_url(locator) or locator == source_url:
+        return {}
+    try:
+        with session.get(locator, timeout=(8, 30), allow_redirects=True) as r:
+            r.raise_for_status()
+            return {"Referer": r.url}
+    except Exception:
+        return {"Referer": locator}
+
+
+def download_one(session, doc, target, total_bytes):
+    url = str(doc.get("source_url") or "")
+    headers = preflight(session, doc, url)
+    last_exc = None
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with session.get(url, stream=True, timeout=(8, 60), allow_redirects=True, headers=headers) as r:
+                r.raise_for_status()
+                length = int(r.headers.get("Content-Length") or 0)
+                if length and length > MAX_FILE_BYTES:
+                    raise ValueError(f"declared file size exceeds {MAX_FILE_BYTES} bytes")
+                count = 0
+                with target.open("wb") as f:
+                    for chunk in r.iter_content(1024 * 1024):
+                        if not chunk:
+                            continue
+                        count += len(chunk)
+                        if count > MAX_FILE_BYTES or total_bytes + count > MAX_TOTAL_BYTES:
+                            raise ValueError("document collection size safety limit exceeded")
+                        f.write(chunk)
+                if count == 0:
+                    raise ValueError("zero-byte document response")
+                ctype = str(r.headers.get("Content-Type") or "").split(";")[0]
+                validate_payload(doc.get("expected_extension"), ctype, target)
+                return r, count, ctype
+        except Exception as exc:
+            last_exc = exc
+            target.unlink(missing_ok=True)
+            if attempt < DOWNLOAD_ATTEMPTS:
+                time.sleep(0.5 * attempt)
+    raise last_exc
+
+
 def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
     out = Path(out_dir); raw = out / "raw_documents"; raw.mkdir(parents=True, exist_ok=True)
     profile = read_json(profile_path, {}) or {}; company_id = str(profile.get("company_id") or "")
@@ -120,36 +204,33 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
         if verification not in STRONG_VERIFICATION:
             skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_UNVERIFIED", "Only VERIFIED/SOURCE_VERIFIED document evidence is downloaded.")); continue
         url = str(doc.get("source_url") or "")
-        if urlparse(url).scheme not in {"http", "https"}:
+        if not is_http_url(url):
             skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_UNSAFE_URL", "Only http/https document locators are allowed.")); continue
         try:
-            with session.get(url, stream=True, timeout=(8, 60), allow_redirects=True) as r:
-                r.raise_for_status()
-                length = int(r.headers.get("Content-Length") or 0)
-                if length and length > MAX_FILE_BYTES:
-                    raise ValueError(f"declared file size exceeds {MAX_FILE_BYTES} bytes")
-                name = remote_filename(doc, r); ext = infer_extension(doc, r, name)
-                if ext in BLOCKED_EXTENSIONS or (ext and ext not in ALLOWED_EXTENSIONS):
-                    skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", f"extension={ext or 'unknown'}")); continue
-                if not Path(name).suffix and ext:
-                    name += "." + ext
-                year = safe(doc.get("report_year") or "UNDATED"); dtype = safe(doc.get("document_type") or "OTHER_OFFICIAL_DOCUMENT")
-                target_dir = raw / dtype / year; target_dir.mkdir(parents=True, exist_ok=True)
-                target = target_dir / f"{safe(doc.get('document_id'))}_{safe(name)}"
-                count = 0
-                with target.open("wb") as f:
-                    for chunk in r.iter_content(1024 * 1024):
-                        if not chunk: continue
-                        count += len(chunk); total_bytes += len(chunk)
-                        if count > MAX_FILE_BYTES or total_bytes > MAX_TOTAL_BYTES:
-                            raise ValueError("document collection size safety limit exceeded")
-                        f.write(chunk)
-                if count == 0:
-                    raise ValueError("zero-byte document response")
-                ctype = str(r.headers.get("Content-Type") or "").split(";")[0]
-                row = blank_row(doc, company_id, "DOWNLOADED")
-                row.update({"original_filename": name, "stored_path": str(target), "retrieved_at": datetime.now(timezone.utc).isoformat(), "bytes": count, "sha256": sha256(target), "content_type": ctype})
-                rows.append(row); downloaded += 1
+            # Filename/type decisions are made from evidence first; the response is
+            # validated after download so a server-side HTML error page can never be
+            # accepted merely because the URL or expected extension says '.pdf'.
+            expected = str(doc.get("expected_extension") or "").lower().lstrip(".")
+            if expected in BLOCKED_EXTENSIONS or (expected and expected not in ALLOWED_EXTENSIONS):
+                skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", f"extension={expected or 'unknown'}")); continue
+            year = safe(doc.get("report_year") or "UNDATED"); dtype = safe(doc.get("document_type") or "OTHER_OFFICIAL_DOCUMENT")
+            target_dir = raw / dtype / year; target_dir.mkdir(parents=True, exist_ok=True)
+            provisional_name = safe(doc.get("title") or doc.get("document_id") or "document") + (("." + expected) if expected else "")
+            provisional_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(provisional_name)}"
+            r, count, ctype = download_one(session, doc, provisional_target, total_bytes)
+            name = remote_filename(doc, r); ext = infer_extension(doc, r, name)
+            if ext in BLOCKED_EXTENSIONS or (ext and ext not in ALLOWED_EXTENSIONS):
+                provisional_target.unlink(missing_ok=True)
+                skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", f"extension={ext or 'unknown'}")); continue
+            if not Path(name).suffix and ext:
+                name += "." + ext
+            final_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(name)}"
+            if final_target != provisional_target:
+                provisional_target.replace(final_target)
+            total_bytes += count
+            row = blank_row(doc, company_id, "DOWNLOADED")
+            row.update({"original_filename": name, "stored_path": str(final_target), "retrieved_at": datetime.now(timezone.utc).isoformat(), "bytes": count, "sha256": sha256(final_target), "content_type": ctype})
+            rows.append(row); downloaded += 1
         except Exception as exc:
             failed += 1; rows.append(blank_row(doc, company_id, "DOWNLOAD_FAILED", f"{type(exc).__name__}: {exc}"))
     declared = len(evidence.get("documents", []) or [])
