@@ -69,12 +69,34 @@ def unique_copy(src,directory,name=None):
         n+=1
 
 
-def canonical_envinfo_map(package_root):
+def envinfo_identity_map(package_root):
+    """Return source-site identity decisions for ENV-INFO.
+
+    Raw source evidence is always retained, but human-facing promoted files must not
+    silently mix a source identity that post-processing explicitly rejected as a
+    related entity into the target company's normal site folders.
+    """
     out={}
     for row in read_csv(Path(package_root)/"Source_Identity.csv"):
-        if row.get("source_key")=="ENVINFO" and row.get("match_status")=="CONFIRMED":
-            out[str(row.get("source_site_id") or "")]=str(row.get("canonical_site_id") or "")
+        if row.get("source_key")!="ENVINFO":
+            continue
+        source_id=str(row.get("source_site_id") or "")
+        if not source_id:
+            continue
+        out[source_id]={
+            "match_status":str(row.get("match_status") or ""),
+            "canonical_site_id":str(row.get("canonical_site_id") or ""),
+            "basis":str(row.get("basis") or row.get("match_basis") or ""),
+        }
     return out
+
+
+def canonical_envinfo_map(package_root):
+    return {
+        source_id: decision.get("canonical_site_id","")
+        for source_id,decision in envinfo_identity_map(package_root).items()
+        if decision.get("match_status")=="CONFIRMED"
+    }
 
 
 def copytree_filtered(src,dst,ignore_names=None):
@@ -93,32 +115,50 @@ def source_raw_copy(package_root,archive_root):
         dst=archive_root/folder/"원본"
         if source=="ENVINFO":
             # Attachments are placed once in meaningful site/year/category folders below.
-            # Keep ENV-INFO search/detail/index/status raw files here, but do not duplicate raw_attachments.
+            # Search/detail/index/status raw files remain intact as audit evidence, including
+            # rows later rejected as related entities by Identity Resolution.
             copytree_filtered(src,dst,{"raw_attachments"})
         else:
             copytree_filtered(src,dst)
 
 
+def envinfo_promoted_directory(archive_root,identity_status,site,year,category=None):
+    base=archive_root/"03_환경정보공개시스템"
+    if identity_status=="REJECTED":
+        base=base/"99_관계사_제외자료"
+    path=base/site/year
+    return path/category if category else path
+
+
 def archive_envinfo(package_root,archive_root,company_id):
-    package_root=Path(package_root); env=package_root/"output"/"ENVINFO"; rows=[]; cmap=canonical_envinfo_map(package_root)
+    package_root=Path(package_root); env=package_root/"output"/"ENVINFO"; rows=[]
+    identity=envinfo_identity_map(package_root)
     for att in read_csv(env/"attachment_index.csv"):
         src=package_root/str(att.get("stored_path") or "")
-        site=safe(att.get("compNm") or att.get("compId") or "미상사업장"); year=safe(att.get("year") or "연도미상")
+        source_site_id=str(att.get("compId") or "")
+        decision=identity.get(source_site_id,{})
+        identity_status=str(decision.get("match_status") or "UNRESOLVED")
+        canonical_site_id=str(decision.get("canonical_site_id") or "") if identity_status=="CONFIRMED" else ""
+        site=safe(att.get("compNm") or source_site_id or "미상사업장"); year=safe(att.get("year") or "연도미상")
         category=safe(att.get("document_category") or "기타")
         archive_path=""
         if att.get("collection_status")=="DOWNLOADED" and src.exists():
-            copied=unique_copy(src,archive_root/"03_환경정보공개시스템"/site/year/category,att.get("original_filename") or src.name)
+            directory=envinfo_promoted_directory(archive_root,identity_status,site,year,category)
+            copied=unique_copy(src,directory,att.get("original_filename") or src.name)
             archive_path=str(copied.relative_to(archive_root))
+        identity_note=f"identity_status={identity_status}"
+        if decision.get("basis"):
+            identity_note+=f"; identity_basis={decision.get('basis')}"
         rows.append({
             "document_id":f"ENVINFO_{att.get('year')}_{att.get('compId')}_{att.get('file_id')}","company_id":company_id,
-            "canonical_site_id":cmap.get(str(att.get("compId") or ""),""),"site_name_raw":att.get("compNm","") ,
+            "canonical_site_id":canonical_site_id,"site_name_raw":att.get("compNm","") ,
             "source_key":"ENVINFO_ATTACHMENT","document_type":"ENVINFO_ATTACHMENT","document_category":att.get("document_category","") ,
             "importance":att.get("importance","UNCLASSIFIED"),"title":att.get("original_filename","") ,"report_year":att.get("year","") ,
             "coverage_start":"","coverage_end":"","publication_date":"","original_filename":att.get("original_filename","") ,
             "archive_path":archive_path,"source_locator":f"https://www.env-info.kr/user/register/viewUserSearch2.do?YEAR={att.get('year','')}&COMP_ID={att.get('compId','')}&OPEN_YN=Y#file_id={att.get('file_id','')}",
             "retrieved_at":"","bytes":att.get("bytes","") ,"sha256":att.get("sha256","") ,"content_type":att.get("content_type","") ,
             "verification_status":"SOURCE_NATIVE","collection_status":att.get("collection_status","") ,
-            "notes":f"section={att.get('section_title','')}; {att.get('error','')}".strip("; ")
+            "notes":f"{identity_note}; section={att.get('section_title','')}; {att.get('error','')}".strip("; ")
         })
     discovery=read_csv(env/"discovery.csv")
     detail_dir=env/"raw_detail"
@@ -126,7 +166,10 @@ def archive_envinfo(package_root,archive_root,company_id):
         year=str(d.get("year") or ""); comp=str(d.get("compId") or ""); site=safe(d.get("compNm") or comp)
         matches=list(detail_dir.glob(f"{year}_{safe(comp)}_*.html")) if detail_dir.exists() else []
         if matches:
-            unique_copy(matches[0],archive_root/"03_환경정보공개시스템"/site/safe(year or "연도미상"),"상세페이지.html")
+            decision=identity.get(comp,{})
+            identity_status=str(decision.get("match_status") or "UNRESOLVED")
+            directory=envinfo_promoted_directory(archive_root,identity_status,site,safe(year or "연도미상"))
+            unique_copy(matches[0],directory,"상세페이지.html")
     return rows
 
 
@@ -194,13 +237,15 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     documents=[]; documents.extend(archive_envinfo(package_root,archive_root,company_id)); documents.extend(archive_corporate_docs(package_root,archive_root,contract,company_id))
     copy_index_files(package_root,archive_root)
     write_csv(archive_root/"00_자료목록"/"Document_Index.csv",documents,DOCUMENT_FIELDS)
-    core_rows=[d for d in documents if d.get("importance")=="CORE"]
+    core_rows=[d for d in documents if d.get("importance")=="CORE" and "identity_status=REJECTED" not in str(d.get("notes") or "")]
     write_csv(archive_root/"00_자료목록"/"핵심자료_목록.csv",core_rows,DOCUMENT_FIELDS)
     coverage=archive_coverage(package_root,documents); write_csv(archive_root/"00_자료목록"/"Source_Coverage.csv",coverage,COVERAGE_FIELDS)
+    quarantined=sum(1 for d in documents if "identity_status=REJECTED" in str(d.get("notes") or ""))
     manifest={
         "schema_version":"1.0","company_id":company_id,"company_display_name":company_name,"created_at":datetime.now(timezone.utc).isoformat(),
         "archive_root":archive_root.name,"document_rows":len(documents),"downloaded_documents":sum(1 for d in documents if d.get("collection_status")=="DOWNLOADED"),
-        "core_documents":sum(1 for d in documents if d.get("importance")=="CORE" and d.get("collection_status")=="DOWNLOADED"),
+        "core_documents":sum(1 for d in core_rows if d.get("collection_status")=="DOWNLOADED"),
+        "quarantined_related_entity_documents":quarantined,
         "coverage_rows":len(coverage),"principles":contract.get("principles",[])
     }
     (archive_root/"00_자료목록"/"Archive_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
