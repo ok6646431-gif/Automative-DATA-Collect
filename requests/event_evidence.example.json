@@ -1,5 +1,6 @@
 {
   "schema_version": "1.0",
+  "request_id": "same-request-id-as-company-discovery",
   "discovery_status": "PARTIAL",
   "events": [
     {
