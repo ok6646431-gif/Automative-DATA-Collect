@@ -11,14 +11,16 @@ ROOT_ARTIFACTS=[
     "Coverage_Event_Links.csv","Analysis_Ready_Index.csv"
 ]
 
-# Canonical row-stream files are legitimately zero bytes when their collector status
-# explicitly reports zero rows. This is different from an empty raw response, status
-# file, or other artifact, which must still fail structural validation.
+# Canonical row-stream files and explicit audit row streams are legitimately zero
+# bytes when their collector status explicitly reports zero rows. This is different
+# from an empty raw response, status file, or other artifact, which must still fail
+# structural validation.
 DECLARED_ROW_STREAM_COUNTS={
-    "PRTR":{"detail_table_rows.jsonl":"detail_table_rows"},
-    "CHEM_STATS":{"detail_table_rows.jsonl":"detail_table_rows"},
+    "ENVINFO":{"excluded_rows.jsonl":"excluded_rows"},
+    "PRTR":{"detail_table_rows.jsonl":"detail_table_rows","excluded_rows.jsonl":"excluded_rows"},
+    "CHEM_STATS":{"detail_table_rows.jsonl":"detail_table_rows","excluded_rows.jsonl":"excluded_rows"},
     "CLEANSYS_AIR":{"annual_rows.jsonl":"annual_rows"},
-    "SOOSIRO_WATER":{"annual_rows.jsonl":"annual_rows","daily_rows.jsonl":"daily_rows"},
+    "SOOSIRO_WATER":{"annual_rows.jsonl":"annual_rows","daily_rows.jsonl":"daily_rows","excluded_rows.jsonl":"excluded_rows"},
 }
 
 

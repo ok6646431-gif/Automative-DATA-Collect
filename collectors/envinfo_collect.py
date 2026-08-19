@@ -4,6 +4,11 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
+try:
+    from .name_filter import matching_exclusion
+except ImportError:
+    from name_filter import matching_exclusion
+
 BASE="https://www.env-info.kr"
 SEARCH_PAGE=BASE+"/member/open/companyTotalInfoSearch.do"
 SEARCH=BASE+"/member/open/retrieveDoc.do"
@@ -154,12 +159,13 @@ def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8")); cfg=req.get("sources",{}).get("ENVINFO",{})
     y1=int(cfg.get("start_year",cfg.get("proof_year",2024))); y2=int(cfg.get("end_year",cfg.get("proof_year",2024)))
     terms=cfg.get("search_terms") or [cfg.get("search_term",req.get("company_display_name",""))]
+    exclude_terms=cfg.get("exclude_terms",[])
     page_size=int(cfg.get("page_size",200)); collect_details=bool(cfg.get("collect_details",True)); max_details=int(cfg.get("max_details",30)); collect_attachments=bool(cfg.get("collect_attachments",True))
     out=Path("output/ENVINFO"); raw=out/"raw_search"; details=out/"raw_detail"; attachments_root=out/"raw_attachments"
     raw.mkdir(parents=True,exist_ok=True); details.mkdir(parents=True,exist_ok=True); attachments_root.mkdir(parents=True,exist_ok=True)
     s=requests.Session(); s.headers.update({"User-Agent":UA})
     status={"source_key":"ENVINFO","status":"RUNNING","year_start":y1,"year_end":y2,"terms":terms,"requests":0,"errors":0}
-    dedup={}; attachment_rows=[]; attachment_ok=attachment_fail=0; attachment_bytes=0
+    dedup={}; excluded_rows=[]; attachment_rows=[]; attachment_ok=attachment_fail=0; attachment_bytes=0
     try:
         p=s.get(SEARCH_PAGE,timeout=(5,12)); p.raise_for_status(); (out/"search_page_raw.html").write_text(p.text,encoding="utf-8")
         term_map=cfg.get("search_terms_by_year",{})
@@ -174,6 +180,10 @@ def main(req_path):
                 if total is None:
                     tr=d.get("totalRows",[len(rows)]); total=int(tr[0]) if isinstance(tr,list) and tr else len(rows)
                 for row in rows:
+                    exclusion=matching_exclusion(row.get("compNm",""),exclude_terms)
+                    if exclusion:
+                        excluded_rows.append({"query_start":query_start,"query_end":query_end,"search_term":term,"excluded_by":exclusion,**row})
+                        continue
                     key=(str(row.get("year","")),str(row.get("compId","")))
                     if key not in dedup:
                         row["search_terms_hit"]=term; dedup[key]=row
@@ -188,6 +198,8 @@ def main(req_path):
                 w=csv.DictWriter(f,fieldnames=all_keys); w.writeheader(); w.writerows(rows)
             with (out/"discovery.jsonl").open("w",encoding="utf-8") as f:
                 for r in rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
+        with (out/"excluded_rows.jsonl").open("w",encoding="utf-8") as f:
+            for r in excluded_rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
         detail_ok=0; detail_fail=0
         if collect_details:
             for row in rows[:max_details]:
@@ -212,10 +224,10 @@ def main(req_path):
                     (out/"errors.log").open("a",encoding="utf-8").write(f"DETAIL\t{year}\t{comp}\t{e}\n")
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
         write_attachment_index(out,attachment_rows)
-        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"unique_comp_ids":len({r.get('compId') for r in rows}),"detail_ok":detail_ok,"detail_fail":detail_fail,"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
+        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"excluded_rows":len(excluded_rows),"unique_comp_ids":len({r.get('compId') for r in rows}),"detail_ok":detail_ok,"detail_fail":detail_fail,"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
     except Exception as e:
         write_attachment_index(out,attachment_rows)
-        status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
+        status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows),"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"]!="REQUEST_OR_PARSE_FAILED" else 61
 

@@ -39,37 +39,41 @@ def terms_by_year(profile, years, include_predecessor=True):
 def build(profile):
     plan=profile["source_plan"]
     company=profile["company_display_name"]
-    req={"request_id":profile["request_id"],"company_display_name":company,"profile_version":profile.get("profile_version","1.0"),"sources":{}}
+    # These names have already passed the Discovery compiler's VERIFIED gate.
+    # Collectors use them only to reject known separate legal entities; they are
+    # not fuzzy identity rules and never create canonical site mappings.
+    exclusions=list(profile.get("related_entity_exclusions",[]) or [])
+    req={"request_id":profile["request_id"],"company_display_name":company,"profile_version":profile.get("profile_version","1.0"),"related_entity_exclusions":exclusions,"sources":{}}
 
     p=plan["ENVINFO"]; s=int(p["start_year"]); e=int(p["end_year"])
     terms=[]
     for a in aliases_for(profile,s,e):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"page_size":int(p.get("page_size",200)),"collect_details":True,"collect_attachments":bool(p.get("collect_attachments",True)),"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
+    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"exclude_terms":exclusions,"page_size":int(p.get("page_size",200)),"collect_details":True,"collect_attachments":bool(p.get("collect_attachments",True)),"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
 
     p=plan["PRTR"]; s=int(p["start_year"]); e=int(p["end_year"]); specs=[]
     for a in aliases_for(profile,s,e):
         ys=max(s,int(a.get("year_start",s))); ye=min(e,year_end_value(a.get("year_end","auto"),e))
         specs.append({"term":a["term"],"year_start":ys,"year_end":ye})
-    req["sources"]["PRTR"]={"start_year":s,"end_year":e,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True,"search_terms":specs,"site_address_anchors":profile.get("site_address_anchors",{})}
+    req["sources"]["PRTR"]={"start_year":s,"end_year":e,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True,"search_terms":specs,"exclude_terms":exclusions,"site_address_anchors":profile.get("site_address_anchors",{})}
 
     p=plan["CHEM_STATS"]; years=[int(x) for x in p["years"]]; s=min(years); e=max(years)
     terms=[]
     for a in aliases_for(profile,s,e):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["CHEM_STATS"]={"years":years,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,years),"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True}
+    req["sources"]["CHEM_STATS"]={"years":years,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,years),"exclude_terms":exclusions,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True}
 
     p=plan["CLEANSYS_AIR"]; s=int(p["start_year"]); e=int(p["end_year"])
     terms=[]
     for a in aliases_for(profile,s,e,include_predecessor=False):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"start_year":s,"end_year":e}
+    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"exclude_terms":exclusions,"start_year":s,"end_year":e}
 
     p=plan["SOOSIRO_WATER"]; annual=[int(x) for x in p["annual_years"]]; daily=[int(x) for x in p.get("daily_years",[])]
     s=min(annual); e=max(annual); terms=[]
     for a in aliases_for(profile,s,e,include_predecessor=False):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"annual_years":annual,"daily_years":daily}
+    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"exclude_terms":exclusions,"annual_years":annual,"daily_years":daily}
     return req
 
 
