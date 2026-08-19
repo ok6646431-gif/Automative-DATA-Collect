@@ -12,8 +12,7 @@
       "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Samsung Semiconductor sustainability-report archive; report includes DX/DS organizational and environmental disclosure context."
+      "importance": "CORE"
     },
     {
       "document_id": "SEC_SUSTAINABILITY_2025",
@@ -46,7 +45,7 @@
       "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "CORE"
     },
     {
       "document_id": "SEC_SUSTAINABILITY_2022",
@@ -57,8 +56,7 @@
       "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Samsung Semiconductor archive Korean PDF."
+      "importance": "CORE"
     },
     {
       "document_id": "SEC_SUSTAINABILITY_2021",
@@ -69,8 +67,70 @@
       "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SEC_DS_ERU_026",
+      "document_type": "CHEMICAL_POLICY",
+      "title": "DS 제품환경 관리물질 운영규칙 DS-ERU-026 Ver 3.0",
+      "report_year": 2025,
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/DS-ERU-026_ver3.0_KR.pdf",
+      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official Samsung Semiconductor archive download target (images.samsung.com), used to avoid samsung.com 403 on direct collector access."
+      "notes": "Official DS environmental substance operating rule."
+    },
+    {
+      "document_id": "SEC_DS_EHS_POLICY",
+      "document_type": "SHE_POLICY",
+      "title": "삼성전자 DS 환경안전보건 경영방침",
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/Environmental_Health_and_Safety_Management_Policy_KR.pdf",
+      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SEC_REGULATED_SUBSTANCES",
+      "document_type": "CHEMICAL_POLICY",
+      "title": "삼성전자 규제물질 목록",
+      "source_url": "https://images.samsung.com/kdp/aboutsamsung/overview/List_of_Regulated_Substances.pdf",
+      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "SEC_ISO_14001",
+      "document_type": "CERTIFICATION",
+      "title": "삼성전자 DS ISO 14001 인증서",
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/ISO_14001.pdf",
+      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "SEMICONDUCTOR_KBREF",
+      "document_type": "BAT_REFERENCE",
+      "title": "반도체 제조업 최적가용기법 기준서 K-BREF",
+      "report_year": 2020,
+      "source_url": "https://ieps.nier.go.kr/jfile/readDownloadFile.do?fileId=16f6514268697&fileSeq=2&uploadMode=db&useSecurity=",
+      "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SEMICONDUCTOR_SCOPE3_GUIDE",
+      "document_type": "GUIDELINE",
+      "title": "반도체 업종을 위한 스코프3 배출량 산정 안내서",
+      "source_url": "https://me.go.kr/home/file/readDownloadFile.do?fileId=294426&fileSeq=1",
+      "source_locator": "https://me.go.kr/home/web/policy_data/read.do?menuId=10260&seq=8433",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "SUPPORTING"
     },
     {
       "document_id": "SEC_BUSINESS_REPORT_2025",
@@ -92,7 +152,7 @@
       "source_locator": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "SUPPORTING"
     },
     {
       "document_id": "SEC_FACTS_FIGURES",
@@ -102,8 +162,7 @@
       "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official quantitative sustainability disclosure page; useful for DS-vs-DX comparison context."
+      "importance": "SUPPORTING"
     },
     {
       "document_id": "SEC_DS_LOCATIONS",
@@ -113,26 +172,21 @@
       "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official location evidence for Giheung, Hwaseong, Pyeongtaek, Cheonan and Onyang DS scope."
-    },
-    {
-      "document_id": "SEC_DS_BUSINESS",
-      "document_type": "OTHER_OFFICIAL_DOCUMENT",
-      "title": "삼성전자 사업영역 Device Solutions",
-      "source_url": "https://www.samsung.com/sec/ir/ir-resources/ourbusiness/",
-      "source_locator": "https://www.samsung.com/sec/ir/ir-resources/ourbusiness/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "CORE"
     }
   ],
   "gaps": [
     {
-      "gap_id": "DS_SITE_POLICY_FILES_NOT_EXHAUSTIVE",
+      "gap_id": "PUBLIC_POLICY_SET_NOT_EXHAUSTIVE",
       "source_key": "SAMSUNG_OFFICIAL",
       "severity": "LOW",
-      "reason": "This acquisition run collects core corporate reports, quantitative disclosure, environmental strategy and DS location evidence. It does not claim exhaustive capture of every site-specific certificate, policy or internal procedure."
+      "reason": "Archive v2 includes core DS chemical/EHS rules and representative certification, but does not claim exhaustive capture of every publicly listed Samsung policy or certificate."
+    },
+    {
+      "gap_id": "NONPUBLIC_INTERNAL_SOP_NOT_COLLECTABLE",
+      "source_key": "SAMSUNG_INTERNAL",
+      "severity": "LOW",
+      "reason": "Non-public internal procedures are outside public-source collection scope and must not be inferred from absence."
     }
   ]
 }
