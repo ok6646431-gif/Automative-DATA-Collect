@@ -5,6 +5,7 @@ on:
     paths:
       - 'requests/company_discovery.json'
       - 'requests/event_evidence.json'
+      - 'requests/document_evidence.json'
       - 'requests/company_profile.json'
       - 'requests/run_token.txt'
       - 'orchestrator/**'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'requests/company_discovery.json'
       - 'requests/event_evidence.json'
+      - 'requests/document_evidence.json'
       - 'requests/run_token.txt'
   workflow_dispatch:
 
@@ -26,7 +28,7 @@ permissions:
 jobs:
   stable_sources:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -51,6 +53,9 @@ jobs:
       - name: Collect CleanSYS
         continue-on-error: true
         run: python collectors/cleansys_collect.py requests/current.generated.json
+      - name: Collect corporate documents
+        continue-on-error: true
+        run: python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
       - name: Upload stable sources
         if: always()
         uses: actions/upload-artifact@v4
@@ -179,7 +184,7 @@ jobs:
     needs: [stable_sources, icis_attempt_1, icis_attempt_2, icis_attempt_3]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -218,6 +223,12 @@ jobs:
           if [ -f requests/runtime/Company_Discovery_Summary.json ]; then
             cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
           fi
+      - name: Build human-facing archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
       - name: Upload final orchestrated package
         id: final_upload
         if: always()
