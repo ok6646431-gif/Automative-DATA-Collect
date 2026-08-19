@@ -4,6 +4,11 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
+try:
+    from .name_filter import matching_exclusion
+except ImportError:
+    from name_filter import matching_exclusion
+
 BASE="https://icis.mcee.go.kr"
 DISCOVERY=BASE+"/iprtr/cdrInfoDetailListJson.do"
 DETAIL=BASE+"/iprtr/cdrInfoView.do"
@@ -19,6 +24,10 @@ def walk(obj):
 
 def safe(x): return re.sub(r"[^0-9A-Za-z가-힣._-]+","_",str(x)).strip("_")
 
+def field_ci(row,name,default=""):
+    target=name.lower()
+    return next((v for k,v in row.items() if str(k).lower()==target),default)
+
 def detail_params(year,bid,term=""):
     return {"searchAdres1Text":"","streNo":"","searchMttrWord":"","searchYear":str(year),"searchCategory":"","searchAdres2":"","bplcNm":term,"irsttList":"","pageNo":"1","bplcId":str(bid),"indutyCode2":"","indutyCode3":"","searchAdres2Text":"","mttrGroup":"","indutyCode4":""}
 
@@ -32,10 +41,10 @@ def generic_tables(html,year,bid):
 
 def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8")); cfg=req.get("sources",{}).get("CHEM_STATS",{})
-    years=[int(x) for x in cfg.get("years",[2024])]; terms=cfg.get("search_terms") or [req.get("company_display_name","")]; max_pages=int(cfg.get("max_pages",10))
+    years=[int(x) for x in cfg.get("years",[2024])]; terms=cfg.get("search_terms") or [req.get("company_display_name","")]; max_pages=int(cfg.get("max_pages",10)); exclude_terms=cfg.get("exclude_terms",[])
     out=Path("output/CHEM_STATS"); raw=out/"raw_discovery"; details=out/"raw_detail"; raw.mkdir(parents=True,exist_ok=True); details.mkdir(parents=True,exist_ok=True)
     s=requests.Session(); s.headers.update({"User-Agent":UA,"X-Requested-With":"XMLHttpRequest","Accept":"application/json,text/javascript,*/*;q=0.01","Referer":BASE+"/pageLink.do"})
-    status={"source_key":"CHEM_STATS","status":"RUNNING","requests":0,"errors":0,"years":years,"terms":terms}; dedup={}; successful=0
+    status={"source_key":"CHEM_STATS","status":"RUNNING","requests":0,"errors":0,"years":years,"terms":terms}; dedup={}; successful=0; excluded_rows=[]
     try:
         try:
             p=s.post(DISCOVERY,data={"searchYear":str(max(years)),"bplcNm":terms[0],"pageNo":"1"},timeout=(8,20)); p.raise_for_status()
@@ -56,8 +65,12 @@ def main(req_path):
                     if not rows: break
                     new=0
                     for row in rows:
-                        bid=next((v for k,v in row.items() if str(k).lower()=="bplcid"),None)
+                        bid=field_ci(row,"bplcid",None)
                         if not bid: continue
+                        exclusion=matching_exclusion(field_ci(row,"bplcnm",""),exclude_terms)
+                        if exclusion:
+                            excluded_rows.append({"search_year":y,"search_term":term,"excluded_by":exclusion,**row})
+                            continue
                         key=(y,str(bid))
                         if key not in dedup: dedup[key]={"search_year":y,**row,"search_terms_hit":term}; new+=1
                         elif term not in str(dedup[key].get("search_terms_hit","")).split("|"): dedup[key]["search_terms_hit"]+="|"+term
@@ -69,10 +82,12 @@ def main(req_path):
             with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f: w=csv.DictWriter(f,fieldnames=keys,extrasaction="ignore"); w.writeheader(); w.writerows(rows)
             with (out/"discovery.jsonl").open("w",encoding="utf-8") as f:
                 for r in rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
+        with (out/"excluded_rows.jsonl").open("w",encoding="utf-8") as f:
+            for row in excluded_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
         detail_ok=0; detail_fail=0; table_rows=[]
         if cfg.get("collect_details",True):
             for row in rows:
-                y=row["search_year"]; bid=next((v for k,v in row.items() if str(k).lower()=="bplcid"),None); term=str(row.get("search_terms_hit","")).split("|")[0]
+                y=row["search_year"]; bid=field_ci(row,"bplcid",None); term=str(row.get("search_terms_hit","")).split("|")[0]
                 try:
                     status["requests"]+=1
                     d=s.get(DETAIL,params=detail_params(y,bid,term),headers={"Referer":BASE+"/pageLink.do"},timeout=(8,25)); d.raise_for_status()
@@ -85,8 +100,8 @@ def main(req_path):
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
         with (out/"detail_table_rows.jsonl").open("w",encoding="utf-8") as f:
             for r in table_rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
-        ids={next((v for k,v in r.items() if str(k).lower()=="bplcid"),None) for r in rows}
-        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"successful_responses":successful,"unique_bplc_ids":len(ids),"detail_ok":detail_ok,"detail_fail":detail_fail,"detail_table_rows":len(table_rows)})
+        ids={field_ci(r,"bplcid",None) for r in rows}
+        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"successful_responses":successful,"excluded_rows":len(excluded_rows),"unique_bplc_ids":len(ids),"detail_ok":detail_ok,"detail_fail":detail_fail,"detail_table_rows":len(table_rows)})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","REMOTE_HOST_UNREACHABLE"} else (72 if status["status"]=="REMOTE_HOST_UNREACHABLE" else 71)
