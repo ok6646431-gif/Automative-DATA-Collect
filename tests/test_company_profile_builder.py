@@ -30,6 +30,19 @@ class TestCompanyProfileBuilder(unittest.TestCase):
         self.assertEqual(request["company_display_name"], "현재산업 주식회사")
         self.assertEqual(summary["review_required_count"], 0)
 
+    def test_current_legal_name_active_period_bounds_search(self):
+        data = discovery()
+        data["current_legal_name_active_period"] = {"start_year": 2012, "end_year": None}
+        data["collection_policy"]["sources"]["PRTR"] = {
+            "available_history": {"start_year": 2001, "end_year": 2024}, "prefer_full_history": True}
+        profile, summary = compile_discovery(data)
+        legal = next(x for x in profile["aliases"] if x["term"] == "현재산업 주식회사")
+        self.assertEqual((legal["year_start"], legal["year_end"]), (2012, "auto"))
+        spec = next(x for x in build(profile)["sources"]["PRTR"]["search_terms"]
+                    if x["term"] == "현재산업 주식회사")
+        self.assertEqual((spec["year_start"], spec["year_end"]), (2012, 2024))
+        self.assertEqual(summary["current_name_active_period"], {"start_year": 2012, "end_year": None})
+
     def test_historical_name_is_bounded(self):
         data = discovery()
         data["historical_legal_names"] = [{"name": "과거산업", "alias_type": "former_legal_name",
