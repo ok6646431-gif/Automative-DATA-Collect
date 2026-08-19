@@ -79,7 +79,9 @@ def extract_attachments(html,year,comp_id,comp_name):
         href=str(a.get("href") or "")
         m=re.search(r"downloadFile\(\s*['\"]([^'\"]+)['\"]\s*,\s*['\"]([^'\"]*)['\"]\s*\)",href)
         if not m: continue
-        file_id,file_ext=m.group(1),m.group(2).lower().lstrip(".")
+        # FILE_EXT is part of the source-native download key. Preserve its exact case
+        # for the POST request; only normalize case when evaluating file semantics.
+        file_id,file_ext=m.group(1),m.group(2).lstrip(".")
         original=" ".join(a.stripped_strings).strip() or f"{file_id}.{file_ext or 'bin'}"
         key=(file_id,original)
         if key in seen: continue
@@ -129,7 +131,7 @@ def download_attachment(session,row,root,total_bytes,max_attempts=2):
                     f.write(chunk)
             if count==0: raise ValueError("zero-byte attachment")
             ctype=str(r.headers.get("Content-Type") or "").split(";")[0].lower()
-            if row["file_ext"] not in {"html","htm"} and ctype.startswith("text/html"):
+            if str(row["file_ext"]).lower() not in {"html","htm"} and ctype.startswith("text/html"):
                 raise ValueError("attachment endpoint returned HTML instead of file")
             row.update({"stored_path":str(target),"bytes":count,"sha256":sha256(target),"content_type":ctype,"collection_status":"DOWNLOADED","error":""})
             return True,total_bytes,attempts
