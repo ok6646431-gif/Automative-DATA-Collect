@@ -77,14 +77,26 @@ def canonical_envinfo_map(package_root):
     return out
 
 
+def copytree_filtered(src,dst,ignore_names=None):
+    ignore_names=set(ignore_names or [])
+    if dst.exists(): shutil.rmtree(dst)
+    def ignore(directory,names):
+        return [name for name in names if name in ignore_names]
+    shutil.copytree(src,dst,ignore=ignore)
+
+
 def source_raw_copy(package_root,archive_root):
     package_root=Path(package_root); output=package_root/"output"
     for source,folder in CORE_SOURCE_FOLDERS.items():
         src=output/source
         if not src.exists(): continue
         dst=archive_root/folder/"원본"
-        if dst.exists(): shutil.rmtree(dst)
-        shutil.copytree(src,dst)
+        if source=="ENVINFO":
+            # Attachments are placed once in meaningful site/year/category folders below.
+            # Keep ENV-INFO search/detail/index/status raw files here, but do not duplicate raw_attachments.
+            copytree_filtered(src,dst,{"raw_attachments"})
+        else:
+            copytree_filtered(src,dst)
 
 
 def archive_envinfo(package_root,archive_root,company_id):
@@ -92,13 +104,11 @@ def archive_envinfo(package_root,archive_root,company_id):
     for att in read_csv(env/"attachment_index.csv"):
         src=package_root/str(att.get("stored_path") or "")
         site=safe(att.get("compNm") or att.get("compId") or "미상사업장"); year=safe(att.get("year") or "연도미상")
+        category=safe(att.get("document_category") or "기타")
         archive_path=""
         if att.get("collection_status")=="DOWNLOADED" and src.exists():
-            copied=unique_copy(src,archive_root/"03_환경정보공개시스템"/site/year/"첨부파일",att.get("original_filename") or src.name)
+            copied=unique_copy(src,archive_root/"03_환경정보공개시스템"/site/year/category,att.get("original_filename") or src.name)
             archive_path=str(copied.relative_to(archive_root))
-            if att.get("importance")=="CORE":
-                core_name=f"{site}_{year}_{att.get('original_filename') or src.name}"
-                unique_copy(src,archive_root/"03_환경정보공개시스템"/"핵심자료"/safe(att.get("document_category") or "기타"),core_name)
         rows.append({
             "document_id":f"ENVINFO_{att.get('year')}_{att.get('compId')}_{att.get('file_id')}","company_id":company_id,
             "canonical_site_id":cmap.get(str(att.get("compId") or ""),""),"site_name_raw":att.get("compNm","") ,
@@ -175,7 +185,7 @@ def archive_file_index(archive_root):
 
 
 def build_archive(package_root,contract_path=CONTRACT_PATH):
-    package_root=Path(package_root); contract=read_json(contract_path,{}) or {}; profile=read_json(package_root/"Company_Profile.json",{}) or {}
+    package_root=Path(package_root).resolve(); contract=read_json(contract_path,{}) or {}; profile=read_json(package_root/"Company_Profile.json",{}) or {}
     company_name=str(profile.get("company_display_name") or profile.get("company_input") or "기업"); company_id=str(profile.get("company_id") or (read_json(package_root/"Integration_Summary.json",{}) or {}).get("company_id") or "")
     base=package_root/"Human_Archive"; archive_root=base/(safe(company_name)+"_환경자료")
     if base.exists(): shutil.rmtree(base)
@@ -184,6 +194,8 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     documents=[]; documents.extend(archive_envinfo(package_root,archive_root,company_id)); documents.extend(archive_corporate_docs(package_root,archive_root,contract,company_id))
     copy_index_files(package_root,archive_root)
     write_csv(archive_root/"00_자료목록"/"Document_Index.csv",documents,DOCUMENT_FIELDS)
+    core_rows=[d for d in documents if d.get("importance")=="CORE"]
+    write_csv(archive_root/"00_자료목록"/"핵심자료_목록.csv",core_rows,DOCUMENT_FIELDS)
     coverage=archive_coverage(package_root,documents); write_csv(archive_root/"00_자료목록"/"Source_Coverage.csv",coverage,COVERAGE_FIELDS)
     manifest={
         "schema_version":"1.0","company_id":company_id,"company_display_name":company_name,"created_at":datetime.now(timezone.utc).isoformat(),
@@ -194,7 +206,7 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     (archive_root/"00_자료목록"/"Archive_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     file_rows=archive_file_index(archive_root); write_csv(archive_root/"00_자료목록"/"Archive_File_Index.csv",file_rows,["path","bytes","sha256"])
     zip_base=package_root/"Human_Archive"
-    zip_path=Path(shutil.make_archive(str(zip_base),"zip",root_dir=base,base_dir=archive_root.name))
+    zip_path=Path(shutil.make_archive(str(zip_base),"zip",root_dir=base,base_dir=archive_root.name)).resolve()
     summary={**manifest,"archive_files":len(file_rows),"zip_path":str(zip_path.relative_to(package_root)),"zip_bytes":zip_path.stat().st_size,"zip_sha256":sha256(zip_path)}
     (package_root/"Archive_Summary.json").write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding="utf-8")
     return summary
