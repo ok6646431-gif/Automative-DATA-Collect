@@ -4,11 +4,19 @@ on:
   pull_request:
     paths:
       - 'requests/company_discovery.json'
+      - 'requests/event_evidence.json'
       - 'requests/company_profile.json'
       - 'requests/run_token.txt'
       - 'orchestrator/**'
       - 'collectors/**'
       - '.github/workflows/collect.yml'
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'requests/company_discovery.json'
+      - 'requests/event_evidence.json'
+      - 'requests/run_token.txt'
   workflow_dispatch:
 
 jobs:
