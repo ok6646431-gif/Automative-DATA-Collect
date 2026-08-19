@@ -89,14 +89,24 @@ def resolve_site(raw,imap,confirmed_sites):
 
 def integrate_events(package_root,evidence_path=None):
     root=Path(package_root); company_id=(read_json(root/"Integration_Summary.json",{}) or {}).get("company_id","")
+    profile=read_json(root/"Company_Profile.json",{}) or {}; expected_request_id=str(profile.get("request_id") or "").strip()
     sites=read_csv(root/"Site_Master.csv"); confirmed={x.get("canonical_site_id") for x in sites if x.get("identity_status")=="CONFIRMED"}
     identities=read_csv(root/"Source_Identity.csv"); imap={(x.get("source_key",""),x.get("source_site_id","")):x for x in identities}
     coverage=read_csv(root/"Coverage_Status.csv"); covmap={x.get("source_key"):x for x in coverage}
     evidence=read_json(evidence_path,{}) if evidence_path and Path(evidence_path).exists() else None
     validations=[]; raw_events=[]
     if evidence is None:
-        evidence={"discovery_status":"NOT_RUN","events":[],"gaps":[]}
+        evidence={"request_id":expected_request_id,"discovery_status":"NOT_RUN","events":[],"gaps":[]}
         validations.append(make_validation(company_id,"EVENT_DISCOVERY",company_id,"EVENT_DISCOVERY_NOT_RUN","MEDIUM","No event_evidence input supplied.","Run official-source event discovery; no search is not evidence of no event."))
+    else:
+        supplied_request_id=str(evidence.get("request_id") or "").strip()
+        if not expected_request_id or supplied_request_id!=expected_request_id:
+            validations.append(make_validation(
+                company_id,"EVENT_DISCOVERY",expected_request_id or company_id,"EVENT_EVIDENCE_SCOPE_MISMATCH","HIGH",
+                f"expected_request_id={expected_request_id or 'MISSING'}; supplied_request_id={supplied_request_id or 'MISSING'}",
+                "Replace or remove stale Event evidence and rerun official event discovery for the current company request. Do not ingest events from another request."
+            ))
+            evidence={"request_id":expected_request_id,"discovery_status":"INVALID_SCOPE","events":[],"gaps":[]}
     for gap in evidence.get("gaps",[]) or []:
         key=str(gap.get("gap_id") or gap.get("source_key") or gap.get("query") or "UNKNOWN_GAP")
         validations.append(make_validation(company_id,"EVENT_DISCOVERY",key,"EVENT_DISCOVERY_GAP",str(gap.get("severity") or "MEDIUM"),json.dumps(gap,ensure_ascii=False),"Resolve or retain the gap explicitly; never convert a search gap to 'no event'."))
