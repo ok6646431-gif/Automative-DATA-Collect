@@ -51,13 +51,29 @@ class TestEventAnalysis(unittest.TestCase):
             issues={r["issue_type"] for r in csv.DictReader((root/"Validation_Queue.csv").open(encoding="utf-8-sig"))}; self.assertIn("EVENT_BASELINE_MISSING",issues)
         finally: td.cleanup()
 
-    def test_identity_event_does_not_modify_source_identity(self):
+    def test_identity_event_does_not_modify_source_identity_and_blocks_analysis(self):
         td,root=self.make_package()
         try:
+            coverage=list(csv.DictReader((root/"Coverage_Status.csv").open(encoding="utf-8-sig")))
+            for row in coverage:
+                if row["source_key"]=="PRTR": row["comparability_status"]="SURVEY_ROUND"
+            write_csv(root/"Coverage_Status.csv",coverage,list(coverage[0]))
+            out=root/"output"/"PRTR"; out.mkdir(parents=True)
+            write_csv(out/"discovery.csv",[{"entrps_id":"100","search_year":"2024"}],["entrps_id","search_year"])
+
             before=(root/"Source_Identity.csv").read_bytes(); ev=root/"events.json"
             ev.write_text(json.dumps({"discovery_status":"COMPLETE","events":[{"event_type":"SITE_IDENTITY_CHANGE","event_scope":"SITE","source_site_ref":{"source_key":"PRTR","source_site_id":"100"},"event_date_start":"2023-01-01","event_title":"rename","source_key":"OFFICIAL","source_locator":"official://rename","verification_status":"VERIFIED"}]}),encoding="utf-8")
-            integrate_events(root,ev); self.assertEqual(before,(root/"Source_Identity.csv").read_bytes())
-            links=list(csv.DictReader((root/"Coverage_Event_Links.csv").open(encoding="utf-8-sig"))); self.assertEqual({x["comparability_action"] for x in links},{"REVIEW_IDENTITY_MAPPING"})
+            integrate_events(root,ev)
+            self.assertEqual(before,(root/"Source_Identity.csv").read_bytes())
+            links=list(csv.DictReader((root/"Coverage_Event_Links.csv").open(encoding="utf-8-sig")))
+            self.assertEqual({x["comparability_action"] for x in links},{"REVIEW_IDENTITY_MAPPING"})
+            coverage_after={r["source_key"]:r for r in csv.DictReader((root/"Coverage_Status.csv").open(encoding="utf-8-sig"))}
+            self.assertIn("IDENTITY_EVENT_REVIEW",coverage_after["PRTR"]["comparability_status"])
+
+            build_analysis_index(root)
+            idx=list(csv.DictReader((root/"Analysis_Ready_Index.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(idx[0]["analysis_readiness"],"COMPARABILITY_REVIEW")
+            self.assertEqual(idx[0]["analysis_eligible"],"False")
         finally: td.cleanup()
 
     def test_duplicate_event_id_only_fills_blank_fields(self):
