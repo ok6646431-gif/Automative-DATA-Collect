@@ -77,6 +77,11 @@ def document_reviews(package_root):
     return vals,docs,env
 
 
+def write_artifact_index(path,rows):
+    with Path(path).open("w",encoding="utf-8-sig",newline="") as f:
+        w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(rows)
+
+
 def append_artifact_rows(package_root):
     root=Path(package_root); p=root/"Artifact_Index.csv"; rows=read_csv(p); seen={x.get("path") for x in rows}
     for candidate in [root/"Document_Evidence.json"]:
@@ -89,8 +94,14 @@ def append_artifact_rows(package_root):
             if file.is_file():
                 rel=str(file.relative_to(root))
                 if rel not in seen: rows.append({"source":"CORP_DOCS","path":rel,"bytes":file.stat().st_size,"sha256":sha256(file)}); seen.add(rel)
-    with p.open("w",encoding="utf-8-sig",newline="") as f:
-        w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(rows)
+    write_artifact_index(p,rows)
+    return len(rows)
+
+
+def add_archive_zip_to_artifact_index(package_root,zip_path):
+    root=Path(package_root).resolve(); p=root/"Artifact_Index.csv"; rows=read_csv(p); rel=str(Path(zip_path).resolve().relative_to(root)); rows=[x for x in rows if x.get("path")!=rel]
+    rows.append({"source":"HUMAN_ARCHIVE","path":rel,"bytes":Path(zip_path).stat().st_size,"sha256":sha256(zip_path)})
+    write_artifact_index(p,rows)
     return len(rows)
 
 
@@ -107,7 +118,7 @@ def refresh_manifest(package_root,docs,env,artifact_count):
 
 
 def finalize_archive_manifest(package_root,manifest,archive_summary):
-    root=Path(package_root)
+    root=Path(package_root).resolve()
     stable={k:v for k,v in archive_summary.items() if k not in {"zip_sha256","zip_bytes"}}
     stable["status"]="PASS"; stable["summary_file"]="Archive_Summary.json"; stable["zip_file"]="Human_Archive.zip"
     manifest["human_archive"]=stable
@@ -117,17 +128,23 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
     file_rows=archive_file_index(archive); write_csv(idx/"Archive_File_Index.csv",file_rows,["path","bytes","sha256"])
     zip_path=root/"Human_Archive.zip"
     if zip_path.exists(): zip_path.unlink()
-    zip_path=Path(shutil.make_archive(str(root/"Human_Archive"),"zip",root_dir=root/"Human_Archive",base_dir=archive.name))
+    zip_path=Path(shutil.make_archive(str(root/"Human_Archive"),"zip",root_dir=root/"Human_Archive",base_dir=archive.name)).resolve()
     final={**archive_summary,"archive_files":len(file_rows),"zip_path":str(zip_path.relative_to(root)),"zip_bytes":zip_path.stat().st_size,"zip_sha256":sha256(zip_path)}
     root.joinpath("Archive_Summary.json").write_text(json.dumps(final,ensure_ascii=False,indent=2),encoding="utf-8")
     return final
 
 
 def run(package_root,stable,evidence=None):
-    root=Path(package_root); copy_document_lane(root,stable,evidence)
+    root=Path(package_root).resolve(); copy_document_lane(root,stable,evidence)
     vals,docs,env=document_reviews(root); merge_validations(root,vals)
     count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,count)
     summary=build_archive(root); final=finalize_archive_manifest(root,manifest,summary)
+    artifact_count=add_archive_zip_to_artifact_index(root,root/final["zip_path"])
+    manifest=read_json(root/"Master_Manifest.json",{}) or {}; manifest["artifact_count"]=artifact_count
+    root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
+    # Final GitHub artifact keeps the validated core package plus one compact Human_Archive.zip.
+    # The expanded human folder is intentionally removed to avoid multi-hundred-MB duplicate copies.
+    shutil.rmtree(root/"Human_Archive",ignore_errors=True)
     print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals)},ensure_ascii=False))
     return final
 
