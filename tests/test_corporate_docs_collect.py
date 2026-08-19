@@ -7,8 +7,9 @@ from corporate_docs_collect import collect
 
 
 class FakeResponse:
-    def __init__(self, body=b"%PDF-test", content_type="application/pdf", disposition='attachment; filename="report.pdf"'):
-        self.body=body; self.headers={"Content-Type":content_type,"Content-Disposition":disposition,"Content-Length":str(len(body))}
+    def __init__(self, body=b"%PDF-test", content_type="application/pdf", disposition='attachment; filename="report.pdf"', url="https://official.example/report.pdf"):
+        self.body=body; self.url=url
+        self.headers={"Content-Type":content_type,"Content-Disposition":disposition,"Content-Length":str(len(body))}
     def __enter__(self): return self
     def __exit__(self,*args): return False
     def raise_for_status(self): return None
@@ -32,7 +33,7 @@ class CorporateDocsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
             profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
-            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[{"document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Report","report_year":2024,"source_url":"https://official.example/report.pdf","verification_status":"VERIFIED","importance":"CORE"}]}),encoding="utf-8")
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[{"document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Report","report_year":2024,"source_url":"https://official.example/report.pdf","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"}]}),encoding="utf-8")
             session=unittest.mock.MagicMock(); session.get.return_value=FakeResponse()
             with patch("corporate_docs_collect.requests.Session",return_value=session):
                 status=collect(evidence,profile,out)
@@ -40,6 +41,37 @@ class CorporateDocsTests(unittest.TestCase):
             rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
             self.assertEqual(rows[0]["collection_status"],"DOWNLOADED")
             self.assertTrue(rows[0]["sha256"])
+
+    def test_expected_pdf_rejects_html_error_payload(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[{"document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Report","source_url":"https://official.example/download/1","expected_extension":"pdf","verification_status":"VERIFIED"}]}),encoding="utf-8")
+            session=unittest.mock.MagicMock(); session.get.return_value=FakeResponse(body=b"<html>blocked</html>",content_type="text/html",disposition="",url="https://official.example/download/1")
+            with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],0)
+            self.assertEqual(status["failed"],1)
+            self.assertEqual(session.get.call_count,3)
+            rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(rows[0]["collection_status"],"DOWNLOAD_FAILED")
+            self.assertIn("expected PDF payload",rows[0]["notes"])
+            self.assertFalse(any((out/"raw_documents").rglob("*.pdf")))
+
+    def test_source_locator_is_preflighted_and_used_as_referer(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[{"document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Report","source_url":"https://official.example/download/1","source_locator":"https://official.example/post/1","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED"}]}),encoding="utf-8")
+            page=FakeResponse(body=b"<html>source page</html>",content_type="text/html",disposition="",url="https://official.example/post/1")
+            pdf=FakeResponse(url="https://official.example/download/1")
+            session=unittest.mock.MagicMock(); session.get.side_effect=[page,pdf]
+            with patch("corporate_docs_collect.requests.Session",return_value=session):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],1)
+            self.assertEqual(session.get.call_count,2)
+            _,kwargs=session.get.call_args_list[1]
+            self.assertEqual(kwargs["headers"]["Referer"],"https://official.example/post/1")
 
     def test_executable_extension_is_never_collected(self):
         with tempfile.TemporaryDirectory() as td:
