@@ -1,28 +1,14 @@
 {
   "schema_version": "1.0",
-  "request_id": "lgensol-blind-archive-20260819-v1",
+  "request_id": "sec-ds-archive-20260819-v1",
   "discovery_status": "PARTIAL",
-  "events": [
-    {
-      "event_type": "CORPORATE_RESTRUCTURE",
-      "event_scope": "COMPANY",
-      "event_date_start": "2020-12-01",
-      "event_date_end": "",
-      "event_title": "LG에너지솔루션 물적분할 신설",
-      "event_description": "주식회사 LG화학의 전지사업부문이 2020년 12월 1일을 분할기일로 물적분할되어 주식회사 엘지에너지솔루션이 신설됨.",
-      "source_key": "OFFICIAL_BUSINESS_REPORT",
-      "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf",
-      "verification_status": "VERIFIED",
-      "affected_sources": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
-      "notes": "Identity boundary only. No pre-spin-off LG Chem source identity is automatically mapped to LG Energy Solution, and no causal claim is made."
-    }
-  ],
+  "events": [],
   "gaps": [
     {
-      "gap_id": "EVENT_DISCOVERY_SCOPE_LIMITED_TO_IDENTITY_BOUNDARY",
-      "source_key": "OFFICIAL_COMPANY_DISCLOSURES",
-      "severity": "MEDIUM",
-      "reason": "This blind acceptance run verifies the 2020 corporate identity boundary. Other regulatory, permit, definition-change, or site events were not exhaustively searched and are not interpreted as absent."
+      "gap_id": "EVENT_ANALYSIS_DEFERRED",
+      "source_key": "PROJECT_SCOPE",
+      "severity": "LOW",
+      "reason": "This run is intentionally limited to source-material acquisition and human-facing archive packaging. Event discovery and interpretation are deferred to the next project stage and absence of events must not be interpreted as no historical changes."
     }
   ]
 }
