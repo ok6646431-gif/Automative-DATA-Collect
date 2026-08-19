@@ -229,6 +229,40 @@ jobs:
           --package assembled
           --stable collected/stable
           --documents requests/document_evidence.json
+      - name: Upload human-facing archive
+        id: human_archive_upload
+        if: ${{ always() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-human-archive
+          path: assembled/Human_Archive.zip
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Prepare lightweight metadata delivery
+        if: always()
+        run: |
+          rm -rf delivery-metadata
+          mkdir -p delivery-metadata/output
+          for file in assembled/*.json assembled/*.csv; do
+            if [ -f "$file" ]; then cp "$file" delivery-metadata/; fi
+          done
+          for source_dir in assembled/output/*; do
+            [ -d "$source_dir" ] || continue
+            target="delivery-metadata/output/$(basename "$source_dir")"
+            mkdir -p "$target"
+            for name in status.json discovery.csv candidates.json fact_candidates.json document_index.csv attachment_index.csv excluded_rows.jsonl excluded_candidates.json; do
+              if [ -f "$source_dir/$name" ]; then cp "$source_dir/$name" "$target/"; fi
+            done
+          done
+      - name: Upload lightweight metadata delivery
+        id: metadata_upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-metadata
+          path: delivery-metadata/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload final orchestrated package
         id: final_upload
         if: always()
@@ -250,6 +284,8 @@ jobs:
           RUN_STATUS: ${{ job.status }}
           SERVER_URL: ${{ github.server_url }}
           ARTIFACT_ID: ${{ steps.final_upload.outputs.artifact-id }}
+          HUMAN_ARTIFACT_ID: ${{ steps.human_archive_upload.outputs.artifact-id }}
+          METADATA_ARTIFACT_ID: ${{ steps.metadata_upload.outputs.artifact-id }}
         run: |
           python - <<'PY'
           import json, os, urllib.request
@@ -262,9 +298,15 @@ jobs:
           run_id=os.environ["RUN_ID"]
           run_number=os.environ["RUN_NUMBER"]
           artifact_id=os.environ.get("ARTIFACT_ID","")
+          human_id=os.environ.get("HUMAN_ARTIFACT_ID","")
+          metadata_id=os.environ.get("METADATA_ARTIFACT_ID","")
           description=f"run #{run_number} {state}"
           if artifact_id:
-              description += f"; artifact {artifact_id}"
+              description += f"; final {artifact_id}"
+          if human_id:
+              description += f"; human {human_id}"
+          if metadata_id:
+              description += f"; meta {metadata_id}"
           payload={
               "state":state,
               "context":"enterprise-env/control-plane",
