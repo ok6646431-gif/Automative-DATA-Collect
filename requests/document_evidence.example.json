@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "request_id": "same-request-id-as-company-discovery",
+  "discovery_status": "PARTIAL",
+  "documents": [
+    {
+      "document_id": "DOC_SUSTAINABILITY_2024",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2024 Sustainability Report",
+      "report_year": 2024,
+      "coverage_start": "2024-01-01",
+      "coverage_end": "2024-12-31",
+      "publication_date": "2025-06-01",
+      "source_url": "https://official-company.example/reports/2024.pdf",
+      "source_locator": "Official company sustainability report archive",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "The control plane verifies the official source before execution."
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "OLDER_REPORT_ARCHIVE_NOT_CHECKED",
+      "source_key": "OFFICIAL_COMPANY_SITE",
+      "severity": "MEDIUM",
+      "reason": "Example only. Search gaps are preserved explicitly rather than interpreted as no document."
+    }
+  ]
+}

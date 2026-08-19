@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/enterprise-env/document_evidence.schema.json",
+  "title": "Corporate document evidence",
+  "type": "object",
+  "required": ["schema_version", "request_id", "discovery_status", "documents"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string", "minLength": 1},
+    "discovery_status": {"enum": ["COMPLETE", "PARTIAL", "NOT_RUN"]},
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["document_id", "document_type", "title", "source_url", "verification_status"],
+        "properties": {
+          "document_id": {"type": "string", "minLength": 1},
+          "document_type": {
+            "enum": [
+              "SUSTAINABILITY_REPORT",
+              "ANNUAL_REPORT",
+              "ENVIRONMENTAL_DISCLOSURE",
+              "CORPORATE_EVENT",
+              "ENVIRONMENTAL_POLICY",
+              "CHEMICAL_POLICY",
+              "CLIMATE_ENERGY_POLICY",
+              "SHE_POLICY",
+              "GUIDELINE",
+              "BAT_REFERENCE",
+              "REGULATION_REFERENCE",
+              "OTHER_OFFICIAL_DOCUMENT"
+            ]
+          },
+          "title": {"type": "string", "minLength": 1},
+          "report_year": {"type": ["integer", "string", "null"]},
+          "coverage_start": {"type": ["string", "null"]},
+          "coverage_end": {"type": ["string", "null"]},
+          "publication_date": {"type": ["string", "null"]},
+          "site_name_raw": {"type": ["string", "null"]},
+          "canonical_site_id": {"type": ["string", "null"]},
+          "source_url": {"type": "string", "pattern": "^https?://"},
+          "source_locator": {"type": ["string", "null"]},
+          "expected_extension": {"type": ["string", "null"]},
+          "verification_status": {"enum": ["VERIFIED", "SOURCE_VERIFIED", "PARTIAL", "UNVERIFIED"]},
+          "importance": {"enum": ["CORE", "SUPPORTING", "EVIDENCE_ONLY", "UNCLASSIFIED"]},
+          "notes": {"type": ["string", "null"]}
+        },
+        "additionalProperties": true
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  },
+  "additionalProperties": true
+}

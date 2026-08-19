@@ -45,7 +45,7 @@ def build(profile):
     terms=[]
     for a in aliases_for(profile,s,e):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"page_size":int(p.get("page_size",200)),"collect_details":True,"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
+    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"page_size":int(p.get("page_size",200)),"collect_details":True,"collect_attachments":bool(p.get("collect_attachments",True)),"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
 
     p=plan["PRTR"]; s=int(p["start_year"]); e=int(p["end_year"]); specs=[]
     for a in aliases_for(profile,s,e):
