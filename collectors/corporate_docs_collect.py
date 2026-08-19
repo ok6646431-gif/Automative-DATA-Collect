@@ -38,13 +38,37 @@ def read_json(path, default=None):
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else default
 
 
+def repair_header_filename(value):
+    """Repair UTF-8 filename bytes that requests decoded as ISO-8859-1.
+
+    RFC 5987 ``filename*=UTF-8''`` values are handled before this function. Some
+    Korean public sites instead send raw UTF-8 bytes in the legacy ``filename=``
+    parameter; HTTP libraries then expose mojibake such as ``SKíì´...``.
+    Re-decoding latin-1 as UTF-8 is safe only when that byte sequence is valid,
+    so genuine Latin-1/ASCII names are left unchanged when conversion fails.
+    """
+    text = str(value or "")
+    try:
+        fixed = text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+    if fixed == text:
+        return text
+    # Adopt only when conversion clearly improves a legacy-header filename.
+    old_controls = sum(0x80 <= ord(ch) <= 0x9F for ch in text)
+    new_controls = sum(0x80 <= ord(ch) <= 0x9F for ch in fixed)
+    old_hangul = sum("가" <= ch <= "힣" for ch in text)
+    new_hangul = sum("가" <= ch <= "힣" for ch in fixed)
+    return fixed if new_hangul > old_hangul or new_controls < old_controls else text
+
+
 def content_disposition_filename(header):
     header = str(header or "")
     m = re.search(r"filename\*=UTF-8''([^;]+)", header, re.I)
     if m:
-        return unquote(m.group(1).strip().strip('"'))
+        return repair_header_filename(unquote(m.group(1).strip().strip('"')))
     m = re.search(r"filename=\"?([^\";]+)", header, re.I)
-    return unquote(m.group(1).strip()) if m else ""
+    return repair_header_filename(unquote(m.group(1).strip())) if m else ""
 
 
 def infer_extension(doc, response, filename):
