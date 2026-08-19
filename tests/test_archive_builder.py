@@ -21,7 +21,7 @@ class ArchiveBuilderTests(unittest.TestCase):
             for name in ["Master_Manifest.json","REVIEW_REQUIRED.json"]:
                 (root/name).write_text("{}" if name.endswith("Manifest.json") else "[]",encoding="utf-8")
             write_csv(root/"Coverage_Status.csv",[{"source_key":"ENVINFO","coverage_status":"MEETS_MINIMUM","collected_start":"2020","collected_end":"2024","next_action":""}])
-            write_csv(root/"Source_Identity.csv",[{"source_key":"ENVINFO","source_site_id":"C1","match_status":"CONFIRMED","canonical_site_id":"SITE1"}])
+            write_csv(root/"Source_Identity.csv",[{"source_key":"ENVINFO","source_site_id":"C1","match_status":"CONFIRMED","canonical_site_id":"SITE1","basis":"ADDRESS_AND_SITE_LABEL"}])
             env=root/"output"/"ENVINFO"; (env/"raw_attachments"/"2024"/"C1").mkdir(parents=True)
             att=env/"raw_attachments"/"2024"/"C1"/"조직도.png"; att.write_bytes(b"PNGDATA")
             write_csv(env/"attachment_index.csv",[{
@@ -49,6 +49,53 @@ class ArchiveBuilderTests(unittest.TestCase):
             self.assertTrue((archive/"00_자료목록"/"핵심자료_목록.csv").exists())
             self.assertTrue((root/"Human_Archive.zip").exists())
             self.assertEqual(summary["downloaded_documents"],2)
+            self.assertEqual(summary["quarantined_related_entity_documents"],0)
+
+    def test_rejected_envinfo_related_entity_is_quarantined_not_promoted(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            (root/"Company_Profile.json").write_text(json.dumps({"company_id":"COMP1","company_display_name":"대상회사"},ensure_ascii=False),encoding="utf-8")
+            (root/"Integration_Summary.json").write_text(json.dumps({"company_id":"COMP1"}),encoding="utf-8")
+            (root/"Master_Manifest.json").write_text("{}",encoding="utf-8")
+            (root/"REVIEW_REQUIRED.json").write_text("[]",encoding="utf-8")
+            write_csv(root/"Coverage_Status.csv",[{"source_key":"ENVINFO","coverage_status":"MEETS_MINIMUM","collected_start":"2020","collected_end":"2024","next_action":""}])
+            write_csv(root/"Source_Identity.csv",[
+                {"source_key":"ENVINFO","source_site_id":"C1","match_status":"CONFIRMED","canonical_site_id":"SITE1","basis":"ADDRESS_AND_SITE_LABEL"},
+                {"source_key":"ENVINFO","source_site_id":"C2","match_status":"REJECTED","canonical_site_id":"","basis":"RELATED_ENTITY_EXCLUSION"}
+            ])
+            env=root/"output"/"ENVINFO"
+            for comp in ["C1","C2"]: (env/"raw_attachments"/"2024"/comp).mkdir(parents=True,exist_ok=True)
+            main_att=env/"raw_attachments"/"2024"/"C1"/"본체조직도.png"; main_att.write_bytes(b"MAIN")
+            rejected_att=env/"raw_attachments"/"2024"/"C2"/"관계사조직도.png"; rejected_att.write_bytes(b"RELATED")
+            write_csv(env/"attachment_index.csv",[
+                {"year":"2024","compId":"C1","compNm":"대상회사 이천","section_title":"전담조직","file_id":"F1","original_filename":"본체조직도.png","stored_path":str(main_att.relative_to(root)),"bytes":"4","sha256":"m","content_type":"image/png","importance":"CORE","document_category":"ORGANIZATION_ROLE","collection_status":"DOWNLOADED","error":""},
+                {"year":"2024","compId":"C2","compNm":"대상회사시스템아이씨","section_title":"전담조직","file_id":"F2","original_filename":"관계사조직도.png","stored_path":str(rejected_att.relative_to(root)),"bytes":"7","sha256":"r","content_type":"image/png","importance":"CORE","document_category":"ORGANIZATION_ROLE","collection_status":"DOWNLOADED","error":""}
+            ])
+            write_csv(env/"discovery.csv",[
+                {"year":"2024","compId":"C1","compNm":"대상회사 이천"},
+                {"year":"2024","compId":"C2","compNm":"대상회사시스템아이씨"}
+            ])
+            (env/"raw_detail").mkdir()
+            (env/"raw_detail"/"2024_C1_대상회사_이천.html").write_text("<html>main</html>",encoding="utf-8")
+            (env/"raw_detail"/"2024_C2_대상회사시스템아이씨.html").write_text("<html>related</html>",encoding="utf-8")
+            for source in ["PRTR","CHEM_STATS","CLEANSYS_AIR","SOOSIRO_WATER"]:
+                p=root/"output"/source; p.mkdir(parents=True); (p/"status.json").write_text("{}",encoding="utf-8")
+            docs=root/"output"/"CORP_DOCS"; docs.mkdir(parents=True); write_csv(docs/"document_index.csv",[])
+
+            summary=build_archive(root)
+            archive=root/"Human_Archive"/"대상회사_환경자료"
+            normal=archive/"03_환경정보공개시스템"/"대상회사시스템아이씨"
+            quarantine=archive/"03_환경정보공개시스템"/"99_관계사_제외자료"/"대상회사시스템아이씨"/"2024"
+            self.assertFalse(normal.exists())
+            self.assertTrue((quarantine/"ORGANIZATION_ROLE"/"관계사조직도.png").exists())
+            self.assertTrue((quarantine/"상세페이지.html").exists())
+            self.assertEqual(summary["quarantined_related_entity_documents"],1)
+            core_rows=list(csv.DictReader((archive/"00_자료목록"/"핵심자료_목록.csv").open(encoding="utf-8-sig")))
+            self.assertEqual([r["title"] for r in core_rows],["본체조직도.png"])
+            doc_rows=list(csv.DictReader((archive/"00_자료목록"/"Document_Index.csv").open(encoding="utf-8-sig")))
+            rejected=[r for r in doc_rows if r["site_name_raw"]=="대상회사시스템아이씨"][0]
+            self.assertIn("identity_status=REJECTED",rejected["notes"])
+            self.assertIn("99_관계사_제외자료",rejected["archive_path"])
 
 
 if __name__=="__main__": unittest.main()

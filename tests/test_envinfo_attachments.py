@@ -50,5 +50,21 @@ class EnvInfoAttachmentTests(unittest.TestCase):
         self.assertEqual(category, "EMERGENCY_RESPONSE")
         self.assertEqual(importance, "CORE")
 
+    def test_spaced_emergency_response_phrase_beats_generic_internal_audit_context(self):
+        category, importance = classify_attachment(
+            "비상상황 발생시 단계별 대응 체계.jpg",
+            context="전담조직 교육훈련 내부심사 등 운영 현황",
+            section_title="의무 4. 전담조직·교육훈련·내부심사 등",
+        )
+        self.assertEqual(category, "EMERGENCY_RESPONSE")
+        self.assertEqual(importance, "CORE")
+
+    def test_generic_section_prefix_is_removed_before_specific_chemical_training_classification(self):
+        category, importance = classify_attachment(
+            "(전담조직 교육훈련 내부심사 등)_유해화학물질 종사자교육.jpg"
+        )
+        self.assertEqual(category, "CHEMICAL_MANAGEMENT")
+        self.assertEqual(importance, "SUPPORTING")
+
 
 if __name__ == "__main__": unittest.main()
