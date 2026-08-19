@@ -9,6 +9,7 @@
     "request_id": {"type": "string", "minLength": 1},
     "requested_company_name": {"type": "string", "minLength": 1},
     "current_legal_name": {"type": "string", "minLength": 1},
+    "current_legal_name_active_period": {"$ref": "#/$defs/period"},
     "company_verification_state": {"enum": ["VERIFIED", "PARTIAL", "REVIEW_REQUIRED", "UNVERIFIED"]},
     "confidence": {"type": ["number", "string", "null"]},
     "company_aliases": {"type": "array", "items": {"$ref": "#/$defs/nameEvidence"}},
