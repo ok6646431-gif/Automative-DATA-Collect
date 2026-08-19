@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "request_id": "lgensol-blind-archive-20260819-v1",
+  "requested_company_name": "LG에너지솔루션",
+  "current_legal_name": "주식회사 엘지에너지솔루션",
+  "current_legal_name_active_period": {"start_year": 2020, "end_year": null},
+  "company_verification_state": "VERIFIED",
+  "confidence": "HIGH",
+  "company_aliases": [
+    {"name": "LG에너지솔루션", "alias_type": "current_brand_name", "verification_state": "VERIFIED", "source_locator": "https://www.lgensol.com/kr/company/info-outline"},
+    {"name": "엘지에너지솔루션", "alias_type": "source_native_alias", "verification_state": "VERIFIED", "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf"}
+  ],
+  "historical_legal_names": [],
+  "corporate_restructuring_evidence": [
+    {"event_type": "spin_off", "effective_period": {"start_year": 2020, "end_year": 2020}, "verification_state": "VERIFIED", "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf", "notes": "Established on 2020-12-01 by physical spin-off of LG Chem battery business."}
+  ],
+  "domestic_site_candidates": [
+    {"candidate_id": "lgensol-hq", "site_name_raw": "LG에너지솔루션 본사", "address_raw": "서울특별시 영등포구 여의대로 108, 타워1(여의도동)", "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf", "identity_status": "CANDIDATE", "verification_state": "VERIFIED"},
+    {"candidate_id": "lgensol-ochang-ep1", "site_name_raw": "오창 에너지플랜트 1", "address_raw": "충청북도 청주시", "source_locator": "https://www.lgensol.com/upload/file/sustainability/LG_Energy_Solution_2023_ESG_Report_KOR_FFF.pdf", "identity_status": "CANDIDATE", "verification_state": "VERIFIED"},
+    {"candidate_id": "lgensol-ochang-ep2", "site_name_raw": "오창 에너지플랜트 2", "address_raw": "충청북도 청주시", "source_locator": "https://www.lgensol.com/upload/file/sustainability/LG_Energy_Solution_2023_ESG_Report_KOR_FFF.pdf", "identity_status": "CANDIDATE", "verification_state": "VERIFIED"},
+    {"candidate_id": "lgensol-daejeon-rnd", "site_name_raw": "기술연구원(대전)", "address_raw": "대전광역시", "source_locator": "https://www.lgensol.com/upload/file/sustainability/LG_Energy_Solution_2023_ESG_Report_KOR_FFF.pdf", "identity_status": "CANDIDATE", "verification_state": "VERIFIED"},
+    {"candidate_id": "lgensol-gwacheon-rnd", "site_name_raw": "과천 R&D캠퍼스", "address_raw": "경기도 과천시", "source_locator": "https://www.lgensol.com/upload/file/sustainability/LG_Energy_Solution_2023_ESG_Report_KOR_FFF.pdf", "identity_status": "CANDIDATE", "verification_state": "VERIFIED"},
+    {"candidate_id": "lgensol-magok-rnd", "site_name_raw": "마곡 R&D캠퍼스", "address_raw": "서울특별시 강서구 마곡", "source_locator": "https://www.lgensol.com/upload/file/sustainability/LG_Energy_Solution_2023_ESG_Report_KOR_FFF.pdf", "identity_status": "CANDIDATE", "verification_state": "VERIFIED"}
+  ],
+  "identity_evidence": [
+    {"source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf", "source_value_raw": "주식회사 엘지에너지솔루션 / 2020년 12월 1일 기존의 ㈜LG화학에서 분할되어 신설", "verification_state": "VERIFIED"},
+    {"source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf", "source_value_raw": "본사 서울 / 생산공장 충북 청주 / 기술연구원 등 대전, 과천, 마곡", "verification_state": "VERIFIED"}
+  ],
+  "related_entity_exclusions": [
+    {"name": "LG화학", "reason": "pre-spin-off parent and separate current legal entity; never auto-attribute its pre-2020 records to LG Energy Solution", "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf", "verification_state": "VERIFIED"},
+    {"name": "아름누리", "reason": "separate domestic subsidiary listed independently from LG Energy Solution sites", "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf", "verification_state": "VERIFIED"}
+  ],
+  "unresolved_items": [
+    {"code": "PRE_SPINOFF_SITE_LINEAGE_NOT_AUTO_ASSIGNED", "subject": "LG Chem battery-business site history before 2020-12-01", "detail": "Pre-spin-off LG Chem records are intentionally not searched or merged as LG Energy Solution. Any historical lineage requires separate evidence and human review.", "source_locator": "https://www.lgensol.com/upload/file/download/2025_LGES_Annual_Report.pdf"}
+  ],
+  "event_evidence_references": ["requests/event_evidence.json"],
+  "collection_policy": {
+    "minimum_history_years": 5,
+    "sources": {
+      "ENVINFO": {"requested_window": {"start_year": 2020, "end_year": 2024}, "prefer_full_history": false, "max_details": 250},
+      "PRTR": {"requested_window": {"start_year": 2020, "end_year": 2024}, "prefer_full_history": false},
+      "CHEM_STATS": {"requested_survey_rounds": [2020, 2022, 2024], "available_survey_rounds": [2020, 2022, 2024], "prefer_full_history": true},
+      "CLEANSYS_AIR": {"requested_window": {"start_year": 2020, "end_year": 2025}, "prefer_full_history": false},
+      "SOOSIRO_WATER": {"requested_window": {"start_year": 2020, "end_year": 2025}, "daily_available_years": [2024], "prefer_full_history": false}
+    }
+  }
+}
