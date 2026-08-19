@@ -135,9 +135,15 @@ def integrate_events(package_root,evidence_path=None):
     for cov in coverage:
         ls=by_source.get(cov.get("source_key"),[]); actions={x["comparability_action"] for x in ls}
         cov["event_baseline_status"]="NO_EVENT_LINKS" if not ls else ("BASELINE_MISSING" if any(x["baseline_status"]=="BASELINE_MISSING" for x in ls) else ("BASELINE_AVAILABLE" if all(x["baseline_status"]=="BASELINE_AVAILABLE" for x in ls) else "BASELINE_UNKNOWN"))
-        old=cov.get("comparability_status","")
-        if "SEGMENT_AT_EVENT" in actions: cov["comparability_status"]="SEGMENT_REQUIRED" if old in {"","PENDING"} else old+"|SEGMENT_REQUIRED"
-        elif "REVIEW_SEGMENT_AT_EVENT" in actions: cov["comparability_status"]="EVENT_REVIEW" if old in {"","PENDING"} else old+"|EVENT_REVIEW"
+        status=cov.get("comparability_status","")
+        markers=[]
+        if "SEGMENT_AT_EVENT" in actions: markers.append("SEGMENT_REQUIRED")
+        if "REVIEW_SEGMENT_AT_EVENT" in actions: markers.append("EVENT_REVIEW")
+        if "REVIEW_IDENTITY_MAPPING" in actions: markers.append("IDENTITY_EVENT_REVIEW")
+        for marker in markers:
+            if status in {"","PENDING"}: status=marker
+            elif marker not in status.split("|"): status += "|"+marker
+        cov["comparability_status"]=status
     if coverage: write_csv(root/"Coverage_Status.csv",coverage,list(coverage[0]))
     merge_validations(root,validations)
     return {"event_discovery_status":str(evidence.get("discovery_status") or "UNKNOWN"),"events":len(events),"event_links":len(links),"event_validations_added":len({x['validation_id'] for x in validations})}
