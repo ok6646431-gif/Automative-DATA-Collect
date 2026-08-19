@@ -118,7 +118,9 @@ def _chem_plan(raw: Dict[str, Any], minimum: int, reviews: List[Dict[str, Any]])
 
 def _aliases(discovery: Dict[str, Any], reviews: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     current = discovery["current_legal_name"]
+    current_period = discovery.get("current_legal_name_active_period") or {}
     facts = [{"name": current, "alias_type": "current_legal_name",
+              "active_period": current_period,
               "verification_state": discovery.get("company_verification_state", "UNVERIFIED"),
               "confidence": discovery.get("confidence")}]
     facts += discovery.get("company_aliases", [])
@@ -227,6 +229,7 @@ def compile_discovery(discovery: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[s
         "request_id": discovery["request_id"],
         "company_resolved": discovery.get("company_verification_state") == "VERIFIED",
         "current_name": discovery["current_legal_name"],
+        "current_name_active_period": deepcopy(discovery.get("current_legal_name_active_period") or {}),
         "historical_aliases": [a for a in aliases if a["scope"] != "current"],
         "site_candidates": sites, "related_entity_exclusions": exclusion_evidence,
         "unresolved_discovery_items": reviews,
