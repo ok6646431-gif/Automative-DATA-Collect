@@ -42,10 +42,11 @@ class ArchiveBuilderTests(unittest.TestCase):
             }])
             summary=build_archive(root)
             archive=root/"Human_Archive"/"테스트화학_환경자료"
-            self.assertTrue((archive/"03_환경정보공개시스템"/"테스트공장"/"2024"/"첨부파일"/"조직도.png").exists())
-            self.assertTrue((archive/"03_환경정보공개시스템"/"핵심자료"/"ORGANIZATION_ROLE").exists())
+            self.assertTrue((archive/"03_환경정보공개시스템"/"테스트공장"/"2024"/"ORGANIZATION_ROLE"/"조직도.png").exists())
+            self.assertFalse((archive/"03_환경정보공개시스템"/"원본"/"raw_attachments").exists())
             self.assertTrue((archive/"04_지속가능경영보고서"/"2024"/"report.pdf").exists())
             self.assertTrue((archive/"00_자료목록"/"Document_Index.csv").exists())
+            self.assertTrue((archive/"00_자료목록"/"핵심자료_목록.csv").exists())
             self.assertTrue((root/"Human_Archive.zip").exists())
             self.assertEqual(summary["downloaded_documents"],2)
 
