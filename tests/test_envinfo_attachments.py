@@ -13,6 +13,8 @@ class EnvInfoAttachmentTests(unittest.TestCase):
           <div id="inquiry04" class="inquiry_cont">
             <table><tbody><tr><td>부서명 환경팀 업무내용 환경경영시스템 운영</td></tr>
             <tr><td>첨부파일</td><td><a href="javascript:downloadFile('FILE001','pdf');">녹색경영 전담조직 및 업무·역할·권한.pdf</a></td></tr>
+            </tbody></table>
+            <table><tbody><tr><td>규격 이행준수 및 효율적 운영여부 점검</td></tr>
             <tr><td>첨부파일</td><td><a href="javascript:downloadFile('FILE002','pptx');">환경안전보건 경영시스템 내부심사 결과 보고서.pptx</a></td></tr>
             </tbody></table>
           </div>
