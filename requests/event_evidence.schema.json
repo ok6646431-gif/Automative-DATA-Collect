@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/environment/event-evidence-1.0.schema.json",
+  "title": "Request-scoped official event evidence",
+  "type": "object",
+  "required": ["schema_version", "request_id", "discovery_status", "events", "gaps"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "request_id": {"type": "string", "minLength": 1},
+    "discovery_status": {"type": "string", "minLength": 1},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/event"}},
+    "gaps": {"type": "array", "items": {"$ref": "#/$defs/gap"}}
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["event_type"],
+      "properties": {
+        "event_id": {"type": "string"},
+        "event_type": {"type": "string", "minLength": 1},
+        "event_scope": {"enum": ["COMPANY", "SITE"]},
+        "canonical_site_id": {"type": "string"},
+        "source_site_ref": {
+          "type": "object",
+          "properties": {
+            "source_key": {"type": "string"},
+            "source_site_id": {"type": "string"}
+          },
+          "additionalProperties": true
+        },
+        "event_date_start": {"type": "string"},
+        "event_date_end": {"type": "string"},
+        "event_title": {"type": "string"},
+        "event_description": {"type": "string"},
+        "source_key": {"type": "string"},
+        "source_locator": {},
+        "verification_status": {"type": "string"},
+        "analysis_role": {"type": "string"},
+        "affected_sources": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "gap": {
+      "type": "object",
+      "properties": {
+        "gap_id": {"type": "string"},
+        "source_key": {"type": "string"},
+        "query": {"type": "string"},
+        "severity": {"type": "string"},
+        "reason": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
