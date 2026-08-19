@@ -15,6 +15,25 @@ ephemeral runtime profile plus the standardized collector request. The tracked
 `requests/company_profile.json` remains only a compatibility fallback for proof runs
 and recovery; the bootstrap never overwrites it.
 
+### Persistent control-plane execution branch
+
+Production-style ChatGPT control-plane runs use the persistent `run/control-plane`
+branch. A push to that branch triggers the orchestrator when any of these execution
+inputs changes:
+
+- `requests/company_discovery.json`
+- `requests/event_evidence.json`
+- `requests/run_token.txt`
+
+This removes the need to open or merge a pull request for each company run. The
+control plane keeps the branch synchronized with current `main`, writes validated
+Discovery/Event evidence, advances `run_token.txt` when an explicit rerun is needed,
+then associates the resulting Actions run and final artifact with that exact commit
+SHA. Execution-only Discovery/Event files are not merged into `main`.
+
+Pull-request CI remains available for code changes and also reacts to both Discovery
+and Event evidence changes. `workflow_dispatch` remains available for manual recovery.
+
 Local/runtime equivalent:
 
 ```bash
