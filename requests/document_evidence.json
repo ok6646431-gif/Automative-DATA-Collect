@@ -49,6 +49,30 @@
       "importance": "SUPPORTING"
     },
     {
+      "document_id": "SEC_SUSTAINABILITY_2022",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "삼성전자 2022 지속가능경영보고서",
+      "report_year": 2022,
+      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2022_KR.pdf",
+      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official Samsung Semiconductor archive Korean PDF."
+    },
+    {
+      "document_id": "SEC_SUSTAINABILITY_2021",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "삼성전자 2021 지속가능경영보고서",
+      "report_year": 2021,
+      "source_url": "https://www.samsung.com/sec/sustainability/media/pdf/sustainability_report_kr_2021_01.pdf",
+      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official Samsung Electronics Korean sustainability report PDF."
+    },
+    {
       "document_id": "SEC_BUSINESS_REPORT_2025",
       "document_type": "ANNUAL_REPORT",
       "title": "삼성전자 2025 사업보고서 공시 페이지",
