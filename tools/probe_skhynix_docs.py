@@ -1,50 +1,54 @@
-import re, json
+import re
 from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
 UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
 s=requests.Session(); s.headers.update({'User-Agent':UA})
-BASE='https://sustainability.skhynix.com/'
-API='https://sustainabilityapi.skhynix.com/esg-ext-backend'
+TARGETS=[
+ ('KIND2022','https://kind.krx.co.kr/external/2022/07/28/000117/20220725000126/61979.htm'),
+ ('KIND2023','https://kind.krx.co.kr/external/2023/07/21/000113/20230707000320/61979.htm'),
+ ('KIND2024','https://kind.krx.co.kr/external/2024/07/23/000345/20240618001016/61979.htm'),
+ ('KIND2025','https://kind.krx.co.kr/external/2025/06/19/000512/20250616000286/61979.htm'),
+ ('KESG2022','https://k-esg.org/post/76'),
+ ('KESG2024','https://k-esg.org/post/3551'),
+ ('KESG2025','https://k-esg.org/post/4392'),
+ ('KESG_GUIDE','https://k-esg.org/post/55'),
+]
 
-r=s.get(BASE,timeout=(8,30)); soup=BeautifulSoup(r.text,'html.parser')
-scripts=[urljoin(r.url,x.get('src')) for x in soup.find_all('script',src=True)]
-print('===== BUNDLE CONTEXT =====')
-keywords=['/datacenter/unstructured','/datacenter/list/all','/datacenter/selectDcLayout','/datacenter/selectLclasDataList','/datacenter/selectMlsfcDc','/datacenter/detail/']
-for src in scripts:
+for label,url in TARGETS:
+ print('\n====',label,url)
  try:
-  js=s.get(src,timeout=(8,30)).text
-  print('SCRIPT',src,'LEN',len(js))
-  for keyword in keywords:
-   positions=[m.start() for m in re.finditer(re.escape(keyword),js)]
-   print('KEY',keyword,'COUNT',len(positions))
-   for pos in positions[:20]: print('CTX',keyword,js[max(0,pos-1200):min(len(js),pos+2200)].replace('\n',' ')[:3400])
- except Exception as e: print('SCRIPT_ERR',src,repr(e))
-
-print('===== DIRECT PUBLIC ENDPOINT PROBES =====')
-probes=[
- ('GET','/datacenter/unstructured',None),('GET','/datacenter/list/all',None),('GET','/datacenter/selectDcLayout',None),
- ('GET','/datacenter/selectLclasDataList',None),('GET','/datacenter/selectMlsfcDc',None),
- ('POST','/datacenter/unstructured',{}),('POST','/datacenter/list/all',{}),('POST','/datacenter/selectDcLayout',{}),
- ('POST','/datacenter/selectLclasDataList',{}),('POST','/datacenter/selectMlsfcDc',{})]
-for method,path,payload in probes:
- try:
-  headers={'Origin':BASE.rstrip('/'),'Referer':BASE,'Content-Type':'application/json'}
-  rr=s.request(method,API+path,json=payload if method=='POST' else None,headers=headers,timeout=(8,25))
-  print('PROBE',method,path,'STATUS',rr.status_code,'TYPE',rr.headers.get('content-type'),'LEN',len(rr.content),'BODY',rr.text[:4000].replace('\n',' '))
- except Exception as e: print('PROBE_ERR',method,path,repr(e))
-
-print('===== K-ESG SEMICONDUCTOR GUIDE =====')
-url='https://k-esg.org/post/55'
-try:
- rr=s.get(url,timeout=(8,30)); sp=BeautifulSoup(rr.text,'html.parser'); print('POST',rr.status_code,len(rr.content))
- for a in sp.find_all('a',href=True):
-  title=' '.join(a.stripped_strings); href=str(a.get('href') or '')
-  if 'file_download' in href or '.pdf' in title.lower():
-   print('GUIDE_LINK',repr(title),href)
+  r=s.get(url,timeout=(8,30),allow_redirects=True)
+  print('STATUS',r.status_code,'TYPE',r.headers.get('content-type'),'LEN',len(r.content),'FINAL',r.url)
+  text=r.text; soup=BeautifulSoup(text,'html.parser')
+  print('TITLE',soup.title.string.strip() if soup.title and soup.title.string else '')
+  for tag in soup.find_all(['a','button','input']):
+   attrs=' '.join(f'{k}={v}' for k,v in tag.attrs.items())
+   title=' '.join(tag.stripped_strings)
+   combined=(attrs+' '+title).lower()
+   if any(k in combined for k in ['attach','download','file','pdf','첨부','다운로드','report']):
+    print('TAG',tag.name,repr(title[:200]),attrs[:1200])
+  patterns=[
+   r'https?://[^\"\'<>\s]+',
+   r'[^\"\'<>\s]*(?:download|attach|file)[^\"\'<>\s]*',
+   r'[^\"\'<>\s]+\.pdf[^\"\'<>\s]*'
+  ]
+  found=[]
+  for pat in patterns:
+   for x in re.findall(pat,text,re.I):
+    if x not in found: found.append(x)
+  for x in found[:300]: print('MATCH',x[:1500])
+  # Probe directly exposed K-ESG JS download endpoints.
+  for a in soup.find_all('a',href=True):
+   href=str(a.get('href') or '')
    m=re.search(r"file_download\(['\"]([^'\"]+)",href)
    if m:
-    download=m.group(1); print('GUIDE_DOWNLOAD',download)
-    d=s.get(download,timeout=(8,60),stream=True); print('GUIDE_PROBE',d.status_code,d.headers.get('content-type'),d.headers.get('content-length'),d.headers.get('content-disposition')); d.close()
-except Exception as e: print('GUIDE_ERR',repr(e))
+    u=m.group(1); print('FILE_DOWNLOAD',u)
+    try:
+     rr=s.get(u,timeout=(8,60),allow_redirects=True,stream=True)
+     print('FILE_PROBE',rr.status_code,rr.url,rr.headers.get('content-type'),rr.headers.get('content-length'),rr.headers.get('content-disposition'))
+     rr.close()
+    except Exception as e: print('FILE_ERR',repr(e))
+ except Exception as e:
+  print('ERROR',repr(e))
