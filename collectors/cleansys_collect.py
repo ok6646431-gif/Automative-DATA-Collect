@@ -12,6 +12,20 @@ except ImportError:
 
 BASE="https://cleansys.or.kr"; INDEX=BASE+"/index.do"; ANNUAL=BASE+"/apiService/selectAnnualResult.do"
 UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36"
+LEGAL_PATTERNS=[r"\(주\)",r"㈜",r"주식회사",r"유한회사",r"\(유\)"]
+
+
+def normalize_company_text(value):
+    """Normalize spelling/layout differences without inventing fuzzy aliases."""
+    text=str(value or "")
+    for pat in LEGAL_PATTERNS:
+        text=re.sub(pat,"",text,flags=re.I)
+    return re.sub(r"[^0-9A-Za-z가-힣]","",text).lower()
+
+
+def term_matches_option(term,name):
+    t=normalize_company_text(term); n=normalize_company_text(name)
+    return bool(t and n and t in n)
 
 
 def main(req_path):
@@ -30,7 +44,7 @@ def main(req_path):
         soup=BeautifulSoup(r.text,"html.parser"); candidates=[]; excluded_candidates=[]
         for opt in soup.find_all("option"):
             name=opt.get_text(" ",strip=True); fact=(opt.get("value") or "").strip()
-            if not fact or not any(t.lower() in name.lower() for t in terms):
+            if not fact or not any(term_matches_option(t,name) for t in terms):
                 continue
             exclusion=matching_exclusion(name,exclude_terms)
             row={"fact_code":fact,"company_name_raw":name}
