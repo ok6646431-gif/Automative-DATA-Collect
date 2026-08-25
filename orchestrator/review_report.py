@@ -1,6 +1,9 @@
-import csv, html, json, math, shutil, subprocess
+import csv, html, json, math, shutil, subprocess, sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from archive_builder import valid_pdf
 
 DOMAIN_ORDER=['AIR','WATER','WATER_RESOURCES','CHEMICALS','WASTE','GHG_ENERGY']
 DOMAIN_KO={'AIR':'대기','WATER':'수질','WATER_RESOURCES':'용수·수자원','CHEMICALS':'화학물질','WASTE':'폐기물·자원순환','GHG_ENERGY':'온실가스·에너지','CROSS_MEDIA':'통합관리'}
@@ -221,8 +224,9 @@ def build_review_report(package_root, render_pdf=True):
         if browser:
             cmd=[browser,'--headless','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path.resolve()}',html_path.resolve().as_uri()]
             cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
-            pdf_ok=cp.returncode==0 and pdf_path.exists() and pdf_path.stat().st_size>1000
+            pdf_ok=valid_pdf(pdf_path)
             if not pdf_ok: pdf_error=cp.stderr.decode('utf-8',errors='replace')[-1000:]
+            elif cp.returncode!=0: pdf_error=f'non-zero exit code {cp.returncode} but PDF is valid: '+cp.stderr.decode('utf-8',errors='replace')[-500:]
         else: pdf_error='no chromium-compatible browser found'
     summary={'schema_version':'1.0','report_html':html_path.name,'report_pdf':pdf_path.name if pdf_ok else None,'evidence_xlsx':xlsx_path.name if xlsx_path and xlsx_path.exists() else None,'deep_dive_topics':len(deep),'scope_sites':len(sites),'pdf_ok':pdf_ok,'pdf_error':pdf_error,'principle':'The report organizes evidence for study; it does not automatically judge environmental performance, compliance, risk or causality.'}
     (root/'Environmental_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary

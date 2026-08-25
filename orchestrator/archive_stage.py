@@ -109,7 +109,11 @@ def add_archive_zip_to_artifact_index(package_root,zip_path):
 
 def refresh_manifest(package_root,docs,env,artifact_count):
     root=Path(package_root); manifest=read_json(root/"Master_Manifest.json",{}) or {}; review=read_json(root/"REVIEW_REQUIRED.json",[]) or []
-    manifest["schema_version"]="1.4"
+    # Preserve the schema version written by package_run.py (currently 1.6, which already
+    # includes review_selection/cross_layer_review/review_report). Archive stage only adds
+    # document_lane/envinfo_attachments/human_archive fields on top; it must never regress
+    # the version to an older package_run schema.
+    manifest.setdefault("schema_version","1.6")
     manifest["review_count"]=len(review); manifest["validation"]="REVIEW_REQUIRED" if review else "PASS"; manifest["artifact_count"]=artifact_count
     manifest["document_lane"]={"status":docs.get("status","NOT_RUN"),"documents_declared":docs.get("documents_declared",0),"downloaded":docs.get("downloaded",0),"failed":docs.get("failed",0),"skipped":docs.get("skipped",0),"gaps":docs.get("gaps",0)}
     manifest["envinfo_attachments"]={"discovered":env.get("attachments_discovered",0),"downloaded":env.get("attachment_ok",0),"failed":env.get("attachment_fail",0),"bytes":env.get("attachment_bytes",0)}

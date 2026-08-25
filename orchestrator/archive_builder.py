@@ -190,6 +190,28 @@ def browser_binary():
     return None
 
 
+def valid_pdf(pdf_path,min_bytes=1000):
+    """Judge PDF health from the file itself, not from a subprocess exit code.
+
+    Headless Chrome can exit non-zero (GPU/logging warnings, sandbox quirks in CI)
+    even after writing a fully valid PDF, so the exit code alone is not trustworthy.
+    A file is treated as a valid PDF when it exists, is large enough, starts with the
+    '%PDF-' magic header and ends with an '%%EOF' marker (both required by the PDF
+    file-structure spec for a non-truncated file).
+    """
+    p=Path(pdf_path)
+    if not p.exists() or p.stat().st_size<min_bytes: return False
+    try:
+        with p.open('rb') as f:
+            head=f.read(8)
+            if not head.startswith(b'%PDF-'): return False
+            f.seek(max(0,p.stat().st_size-2048))
+            tail=f.read()
+    except OSError:
+        return False
+    return b'%%EOF' in tail
+
+
 def render_html_pdf(html_path,pdf_path):
     browser=browser_binary()
     if not browser: return False,'no chromium-compatible browser found'
@@ -197,8 +219,14 @@ def render_html_pdf(html_path,pdf_path):
     cmd=[browser,'--headless','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path}',html_path.as_uri()]
     try:
         cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45,check=False)
-        ok=cp.returncode==0 and pdf_path.exists() and pdf_path.stat().st_size>500
-        return ok,(cp.stderr.decode('utf-8',errors='replace')[-1000:] if not ok else '')
+        ok=valid_pdf(pdf_path)
+        err=''
+        if not ok:
+            err=cp.stderr.decode('utf-8',errors='replace')[-1000:]
+        elif cp.returncode!=0:
+            # File is a valid PDF despite a non-zero exit code; keep the warning for visibility.
+            err=f'non-zero exit code {cp.returncode} but PDF is valid: '+cp.stderr.decode('utf-8',errors='replace')[-500:]
+        return ok,err
     except Exception as exc: return False,f'{type(exc).__name__}: {exc}'
 
 
@@ -226,6 +254,32 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
         year=str(att.get('year') or '연도미상')
         created.append(unique_copy(src,user/safe(display)/'첨부자료',f'{year}_{att.get("original_filename") or src.name}'))
     return created,failures
+
+
+REVIEW_REPORT_FILES=[
+    ('Environmental_Review_Brief.pdf', True),
+    ('Environmental_Review_Evidence.xlsx', True),
+    ('Environmental_Review_Brief.html', False),
+    ('Environmental_Review_Summary.json', False),
+]
+
+
+def build_review_report_user(package_root,archive_root,company_name):
+    """Copy the automated human review report into the front of the user-facing archive.
+
+    The report is generated at the package root (see orchestrator/review_report.py) but
+    build_archive() never copied it into Human_Archive.zip, so users opening the archive
+    never saw it. This puts the PDF/XLSX (and HTML/JSON for traceability) at
+    01_사용자자료/00_환경관리검토/, ahead of raw source folders, without removing the
+    root-level originals (90_시스템원본 stays company-wide/raw).
+    """
+    root=Path(package_root); folder=Path(archive_root)/USER_ROOT/'00_환경관리검토'; created=[]; found_pdf=False
+    for name,required in REVIEW_REPORT_FILES:
+        src=root/name
+        if not src.exists(): continue
+        created.append(unique_copy(src,folder,f'{safe(company_name)}_{name}'))
+        if name.endswith('.pdf'): found_pdf=True
+    return created,found_pdf
 
 
 def doc_user_folder(dtype,title=''):
@@ -265,7 +319,7 @@ def copy_system_raw(package_root,archive_root):
         for src in out.iterdir():
             if src.is_dir(): shutil.copytree(src,system/src.name,dirs_exist_ok=True)
     cp=system/'control_plane'; cp.mkdir(parents=True,exist_ok=True)
-    for name in ROOT_INDEX_FILES+['Integration_Summary.json','Archive_Summary.json']:
+    for name in ROOT_INDEX_FILES+['Integration_Summary.json','Archive_Summary.json']+[n for n,_ in REVIEW_REPORT_FILES]:
         p=root/name
         if p.exists(): copy_file(p,cp/name)
 
@@ -297,13 +351,14 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     archive_root.mkdir(parents=True,exist_ok=True)
     scope,labels,tokens=source_id_scope(package_root,profile)
     excels=build_user_excels(package_root,archive_root,scope)
+    review_created,review_pdf_present=build_review_report_user(package_root,archive_root,company_name)
     env_created,env_failures=build_envinfo_user(package_root,archive_root,scope,labels)
     docs_created,document_rows=build_corporate_user(package_root,archive_root,company_name)
     copy_system_raw(package_root,archive_root)
     user_files=write_user_indexes(package_root,archive_root,document_rows,env_failures)
     sustainability=[p for p in docs_created if '04_지속가능경영보고서' in str(p)]; policy=[p for p in docs_created if '06_회사환경정책' in str(p)]; guides=[p for p in docs_created if '07_가이드라인_참고자료' in str(p)]
     expected_env=sum(1 for r in read_csv(package_root/'output'/'ENVINFO'/'discovery.csv') if str(r.get('compId') or '') in scope['ENVINFO'])
-    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':len(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1}
+    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':len(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present}
     completeness='COMPLETE' if all(checks.values()) else 'INCOMPLETE'; idx=archive_root/'00_자료목록'
     manifest={'schema_version':'2.0','company_id':company_id,'company_display_name':company_name,'created_at':datetime.now(timezone.utc).isoformat(),'archive_root':archive_root.name,'archive_completeness':completeness,'acceptance_checks':checks,'target_site_tokens':[x[0] for x in tokens],'target_source_ids':{k:sorted(v) for k,v in scope.items()},'user_files':len(user_files),'system_files':sum(1 for p in (archive_root/SYSTEM_ROOT).rglob('*') if p.is_file()),'xlsx_exports':len(excels),'envinfo_pdf_failures':env_failures,'principle':'01_사용자자료만으로 조사·비교가 가능해야 하며, 재현용 raw 자료는 90_시스템원본에 격리한다.'}
     (idx/'Archive_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
