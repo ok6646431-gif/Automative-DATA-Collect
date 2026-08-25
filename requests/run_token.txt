@@ -1,1 +1,1 @@
-sec-ds-document-semantics-20260825-v1
+sec-ds-document-semantics-20260825-v2
