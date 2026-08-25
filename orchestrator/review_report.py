@@ -222,7 +222,9 @@ def build_review_report(package_root, render_pdf=True):
     if render_pdf:
         browser=next((shutil.which(x) for x in ['google-chrome','google-chrome-stable','chromium','chromium-browser'] if shutil.which(x)),None)
         if browser:
-            cmd=[browser,'--headless','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path.resolve()}',html_path.resolve().as_uri()]
+            # '--headless=new' (not the legacy '--headless' content-shell mode) is required for
+            # correct CJK/complex-script text shaping and font embedding in --print-to-pdf output.
+            cmd=[browser,'--headless=new','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path.resolve()}',html_path.resolve().as_uri()]
             cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
             pdf_ok=valid_pdf(pdf_path)
             if not pdf_ok: pdf_error=cp.stderr.decode('utf-8',errors='replace')[-1000:]
