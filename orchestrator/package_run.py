@@ -2,13 +2,14 @@ import argparse, csv, hashlib, json, shutil
 from pathlib import Path
 from postprocess import run_integration, stable_id
 from event_analysis import run_event_analysis
+from requested_scope import apply_requested_scope
 
 BAD={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","CONFIG_ERROR"}
 SOURCES=["ENVINFO","PRTR","CHEM_STATS","CLEANSYS_AIR","SOOSIRO_WATER"]
 ROOT_ARTIFACTS=[
     "Company_Profile.json","Event_Evidence.json","Coverage_Matrix.csv","Coverage_Status.csv","Integration_Summary.json",
     "REVIEW_REQUIRED.json","Site_Master.csv","Source_Identity.csv","Validation_Queue.csv","Event_Registry.csv",
-    "Coverage_Event_Links.csv","Analysis_Ready_Index.csv"
+    "Coverage_Event_Links.csv","Analysis_Ready_Index.csv","Requested_Scope.json","Analysis_Scope.csv"
 ]
 
 # Canonical row-stream files and explicit audit row streams are legitimately zero
@@ -182,6 +183,15 @@ def main():
     integration=run_integration(output,profile,out)
     append_coverage_reviews(out,integration["company_id"])
     integration.update(run_event_analysis(out,events if events.exists() else None))
+    scope_summary=apply_requested_scope(out)
+    integration["requested_scope"]={
+        "mode": scope_summary.get("mode"),
+        "label": scope_summary.get("label"),
+        "target_canonical_site_ids": scope_summary.get("target_canonical_site_ids",[]),
+        "analysis_rows_before": scope_summary.get("analysis_rows_before",0),
+        "analysis_rows_after": scope_summary.get("analysis_rows_after",0),
+        "unresolved_candidates": scope_summary.get("unresolved_candidates",[]),
+    }
     with (out/"Validation_Queue.csv").open(encoding="utf-8-sig",newline="") as f: integration["validation_queue"]=sum(1 for _ in csv.DictReader(f))
     (out/"Integration_Summary.json").write_text(json.dumps(integration,ensure_ascii=False,indent=2),encoding="utf-8")
     all_review=read_json(out/"REVIEW_REQUIRED.json"); validation="REVIEW_REQUIRED" if all_review else "PASS"
@@ -190,7 +200,7 @@ def main():
     with (out/"Artifact_Index.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(idx)
 
-    manifest={"schema_version":"1.2","package_health":"PASS" if package_ok else "FAIL","validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"sources":statuses,"integration":integration,"artifact_count":len(idx)}
+    manifest={"schema_version":"1.3","package_health":"PASS" if package_ok else "FAIL","validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"artifact_count":len(idx)}
     (out/"Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps({"package_health":manifest["package_health"],"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"artifacts":len(idx),"integration":integration},ensure_ascii=False))
     raise SystemExit(0 if package_ok else 81)
