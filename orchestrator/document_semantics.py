@@ -1,4 +1,4 @@
-import csv, json, re, subprocess
+import csv, json, re, subprocess, sys
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -11,17 +11,17 @@ FIELDS=[
 
 DOMAIN_WORDS={
     'AIR':['대기','배기','질소산화물','nox','sox','hcl','hf','voc','먼지','scrubber','집진','악취'],
-    'WATER_RESOURCES':['용수','수자원','재이용','재사용','upw','초순수','ro 농축수','water stewardship','aws'],
-    'WATER':['수질','폐수','방류','오수','toc','cod','bod','t-n','t-p','총질소','총인','불소','폐수처리'],
+    'WATER_RESOURCES':['용수','수자원','재이용','재사용','upw','초순수','ro 농축수','water stewardship','aws','water reuse'],
+    'WATER':['수질','폐수','방류','오수','toc','cod','bod','t-n','t-p','총질소','총인','불소','폐수처리','wastewater'],
     'CHEMICALS':['화학물질','화학','chemical','유해물질','규제물질','약품','누출','hf','불산','황산','암모니아','ipa'],
     'WASTE':['폐기물','재활용','자원순환','waste','zero waste','지정폐기물'],
-    'GHG_ENERGY':['온실가스','탄소','carbon','scope 1','scope1','scope 2','scope2','pfc','hfc','sf6','nf3','에너지','전력','re100','net zero','넷제로']
+    'GHG_ENERGY':['온실가스','탄소','carbon','scope 1','scope1','scope 2','scope2','pfc','hfc','sf6','nf3','에너지','전력','re100','net zero','넷제로','greenhouse gas']
 }
-TECHNIQUE_WORDS=['처리','저감','회수','재이용','재사용','흡수','흡착','세정','scrubber','집진','여과','막','ro','응집','침전','중화','산화','소각','rto','탈질','denox','촉매','분리','재활용','recovery','abatement']
-ISSUE_WORDS=['배출','발생','오염','부하','폐수','배기가스','환경영향','온실가스','유해','누출','사용량','취급']
-FUTURE_WORDS=['목표','계획','예정','추진','확대할','도입할','달성','2030','2040','2050','2029','target','roadmap','strategy','net zero','re100']
-ACTION_WORDS=['설치','도입','적용','운영','개선','교체','구축','증설','감축','저감','재이용','회수','인증','허가','취득','완료']
-POLICY_WORDS=['정책','방침','규칙','절차','관리체계','위원회','검토','승인','관리기준','금지','제한']
+TECHNIQUE_WORDS=['처리','저감','회수','재이용','재사용','흡수','흡착','세정','scrubber','집진','여과','막','ro','응집','침전','중화','산화','소각','rto','탈질','denox','촉매','분리','재활용','recovery','abatement','treatment','recycle']
+ISSUE_WORDS=['배출','발생','오염','부하','폐수','배기가스','환경영향','온실가스','유해','누출','사용량','취급','emission','wastewater','pollutant']
+FUTURE_WORDS=['목표','계획','예정','추진','확대할','도입할','달성','2030','2040','2050','2029','target','roadmap','strategy','net zero','re100','will ','aim to']
+ACTION_WORDS=['설치','도입','적용','운영','개선','교체','구축','증설','감축','저감','재이용','회수','인증','허가','취득','완료','installed','introduced','applied','reduced','reused','certified']
+POLICY_WORDS=['정책','방침','규칙','절차','관리체계','위원회','검토','승인','관리기준','금지','제한','policy','procedure','committee','prohibit','restrict']
 
 SUPPORTED_TYPES={'BAT_REFERENCE','GUIDELINE','SUSTAINABILITY_REPORT','ENVIRONMENTAL_POLICY','CHEMICAL_POLICY','SHE_POLICY','ANNUAL_REPORT'}
 
@@ -41,14 +41,25 @@ def normalize(text):
 
 
 def split_units(text):
-    text=normalize(text)
-    if not text: return []
-    parts=re.split(r'(?<=[.!?。])\s+|\n+',text)
+    raw=str(text or '').replace('\r\n','\n').replace('\r','\n')
+    if not raw.strip(): return []
+    # Preserve PDF line structure first.  Collapsing all whitespace before splitting
+    # caused long technical pages to become one >900-character block and disappear.
+    pieces=[]
+    for line in re.split(r'\n+',raw):
+        line=normalize(line)
+        if not line: continue
+        pieces.extend(re.split(r'(?<=[.!?。])\s+',line))
     out=[]
-    for p in parts:
-        p=normalize(p)
-        if 35<=len(p)<=900: out.append(p)
-    if not out and 35<=len(text)<=900: out=[text]
+    for piece in pieces:
+        piece=normalize(piece)
+        if len(piece)<35: continue
+        if len(piece)<=900:
+            out.append(piece); continue
+        # Long table/text rows are retained in bounded chunks rather than dropped.
+        for i in range(0,len(piece),850):
+            chunk=normalize(piece[i:i+850])
+            if len(chunk)>=35: out.append(chunk)
     return out
 
 
@@ -102,21 +113,27 @@ def resolve_document_path(pkg,row):
     return None
 
 
+def pdf_reader():
+    try:
+        from pypdf import PdfReader
+        return PdfReader
+    except ImportError:
+        # The package stage is a controlled GitHub Actions environment.  Bootstrap
+        # the lightweight parser when the workflow image does not already provide it.
+        subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','pypdf'],check=True,capture_output=True,text=True)
+        from pypdf import PdfReader
+        return PdfReader
+
+
 def extract_pages(path):
     suffix=path.suffix.lower()
     if suffix=='.pdf':
-        try:
-            from pypdf import PdfReader
-            reader=PdfReader(str(path)); out=[]
-            for i,page in enumerate(reader.pages,1):
-                try: text=page.extract_text() or ''
-                except Exception: text=''
-                out.append((i,text))
-            return out
-        except ImportError:
-            proc=subprocess.run(['pdftotext','-layout',str(path),'-'],capture_output=True,check=True)
-            text=proc.stdout.decode('utf-8',errors='replace')
-            return [(i+1,p) for i,p in enumerate(text.split('\f')) if p.strip()]
+        PdfReader=pdf_reader(); reader=PdfReader(str(path)); out=[]
+        for i,page in enumerate(reader.pages,1):
+            try: text=page.extract_text() or ''
+            except Exception: text=''
+            out.append((i,text))
+        return out
     if suffix in {'.html','.htm'}:
         parser=TextHTMLParser(); parser.feed(path.read_text(encoding='utf-8',errors='replace')); return [(1,'\n'.join(parser.parts))]
     if suffix in {'.txt','.csv'}:
@@ -131,7 +148,7 @@ def boundary(layer,kind):
     return 'Page-grounded company statement. Do not infer causal impact on environmental data from the statement alone.'
 
 
-def run_document_semantics(package_root,max_per_document=120):
+def run_document_semantics(package_root,max_per_document=500):
     pkg=Path(package_root); idx=read_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv'); out=[]; docs=pages=0; failures=[]
     for row in idx:
         dtype=str(row.get('document_type') or '')
@@ -175,10 +192,10 @@ def run_document_semantics(package_root,max_per_document=120):
             'source_key':'CORP_DOCS','source_locator':locator,'interpretation_boundary':r['interpretation_boundary']
         })
     generated={'schema_version':'1.0','request_id':profile.get('request_id',''),'facts':facts,
-               'generation_rule':'Only page-grounded INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. Company action/future excerpts remain candidates until separately corroborated.'}
+               'generation_rule':'Only page-grounded INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. Company action/future excerpts remain page-grounded candidates and may be used only as statements of company action/plan, never as proof of performance or causality.'}
     (pkg/'Generated_Semantic_Evidence.json').write_text(json.dumps(generated,ensure_ascii=False,indent=2),encoding='utf-8')
 
-    summary={'schema_version':'1.1','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
+    summary={'schema_version':'1.2','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
              'generated_industry_facts':len(facts),'layer_counts':{k:sum(r['layer']==k for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
              'failures':failures,'principle':'Extraction is page-grounded candidate evidence; company BAT application, performance and causality are never inferred automatically.'}
     (pkg/'Document_Semantics_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -187,7 +204,7 @@ def run_document_semantics(package_root,max_per_document=120):
 
 def main():
     import argparse
-    ap=argparse.ArgumentParser(); ap.add_argument('--package-root',default='assembled'); ap.add_argument('--max-per-document',type=int,default=120); a=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--package-root',default='assembled'); ap.add_argument('--max-per-document',type=int,default=500); a=ap.parse_args()
     print(json.dumps(run_document_semantics(a.package_root,a.max_per_document),ensure_ascii=False))
 
 if __name__=='__main__': main()
