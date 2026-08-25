@@ -35,7 +35,7 @@ def parse_prtr(root,idmap):
         c=r.get('cells',[])
         if r.get('table_index')!=2 or len(c)!=6 or year(c[0]) is None: continue
         sid=str(r.get('entrps_id','')); cid,cname=resolve_site(idmap,'PRTR',sid,names.get(sid,sid))
-        out.append({'canonical_site_id':cid,'site_name':cname,'year':year(c[0]),'cas':c[1],'chemical':c[2],'release_kg':num(c[3]) or 0,'landfill_kg':num(c[4]) or 0,'transfer_kg':num(c[5]) or 0})
+        out.append({'source':'PRTR','source_site_id':sid,'canonical_site_id':cid,'site_name':cname,'year':year(c[0]),'cas':c[1],'chemical':c[2],'release_kg':num(c[3]) or 0,'landfill_kg':num(c[4]) or 0,'transfer_kg':num(c[5]) or 0})
     return out
 
 def cas_norm(x):
@@ -49,7 +49,7 @@ def parse_chem_stats(root,idmap):
         c=r.get('cells',[])
         if r.get('table_index')!=3 or int(r.get('row_index',-1))<2 or len(c)<13: continue
         sid=str(r.get('bplcId','')); cid,cname=resolve_site(idmap,'CHEM_STATS',sid,names.get(sid,sid)); flags=[FLAGS[i] for i,v in enumerate(c[2:13]) if '▣' in str(v)]
-        out.append({'canonical_site_id':cid,'site_name':cname,'year':year(r.get('search_year')),'chemical':c[0],'cas':cas_norm(c[1]),'flags':flags})
+        out.append({'source':'CHEM_STATS','source_site_id':sid,'canonical_site_id':cid,'site_name':cname,'year':year(r.get('search_year')),'chemical':c[0],'cas':cas_norm(c[1]),'flags':flags})
     return out
 
 def chemical_candidates(prtr,stats):
@@ -76,9 +76,9 @@ def daily_stats(root,idmap):
         for f,m in WATER.items():
             if not (f.endswith('_AVRG_DNSTY') or f=='AMOUNT_FLOW'): continue
             v=num(r.get(f))
-            if v is not None: g[(cid,cname,outlet,m)].append(v)
+            if v is not None: g[(sid,cid,cname,outlet,m)].append(v)
     out=[]
-    for (cid,cname,outlet,m),v in sorted(g.items()):
+    for (sid,cid,cname,outlet,m),v in sorted(g.items()):
         s=sorted(v); mean=statistics.mean(s); sd=statistics.stdev(s) if len(s)>1 else 0; p95=s[min(len(s)-1,max(0,math.ceil(.95*len(s))-1))]
-        out.append({'canonical_site_id':cid,'site_name':cname,'outlet':outlet,'metric':m,'n':len(s),'mean':mean,'median':statistics.median(s),'p95':p95,'max':max(s),'cv':sd/mean if mean else None,'interpretation_boundary':'Descriptive within-year variability only; not compliance or treatment efficiency.'})
+        out.append({'source':'SOOSIRO_WATER','source_site_id':sid,'canonical_site_id':cid,'site_name':cname,'outlet':outlet,'metric':m,'n':len(s),'mean':mean,'median':statistics.median(s),'p95':p95,'max':max(s),'cv':sd/mean if mean else None,'interpretation_boundary':'Descriptive within-year variability only; not compliance or treatment efficiency.'})
     return out
