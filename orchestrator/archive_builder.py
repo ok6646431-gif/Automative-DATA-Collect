@@ -221,7 +221,9 @@ def render_html_pdf(html_path,pdf_path):
     browser=browser_binary()
     if not browser: return False,'no chromium-compatible browser found'
     html_path=Path(html_path).resolve(); pdf_path=Path(pdf_path).resolve(); pdf_path.parent.mkdir(parents=True,exist_ok=True)
-    cmd=[browser,'--headless','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path}',html_path.as_uri()]
+    # '--headless=new' (not the legacy '--headless' content-shell mode) is required for
+    # correct CJK/complex-script text shaping and font embedding in --print-to-pdf output.
+    cmd=[browser,'--headless=new','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path}',html_path.as_uri()]
     try:
         cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=45,check=False)
         ok=valid_pdf(pdf_path)
