@@ -3,6 +3,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from review_selection_common import read_csv, read_json, write_csv, stable_id
+from document_semantics import run_document_semantics
 
 LAYER_FIELDS=[
     'evidence_id','layer','domain','canonical_site_id','site_name','time_key','title','statement',
@@ -98,7 +99,6 @@ def industry_reference_layer(pkg, semantic_path=None):
         if d.get('collection_status')!='DOWNLOADED' or d.get('document_type') not in INDUSTRY_DOC_TYPES: continue
         text=' '.join([d.get('title',''),d.get('document_type',''),d.get('notes','')])
         domains=infer_domains(text)
-        # A generic BAT/K-BREF document can support several media, but document presence is not a technique claim.
         if d.get('document_type')=='BAT_REFERENCE' and domains==['CROSS_MEDIA']:
             domains=['AIR','WATER','WATER_RESOURCES','CHEMICALS','WASTE','GHG_ENERGY']
         for domain in domains:
@@ -142,7 +142,7 @@ def build_cross_candidates(pkg,layers,scope):
         present=[k for k,v in matches.items() if v]
         why='Observed public-data signal'
         if actions: why+=' + company/site action'
-        if semantic_industry: why+=' + semantically extracted industry technical context'
+        if semantic_industry: why+=' + page-grounded industry technical context'
         elif industry: why+=' + industry reference document available (semantic extraction pending)'
         if future: why+=' + company future direction'
         rows.append({
@@ -164,16 +164,20 @@ def build_cross_candidates(pkg,layers,scope):
 
 def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     pkg=Path(package_root); scope=read_json(pkg/'Requested_Scope.json',{}) or {}; protocol=read_json(protocol_path or Path(__file__).with_name('cross_layer_protocol.json'),{}) or {}
+    semantic_summary=run_document_semantics(pkg)
+    generated=pkg/'Generated_Semantic_Evidence.json'
+    if not semantic_path or not Path(semantic_path).exists(): semantic_path=generated if generated.exists() else None
     layers=observed_layer(pkg,scope)+company_action_layer(pkg,scope)+industry_reference_layer(pkg,semantic_path)
     rows,questions=build_cross_candidates(pkg,layers,scope)
     write_csv(pkg/'Evidence_Layer_Registry.csv',layers,LAYER_FIELDS)
     write_csv(pkg/'Cross_Layer_Review_Candidates.csv',rows,CROSS_FIELDS)
     write_csv(pkg/'Study_Question_Queue.csv',questions,QUESTION_FIELDS)
     summary={
-        'schema_version':'1.0','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.1','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
+        'document_semantics':semantic_summary,
         'principle':'Independent evidence layers overlap to create review questions; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
