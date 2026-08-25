@@ -1,1 +1,1 @@
-sec-ds-archive-v2-20260819-acceptance
+sec-ds-event-v1-20260825
