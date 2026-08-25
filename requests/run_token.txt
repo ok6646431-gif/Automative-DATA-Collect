@@ -1,1 +1,1 @@
-sec-ds-event-v1-20260825
+sec-ds-event-v1-scope-20260825-final
