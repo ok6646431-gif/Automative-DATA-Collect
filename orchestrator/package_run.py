@@ -4,6 +4,7 @@ from postprocess import run_integration, stable_id
 from event_analysis import run_event_analysis
 from requested_scope import apply_requested_scope
 from review_selection import run_review_selection
+from cross_layer_review import run_cross_layer_review
 
 BAD={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","CONFIG_ERROR"}
 SOURCES=["ENVINFO","PRTR","CHEM_STATS","CLEANSYS_AIR","SOOSIRO_WATER"]
@@ -13,7 +14,9 @@ ROOT_ARTIFACTS=[
     "Coverage_Event_Links.csv","Analysis_Ready_Index.csv","Requested_Scope.json","Analysis_Scope.csv",
     "Review_Metric_Inventory.csv","Review_Signal_Registry.csv","Management_Action_Ledger.csv",
     "Chemical_Review_Candidates.csv","Water_Daily_Stats.csv","Review_Display_Plan.csv",
-    "Review_Topic_Candidates.csv","Review_Source_Coverage.csv","Review_Selection_Summary.json"
+    "Review_Topic_Candidates.csv","Review_Source_Coverage.csv","Review_Selection_Summary.json",
+    "Evidence_Layer_Registry.csv","Cross_Layer_Review_Candidates.csv","Study_Question_Queue.csv",
+    "Cross_Layer_Review_Summary.json"
 ]
 
 # Canonical row-stream files and explicit audit row streams are legitimately zero
@@ -166,11 +169,11 @@ def append_coverage_reviews(package_root,company_id):
 
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument("--stable",default="collected/stable"); ap.add_argument("--icis",default="collected/icis"); ap.add_argument("--profile",default="requests/company_profile.json"); ap.add_argument("--events",default="requests/event_evidence.json"); ap.add_argument("--out",default="assembled")
-    args=ap.parse_args(); stable=Path(args.stable); icis=Path(args.icis); profile=Path(args.profile); events=Path(args.events); out=Path(args.out); output=out/"output"
+    ap=argparse.ArgumentParser(); ap.add_argument("--stable",default="collected/stable"); ap.add_argument("--icis",default="collected/icis"); ap.add_argument("--profile",default="requests/company_profile.json"); ap.add_argument("--events",default="requests/event_evidence.json"); ap.add_argument("--semantic",default="requests/semantic_evidence.json"); ap.add_argument("--out",default="assembled")
+    args=ap.parse_args(); stable=Path(args.stable); icis=Path(args.icis); profile=Path(args.profile); events=Path(args.events); semantic=Path(args.semantic); out=Path(args.out); output=out/"output"
     if out.exists(): shutil.rmtree(out)
     output.mkdir(parents=True,exist_ok=True)
-    for s in ["ENVINFO","CLEANSYS_AIR","SOOSIRO_WATER"]: copy_source(stable,output,s) or copy_source(stable/"output",output,s)
+    for s in ["ENVINFO","CLEANSYS_AIR","SOOSIRO_WATER","CORP_DOCS"]: copy_source(stable,output,s) or copy_source(stable/"output",output,s)
     chosen=choose_icis(icis)
     if chosen:
         for s in ["PRTR","CHEM_STATS"]: copy_source(chosen,output,s)
@@ -197,6 +200,7 @@ def main():
         "unresolved_candidates": scope_summary.get("unresolved_candidates",[]),
     }
     integration["review_selection"]=run_review_selection(output,out)
+    integration["cross_layer_review"]=run_cross_layer_review(out,semantic if semantic.exists() else None)
     with (out/"Validation_Queue.csv").open(encoding="utf-8-sig",newline="") as f: integration["validation_queue"]=sum(1 for _ in csv.DictReader(f))
     (out/"Integration_Summary.json").write_text(json.dumps(integration,ensure_ascii=False,indent=2),encoding="utf-8")
     all_review=read_json(out/"REVIEW_REQUIRED.json"); validation="REVIEW_REQUIRED" if all_review else "PASS"
@@ -205,7 +209,7 @@ def main():
     with (out/"Artifact_Index.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(idx)
 
-    manifest={"schema_version":"1.4","package_health":"PASS" if package_ok else "FAIL","validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"review_selection":integration.get("review_selection",{}),"artifact_count":len(idx)}
+    manifest={"schema_version":"1.5","package_health":"PASS" if package_ok else "FAIL","validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"review_selection":integration.get("review_selection",{}),"cross_layer_review":integration.get("cross_layer_review",{}),"artifact_count":len(idx)}
     (out/"Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps({"package_health":manifest["package_health"],"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"artifacts":len(idx),"integration":integration},ensure_ascii=False))
     raise SystemExit(0 if package_ok else 81)
