@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "purpose": "Convert heterogeneous company/environment evidence into a compact, source-traceable review brief for environmental-management study. The system may propose review topics, but must not make unsupported causal or performance judgments.",
+  "schema_version": "1.1",
+  "purpose": "Convert heterogeneous company/environment evidence into a source-traceable environmental-management study dossier. The dossier is for a non-expert user who needs to understand what the company manages, why selected evidence matters, and what still requires verification. It must not make unsupported causal, legal-compliance, risk, or performance judgments.",
   "input": {
     "required": ["company_name", "analysis_period"],
     "optional": ["requested_scope"],
@@ -10,137 +10,61 @@
       "requested_scope": "Optional business-unit/site scope such as Samsung Electronics DS. Raw evidence remains preserved outside the scoped review view."
     }
   },
+  "selection_protocol": {
+    "config": "orchestrator/review_selection_protocol.json",
+    "implementation": "orchestrator/review_selection.py",
+    "required_order": ["inventory", "comparability", "signal", "management_relevance", "interpretability", "display_level"],
+    "principle": "Never decide the representative pollutant or metric before inventorying the source-native evidence. The protocol, not a fixed company-specific list, determines what is promoted into the main review."
+  },
   "output_bundle": {
-    "primary": "Environmental_Review_Brief.pdf",
-    "evidence_workbook": "Environmental_Facts.xlsx",
+    "primary": "Environmental_Management_Dossier.pdf",
+    "evidence_workbook": "Environmental_Evidence.xlsx",
     "source_archive": "Sources/",
-    "target_brief_pages": {
-      "min": 8,
-      "max": 10,
-      "overflow_policy": "Move detail to workbook/source archive rather than expanding the main brief."
-    }
+    "selection_artifacts": [
+      "Review_Metric_Inventory.csv",
+      "Review_Signal_Registry.csv",
+      "Management_Action_Ledger.csv",
+      "Chemical_Review_Candidates.csv",
+      "Water_Daily_Stats.csv",
+      "Review_Display_Plan.csv",
+      "Review_Topic_Candidates.csv",
+      "Review_Source_Coverage.csv",
+      "Review_Selection_Summary.json"
+    ],
+    "page_policy": "No fixed page target. Use enough pages to explain the management structure and evidence without repeating raw tables. Detail that does not change what the user should inspect next stays in the workbook/archive."
+  },
+  "brief_generation_policy": {
+    "architecture_first": "Explain company/process/site/environmental-management architecture before detailed site or pollutant trends.",
+    "media_inventory_before_selection": "For each environmental medium, disclose what metrics/sources exist before explaining why some were selected for detailed review.",
+    "site_repetition_policy": "Do not repeat every metric for every site. Site-specific detail appears when it explains a material process/site difference, a multi-year signal, or a management action.",
+    "management_timeline": "Use the full available multi-year action/investment window. Do not default to the latest year only.",
+    "selection_transparency": "The evidence workbook must distinguish no-data, context-only, overview, main-review and deep-dive-candidate states."
   },
   "brief_sections": [
-    {
-      "id": "company_context",
-      "title": "Company & Business Context",
-      "goal": "Provide only the business facts needed to interpret environmental evidence.",
-      "contents": [
-        "legal entity and requested scope",
-        "major businesses/products",
-        "major domestic sites and site roles",
-        "high-level process flow when publicly supportable",
-        "recent capacity/expansion/business changes relevant to environmental context"
-      ]
-    },
-    {
-      "id": "management_overview",
-      "title": "Environmental Management Overview",
-      "goal": "Summarize cross-media management systems separately from individual environmental media.",
-      "contents": [
-        "environmental policy",
-        "management system/certification",
-        "permit or integrated-permit status when public",
-        "public internal guidelines/processes",
-        "environmental investment and governance facts"
-      ]
-    },
-    {
-      "id": "media_snapshot",
-      "title": "Environmental Media Snapshot",
-      "goal": "Give broad but shallow coverage of each relevant environmental domain before selecting deeper topics.",
-      "media": [
-        "air",
-        "water",
-        "waste",
-        "chemicals",
-        "greenhouse_gas_energy",
-        "water_resources",
-        "soil_groundwater",
-        "other_material_topics"
-      ],
-      "missing_data_policy": "Explicitly mark public evidence as not found/not applicable/insufficient rather than inventing a filled section."
-    },
-    {
-      "id": "multiyear_signals",
-      "title": "Multi-year Signals",
-      "goal": "Surface only changes that alter what the user should inspect next.",
-      "signal_types": ["repeated", "increase_decrease", "change_point", "composition_change", "stability_change"],
-      "prohibited": ["automatic causal inference", "automatic environmental-performance rating"]
-    },
-    {
-      "id": "priority_review_topics",
-      "title": "Priority Review Topics",
-      "goal": "Propose 3-5 study priorities using explicit evidence, not an opaque score.",
-      "topic_count": {"min": 3, "max": 5},
-      "selection_evidence": [
-        "multi-year repetition",
-        "material quantitative change",
-        "multi-site recurrence",
-        "company action/investment",
-        "public management guideline relevance",
-        "hazard/regulatory relevance when supported",
-        "BAT/industry relevance"
-      ],
-      "rule": "A topic must show its evidence dimensions and limitations. Do not force five topics if evidence is weak."
-    },
-    {
-      "id": "technical_context",
-      "title": "BAT / Technical / Management Context",
-      "goal": "Provide a technical starting point for the user's further study without guessing site-specific technology.",
-      "application_states": [
-        "company_confirmed",
-        "related_practice_confirmed",
-        "reference_only"
-      ]
-    },
-    {
-      "id": "further_review",
-      "title": "Questions for Further Review",
-      "goal": "Turn unresolved evidence into concrete questions about process, equipment, operating conditions, production scale, legal requirements, or treatment performance."
-    },
-    {
-      "id": "evidence_index",
-      "title": "Evidence Index",
-      "goal": "Allow every material fact and AI review statement to be traced back to source, year, scope, and evidence location."
-    }
+    {"id":"environmental_architecture","title":"Company Environmental Management Architecture","goal":"Show how business/process/site structure creates environmental-management interfaces and how common management functions such as permits, EMS, monitoring, investment and emergency response sit across media."},
+    {"id":"source_and_site_coverage","title":"Site & Source Coverage","goal":"Make clear which sites, years and source-native metrics are available and which are absent or short-series."},
+    {"id":"management_timeline","title":"Multi-year Management Action & Investment Timeline","goal":"Show disclosed facilities, investments, reuse/reduction projects and management actions across the whole available period, separated by site and environmental domain."},
+    {"id":"media_review","title":"Environmental Media Review","goal":"For each environmental medium: show what is managed, what data exists, which signals passed the selection gates, related management evidence, limitations and what to inspect next.","media":["air","water","chemicals","waste","greenhouse_gas_energy","water_resources","soil_groundwater","other_material_topics"]},
+    {"id":"site_specific_exceptions","title":"Site-specific Exceptions","goal":"Show site detail only when process role, expansion, source coverage or evidence patterns materially differ from the company-wide view. Equal page allocation by site is not required."},
+    {"id":"priority_review_topics","title":"Priority Review Topics","goal":"Promote only evidence-backed topic candidates. Topic candidates must expose evidence dimensions and limitations; human adoption remains required.","rule":"Do not force a fixed number when evidence is weak. Prefer non-redundant topics that answer different environmental-management questions."},
+    {"id":"technical_context","title":"Process / BAT / Regulatory Context","goal":"Explain why an observed fact may matter technically without guessing company-specific process or BAT application.","application_states":["company_confirmed","related_practice_confirmed","reference_only"]},
+    {"id":"further_review","title":"Questions for Further Review","goal":"Turn unresolved evidence into concrete questions about process use, equipment, operating conditions, production scale, legal requirements, inlet/load, treatment performance or definition changes."},
+    {"id":"evidence_index","title":"Evidence Index","goal":"Allow every material fact and AI review statement to be traced back to source, site/scope, year and evidence location."}
   ],
   "statement_types": {
-    "FACT": {
-      "definition": "Directly supported by source evidence.",
-      "required_fields": ["source", "scope", "period", "evidence_locator"]
-    },
-    "AI_REVIEW": {
-      "definition": "AI-proposed relationship, prioritization, or review suggestion built from one or more facts.",
-      "required_fields": ["supporting_fact_ids", "why_relevant", "limitations"],
-      "human_role": "User decides whether to adopt, hold, or reject the review suggestion."
-    },
-    "TO_VERIFY": {
-      "definition": "Information needed before a stronger interpretation can be made.",
-      "examples": ["production volume", "process change", "specific control equipment", "removal efficiency", "operating condition", "site-specific permit limit"]
-    }
+    "FACT": {"definition":"Directly supported by source evidence.","required_fields":["source","scope","period","evidence_locator"]},
+    "AI_REVIEW": {"definition":"AI-proposed relationship, prioritization or study suggestion built from one or more facts.","required_fields":["supporting_fact_ids","why_relevant","limitations"],"human_role":"User evaluates whether the evidence is understandable and useful, then adopts, holds or rejects the review suggestion."},
+    "TO_VERIFY": {"definition":"Information required before a stronger interpretation can be made.","examples":["production volume","process change","specific control equipment","removal efficiency","operating condition","site-specific permit limit","inlet load","measurement-definition bridge"]}
   },
-  "review_workbook_fields": [
-    "review_id",
-    "topic",
-    "statement_type",
-    "statement",
-    "supporting_fact_ids",
-    "evidence",
-    "source",
-    "scope",
-    "period",
-    "why_relevant",
-    "limitations",
-    "to_verify",
-    "user_decision"
-  ],
   "human_decision_values": ["ADOPT", "HOLD", "REJECT", "UNREVIEWED"],
   "hard_boundaries": [
     "No automatic statement that investment caused an emission change.",
     "No automatic rating that environmental management improved or worsened from absolute emissions alone.",
+    "No legal-compliance claim without the applicable site/facility-specific requirement.",
+    "No treatment-efficiency claim without inlet/load and relevant operating information.",
     "No claim that a company applies a BAT unless company-specific public evidence supports it.",
-    "No forced comparison across incompatible definitions, scopes, units, or regulatory measurement transitions.",
-    "Keep raw/source evidence available even when the review scope is narrower."
+    "No forced comparison across incompatible definitions, scopes, units or regulatory measurement transitions.",
+    "No chemical risk ranking from PRTR quantity alone.",
+    "Keep raw/source evidence available even when the main dossier omits it."
   ]
 }
