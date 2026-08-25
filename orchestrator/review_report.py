@@ -91,6 +91,21 @@ def rank_evidence(rows, terms, layer, limit=4):
     positive=[r for s,r in scored if s>2]
     return (positive or [r for _,r in scored])[:limit]
 
+def select_deep_topics(topics,xmap):
+    """Select report deep dives from either early or completed cross-layer readiness.
+
+    Review selection runs before document/cross-layer enrichment.  A topic that later
+    reaches FOUR_LAYER_READY has all four independent evidence layers and should not
+    disappear from the human report merely because the earlier source-overlap gate was
+    not met.  No hidden score or fixed Top-N ranking is introduced: every transparently
+    ready topic is included, while MULTI_LAYER_REVIEW remains contextual only.
+    """
+    return [
+        t for t in topics
+        if t.get('candidate_state')=='DEEP_DIVE_CANDIDATE'
+        or xmap.get(t.get('topic_id'),{}).get('review_state')=='FOUR_LAYER_READY'
+    ]
+
 def sparkline(values):
     pts=[]; data=[]
     for y,v in sorted(values.items(), key=lambda z:int(z[0])):
@@ -130,7 +145,7 @@ def build_review_report(package_root, render_pdf=True):
             if name and name in str(m.get('canonical_site_name','')): cid=tid; break
         sites.append((name,addr,cid))
     sm={r.get('metric_id'):r for r in sig}; am={r.get('action_id'):r for r in actions}; evm={r.get('evidence_id'):r for r in layers}; xmap={r.get('topic_id'):r for r in cross}
-    deep=[t for t in topics if t.get('candidate_state')=='DEEP_DIVE_CANDIDATE']
+    deep=select_deep_topics(topics,xmap)
     cvrows=''.join(f'<tr><td>{esc(r.get("source"))}</td><td>{esc(r.get("requested_scope_years"))}</td><td>{esc(r.get("requested_scope_year_count"))}</td></tr>' for r in cov)
     site_rows=''.join(f'<tr><td>{esc(n)}</td><td>{esc(a)}</td><td>{esc(cid or "scope-mapped")}</td></tr>' for n,a,cid in sites)
     domain_html=[]
@@ -192,12 +207,12 @@ def build_review_report(package_root, render_pdf=True):
     @page{{size:A4;margin:13mm 12mm 15mm}} body{{font-family:sans-serif;color:#172033;font-size:9.3pt;line-height:1.48}} h1{{font-size:22pt;margin:0 0 4mm}} h2{{font-size:15pt;margin:7mm 0 3mm;border-bottom:2px solid #17365D;padding-bottom:1.5mm}} h3{{font-size:11.5pt;margin:4mm 0 1.5mm;color:#17365D}} h4{{margin:2mm 0 1mm}} p{{margin:1.2mm 0}} ul{{margin:1.2mm 0 2mm;padding-left:5mm}} li{{margin:.8mm 0}} table{{width:100%;border-collapse:collapse;font-size:8.2pt;margin:2mm 0}} th,td{{border:1px solid #c7ced8;padding:1.4mm;vertical-align:top}} th{{background:#eef2f7}} .cover{{min-height:235mm;display:flex;flex-direction:column;justify-content:center}} .kicker{{font-size:10pt;color:#5b6575;letter-spacing:.04em}} .subtitle{{font-size:12pt;color:#465164;margin:3mm 0 8mm}} .box,.domain,.deep{{border:1px solid #d4dbe5;border-radius:6px;padding:4mm;margin:3mm 0;break-inside:avoid}} .domain{{break-inside:auto}} .deep{{break-before:page;border:none;padding:0}} .grid2{{display:grid;grid-template-columns:1fr 1fr;gap:3mm}} .stats{{display:flex;gap:2mm;flex-wrap:wrap;margin:2mm 0}} .stats span,.tag{{background:#eef3f8;border-radius:12px;padding:1mm 2mm;font-size:8pt}} .frame{{background:#f5f7fa;padding:2mm 3mm;border-left:3px solid #17365D}} .caveat{{background:#fff8e7;border-left:3px solid #d49a00;padding:2mm 3mm}} .muted,.src{{color:#697587;font-size:7.6pt}} .src{{display:block;margin-top:.4mm}} .evi{{border:1px solid #d9e0e8;padding:2.5mm;break-inside:avoid}} .signal{{display:inline-block;width:47%;vertical-align:top;border:1px solid #d9e0e8;padding:2mm;margin:1mm;break-inside:avoid}} .spark{{width:100%;height:48px;margin-top:1mm}} .spark polyline{{fill:none;stroke:#17365D;stroke-width:2}} .spark circle{{fill:#17365D}} .spark text{{font-size:8px;fill:#667}} .vals{{font-size:7.5pt;color:#596577;word-break:break-all}} .year{{border-left:3px solid #8fa6bf;padding-left:3mm;margin:3mm 0;break-inside:avoid}} .year h4 span{{font-weight:normal;font-size:8pt;color:#697587}} .lead{{font-size:10pt}} .pagebreak{{break-before:page}}</style></head><body>
     <section class="cover"><div class="kicker">AI-assisted Environmental Management Review</div><h1>{esc(report_name)} 환경관리 검토보고서</h1><div class="subtitle">공개근거 기반 · 요청범위 {esc(scope.get('label') or scope.get('mode'))} · 자동 생성 검증형 프로토타입</div>
     <div class="box"><b>이 보고서의 목적</b><p>기업 환경성과를 평가하거나 현장 원인을 단정하는 문서가 아니다. 비전문가가 공개자료를 통해 <b>무엇을 관리하는 회사인지, 어떤 변화가 보이는지, 무엇을 더 공부해야 하는지</b>를 근거를 따라 이해하도록 돕는 검토자료다.</p></div>
-    <div class="stats"><span>요청범위 지표 {review_summary.get('metric_inventory_in_scope','-')}</span><span>관리 Action {review_summary.get('management_actions_in_scope','-')}</span><span>검토주제 {review_summary.get('topic_candidates','-')}</span><span>Deep Dive {review_summary.get('deep_dive_candidates','-')}</span><span>문서 스캔 {cross_summary.get('document_semantics',{}).get('pages_scanned','-')}p</span></div><p class="muted">자동생성 결과는 원자료·페이지 근거와 함께 검토해야 하며, AI가 제시한 연관성은 인과관계를 뜻하지 않는다.</p></section>
+    <div class="stats"><span>요청범위 지표 {review_summary.get('metric_inventory_in_scope','-')}</span><span>관리 Action {review_summary.get('management_actions_in_scope','-')}</span><span>검토주제 {len(topics)}</span><span>Deep Dive {len(deep)}</span><span>문서 스캔 {cross_summary.get('document_semantics',{}).get('pages_scanned','-')}p</span></div><p class="muted">자동생성 결과는 원자료·페이지 근거와 함께 검토해야 하며, AI가 제시한 연관성은 인과관계를 뜻하지 않는다.</p></section>
     <h2>1. 먼저 머릿속에 넣을 구조</h2><div class="box"><p><b>회사/사업범위</b> → <b>사업장</b> → <b>환경영역</b> → <b>실제 공개값</b> → <b>회사 관리활동</b> → <b>산업 기술근거</b> → <b>미래방향</b> → <b>추가확인</b></p><p>각 층은 독립 근거로 유지한다. 시간적으로 겹친다는 이유만으로 ‘시설투자 때문에 수치가 개선됐다’고 연결하지 않는다.</p></div>
     <h3>요청 사업장</h3><table><thead><tr><th>사업장</th><th>공식 주소</th><th>분석 ID</th></tr></thead><tbody>{site_rows}</tbody></table><h3>공개자료 범위</h3><table><thead><tr><th>Source</th><th>요청범위 연도</th><th>연도 수</th></tr></thead><tbody>{cvrows}</tbody></table><p class="muted">화학물질통계처럼 조사주기가 다른 Source는 동일 연도수로 맞추지 않는다.</p>
     <h2>2. 환경관리 전체 지도</h2>{''.join(domain_html)}
     <h2>3. 2020-2024 관리시설·개선활동 Timeline</h2><p>ENV-INFO에 회사가 공개한 투자·기술도입·개선활동을 요청 사업장 기준으로 모았다. 투자액 합계는 공개 항목의 단순 합이며 성과평가 지표가 아니다.</p>{''.join(year_blocks)}
-    <h2>4. 근거가 겹치는 우선 검토주제</h2><p>전체 31개 검토주제 중 현재 규칙상 Deep Dive 후보는 {len(deep)}개다. 선정은 단일 수치의 크기가 아니라 <b>다년도 Signal + 같은 사업장/영역 Action + 독립 Source 중첩</b>을 기본으로 하며, 화학물질은 반복성·배출/이동경로·규제/유해 플래그를 함께 본다.</p>{''.join(deep_html)}
+    <h2>4. 근거가 겹치는 우선 검토주제</h2><p>전체 {len(topics)}개 검토주제 중 현재 규칙상 상세검토 후보는 {len(deep)}개다. 초기 단계의 <b>다년도 Signal + 같은 사업장/영역 Action + 독립 Source 중첩</b> 또는 후속 단계의 <b>OBSERVED + COMPANY_ACTION + INDUSTRY_TECHNICAL + FUTURE_DIRECTION 4개 근거층 완비</b>를 근거로 포함한다. 이는 중요도·위험도 순위나 인과판정이 아니다.</p>{''.join(deep_html)}
     <h2 class="pagebreak">5. 이 보고서를 읽을 때 지켜야 할 경계</h2><ul>{bhtml}</ul><div class="box"><b>결론 대신 남겨야 하는 것</b><p>[FACT] 원자료에서 직접 확인한 사실 / [AI REVIEW] 근거가 겹쳐 더 볼 가치가 있는 후보 / [TO VERIFY] 공개자료만으로 부족해 현장·허가·운전정보가 필요한 질문을 구분한다.</p></div></body></html>'''
     html_path=root/'Environmental_Review_Brief.html'; html_path.write_text(html_text,encoding='utf-8')
     xlsx_path=root/'Environmental_Review_Evidence.xlsx'
@@ -230,7 +245,7 @@ def build_review_report(package_root, render_pdf=True):
             if not pdf_ok: pdf_error=cp.stderr.decode('utf-8',errors='replace')[-1000:]
             elif cp.returncode!=0: pdf_error=f'non-zero exit code {cp.returncode} but PDF is valid: '+cp.stderr.decode('utf-8',errors='replace')[-500:]
         else: pdf_error='no chromium-compatible browser found'
-    summary={'schema_version':'1.0','report_html':html_path.name,'report_pdf':pdf_path.name if pdf_ok else None,'evidence_xlsx':xlsx_path.name if xlsx_path and xlsx_path.exists() else None,'deep_dive_topics':len(deep),'scope_sites':len(sites),'pdf_ok':pdf_ok,'pdf_error':pdf_error,'principle':'The report organizes evidence for study; it does not automatically judge environmental performance, compliance, risk or causality.'}
+    summary={'schema_version':'1.0','report_html':html_path.name,'report_pdf':pdf_path.name if pdf_ok else None,'evidence_xlsx':xlsx_path.name if xlsx_path and xlsx_path.exists() else None,'deep_dive_topics':len(deep),'deep_dive_selection_basis':'EARLY_DEEP_DIVE_OR_FOUR_LAYER_READY','scope_sites':len(sites),'pdf_ok':pdf_ok,'pdf_error':pdf_error,'principle':'The report organizes evidence for study; it does not automatically judge environmental performance, compliance, risk or causality.'}
     (root/'Environmental_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
 
 if __name__=='__main__':
