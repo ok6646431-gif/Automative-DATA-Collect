@@ -1,0 +1,83 @@
+import csv
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "orchestrator"))
+from requested_scope import apply_requested_scope, resolve_requested_scope
+
+
+def write_csv(path, rows, fields):
+    path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields); w.writeheader(); w.writerows(rows)
+
+
+class RequestedScopeTests(unittest.TestCase):
+    def make_package(self):
+        td = tempfile.TemporaryDirectory(); root = Path(td.name)
+        profile = {
+            "company_display_name": "테스트전자 주식회사",
+            "requested_company_name": "테스트전자(반도체)",
+            "requested_scope": {"mode": "SITE_SET", "label": "반도체", "candidate_ids": ["A", "B"]},
+            "aliases": [{"term": "테스트전자"}, {"term": "테스트전자(주)"}],
+            "site_candidates": [
+                {"candidate_id": "A", "site_name_raw": "기흥", "address_raw": "경기도 용인시 기흥구 삼성로 1", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+                {"candidate_id": "B", "site_name_raw": "온양", "address_raw": "충청남도 아산시 배방읍 배방로 158", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+            ],
+        }
+        (root / "Company_Profile.json").write_text(json.dumps(profile, ensure_ascii=False), encoding="utf-8")
+        write_csv(root / "Site_Master.csv", [
+            {"canonical_site_id": "SITE_A", "canonical_site_name": "테스트전자(주) 기흥사업장", "canonical_address_key": "경기용인시기흥구삼성로1", "identity_status": "CONFIRMED"},
+            {"canonical_site_id": "SITE_B", "canonical_site_name": "테스트전자(주) 온양사업장", "canonical_address_key": "충남아산시배방읍배방로158", "identity_status": "CONFIRMED"},
+            {"canonical_site_id": "SITE_X", "canonical_site_name": "테스트전자(주) 수원사업장", "canonical_address_key": "경기수원시영통구테스트로1", "identity_status": "CONFIRMED"},
+        ], ["canonical_site_id", "canonical_site_name", "canonical_address_key", "identity_status"])
+        write_csv(root / "Source_Identity.csv", [
+            {"source_key": "CHEM_STATS", "source_site_id": "CHEM_A", "canonical_site_id": "SITE_A", "source_site_name_raw": "테스트전자 주식회사 기흥사업장", "source_address_raw": "경기도 용인시 기흥구 삼성로 1", "match_status": "CONFIRMED"},
+            {"source_key": "CHEM_STATS", "source_site_id": "CHEM_B", "canonical_site_id": "CAND_B", "source_site_name_raw": "테스트전자(주)", "source_address_raw": "충청남도 아산시 배방읍 배방로 158", "match_status": "REVIEW_REQUIRED"},
+            {"source_key": "CHEM_STATS", "source_site_id": "CHEM_X", "canonical_site_id": "CAND_X", "source_site_name_raw": "테스트전자(주)", "source_address_raw": "경기도 수원시 영통구 테스트로 1", "match_status": "REVIEW_REQUIRED"},
+            {"source_key": "PRTR", "source_site_id": "PRTR_A", "canonical_site_id": "SITE_A", "source_site_name_raw": "테스트전자 기흥", "source_address_raw": "경기도 용인시 기흥구 삼성로 1", "match_status": "CONFIRMED"},
+        ], ["source_key", "source_site_id", "canonical_site_id", "source_site_name_raw", "source_address_raw", "match_status"])
+        write_csv(root / "Analysis_Ready_Index.csv", [
+            {"analysis_id": "1", "canonical_site_id": "SITE_A", "source_key": "PRTR", "source_site_id": "PRTR_A", "event_link_ids": "", "analysis_readiness": "READY"},
+            {"analysis_id": "2", "canonical_site_id": "", "source_key": "CHEM_STATS", "source_site_id": "CHEM_B", "event_link_ids": "", "analysis_readiness": "IDENTITY_REVIEW"},
+            {"analysis_id": "3", "canonical_site_id": "", "source_key": "CHEM_STATS", "source_site_id": "CHEM_X", "event_link_ids": "", "analysis_readiness": "IDENTITY_REVIEW"},
+        ], ["analysis_id", "canonical_site_id", "source_key", "source_site_id", "event_link_ids", "analysis_readiness"])
+        write_csv(root / "Coverage_Event_Links.csv", [
+            {"link_id": "L_COMPANY", "source_key": "PRTR", "canonical_site_id": ""},
+            {"link_id": "L_SITE", "source_key": "PRTR", "canonical_site_id": "SITE_A"},
+        ], ["link_id", "source_key", "canonical_site_id"])
+        return td, root
+
+    def test_company_only_name_never_matches_every_site(self):
+        td, root = self.make_package()
+        try:
+            scope = resolve_requested_scope(root)
+            self.assertIn("CHEM_A", scope["target_source_ids"]["CHEM_STATS"])
+            self.assertIn("CHEM_B", scope["target_source_ids"]["CHEM_STATS"])
+            self.assertNotIn("CHEM_X", scope["target_source_ids"]["CHEM_STATS"])
+            self.assertEqual(scope["target_canonical_site_ids"], {"SITE_A", "SITE_B"})
+        finally:
+            td.cleanup()
+
+    def test_analysis_view_filters_non_target_and_inherits_company_events(self):
+        td, root = self.make_package()
+        try:
+            summary = apply_requested_scope(root)
+            self.assertEqual(summary["analysis_rows_before"], 3)
+            self.assertEqual(summary["analysis_rows_after"], 2)
+            with (root / "Analysis_Ready_Index.csv").open(encoding="utf-8-sig", newline="") as f:
+                rows = list(csv.DictReader(f))
+            by_id = {r["analysis_id"]: r for r in rows}
+            self.assertEqual(set(by_id), {"1", "2"})
+            self.assertEqual(by_id["1"]["event_link_ids"], "L_COMPANY|L_SITE")
+            self.assertTrue((root / "Requested_Scope.json").exists())
+            self.assertTrue((root / "Analysis_Scope.csv").exists())
+        finally:
+            td.cleanup()
+
+
+if __name__ == "__main__":
+    unittest.main()
