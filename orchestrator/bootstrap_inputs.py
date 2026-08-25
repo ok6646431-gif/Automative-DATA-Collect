@@ -39,9 +39,16 @@ def bootstrap_inputs(
     if discovery_path.exists():
         discovery = _read_json(discovery_path)
         profile, summary = compile_discovery(discovery)
+        # Collection remains legal-entity-wide, while the requested scope may narrow
+        # human delivery and downstream analysis to a verified site set.  This field
+        # is control-plane metadata and therefore does not change collector queries.
+        requested_scope = discovery.get("requested_scope") or {"mode": "COMPANY"}
+        profile["requested_scope"] = requested_scope
+        summary["requested_scope"] = requested_scope
         mode = "DISCOVERY"
     elif profile_fallback_path.exists():
         profile = _read_json(profile_fallback_path)
+        profile.setdefault("requested_scope", {"mode": "COMPANY"})
         mode = "PROFILE_FALLBACK"
         summary = {
             "summary_schema_version": "runtime-bootstrap-1.0",
@@ -49,6 +56,7 @@ def bootstrap_inputs(
             "request_id": profile.get("request_id"),
             "company_resolved": None,
             "current_name": profile.get("company_display_name"),
+            "requested_scope": profile.get("requested_scope"),
             "review_required_count": len(profile.get("discovery_review_required", [])),
             "note": "company_discovery.json absent; compatibility profile fallback used",
         }
@@ -70,6 +78,7 @@ def bootstrap_inputs(
         "bootstrap_mode": mode,
         "request_id": profile.get("request_id"),
         "company": profile.get("company_display_name"),
+        "requested_scope": profile.get("requested_scope"),
         "profile": str(profile_out),
         "request": str(request_out),
         "summary": str(summary_out),
