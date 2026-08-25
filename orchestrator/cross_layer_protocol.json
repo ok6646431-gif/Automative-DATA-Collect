@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Keep observed environmental signals, company actions, industry technical references, and company future direction as independent evidence layers, then propose review questions only where layers overlap. Timing overlap never becomes a causal claim.",
+  "layers": {
+    "OBSERVED": "Source-native public environmental data and mathematically detected multi-year signals.",
+    "COMPANY_ACTION": "Company/site actions, investments, permits, certifications or completed/ongoing management activities supported by company or official evidence.",
+    "INDUSTRY_TECHNICAL": "BAT/K-BREF or other industry technical references. Document availability alone is not semantic evidence of a particular technique.",
+    "FUTURE_DIRECTION": "Company-stated targets, strategies, planned projects or future milestones. A plan is not an achieved outcome."
+  },
+  "candidate_policy": {
+    "MULTI_LAYER_REVIEW": "An observed signal plus at least two independently supported non-observed layers overlap by environmental domain and compatible scope.",
+    "FOUR_LAYER_READY": "Observed signal, company action, semantically extracted industry technical evidence, and future direction are all present. This still permits only a review hypothesis, not causality.",
+    "CONTEXT_ONLY": "Observed signal has one additional layer or the industry reference is only document-level metadata.",
+    "OBSERVED_ONLY": "Only a numeric/public-data signal is present."
+  },
+  "scope_rules": [
+    "SITE evidence may link only to the same canonical site or to company-wide evidence.",
+    "COMPANY evidence may provide context to any requested-scope site, but must remain labeled company-wide.",
+    "Raw company-wide evidence is preserved; human review candidates follow Requested_Scope.json."
+  ],
+  "time_rules": [
+    "Overlapping or adjacent years are context only.",
+    "A later company target may explain what management intends to address, not why an earlier signal occurred.",
+    "Publication year and activity/effective year must remain distinct when available."
+  ],
+  "hard_boundaries": [
+    "Do not state that a company action caused an observed environmental change from temporal overlap alone.",
+    "Do not state that a company applies a BAT from the existence of an industry BAT document.",
+    "Do not treat a future strategy or MOU as completed environmental performance.",
+    "Do not rank environmental importance by a single quantity or a hidden composite score.",
+    "When a required layer is missing, output a concrete study/verification question instead of filling the gap with inference."
+  ]
+}
