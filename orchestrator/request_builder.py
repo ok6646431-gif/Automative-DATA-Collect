@@ -36,6 +36,23 @@ def terms_by_year(profile, years, include_predecessor=True):
             for year in years}
 
 
+def verified_site_addresses(profile):
+    """Return only first-party verified site addresses for source discovery hints.
+
+    These are discovery anchors, not canonical mappings.  Collectors may use them to
+    locate source-native facility names, while downstream identity rules still decide
+    whether a source facility can be linked to a canonical site.
+    """
+    out=[]
+    for site in profile.get("site_candidates",[]) or []:
+        if not isinstance(site,dict): continue
+        if site.get("verification_state") not in {"VERIFIED","SOURCE_VERIFIED"}: continue
+        if site.get("identity_status") != "CONFIRMED": continue
+        address=str(site.get("address_raw") or "").strip()
+        if address and address not in out: out.append(address)
+    return out
+
+
 def build(profile):
     plan=profile["source_plan"]
     company=profile["company_display_name"]
@@ -43,6 +60,7 @@ def build(profile):
     # Collectors use them only to reject known separate legal entities; they are
     # not fuzzy identity rules and never create canonical site mappings.
     exclusions=list(profile.get("related_entity_exclusions",[]) or [])
+    site_addresses=verified_site_addresses(profile)
     req={"request_id":profile["request_id"],"company_display_name":company,"profile_version":profile.get("profile_version","1.0"),"related_entity_exclusions":exclusions,"sources":{}}
 
     p=plan["ENVINFO"]; s=int(p["start_year"]); e=int(p["end_year"])
@@ -67,13 +85,13 @@ def build(profile):
     terms=[]
     for a in aliases_for(profile,s,e,include_predecessor=False):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"exclude_terms":exclusions,"start_year":s,"end_year":e}
+    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"exclude_terms":exclusions,"site_addresses":site_addresses,"start_year":s,"end_year":e}
 
     p=plan["SOOSIRO_WATER"]; annual=[int(x) for x in p["annual_years"]]; daily=[int(x) for x in p.get("daily_years",[])]
     s=min(annual); e=max(annual); terms=[]
     for a in aliases_for(profile,s,e,include_predecessor=False):
         if a["term"] not in terms: terms.append(a["term"])
-    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"exclude_terms":exclusions,"annual_years":annual,"daily_years":daily}
+    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"exclude_terms":exclusions,"site_addresses":site_addresses,"annual_years":annual,"daily_years":daily}
     return req
 
 
