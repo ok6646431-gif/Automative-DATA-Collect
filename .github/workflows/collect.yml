@@ -228,7 +228,10 @@ jobs:
       - name: Install Korean/CJK fonts for PDF rendering
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk fonts-noto-cjk-extra
+          sudo apt-get install -y fonts-noto-cjk fonts-noto-cjk-extra fonts-nanum fonts-nanum-coding fonts-nanum-extra
+          sudo fc-cache -f -v
+          fc-match "Noto Sans CJK KR"
+          fc-match "NanumGothic"
       - name: Build human-facing archive
         run: >-
           python orchestrator/archive_stage.py
