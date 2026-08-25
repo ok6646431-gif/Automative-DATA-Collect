@@ -1,115 +1,121 @@
 {
   "schema_version": "1.0",
-  "request_id": "sec-ds-archive-20260819-v1",
+  "request_id": "skhynix-kr-archive-20260826-v1",
   "discovery_status": "PARTIAL",
   "documents": [
     {
-      "document_id": "SEC_SUSTAINABILITY_2026",
+      "document_id": "SKH_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "Samsung Electronics Sustainability Report 2026",
-      "report_year": 2026,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_ENG.pdf",
-      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_SUSTAINABILITY_2025",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "Samsung Electronics Sustainability Report 2025",
-      "report_year": 2025,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2025_ENG.pdf",
-      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_SUSTAINABILITY_2024",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "Samsung Electronics Sustainability Report 2024",
-      "report_year": 2024,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2024_ENG.pdf",
-      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_SUSTAINABILITY_2023",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "Samsung Electronics Sustainability Report 2023",
-      "report_year": 2023,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2023_ENG.pdf",
-      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_SUSTAINABILITY_2022",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 2022 지속가능경영보고서",
+      "title": "SK hynix Sustainability Report 2022",
       "report_year": 2022,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2022_KR.pdf",
-      "source_locator": "https://semiconductor.samsung.com/sustainability/highlights/downloads/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_SUSTAINABILITY_2021",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 2021 지속가능경영보고서",
-      "report_year": 2021,
-      "source_url": "https://images.samsung.com/kdp/aboutsamsung/overview/sustainability_report_kr_2021_01.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_DS_ERU_026",
-      "document_type": "CHEMICAL_POLICY",
-      "title": "DS 제품환경 관리물질 운영규칙 DS-ERU-026 Ver 3.0",
-      "report_year": 2025,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/DS-ERU-026_ver3.0_KR.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
+      "source_url": "https://englishdart.fss.or.kr/report/downloadEng.do?dcmNo=8824631&flNm=2022_SK+hynix_Sustainability+Report_ENG.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2022/07/28/000117/20220725000126/61979.htm",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official DS environmental substance operating rule."
+      "notes": "Official disclosure/report. KRX confirms the 2022 sustainability report publication."
     },
     {
-      "document_id": "SEC_DS_EHS_POLICY",
-      "document_type": "SHE_POLICY",
-      "title": "삼성전자 DS 환경안전보건 경영방침",
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Environmental_Health_and_Safety_Management_Policy_KR.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
+      "document_id": "SKH_SUSTAINABILITY_2023",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "SK하이닉스 지속가능경영보고서 2023",
+      "report_year": 2023,
+      "source_url": "https://kind.krx.co.kr/external/2023/08/04/000103/20230803000340/SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202023.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2023/07/21/000113/20230707000320/61979.htm",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "SEC_REGULATED_SUBSTANCES",
-      "document_type": "CHEMICAL_POLICY",
-      "title": "삼성전자 규제물질 목록",
-      "source_url": "https://images.samsung.com/kdp/aboutsamsung/overview/List_of_Regulated_Substances.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
+      "document_id": "SKH_SUSTAINABILITY_2024",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "SK하이닉스 지속가능경영보고서 2024",
+      "report_year": 2024,
+      "source_url": "https://kind.krx.co.kr/external/2024/07/23/000345/20240723001065/SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2024/07/23/000345/20240723001065/SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
       "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "SKH_SUSTAINABILITY_2025_DISCLOSURE",
+      "document_type": "ENVIRONMENTAL_DISCLOSURE",
+      "title": "SK하이닉스 지속가능경영보고서 2025 발간 공시",
+      "report_year": 2025,
+      "publication_date": "2025-06-19",
+      "source_url": "https://kind.krx.co.kr/external/2025/06/19/000512/20250616000286/61979.htm",
+      "source_locator": "https://kind.krx.co.kr/external/2025/06/19/000512/20250616000286/61979.htm",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official KRX publication disclosure. Full report PDF is also present among collected ENV-INFO attachments and should remain traceable to that source until a stable direct official PDF URL is verified."
+    },
+    {
+      "document_id": "SKH_SUSTAINABILITY_2026_DISCLOSURE",
+      "document_type": "ENVIRONMENTAL_DISCLOSURE",
+      "title": "SK하이닉스 지속가능경영보고서 2026 발간 공시",
+      "report_year": 2026,
+      "publication_date": "2026-06-25",
+      "source_url": "https://kind.krx.co.kr/external/2026/06/25/000489/20260612000788/61979.htm",
+      "source_locator": "https://kind.krx.co.kr/external/2026/06/25/000489/20260612000788/61979.htm",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official KRX publication disclosure. The report covers 2025 performance and material activities through 2026 H1. Direct full-report PDF URL remains a discovery gap and must not be guessed."
+    },
+    {
+      "document_id": "SKH_REPORTS_POLICIES",
+      "document_type": "ENVIRONMENTAL_POLICY",
+      "title": "SK hynix Reports & Policies",
+      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA1601/",
+      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA1601/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official company index for sustainability reports, special reports, policies/guidelines and certifications."
+    },
+    {
+      "document_id": "SKH_PRISM_GOALS",
+      "document_type": "ENVIRONMENT_STRATEGY",
+      "title": "SK hynix PRISM ESG Strategy and 2030 Goals",
+      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA06/",
+      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA06/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official company strategy page. Includes climate, water, circular economy and sustainable manufacturing targets including the 2026 water-withdrawal-intensity target."
+    },
+    {
+      "document_id": "SKH_GREEN_PRODUCT_POLICY",
+      "document_type": "CHEMICAL_POLICY",
+      "title": "SK hynix Green Product Policy",
+      "source_url": "https://www.skhynix.com/quality/UI-FR-QT01_T1/",
+      "source_locator": "https://www.skhynix.com/quality/UI-FR-QT01_T1/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official policy covering hazardous-substance-free products, RoHS/REACH monitoring and material information. It is product/supply-chain policy evidence and must not be treated as fab chemical-management proof."
+    },
+    {
+      "document_id": "SKH_DBL_ENVIRONMENT",
+      "document_type": "ENVIRONMENTAL_DISCLOSURE",
+      "title": "SK hynix DBL Environmental Performance",
+      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA04/",
+      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA04/",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "SEC_ISO_14001",
-      "document_type": "CERTIFICATION",
-      "title": "삼성전자 DS ISO 14001 인증서",
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/ISO_14001.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/",
-      "expected_extension": "pdf",
+      "document_id": "SKH_ECO_ALLIANCE_SHE",
+      "document_type": "SHE_POLICY",
+      "title": "SK hynix SHE Support Center and ECO Alliance",
+      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA0302/",
+      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA0302/",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "notes": "Official company page describing partner SHE support and semiconductor environmental collaboration."
     },
     {
       "document_id": "SEMICONDUCTOR_KBREF",
@@ -120,7 +126,8 @@
       "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "notes": "Industry technical reference only. Presence in the archive does not establish that SK hynix applies any specific BAT."
     },
     {
       "document_id": "SEMICONDUCTOR_SCOPE3_GUIDE",
@@ -131,62 +138,26 @@
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "SEC_BUSINESS_REPORT_2025",
-      "document_type": "ANNUAL_REPORT",
-      "title": "삼성전자 2025 사업보고서 공시 페이지",
-      "report_year": 2025,
-      "publication_date": "2026-03-10",
-      "source_url": "https://www.samsung.com/sec/ir/reports-disclosures/public-disclosure/3753/",
-      "source_locator": "https://www.samsung.com/sec/ir/reports-disclosures/public-disclosure/3753/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SEC_ENV_STRATEGY",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "삼성전자 환경경영전략",
-      "source_url": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
-      "source_locator": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "SEC_FACTS_FIGURES",
-      "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "삼성전자 Sustainability Facts & Figures",
-      "source_url": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "SEC_DS_LOCATIONS",
-      "document_type": "OTHER_OFFICIAL_DOCUMENT",
-      "title": "Samsung Semiconductor Korea Locations",
-      "source_url": "https://semiconductor.samsung.com/kr/about-us/locations/",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
     }
   ],
   "gaps": [
     {
-      "gap_id": "PUBLIC_POLICY_SET_NOT_EXHAUSTIVE",
-      "source_key": "SAMSUNG_OFFICIAL",
-      "severity": "LOW",
-      "reason": "Archive v2 includes core DS chemical/EHS rules and representative certification, but does not claim exhaustive capture of every publicly listed Samsung policy or certificate."
+      "gap_id": "SKH_SUSTAINABILITY_2020_2021_DIRECT_PDF_PENDING",
+      "source_key": "SKHYNIX_OFFICIAL",
+      "severity": "MEDIUM",
+      "reason": "2020/2021 report publications are verified historically, and ENV-INFO attachments contain relevant report files, but stable direct official PDF URLs have not yet been verified for this corporate-document lane. Do not guess URLs."
+    },
+    {
+      "gap_id": "SKH_SUSTAINABILITY_2025_2026_DIRECT_PDF_PENDING",
+      "source_key": "SKHYNIX_OFFICIAL",
+      "severity": "MEDIUM",
+      "reason": "KRX verifies publication of the 2025 and 2026 sustainability reports. 2025 full report is already present in collected ENV-INFO attachments; 2026 full-report direct PDF URL remains unresolved. The KRX publication pages are collected meanwhile for traceable official evidence."
     },
     {
       "gap_id": "NONPUBLIC_INTERNAL_SOP_NOT_COLLECTABLE",
-      "source_key": "SAMSUNG_INTERNAL",
+      "source_key": "SKHYNIX_INTERNAL",
       "severity": "LOW",
-      "reason": "Non-public internal procedures are outside public-source collection scope and must not be inferred from absence."
+      "reason": "Non-public internal environmental/SHE procedures are outside public-source collection scope and must not be inferred from absence."
     }
   ]
 }
