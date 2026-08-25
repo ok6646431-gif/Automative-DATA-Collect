@@ -188,8 +188,23 @@ def excluded(c,profile):
 
 def resolve_identity(candidates,profile):
     company_id=profile.get("company_id") or stable_id("COMP_",normalize_name(profile.get("company_display_name")))
-    # Auto-confirm only when both normalized road address and normalized site label agree
-    # across at least two independent sources. Same-address/different-unit cases stay reviewable.
+
+    # A verified Discovery site address is first-party identity evidence.  When one
+    # normalized official address maps to exactly one confirmed site candidate, a
+    # source row with that exact address may be linked without requiring a second
+    # public database to spell the site label the same way.  Duplicate official
+    # addresses remain ambiguous and never auto-confirm.
+    official_by_addr=defaultdict(list)
+    for site in profile.get("site_candidates",[]) or []:
+        if not isinstance(site,dict): continue
+        if site.get("verification_state") not in {"VERIFIED","SOURCE_VERIFIED"}: continue
+        if site.get("identity_status") != "CONFIRMED": continue
+        addr=normalize_address(site.get("address_raw"),profile)
+        if addr: official_by_addr[addr].append(site)
+    official_unique={addr:items[0] for addr,items in official_by_addr.items() if len(items)==1}
+
+    # Cross-source confirmation remains available for sites that do not have a
+    # unique verified Discovery address anchor.
     by_pair=defaultdict(list); by_addr=defaultdict(list)
     for c in candidates:
         c["address_key"]=normalize_address(c.get("source_address_raw"),profile)
@@ -198,18 +213,39 @@ def resolve_identity(candidates,profile):
             by_addr[c["address_key"]].append(c)
             by_pair[(c["address_key"],c["name_key"])].append(c)
     strong={k:cs for k,cs in by_pair.items() if len({x["source_key"] for x in cs})>=2}
-    site_rows=[]; site_by_pair={}; confirmed_name_to_sites=defaultdict(set)
+
+    site_rows=[]; site_by_pair={}; official_sid_by_addr={}; confirmed_name_to_sites=defaultdict(set)
+    for addr,site in sorted(official_unique.items()):
+        name=str(site.get("site_name_raw") or site.get("candidate_id") or "official site")
+        namekey=normalize_name(name,profile)
+        sid=stable_id("SITE_",company_id,addr,namekey or site.get("candidate_id") or "official")
+        source_years=[y for c in by_addr.get(addr,[]) for y in c.get("years",[])]
+        yrs=years_span(source_years)
+        site_rows.append({"company_id":company_id,"canonical_site_id":sid,"canonical_site_name":name,"site_type":"UNKNOWN","country":"KR","region":"UNKNOWN","canonical_address_key":addr,"identity_status":"CONFIRMED","first_seen_year":min(yrs) if yrs else "UNKNOWN","last_seen_year":max(yrs) if yrs else "UNKNOWN","active_status":"UNKNOWN","notes":"AUTO_CONFIRMED: unique verified official Discovery address anchor"})
+        official_sid_by_addr[addr]=sid
+        if namekey: confirmed_name_to_sites[namekey].add(sid)
+
     for (addr,namekey),cs in sorted(strong.items()):
+        if addr in official_sid_by_addr:
+            sid=official_sid_by_addr[addr]
+            site_by_pair[(addr,namekey)]=sid
+            if namekey: confirmed_name_to_sites[namekey].add(sid)
+            continue
         sid=stable_id("SITE_",company_id,addr,namekey)
         preferred=next((x for x in cs if x["source_key"]=="ENVINFO"),cs[0])
         yrs=years_span([y for x in cs for y in x.get("years",[])])
         site_rows.append({"company_id":company_id,"canonical_site_id":sid,"canonical_site_name":preferred["source_site_name_raw"],"site_type":"UNKNOWN","country":"KR","region":"UNKNOWN","canonical_address_key":addr,"identity_status":"CONFIRMED","first_seen_year":min(yrs) if yrs else "UNKNOWN","last_seen_year":max(yrs) if yrs else "UNKNOWN","active_status":"UNKNOWN","notes":f"AUTO_CONFIRMED: exact normalized address+site label across {len({x['source_key'] for x in cs})} independent sources"})
         site_by_pair[(addr,namekey)]=sid
         if namekey: confirmed_name_to_sites[namekey].add(sid)
-    # Every unresolved address+label pair remains a distinct candidate. This prevents
-    # two units sharing one street address from being collapsed automatically.
+
+    # Every unresolved address+label pair remains a distinct candidate unless its
+    # address is already anchored to one unique verified official site.
     for (addr,namekey),cs in sorted(by_pair.items()):
         if (addr,namekey) in strong: continue
+        if addr in official_sid_by_addr:
+            site_by_pair[(addr,namekey)]=official_sid_by_addr[addr]
+            if namekey: confirmed_name_to_sites[namekey].add(official_sid_by_addr[addr])
+            continue
         preferred=next((x for x in cs if x["source_key"]=="ENVINFO"),cs[0])
         sid=stable_id("CAND_",company_id,addr,namekey)
         yrs=years_span([y for x in cs for y in x.get("years",[])])
@@ -227,6 +263,8 @@ def resolve_identity(candidates,profile):
         pair=(c["address_key"],c["name_key"])
         if ex:
             match_status="REJECTED"; basis="RELATED_ENTITY_EXCLUSION"; review=False; note=(note+"; " if note else "")+f"excluded entity: {ex}"
+        elif c["address_key"] in official_sid_by_addr:
+            sid=official_sid_by_addr[c["address_key"]]; match_status="CONFIRMED"; basis="OFFICIAL_SITE_EXACT_ADDRESS"; review=False
         elif pair in strong:
             sid=site_by_pair[pair]; match_status="CONFIRMED"; basis="CROSS_SOURCE_EXACT_ADDRESS_NAME"; review=False
         elif c["address_key"]:
