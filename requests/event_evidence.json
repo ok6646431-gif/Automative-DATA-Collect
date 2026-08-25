@@ -2,13 +2,156 @@
   "schema_version": "1.0",
   "request_id": "sec-ds-archive-20260819-v1",
   "discovery_status": "PARTIAL",
-  "events": [],
+  "events": [
+    {
+      "event_id": "SEC_EVT_202106_TRIPLE_STANDARD",
+      "event_scope": "COMPANY",
+      "event_type": "ENVIRONMENTAL_CERTIFICATION_MILESTONE",
+      "event_date_start": "2021-06",
+      "event_title": "DS 국내 5개 사업장 포함 반도체 전 사업장 Carbon Trust Triple Standard 취득",
+      "event_description": "삼성전자 반도체 국내 기흥·화성·평택·온양·천안 등 전 사업장이 탄소·물·폐기물 저감에 대한 Carbon Trust Triple Standard를 취득했다. 인증 근거에는 2020년 원단위 기준 탄소·물·폐기물 저감 성과가 제시됐다.",
+      "source_key": "SAMSUNG_SEMICONDUCTOR",
+      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/environment/",
+      "verification_status": "SOURCE_VERIFIED",
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["CLEANSYS_AIR", "SOOSIRO_WATER"],
+      "notes": "인증 성과는 TMS 수치의 직접 원인으로 사용하지 않는다. 환경관리 체계 변화의 시계열 맥락으로만 사용."
+    },
+    {
+      "event_id": "SEC_EVT_20220915_NEW_ENV_STRATEGY",
+      "event_scope": "COMPANY",
+      "event_type": "ENVIRONMENT_STRATEGY_CHANGE",
+      "event_date_start": "2022-09-15",
+      "event_title": "삼성전자 新환경경영전략 선언",
+      "event_description": "삼성전자는 2050 Scope 1·2 탄소중립과 공정가스 저감, 수자원 보존, 오염물질 최소화 등을 포함한 신환경경영전략을 발표하고 2030년까지 환경경영 과제에 7조원 이상 투자 계획을 제시했다.",
+      "source_key": "SAMSUNG_NEWSROOM",
+      "source_locator": "https://news.samsung.com/kr/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90-%E6%96%B0%ED%99%98%EA%B2%BD%EA%B2%BD%EC%98%81%EC%A0%84%EB%9E%B5-%EC%84%A0%EC%96%B8",
+      "verification_status": "SOURCE_VERIFIED",
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
+      "notes": "전사 전략 선언이므로 개별 사업장 데이터 변화와 인과관계를 자동 주장하지 않는다."
+    },
+    {
+      "event_id": "SEC_EVT_20221130_WATER_REUSE_MOU",
+      "event_scope": "COMPANY",
+      "event_type": "WATER_REUSE_PROJECT_MOU",
+      "event_date_start": "2022-11-30",
+      "event_title": "환경부·삼성전자 하수처리수 반도체 공업용수 재이용 업무협약",
+      "event_description": "환경부와 삼성전자 등은 수원·용인·화성·오산 등 하수처리시설의 처리수를 재생해 반도체 생산용 공업용수로 공급하기 위한 협약을 체결했다.",
+      "source_key": "MINISTRY_OF_ENVIRONMENT",
+      "source_locator": "https://www.me.go.kr/home/web/board/read.do?boardId=1564510&boardMasterId=1",
+      "verification_status": "SOURCE_VERIFIED",
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["SOOSIRO_WATER"],
+      "notes": "협약은 계획·사업 추진 이벤트이며 실제 취수량 감소 시점과 동일시하지 않는다."
+    },
+    {
+      "event_id": "SEC_EVT_202303_HWASEONG_AWS",
+      "event_scope": "SITE",
+      "event_type": "WATER_STEWARDSHIP_CERTIFICATION",
+      "event_date_start": "2023-03",
+      "event_title": "화성사업장 AWS Platinum 인증",
+      "event_description": "삼성전자 화성사업장이 Alliance for Water Stewardship의 최고 등급인 Platinum 인증을 취득했다.",
+      "source_key": "SAMSUNG_SEMICONDUCTOR",
+      "source_locator": "https://semiconductor.samsung.com/kr/news-events/news/samsung-semiconductor-site-awarded-highest-level-global-certification-for-water-resource-management/",
+      "verification_status": "SOURCE_VERIFIED",
+      "source_site_ref": {"source_key": "PRTR", "source_site_id": "581"},
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["SOOSIRO_WATER"],
+      "notes": "인증 획득 자체를 수질 TMS 개선의 원인으로 해석하지 않는다."
+    },
+    {
+      "event_id": "SEC_EVT_202401_AWS_EXPANSION",
+      "event_scope": "COMPANY",
+      "event_type": "WATER_STEWARDSHIP_CERTIFICATION_EXPANSION",
+      "event_date_start": "2024-01",
+      "event_title": "AWS Platinum 인증 기흥·화성 및 평택으로 확대",
+      "event_description": "2024년 1월 기흥·화성 통합 범위와 평택사업장까지 AWS Platinum 인증 범위가 확대됐다.",
+      "source_key": "SAMSUNG_SUSTAINABILITY_REPORT",
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2025_ENG.pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["SOOSIRO_WATER"],
+      "notes": "인증 범위 확대 이벤트. 데이터 변화의 직접 원인으로 사용하지 않는다."
+    },
+    {
+      "event_id": "SEC_EVT_202411_AWS_CHEONAN_ONYANG",
+      "event_scope": "COMPANY",
+      "event_type": "WATER_STEWARDSHIP_CERTIFICATION_EXPANSION",
+      "event_date_start": "2024-11",
+      "event_title": "천안·온양 AWS Platinum 인증 추가",
+      "event_description": "2024년 11월 천안·온양 사업장이 AWS Platinum 인증 범위에 추가되어 국내 DS 제조사업장 전체가 Platinum 인증을 보유하게 됐다.",
+      "source_key": "SAMSUNG_SUSTAINABILITY_REPORT",
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2025_ENG.pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["SOOSIRO_WATER"],
+      "notes": "인증 범위 확대 이벤트."
+    },
+    {
+      "event_id": "SEC_EVT_20241211_WATER_REUSE_GIHEUNG",
+      "event_scope": "SITE",
+      "event_type": "WATER_REUSE_PROJECT",
+      "event_date_start": "2024-12-11",
+      "event_title": "경기권 반도체 사업장 물 재이용 1단계 협약 - 기흥",
+      "event_description": "환경부·경기도·화성시·오산시·삼성전자 등은 화성·오산 하수처리수를 재생해 하루 12만 톤 규모를 기흥·화성 반도체 사업장에 공급하는 1단계 사업 협약을 체결했다. 2029년 공급을 목표로 한다.",
+      "source_key": "MINISTRY_OF_ENVIRONMENT",
+      "source_locator": "https://www.me.go.kr/home/web/board/read.do?boardId=1713870&boardMasterId=1",
+      "verification_status": "SOURCE_VERIFIED",
+      "source_site_ref": {"source_key": "PRTR", "source_site_id": "582"},
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["SOOSIRO_WATER"],
+      "notes": "2024년은 협약 체결 시점이며 실제 재이용수 공급 개시는 2029년 목표."
+    },
+    {
+      "event_id": "SEC_EVT_20241211_WATER_REUSE_HWASEONG",
+      "event_scope": "SITE",
+      "event_type": "WATER_REUSE_PROJECT",
+      "event_date_start": "2024-12-11",
+      "event_title": "경기권 반도체 사업장 물 재이용 1단계 협약 - 화성",
+      "event_description": "환경부·경기도·화성시·오산시·삼성전자 등은 화성·오산 하수처리수를 재생해 하루 12만 톤 규모를 기흥·화성 반도체 사업장에 공급하는 1단계 사업 협약을 체결했다. 2029년 공급을 목표로 한다.",
+      "source_key": "MINISTRY_OF_ENVIRONMENT",
+      "source_locator": "https://www.me.go.kr/home/web/board/read.do?boardId=1713870&boardMasterId=1",
+      "verification_status": "SOURCE_VERIFIED",
+      "source_site_ref": {"source_key": "PRTR", "source_site_id": "581"},
+      "analysis_role": "CONTEXT_MARKER",
+      "affected_sources": ["SOOSIRO_WATER"],
+      "notes": "2024년은 협약 체결 시점이며 실제 재이용수 공급 개시는 2029년 목표."
+    },
+    {
+      "event_id": "SEC_EVT_20241230_PYEONGTAEK_INTEGRATED_PERMIT",
+      "event_scope": "SITE",
+      "event_type": "INTEGRATED_PERMIT",
+      "event_date_start": "2024-12-30",
+      "event_title": "삼성전자 평택사업장 반도체 업종 통합환경허가 완료",
+      "event_description": "환경부는 2024년 12월 30일 삼성전자 평택사업장을 반도체 업종 통합허가 마무리 사업장 중 하나로 명시했다. 통합허가는 대기·수질·폐기물 등 7개 법률 10개 인허가를 사업장 단위로 통합하고 BAT와 맞춤형 허가기준을 적용한다.",
+      "source_key": "MINISTRY_OF_ENVIRONMENT",
+      "source_locator": "https://m.me.go.kr/home/web/board/read.do?boardId=1716920&boardMasterId=939",
+      "verification_status": "SOURCE_VERIFIED",
+      "source_site_ref": {"source_key": "PRTR", "source_site_id": "1250145083732154586"},
+      "analysis_role": "BASELINE_MARKER",
+      "affected_sources": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
+      "notes": "허가 완료 전후 비교를 위한 기준점. 다른 DS 사업장의 정확한 통합허가 완료일은 별도 확인 필요."
+    }
+  ],
   "gaps": [
     {
-      "gap_id": "EVENT_ANALYSIS_DEFERRED",
-      "source_key": "PROJECT_SCOPE",
+      "gap_id": "OTHER_DS_INTEGRATED_PERMIT_DATES_UNRESOLVED",
+      "source_key": "MINISTRY_OF_ENVIRONMENT",
+      "severity": "MEDIUM",
+      "reason": "평택은 2024-12-30 완료가 공식 보도자료로 확인됐으나 기흥·화성·천안·온양의 개별 통합허가 완료일은 이번 1차 discovery에서 확정하지 못했다."
+    },
+    {
+      "gap_id": "PRODUCTION_CAPACITY_ACTUAL_START_DATES_NOT_EXHAUSTIVE",
+      "source_key": "SAMSUNG_SEMICONDUCTOR",
       "severity": "LOW",
-      "reason": "This run is intentionally limited to source-material acquisition and human-facing archive packaging. Event discovery and interpretation are deferred to the next project stage and absence of events must not be interpreted as no historical changes."
+      "reason": "평택 P3 등 생산능력 확대 계획은 확인되지만 계획 발표일과 실제 가동·양산 개시일을 구분하기 위해 1차 Event Registry에는 미확정 계획 이벤트를 넣지 않았다."
+    },
+    {
+      "gap_id": "GHG_ABATEMENT_NOT_LINKED_TO_CORE_SOURCE",
+      "source_key": "SAMSUNG_SEMICONDUCTOR",
+      "severity": "LOW",
+      "reason": "2024년 RCS 추가 설치 등 공정가스 저감 이벤트는 확인되지만 현재 핵심 5 Source에는 온실가스 직접배출 데이터가 없어 Event-Coverage 자동 링크에서 제외했다."
     }
   ]
 }
