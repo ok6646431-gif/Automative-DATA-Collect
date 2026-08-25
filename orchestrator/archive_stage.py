@@ -1,7 +1,9 @@
 import argparse, csv, json, shutil
 from pathlib import Path
 
+import archive_builder
 from archive_builder import build_archive, archive_file_index, write_csv, sha256
+from requested_scope import source_id_scope as requested_source_id_scope
 from postprocess import stable_id
 
 VALIDATION_FIELDS=["validation_id","company_id","object_type","object_key","issue_type","severity","detected_by","evidence","recommended_action","status","resolved_by","resolved_at","notes"]
@@ -84,10 +86,10 @@ def write_artifact_index(path,rows):
 
 def append_artifact_rows(package_root):
     root=Path(package_root); p=root/"Artifact_Index.csv"; rows=read_csv(p); seen={x.get("path") for x in rows}
-    for candidate in [root/"Document_Evidence.json"]:
+    for candidate in [root/"Document_Evidence.json",root/"Requested_Scope.json",root/"Analysis_Scope.csv"]:
         if candidate.exists():
             rel=str(candidate.relative_to(root))
-            if rel not in seen: rows.append({"source":"DOCUMENT","path":rel,"bytes":candidate.stat().st_size,"sha256":sha256(candidate)}); seen.add(rel)
+            if rel not in seen: rows.append({"source":"DOCUMENT" if candidate.name=="Document_Evidence.json" else "INTEGRATION","path":rel,"bytes":candidate.stat().st_size,"sha256":sha256(candidate)}); seen.add(rel)
     source=root/"output"/"CORP_DOCS"
     if source.exists():
         for file in sorted(source.rglob("*")):
@@ -107,7 +109,7 @@ def add_archive_zip_to_artifact_index(package_root,zip_path):
 
 def refresh_manifest(package_root,docs,env,artifact_count):
     root=Path(package_root); manifest=read_json(root/"Master_Manifest.json",{}) or {}; review=read_json(root/"REVIEW_REQUIRED.json",[]) or []
-    manifest["schema_version"]="1.3"
+    manifest["schema_version"]="1.4"
     manifest["review_count"]=len(review); manifest["validation"]="REVIEW_REQUIRED" if review else "PASS"; manifest["artifact_count"]=artifact_count
     manifest["document_lane"]={"status":docs.get("status","NOT_RUN"),"documents_declared":docs.get("documents_declared",0),"downloaded":docs.get("downloaded",0),"failed":docs.get("failed",0),"skipped":docs.get("skipped",0),"gaps":docs.get("gaps",0)}
     manifest["envinfo_attachments"]={"discovered":env.get("attachments_discovered",0),"downloaded":env.get("attachment_ok",0),"failed":env.get("attachment_fail",0),"bytes":env.get("attachment_bytes",0)}
@@ -125,6 +127,8 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     archive=root/"Human_Archive"/archive_summary["archive_root"]; idx=archive/"00_자료목록"
     shutil.copy2(root/"Master_Manifest.json",idx/"Master_Manifest.json")
+    for extra in [root/"Requested_Scope.json",root/"Analysis_Scope.csv"]:
+        if extra.exists(): shutil.copy2(extra,idx/extra.name)
     file_rows=archive_file_index(archive); write_csv(idx/"Archive_File_Index.csv",file_rows,["path","bytes","sha256"])
     zip_path=root/"Human_Archive.zip"
     if zip_path.exists(): zip_path.unlink()
@@ -138,6 +142,9 @@ def run(package_root,stable,evidence=None):
     root=Path(package_root).resolve(); copy_document_lane(root,stable,evidence)
     vals,docs,env=document_reviews(root); merge_validations(root,vals)
     count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,count)
+    # Archive v2 must use the exact same requested-scope resolver as Analysis.
+    # This only affects human-facing copies; 90_시스템원본 remains legal-entity-wide.
+    archive_builder.source_id_scope=requested_source_id_scope
     summary=build_archive(root); final=finalize_archive_manifest(root,manifest,summary)
     artifact_count=add_archive_zip_to_artifact_index(root,root/final["zip_path"])
     manifest=read_json(root/"Master_Manifest.json",{}) or {}; manifest["artifact_count"]=artifact_count
