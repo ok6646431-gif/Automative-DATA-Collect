@@ -6,6 +6,20 @@
   "current_legal_name_active_period": {"start_year": 1984, "end_year": null},
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
+  "requested_scope": {
+    "mode": "SITE_SET",
+    "label": "DS",
+    "candidate_ids": [
+      "sec-ds-giheung",
+      "sec-ds-hwaseong",
+      "sec-ds-pyeongtaek",
+      "sec-ds-cheonan",
+      "sec-ds-onyang"
+    ],
+    "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
+    "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
+    "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+  },
   "company_aliases": [
     {"name": "삼성전자", "alias_type": "current_brand_name", "verification_state": "VERIFIED", "source_locator": "https://www.samsung.com/sec/ir/ir-resources/faq/"},
     {"name": "삼성전자(주)", "alias_type": "source_native_alias", "verification_state": "VERIFIED", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/"}
@@ -26,7 +40,7 @@
   ],
   "related_entity_exclusions": [],
   "unresolved_items": [
-    {"code": "DS_SCOPE_SAME_ENTITY_SITE_FILTER_NOT_NATIVE", "subject": "삼성전자 DS 핵심 5개 사업장", "detail": "Collectors query the Samsung Electronics legal entity and may also return same-entity non-DS sites. Raw source results must be preserved; the intended DS comparison scope is Giheung, Hwaseong, Pyeongtaek, Cheonan and Onyang, and any other same-entity site remains REVIEW_REQUIRED for scope classification.", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/"}
+    {"code": "DS_SCOPE_SAME_ENTITY_SITE_FILTER_NOT_NATIVE", "subject": "삼성전자 DS 핵심 5개 사업장", "detail": "Collectors query the Samsung Electronics legal entity and may also return same-entity non-DS sites. Raw source results must be preserved; requested_scope limits human archive and analysis to Giheung, Hwaseong, Pyeongtaek, Cheonan and Onyang.", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/"}
   ],
   "event_evidence_references": ["requests/event_evidence.json"],
   "collection_policy": {
