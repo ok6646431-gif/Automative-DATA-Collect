@@ -2,6 +2,8 @@ import csv, hashlib, json, re, shutil, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
+from requested_scope import company_terms as _company_terms
+
 try:
     import xlsxwriter
 except Exception:
@@ -85,11 +87,14 @@ def archive_file_index(archive_root):
     return rows
 
 
-def normalize_site_name(value):
+def normalize_site_name(value, profile=None):
     s=str(value or '')
-    for pat in [r'삼성전자',r'주식회사',r'\(주\)',r'㈜',r'사업장',r'공장',r'캠퍼스',r'연구원']:
+    for pat in [r'주식회사',r'\(주\)',r'㈜',r'사업장',r'공장',r'캠퍼스',r'연구원']:
         s=re.sub(pat,'',s,flags=re.I)
-    return re.sub(r'[^0-9A-Za-z가-힣]','',s).lower()
+    token=re.sub(r'[^0-9A-Za-z가-힣]','',s).lower()
+    for company in _company_terms(profile or {}):
+        token=token.replace(company,'')
+    return token
 
 
 def target_site_tokens(profile):
@@ -98,14 +103,14 @@ def target_site_tokens(profile):
         if not isinstance(site,dict): continue
         if site.get('verification_state') not in {'VERIFIED','SOURCE_VERIFIED'}: continue
         if site.get('identity_status') != 'CONFIRMED': continue
-        name=str(site.get('site_name_raw') or '').strip(); tok=normalize_site_name(name)
+        name=str(site.get('site_name_raw') or '').strip(); tok=normalize_site_name(name,profile)
         if name and tok: rows.append((name,tok))
     return rows
 
 
-def site_is_target(name,tokens):
+def site_is_target(name,tokens,profile=None):
     if not tokens: return True
-    raw=normalize_site_name(name)
+    raw=normalize_site_name(name,profile)
     return any(tok and (tok in raw or raw in tok) for _,tok in tokens)
 
 
@@ -113,20 +118,20 @@ def source_id_scope(package_root, profile):
     root=Path(package_root)/'output'; tokens=target_site_tokens(profile)
     scope={k:set() for k in ['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER']}; labels={}
     for r in read_csv(root/'ENVINFO'/'discovery.csv'):
-        if site_is_target(r.get('compNm',''),tokens):
+        if site_is_target(r.get('compNm',''),tokens,profile):
             sid=str(r.get('compId') or ''); scope['ENVINFO'].add(sid); labels[('ENVINFO',sid)]=r.get('compNm','')
     for r in read_csv(root/'PRTR'/'discovery.csv'):
-        if site_is_target(r.get('company_name_raw',''),tokens):
+        if site_is_target(r.get('company_name_raw',''),tokens,profile):
             sid=str(r.get('entrps_id') or ''); scope['PRTR'].add(sid); labels[('PRTR',sid)]=r.get('company_name_raw','')
     for r in read_csv(root/'CHEM_STATS'/'discovery.csv'):
-        if site_is_target(r.get('bplcNm',''),tokens):
+        if site_is_target(r.get('bplcNm',''),tokens,profile):
             sid=str(r.get('bplcId') or ''); scope['CHEM_STATS'].add(sid); labels[('CHEM_STATS',sid)]=r.get('bplcNm','')
     for r in read_json(root/'CLEANSYS_AIR'/'candidates.json',[]) or []:
-        if site_is_target(r.get('company_name_raw',''),tokens):
+        if site_is_target(r.get('company_name_raw',''),tokens,profile):
             sid=str(r.get('fact_code') or ''); scope['CLEANSYS_AIR'].add(sid); labels[('CLEANSYS_AIR',sid)]=r.get('company_name_raw','')
     for r in read_json(root/'SOOSIRO_WATER'/'fact_candidates.json',[]) or []:
         name=r.get('FACT_FNAME') or r.get('FACT_NAME','')
-        if site_is_target(name,tokens):
+        if site_is_target(name,tokens,profile):
             sid=str(r.get('FACT_CODE') or ''); scope['SOOSIRO_WATER'].add(sid); labels[('SOOSIRO_WATER',sid)]=name
     return scope,labels,tokens
 
@@ -237,7 +242,7 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
         comp=str(d.get('compId') or '')
         if comp not in scope['ENVINFO']: continue
         year=str(d.get('year') or '연도미상'); raw_name=d.get('compNm') or labels.get(('ENVINFO',comp),comp)
-        display=next((name for name,tok in tokens if tok and tok in normalize_site_name(raw_name)), raw_name)
+        display=next((name for name,tok in tokens if tok and tok in normalize_site_name(raw_name,profile)), raw_name)
         matches=sorted((env/'raw_detail').glob(f'{year}_{safe(comp)}_*.html'))
         if not matches:
             failures.append({'site':display,'year':year,'reason':'raw detail HTML missing'}); continue
@@ -250,7 +255,7 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
         if comp not in scope['ENVINFO'] or att.get('collection_status')!='DOWNLOADED': continue
         src=root/str(att.get('stored_path') or '')
         if not src.exists(): continue
-        raw_name=att.get('compNm') or labels.get(('ENVINFO',comp),comp); display=next((name for name,tok in tokens if tok and tok in normalize_site_name(raw_name)),raw_name)
+        raw_name=att.get('compNm') or labels.get(('ENVINFO',comp),comp); display=next((name for name,tok in tokens if tok and tok in normalize_site_name(raw_name,profile)),raw_name)
         year=str(att.get('year') or '연도미상')
         created.append(unique_copy(src,user/safe(display)/'첨부자료',f'{year}_{att.get("original_filename") or src.name}'))
     return created,failures

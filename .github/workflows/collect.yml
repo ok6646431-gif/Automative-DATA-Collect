@@ -225,6 +225,10 @@ jobs:
           if [ -f requests/runtime/Company_Discovery_Summary.json ]; then
             cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
           fi
+      - name: Install Korean/CJK fonts for PDF rendering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-noto-cjk-extra
       - name: Build human-facing archive
         run: >-
           python orchestrator/archive_stage.py
