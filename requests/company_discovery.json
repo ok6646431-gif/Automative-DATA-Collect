@@ -1,48 +1,57 @@
 {
   "schema_version": "1.0",
-  "request_id": "sec-ds-archive-20260819-v1",
-  "requested_company_name": "삼성전자(DS)",
-  "current_legal_name": "삼성전자 주식회사",
-  "current_legal_name_active_period": {"start_year": 1984, "end_year": null},
+  "request_id": "skhynix-kr-archive-20260826-v1",
+  "requested_company_name": "SK하이닉스",
+  "current_legal_name": "에스케이하이닉스 주식회사",
+  "current_legal_name_active_period": {"start_year": 2012, "end_year": null},
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "DS",
+    "label": "국내 생산사업장(이천·청주)",
     "candidate_ids": [
-      "sec-ds-giheung",
-      "sec-ds-hwaseong",
-      "sec-ds-pyeongtaek",
-      "sec-ds-cheonan",
-      "sec-ds-onyang"
+      "skhynix-icheon",
+      "skhynix-cheongju-1",
+      "skhynix-cheongju-2",
+      "skhynix-cheongju-3",
+      "skhynix-cheongju-4"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
   "company_aliases": [
-    {"name": "삼성전자", "alias_type": "current_brand_name", "verification_state": "VERIFIED", "source_locator": "https://www.samsung.com/sec/ir/ir-resources/faq/"},
-    {"name": "삼성전자(주)", "alias_type": "source_native_alias", "verification_state": "VERIFIED", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/"}
+    {"name": "SK하이닉스", "alias_type": "current_brand_name", "verification_state": "VERIFIED", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/"},
+    {"name": "SK hynix Inc.", "alias_type": "source_native_alias", "verification_state": "VERIFIED", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/"}
   ],
-  "historical_legal_names": [],
-  "corporate_restructuring_evidence": [],
+  "historical_legal_names": [
+    {"name": "현대전자산업", "alias_type": "historical_legal_name", "active_period": {"start_year": 1983, "end_year": 2001}, "verification_state": "VERIFIED", "source_locator": "https://news.skhynix.co.kr/hynix-semiconductor/"},
+    {"name": "하이닉스반도체", "alias_type": "historical_legal_name", "active_period": {"start_year": 2001, "end_year": 2012}, "verification_state": "VERIFIED", "source_locator": "https://news.skhynix.co.kr/hynix-semiconductor/"}
+  ],
+  "corporate_restructuring_evidence": [
+    {"event": "현대전자산업 채권단 매각 및 사명 변경(하이닉스반도체)", "date": "2001-03", "source_locator": "https://news.skhynix.co.kr/hynix-semiconductor/"},
+    {"event": "SK그룹 편입 및 사명 변경(SK하이닉스)", "date": "2012-03-23", "source_locator": "https://m.ddaily.co.kr/page/view/2012020611090590377"}
+  ],
   "domestic_site_candidates": [
-    {"candidate_id": "sec-ds-giheung", "site_name_raw": "기흥", "address_raw": "경기도 용인시 기흥구 삼성로 1", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
-    {"candidate_id": "sec-ds-hwaseong", "site_name_raw": "화성", "address_raw": "경기도 화성시 삼성전자로 1", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
-    {"candidate_id": "sec-ds-pyeongtaek", "site_name_raw": "평택", "address_raw": "경기도 평택시 고덕면 삼성로 114", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
-    {"candidate_id": "sec-ds-cheonan", "site_name_raw": "천안", "address_raw": "충청남도 천안시 서북구 번영로 465", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
-    {"candidate_id": "sec-ds-onyang", "site_name_raw": "온양", "address_raw": "충청남도 아산시 배방읍 배방로 158", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"}
+    {"candidate_id": "skhynix-icheon", "site_name_raw": "이천캠퍼스(본사)", "address_raw": "경기도 이천시 부발읍 경충대로 2091", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+    {"candidate_id": "skhynix-cheongju-1", "site_name_raw": "청주캠퍼스(대신로)", "address_raw": "충청북도 청주시 흥덕구 대신로 215", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+    {"candidate_id": "skhynix-cheongju-2", "site_name_raw": "청주캠퍼스(2순환로)", "address_raw": "충청북도 청주시 흥덕구 2순환로 959", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+    {"candidate_id": "skhynix-cheongju-3", "site_name_raw": "청주캠퍼스(직지대로)", "address_raw": "충청북도 청주시 흥덕구 직지대로 337", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+    {"candidate_id": "skhynix-cheongju-4", "site_name_raw": "청주캠퍼스(에스케이로)", "address_raw": "충청북도 청주시 흥덕구 에스케이로 120", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"}
   ],
   "identity_evidence": [
-    {"source_locator": "https://www.samsung.com/sec/ir/ir-resources/faq/", "source_value_raw": "삼성전자 주식회사", "verification_state": "VERIFIED"},
-    {"source_locator": "https://www.samsung.com/sec/ir/ir-resources/ourbusiness/", "source_value_raw": "Device Solutions: Memory, System LSI, Foundry", "verification_state": "VERIFIED"},
-    {"source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/", "source_value_raw": "Korea DS locations: Giheung, Hwaseong, Pyeongtaek, Cheonan, Onyang", "verification_state": "VERIFIED"}
+    {"source_locator": "https://www.skhynix.com/company/UI-FR-CP06/", "source_value_raw": "SK hynix Inc. / SK하이닉스㈜ Global Network: Icheon Campus, Bundang Campus, Cheongju Campus (4 addresses), Seoul Office", "verification_state": "VERIFIED"},
+    {"source_locator": "https://bizno.net/article/1268103725", "source_value_raw": "정식명칭 에스케이하이닉스 주식회사, 법인등록번호 134411-0001387, 사업자등록번호 126-81-03725", "verification_state": "VERIFIED"},
+    {"source_locator": "https://m.ddaily.co.kr/page/view/2012020611090590377", "source_value_raw": "하이닉스, 2012-03-23 주주총회에서 SK 계열 편입 및 사명을 SK하이닉스로 변경", "verification_state": "VERIFIED"},
+    {"source_locator": "https://news.skhynix.co.kr/hynix-semiconductor/", "source_value_raw": "현대전자 이사회, 2001-03-07 사명을 하이닉스반도체로 변경 의결(3월말 주총 확정 예정)", "verification_state": "VERIFIED"}
   ],
   "related_entity_exclusions": [],
   "unresolved_items": [
-    {"code": "DS_SCOPE_SAME_ENTITY_SITE_FILTER_NOT_NATIVE", "subject": "삼성전자 DS 핵심 5개 사업장", "detail": "Collectors query the Samsung Electronics legal entity and may also return same-entity non-DS sites. Raw source results must be preserved; requested_scope limits human archive and analysis to Giheung, Hwaseong, Pyeongtaek, Cheonan and Onyang.", "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/"}
+    {"code": "SKHYNIX_ADMIN_OFFICES_EXCLUDED_FROM_SCOPE", "subject": "분당사무소, 서울사무소", "detail": "Global Network 페이지에 분당사무소(성남시 분당구)와 서울사무소(중구)가 등재되어 있으나, 이들은 사무/영업 거점으로 파악되며 반도체 제조 공정에 따른 환경 인허가(대기/수질/화학물질) 데이터의 주 발생지가 아닐 가능성이 높아 1차 requested_scope에서 제외했다. 필요 시 추가 확인 후 scope를 확장할 수 있다.", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/"},
+    {"code": "SKHYNIX_SCOPE_SAME_ENTITY_SITE_FILTER_NOT_NATIVE", "subject": "SK하이닉스 국내 이천·청주 생산사업장", "detail": "Collectors query the SK hynix legal entity and may also return same-entity non-listed sites (e.g. Yongin cluster under construction, overseas sites). Raw source results must be preserved; requested_scope limits human archive and analysis to Icheon and the 4 Cheongju addresses confirmed on the official Global Network page.", "source_locator": "https://www.skhynix.com/company/UI-FR-CP06/"},
+    {"code": "YONGIN_CLUSTER_NOT_YET_OPERATIONAL", "subject": "용인 반도체 클러스터", "detail": "공사/조성 단계로 확인되며 아직 가동 중인 생산사업장이 아니므로 이번 1차 discovery의 requested_scope에는 포함하지 않았다.", "source_locator": null}
   ],
-  "event_evidence_references": ["requests/event_evidence.json"],
+  "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
     "sources": {
