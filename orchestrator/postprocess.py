@@ -91,6 +91,24 @@ def normalize_address(x, profile=None):
     return s
 
 
+def embedded_facility_name_key(value, profile=None):
+    """Extract a trailing facility alias that is embedded after a road address.
+
+    Some public registers expose a verified road address followed by a parenthesized
+    neighborhood and a source-native plant label, while addressless sources expose only
+    that plant label.  The alias is used only after the road address itself has already
+    resolved to one unique verified official site, and later name-only matches remain
+    REVIEW_REQUIRED rather than being auto-confirmed.
+    """
+    text=str(value or '').strip()
+    if not text: return ''
+    m=re.match(r"^.*?(?:로|길)\s*\d+(?:-\d+)?\b(.*)$",text)
+    if not m: return ''
+    tail=re.sub(r"^\s*\([^)]*\)\s*",'',m.group(1)).strip()
+    m=re.search(r"([0-9A-Za-z가-힣㈜()·._& -]{2,80}(?:공장|사업장|캠퍼스|연구원|기술연구원))\s*$",tail)
+    return normalize_name(m.group(1),profile) if m else ''
+
+
 class TableParser(HTMLParser):
     def __init__(self):
         super().__init__(); self.tables=[]; self.table=None; self.in_caption=False; self.in_cell=False; self.cell=""; self.row=None
@@ -225,6 +243,16 @@ def resolve_identity(candidates,profile):
         official_sid_by_addr[addr]=sid
         if namekey: confirmed_name_to_sites[namekey].add(sid)
 
+    # A source row already anchored by exact official address may also carry a
+    # source-native plant label after the address (for example in a register's address
+    # text).  Preserve that label only as a bridge for later addressless sources.
+    for c in candidates:
+        sid=official_sid_by_addr.get(c.get("address_key"))
+        if not sid: continue
+        aliases={c.get("name_key") or '', embedded_facility_name_key(c.get("source_address_raw"),profile)}
+        for alias in aliases:
+            if alias: confirmed_name_to_sites[alias].add(sid)
+
     for (addr,namekey),cs in sorted(strong.items()):
         if addr in official_sid_by_addr:
             sid=official_sid_by_addr[addr]
@@ -270,7 +298,7 @@ def resolve_identity(candidates,profile):
         elif c["address_key"]:
             sid=site_by_pair[pair]; match_status="REVIEW_REQUIRED"; basis="SINGLE_OR_CONFLICTING_SOURCE_ADDRESS"; review=True; note=(note+"; " if note else "")+"address/name pair not independently confirmed"
         elif c["name_key"] and len(confirmed_name_to_sites.get(c["name_key"],set()))==1:
-            sid=next(iter(confirmed_name_to_sites[c["name_key"]])); match_status="REVIEW_REQUIRED"; basis="NAME_ONLY_CANDIDATE"; review=True; note=(note+"; " if note else "")+"unique confirmed site-name candidate only; address/detail required"
+            sid=next(iter(confirmed_name_to_sites[c["name_key"]])); match_status="REVIEW_REQUIRED"; basis="NAME_ONLY_CANDIDATE"; review=True; note=(note+"; " if note else "")+"unique facility alias derived from an official-address-anchored source; address/detail still required for confirmation"
         elif c["name_key"] and len(confirmed_name_to_sites.get(c["name_key"],set()))>1:
             basis="AMBIGUOUS_NAME"; note=(note+"; " if note else "")+"normalized name maps to multiple confirmed sites"
         else:
