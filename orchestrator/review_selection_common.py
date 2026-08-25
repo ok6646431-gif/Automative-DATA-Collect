@@ -48,3 +48,21 @@ def source_identity_map(package_root):
 def resolve_site(idmap,source,source_id,fallback=''):
     cid,name=idmap.get((source,str(source_id)),('',''))
     return cid or str(source_id), name or fallback or str(source_id)
+
+def requested_scope(package_root):
+    raw=read_json(Path(package_root)/'Requested_Scope.json',{}) or {}
+    mode=str(raw.get('mode') or 'COMPANY').upper()
+    canonical={str(x) for x in raw.get('target_canonical_site_ids',[]) or [] if str(x)}
+    source_ids={}
+    for source,ids in (raw.get('target_source_ids',{}) or {}).items():
+        source_ids[str(source)]={str(x) for x in (ids or []) if str(x)}
+    return {'mode':mode,'label':raw.get('label') or mode,'target_canonical_site_ids':canonical,'target_source_ids':source_ids,'raw':raw}
+
+def scope_allows(scope,source='',source_site_id='',canonical_site_id=''):
+    if not scope or str(scope.get('mode') or 'COMPANY').upper()!='SITE_SET': return True
+    cid=str(canonical_site_id or ''); sid=str(source_site_id or ''); src=str(source or '')
+    if cid and cid in scope.get('target_canonical_site_ids',set()): return True
+    return bool(sid and sid in scope.get('target_source_ids',{}).get(src,set()))
+
+def scope_flag(scope,source='',source_site_id='',canonical_site_id=''):
+    return 'YES' if scope_allows(scope,source,source_site_id,canonical_site_id) else 'NO'
