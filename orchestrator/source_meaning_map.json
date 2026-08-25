@@ -1,0 +1,193 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Define what each evidence source can meaningfully tell an environmental-management job seeker, which signals are worth surfacing, and what must not be inferred from that source alone.",
+  "sources": {
+    "DART": {
+      "role": ["company_context", "business_change_context", "environmental_regulatory_context"],
+      "meaning_questions": [
+        "What businesses/products/sites create the operating context for environmental management?",
+        "Did capacity, facilities, or business structure change during the environmental-data period?",
+        "What environmental/regulatory obligations or investments does the company formally disclose?"
+      ],
+      "extract": [
+        "legal entity",
+        "business segments and products",
+        "major sites/facilities and roles",
+        "production capacity or facility expansion when disclosed",
+        "major capex/facility changes",
+        "environmental regulation/permit/disclosure statements",
+        "greenhouse-gas/emissions-trading disclosures when present"
+      ],
+      "signals": ["site_or_capacity_change", "business_scope_change", "environment_related_investment", "regulatory_or_permit_fact"],
+      "do_not_infer": [
+        "Do not treat total capex as environmental investment unless identified as such.",
+        "Do not use corporate-level production data as a site-specific denominator without evidence.",
+        "Do not infer causality between expansion and environmental data solely from timing."
+      ],
+      "complements": ["PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER", "ENVINFO", "SUSTAINABILITY_REPORT"]
+    },
+    "PRTR": {
+      "role": ["chemical_release_transfer_fact"],
+      "meaning_questions": [
+        "Which chemicals are released to the environment or transferred off-site?",
+        "Which chemicals recur across years/sites?",
+        "Did release/transfer composition materially change?"
+      ],
+      "extract": ["site", "year", "chemical", "release_amount_by_medium", "transfer_amount_by_route", "source_native_values"],
+      "signals": ["repeated_chemical", "large_relative_release_or_transfer", "material_change", "composition_change", "multi_site_recurrence"],
+      "do_not_infer": [
+        "High release quantity alone does not establish highest risk or highest management priority.",
+        "Do not infer treatment difficulty from quantity alone.",
+        "Do not infer environmental-management performance from absolute quantity without process/production context.",
+        "Do not calculate a release ratio against CHEM_STATS unless scope and definitions are demonstrably comparable."
+      ],
+      "complements": ["CHEM_STATS", "COMPANY_GUIDELINE", "BAT_KBREF", "HAZARD_REGULATORY_REFERENCE", "DART", "SUSTAINABILITY_REPORT"]
+    },
+    "CHEM_STATS": {
+      "role": ["chemical_handling_fact"],
+      "meaning_questions": [
+        "Which chemicals/products are handled at each site?",
+        "Which substances recur across disclosed survey rounds?",
+        "Did the handled-chemical composition change?"
+      ],
+      "extract": ["site", "survey_year", "chemical_or_product", "handling_amount_or_source_native_measure", "source_native_values"],
+      "signals": ["repeated_handled_chemical", "large_relative_handling", "composition_change", "multi_site_recurrence"],
+      "do_not_infer": [
+        "Handling amount is not release amount.",
+        "Higher handling amount alone does not mean higher environmental impact.",
+        "Preserve biennial/survey-round cadence rather than fabricating annual values."
+      ],
+      "complements": ["PRTR", "COMPANY_GUIDELINE", "BAT_KBREF", "HAZARD_REGULATORY_REFERENCE"]
+    },
+    "CLEANSYS_AIR": {
+      "role": ["continuous_air_measurement_fact"],
+      "meaning_questions": [
+        "What pollutants are continuously measured at disclosed stacks/sites?",
+        "Is the measurement level broadly stable or does it show a sustained shift?",
+        "Is variability materially different over time?"
+      ],
+      "extract": ["site", "stack", "pollutant", "date_or_period", "measurement", "unit", "source_native_supporting_fields"],
+      "signals": ["baseline_level", "sustained_shift", "trend", "stability_change", "limit_proximity_only_when_valid_limit_is_known"],
+      "do_not_infer": [
+        "Do not treat a simple average/max/min table as the final meaning.",
+        "Do not combine different stacks as if they were one homogeneous source without a defensible weighting basis.",
+        "Do not infer total air pollution load from concentration alone.",
+        "Do not compare to a generic legal limit when site/facility-specific applicable limits are unknown."
+      ],
+      "complements": ["ENVINFO", "DART", "SUSTAINABILITY_REPORT", "BAT_KBREF", "PERMIT_REFERENCE"]
+    },
+    "SOOSIRO_WATER": {
+      "role": ["continuous_water_measurement_fact"],
+      "meaning_questions": [
+        "What water-quality parameters are continuously measured at disclosed outlets/sites?",
+        "Is the measurement level broadly stable or does it show a sustained shift?",
+        "Are there measurement-definition/regulatory transitions that split the time series?"
+      ],
+      "extract": ["site", "outlet", "parameter", "date_or_period", "measurement", "unit", "source_native_supporting_fields"],
+      "signals": ["baseline_level", "sustained_shift", "trend", "stability_change", "measurement_regime_change", "limit_proximity_only_when_valid_limit_is_known"],
+      "do_not_infer": [
+        "Do not stitch incompatible parameters such as COD and TOC into one continuous trend without a validated conversion/definition basis.",
+        "Do not aggregate different outlets without a defensible flow/load basis.",
+        "Do not infer total pollutant load from concentration alone when flow is unavailable.",
+        "Do not infer treatment performance without influent/process/operating information."
+      ],
+      "complements": ["ENVINFO", "DART", "SUSTAINABILITY_REPORT", "BAT_KBREF", "PERMIT_REFERENCE"]
+    },
+    "ENVINFO": {
+      "role": ["site_environmental_profile", "environmental_investment_and_management_fact"],
+      "meaning_questions": [
+        "What environmental quantities and facilities/investments are publicly disclosed for the site?",
+        "Did environmental investment or resource/waste/emission indicators change over time?"
+      ],
+      "extract": [
+        "site",
+        "year",
+        "environmental_investment",
+        "air_water_waste_resource_fields_as_disclosed",
+        "facility_or_management_fields_as_disclosed"
+      ],
+      "signals": ["investment_change", "resource_change", "waste_change", "site_profile_change"],
+      "do_not_infer": [
+        "Environmental investment amount is not itself proof of environmental performance.",
+        "Do not infer effectiveness of a facility investment unless the specific facility, target pollutant, and outcome are supported.",
+        "Preserve source-native definitions and units."
+      ],
+      "complements": ["CLEANSYS_AIR", "SOOSIRO_WATER", "PRTR", "DART", "SUSTAINABILITY_REPORT"]
+    },
+    "SUSTAINABILITY_REPORT": {
+      "role": ["company_action_timeline", "management_goal_and_system_fact"],
+      "meaning_questions": [
+        "What environmental goals/actions/results does the company explicitly report?",
+        "Which environmental subjects recur or newly appear across reporting years?",
+        "Which actions are tied to a site, business unit, or company-wide scope?"
+      ],
+      "extract": ["publication_year", "activity_year", "scope", "environmental_category", "action", "target_or_metric", "status", "evidence_locator"],
+      "signals": ["repeated_management_theme", "new_action", "project_start_or_completion", "target_change", "site_specific_action"],
+      "do_not_infer": [
+        "Company emphasis is not equivalent to objective environmental materiality.",
+        "Do not convert company narrative into causal explanations for public-data changes without supporting evidence.",
+        "Distinguish publication year from activity year."
+      ],
+      "complements": ["DART", "ENVINFO", "PRTR", "CLEANSYS_AIR", "SOOSIRO_WATER", "COMPANY_GUIDELINE"]
+    },
+    "COMPANY_GUIDELINE": {
+      "role": ["public_management_process_reference"],
+      "meaning_questions": [
+        "What is the purpose and scope of the published rule/guideline?",
+        "What subjects, stages, criteria, or approvals does it govern?"
+      ],
+      "extract": ["document_title", "effective_date_or_version", "purpose", "scope", "managed_subject", "process_stage", "requirement_or_rule", "evidence_locator"],
+      "signals": ["management_scope", "lifecycle_process", "restricted_or_controlled_subject", "internal_control_step"],
+      "do_not_infer": [
+        "Do not generalize a product-environment rule to site process-chemical management when the scope excludes it.",
+        "Do not assume a public guideline reveals the company's complete internal SOP.",
+        "Do not treat a rule's existence as proof of outcome/performance."
+      ],
+      "complements": ["PRTR", "CHEM_STATS", "SUSTAINABILITY_REPORT", "HAZARD_REGULATORY_REFERENCE"]
+    },
+    "COMPANY_POLICY": {
+      "role": ["management_principle_reference"],
+      "meaning_questions": ["What environmental principles, commitments, and high-level management directions are publicly stated?"],
+      "extract": ["policy_title", "effective_date_or_version", "scope", "principle_or_commitment", "evidence_locator"],
+      "signals": ["stated_management_priority", "scope_of_commitment"],
+      "do_not_infer": ["Policy language alone is not evidence of implementation or environmental performance."],
+      "complements": ["SUSTAINABILITY_REPORT", "COMPANY_GUIDELINE", "ENVINFO"]
+    },
+    "BAT_KBREF": {
+      "role": ["industry_technical_reference"],
+      "meaning_questions": [
+        "For the relevant industry/process, what environmental emissions/issues and management techniques are recognized?",
+        "Which techniques are technically relevant to facts observed at the company?"
+      ],
+      "extract": ["industry_or_process", "environmental_medium", "pollutant_or_issue", "technique", "applicability_or_conditions", "document_version", "evidence_locator"],
+      "signals": ["industry_relevance", "technical_review_option"],
+      "do_not_infer": [
+        "Do not state that the company applies a BAT unless company-specific public evidence confirms it.",
+        "Do not recommend a specific retrofit without site/process/flow/concentration/operating/economic information."
+      ],
+      "company_application_states": ["company_confirmed", "related_practice_confirmed", "reference_only"],
+      "complements": ["PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER", "ENVINFO", "COMPANY_ACTION"]
+    },
+    "HAZARD_REGULATORY_REFERENCE": {
+      "role": ["chemical_hazard_and_regulatory_context"],
+      "meaning_questions": ["Does a chemical have hazard/regulatory properties that make quantity-only ranking insufficient?"],
+      "extract": ["chemical", "hazard_or_regulatory_basis", "applicable_scope", "source", "evidence_locator"],
+      "signals": ["hazard_relevance", "regulatory_relevance"],
+      "do_not_infer": ["Do not collapse hazard, exposure, release quantity, and risk into a single score without a validated methodology."],
+      "complements": ["PRTR", "CHEM_STATS", "COMPANY_GUIDELINE"]
+    },
+    "OFFICIAL_COMPANY_NEWS": {
+      "role": ["company_action_timeline", "event_context"],
+      "meaning_questions": ["What site-specific environmental facility, reuse, permit, certification, or investment action did the company publicly announce?"],
+      "extract": ["date", "scope", "site", "category", "action", "status", "quantitative_fact_if_any", "evidence_locator"],
+      "signals": ["project_start", "project_completion", "facility_action", "permit_or_certification_action"],
+      "do_not_infer": ["Timing overlap with environmental data is context, not proof of causality."],
+      "complements": ["DART", "ENVINFO", "SUSTAINABILITY_REPORT", "CLEANSYS_AIR", "SOOSIRO_WATER", "PRTR"]
+    }
+  },
+  "cross_source_principle": {
+    "rule": "A source should answer only the questions it is competent to answer. Cross-source links may be proposed as AI_REVIEW only when source scope, time, environmental medium/topic, and meaning are explicitly shown.",
+    "priority_topic_policy": "Do not rank by one metric such as release quantity. Show independent evidence dimensions (quantity, persistence/change, hazard/regulatory relevance, company action/management relevance, BAT/industry relevance) and let the user make the final judgment.",
+    "output_policy": "Detailed raw values remain in the evidence workbook/source archive. The brief surfaces only signals that change what the user should inspect or study next."
+  }
+}
