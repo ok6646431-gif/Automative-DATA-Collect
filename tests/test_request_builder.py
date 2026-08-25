@@ -51,5 +51,17 @@ class TestRequestBuilder(unittest.TestCase):
         self.assertNotIn("기간미상",r["sources"]["ENVINFO"]["search_terms"])
         self.assertFalse(any(x["term"] == "기간미상" for x in r["sources"]["PRTR"]["search_terms"]))
 
+    def test_only_verified_confirmed_site_addresses_are_passed_to_tms(self):
+        p={"request_id":"x","company_display_name":"새회사","aliases":[{"term":"새회사","scope":"current","year_start":2020,"year_end":"auto"}],
+           "site_candidates":[
+             {"site_name_raw":"A공장","address_raw":"충북 청주시 테스트로 1","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+             {"site_name_raw":"B공장","address_raw":"충북 청주시 테스트로 2","identity_status":"CANDIDATE","verification_state":"VERIFIED"},
+             {"site_name_raw":"C공장","address_raw":"충북 청주시 테스트로 3","identity_status":"CONFIRMED","verification_state":"UNVERIFIED"}],
+           "source_plan":{"ENVINFO":{"start_year":2020,"end_year":2024},"PRTR":{"start_year":2020,"end_year":2024},"CHEM_STATS":{"years":[2020,2022,2024]},"CLEANSYS_AIR":{"start_year":2020,"end_year":2024},"SOOSIRO_WATER":{"annual_years":[2020,2021,2022,2023,2024],"daily_years":[]}}}
+        r=build(p)
+        expected=["충북 청주시 테스트로 1"]
+        self.assertEqual(r["sources"]["CLEANSYS_AIR"]["site_addresses"],expected)
+        self.assertEqual(r["sources"]["SOOSIRO_WATER"]["site_addresses"],expected)
+
 
 if __name__=="__main__": unittest.main()
