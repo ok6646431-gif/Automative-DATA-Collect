@@ -1,4 +1,4 @@
-import csv, json, re
+import csv, json, re, subprocess
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -105,13 +105,18 @@ def resolve_document_path(pkg,row):
 def extract_pages(path):
     suffix=path.suffix.lower()
     if suffix=='.pdf':
-        from pypdf import PdfReader
-        reader=PdfReader(str(path)); out=[]
-        for i,page in enumerate(reader.pages,1):
-            try: text=page.extract_text() or ''
-            except Exception: text=''
-            out.append((i,text))
-        return out
+        try:
+            from pypdf import PdfReader
+            reader=PdfReader(str(path)); out=[]
+            for i,page in enumerate(reader.pages,1):
+                try: text=page.extract_text() or ''
+                except Exception: text=''
+                out.append((i,text))
+            return out
+        except ImportError:
+            proc=subprocess.run(['pdftotext','-layout',str(path),'-'],capture_output=True,check=True)
+            text=proc.stdout.decode('utf-8',errors='replace')
+            return [(i+1,p) for i,p in enumerate(text.split('\f')) if p.strip()]
     if suffix in {'.html','.htm'}:
         parser=TextHTMLParser(); parser.feed(path.read_text(encoding='utf-8',errors='replace')); return [(1,'\n'.join(parser.parts))]
     if suffix in {'.txt','.csv'}:
