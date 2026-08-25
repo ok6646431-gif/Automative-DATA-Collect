@@ -71,5 +71,26 @@ class TestPostprocessIdentity(unittest.TestCase):
         self.assertEqual(air["match_status"],"REVIEW_REQUIRED")
         self.assertEqual(air["match_basis"],"NAME_ONLY_CANDIDATE")
 
+    def test_address_anchored_embedded_facility_alias_bridges_addressless_source(self):
+        profile={**PROFILE,"site_candidates":[{
+            "candidate_id":"test-cheongju-1",
+            "site_name_raw":"청주캠퍼스(대신로)",
+            "address_raw":"충북 청주시 흥덕구 대신로 215",
+            "identity_status":"CONFIRMED",
+            "verification_state":"VERIFIED",
+        }]}
+        cs=[
+          {"source_key":"PRTR","source_site_id":"1","source_site_name_raw":"테스트화학","source_address_raw":"충북 청주시 흥덕구 대신로 215 (향정동)테스트화학 청주1공장","years":[2024]},
+          {"source_key":"CLEANSYS_AIR","source_site_id":"100","source_site_name_raw":"테스트화학(주) 청주1공장","source_address_raw":"","years":[2020,2021,2022,2023,2024]},
+        ]
+        _,_,ids,vals=resolve_identity(cs,profile)
+        prtr=[x for x in ids if x["source_key"]=="PRTR"][0]
+        air=[x for x in ids if x["source_key"]=="CLEANSYS_AIR"][0]
+        self.assertEqual(prtr["match_status"],"CONFIRMED")
+        self.assertEqual(air["match_status"],"REVIEW_REQUIRED")
+        self.assertEqual(air["match_basis"],"NAME_ONLY_CANDIDATE")
+        self.assertEqual(air["canonical_site_id"],prtr["canonical_site_id"])
+        self.assertTrue(any(v["object_key"]=="CLEANSYS_AIR:100" for v in vals))
+
 
 if __name__=="__main__": unittest.main()
