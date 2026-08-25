@@ -263,6 +263,39 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
     return created,failures
 
 
+def promote_envinfo_references(package_root,archive_root,scope,company_name):
+    """Expose high-value ENV-INFO attachments in the user folders they belong to.
+
+    ENV-INFO remains the provenance: every file is still preserved under
+    03_환경정보공개시스템/첨부자료.  This function only adds a user-facing copy when the
+    disclosure section/category itself identifies the attachment as a sustainability
+    report or an environmental/chemical-management policy.  It does not infer a
+    document class from environmental performance content.
+    """
+    root=Path(package_root); env=root/'output'/'ENVINFO'; user=Path(archive_root)/USER_ROOT; created=[]
+    for att in read_csv(env/'attachment_index.csv'):
+        comp=str(att.get('compId') or '')
+        if comp not in scope['ENVINFO'] or att.get('collection_status')!='DOWNLOADED': continue
+        src=root/str(att.get('stored_path') or '')
+        if not src.exists(): continue
+        section_id=str(att.get('section_id') or '').strip().lower()
+        section_title=str(att.get('section_title') or '')
+        category=str(att.get('document_category') or '')
+        original=str(att.get('original_filename') or src.name)
+        year=str(att.get('year') or '연도미상')
+        folder=None
+        if src.suffix.lower()=='.pdf' and (section_id=='inquiry26' or '환경(지속가능)보고서' in section_title):
+            folder=user/'04_지속가능경영보고서'
+        elif category=='CHEMICAL_MANAGEMENT':
+            folder=user/'06_회사환경정책'/'화학물질관리'/'ENVINFO_공개근거'
+        elif category=='ENV_POLICY_GOAL' or section_id=='inquiry03':
+            folder=user/'06_회사환경정책'/'환경경영'/'ENVINFO_공개근거'
+        if folder is None: continue
+        name=f'ENVINFO공개연도_{year}_{original}'
+        created.append(unique_copy(src,folder,name))
+    return created
+
+
 REVIEW_REPORT_FILES=[
     ('Environmental_Review_Brief.pdf', True),
     ('Environmental_Review_Evidence.xlsx', True),
@@ -345,8 +378,12 @@ def write_user_indexes(package_root,archive_root,documents,env_failures):
     dict_rows_to_xlsx(idx/'확인필요_REVIEW_REQUIRED.xlsx',[('검토필요',review_rows)])
     write_csv(idx/'사용자자료_목록.csv',file_rows,['구분','파일명','상대경로','용량_MB'])
     (idx/'README_먼저읽기.txt').write_text(
-        'Archive v2 사용 안내\n\n1) 평소에는 01_사용자자료만 확인하면 됩니다.\n2) HTML/JSON/JSONL/실행로그 등 재현·개발용 원본은 90_시스템원본에 분리했습니다.\n3) 지속가능경영보고서처럼 연도별 1개인 문서는 연도 폴더 없이 한 폴더에 파일명으로 연도를 표시합니다.\n4) 00_자료목록의 전체자료목록.xlsx와 확인필요_REVIEW_REQUIRED.xlsx를 먼저 확인하십시오.\n',encoding='utf-8')
+        'Archive v2 사용 안내\n\n1) 평소에는 01_사용자자료만 확인하면 됩니다.\n2) HTML/JSON/JSONL/실행로그 등 재현·개발용 원본은 90_시스템원본에 분리했습니다.\n3) 지속가능경영보고서처럼 연도별 1개인 문서는 연도 폴더 없이 한 폴더에 파일명으로 연도를 표시합니다.\n4) ENV-INFO가 공식 첨부파일로 제공한 지속가능경영보고서·정책 자료는 원래 03 폴더에 보존하면서 04/06에도 사용자 편의를 위해 복사해 표시합니다.\n5) 00_자료목록의 전체자료목록.xlsx와 확인필요_REVIEW_REQUIRED.xlsx를 먼저 확인하십시오.\n',encoding='utf-8')
     return file_rows
+
+
+def distinct_file_count(paths):
+    return len({sha256(p) for p in paths if Path(p).exists()})
 
 
 def build_archive(package_root,contract_path=CONTRACT_PATH):
@@ -360,14 +397,16 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     excels=build_user_excels(package_root,archive_root,scope)
     review_created,review_pdf_present=build_review_report_user(package_root,archive_root,company_name)
     env_created,env_failures=build_envinfo_user(package_root,archive_root,scope,labels)
+    promoted=promote_envinfo_references(package_root,archive_root,scope,company_name)
     docs_created,document_rows=build_corporate_user(package_root,archive_root,company_name)
     copy_system_raw(package_root,archive_root)
     user_files=write_user_indexes(package_root,archive_root,document_rows,env_failures)
-    sustainability=[p for p in docs_created if '04_지속가능경영보고서' in str(p)]; policy=[p for p in docs_created if '06_회사환경정책' in str(p)]; guides=[p for p in docs_created if '07_가이드라인_참고자료' in str(p)]
+    exposed_docs=docs_created+promoted
+    sustainability=[p for p in exposed_docs if '04_지속가능경영보고서' in str(p)]; policy=[p for p in exposed_docs if '06_회사환경정책' in str(p)]; guides=[p for p in docs_created if '07_가이드라인_참고자료' in str(p)]
     expected_env=sum(1 for r in read_csv(package_root/'output'/'ENVINFO'/'discovery.csv') if str(r.get('compId') or '') in scope['ENVINFO'])
-    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':len(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present}
+    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present}
     completeness='COMPLETE' if all(checks.values()) else 'INCOMPLETE'; idx=archive_root/'00_자료목록'
-    manifest={'schema_version':'2.0','company_id':company_id,'company_display_name':company_name,'created_at':datetime.now(timezone.utc).isoformat(),'archive_root':archive_root.name,'archive_completeness':completeness,'acceptance_checks':checks,'target_site_tokens':[x[0] for x in tokens],'target_source_ids':{k:sorted(v) for k,v in scope.items()},'user_files':len(user_files),'system_files':sum(1 for p in (archive_root/SYSTEM_ROOT).rglob('*') if p.is_file()),'xlsx_exports':len(excels),'envinfo_pdf_failures':env_failures,'principle':'01_사용자자료만으로 조사·비교가 가능해야 하며, 재현용 raw 자료는 90_시스템원본에 격리한다.'}
+    manifest={'schema_version':'2.0','company_id':company_id,'company_display_name':company_name,'created_at':datetime.now(timezone.utc).isoformat(),'archive_root':archive_root.name,'archive_completeness':completeness,'acceptance_checks':checks,'target_site_tokens':[x[0] for x in tokens],'target_source_ids':{k:sorted(v) for k,v in scope.items()},'user_files':len(user_files),'system_files':sum(1 for p in (archive_root/SYSTEM_ROOT).rglob('*') if p.is_file()),'xlsx_exports':len(excels),'envinfo_promoted_references':len(promoted),'envinfo_pdf_failures':env_failures,'principle':'01_사용자자료만으로 조사·비교가 가능해야 하며, 재현용 raw 자료는 90_시스템원본에 격리한다.'}
     (idx/'Archive_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     file_rows=archive_file_index(archive_root); write_csv(idx/'Archive_File_Index.csv',file_rows,['path','bytes','sha256'])
     zip_path=Path(shutil.make_archive(str(package_root/'Human_Archive'),'zip',root_dir=base,base_dir=archive_root.name)).resolve()
