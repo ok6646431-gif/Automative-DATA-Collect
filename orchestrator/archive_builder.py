@@ -2,7 +2,7 @@ import csv, hashlib, json, re, shutil, subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from requested_scope import company_terms as _company_terms
+from requested_scope import company_terms as _company_terms, source_id_scope as _resolved_source_id_scope
 
 try:
     import xlsxwriter
@@ -115,25 +115,12 @@ def site_is_target(name,tokens,profile=None):
 
 
 def source_id_scope(package_root, profile):
-    root=Path(package_root)/'output'; tokens=target_site_tokens(profile)
-    scope={k:set() for k in ['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER']}; labels={}
-    for r in read_csv(root/'ENVINFO'/'discovery.csv'):
-        if site_is_target(r.get('compNm',''),tokens,profile):
-            sid=str(r.get('compId') or ''); scope['ENVINFO'].add(sid); labels[('ENVINFO',sid)]=r.get('compNm','')
-    for r in read_csv(root/'PRTR'/'discovery.csv'):
-        if site_is_target(r.get('company_name_raw',''),tokens,profile):
-            sid=str(r.get('entrps_id') or ''); scope['PRTR'].add(sid); labels[('PRTR',sid)]=r.get('company_name_raw','')
-    for r in read_csv(root/'CHEM_STATS'/'discovery.csv'):
-        if site_is_target(r.get('bplcNm',''),tokens,profile):
-            sid=str(r.get('bplcId') or ''); scope['CHEM_STATS'].add(sid); labels[('CHEM_STATS',sid)]=r.get('bplcNm','')
-    for r in read_json(root/'CLEANSYS_AIR'/'candidates.json',[]) or []:
-        if site_is_target(r.get('company_name_raw',''),tokens,profile):
-            sid=str(r.get('fact_code') or ''); scope['CLEANSYS_AIR'].add(sid); labels[('CLEANSYS_AIR',sid)]=r.get('company_name_raw','')
-    for r in read_json(root/'SOOSIRO_WATER'/'fact_candidates.json',[]) or []:
-        name=r.get('FACT_FNAME') or r.get('FACT_NAME','')
-        if site_is_target(name,tokens,profile):
-            sid=str(r.get('FACT_CODE') or ''); scope['SOOSIRO_WATER'].add(sid); labels[('SOOSIRO_WATER',sid)]=name
-    return scope,labels,tokens
+    # User delivery must use the same canonical requested-scope resolver as analysis.
+    # Source-native facility labels are not reliable scope keys (for example TMS may
+    # use an ordinal plant name while Discovery uses a campus/road label).  The
+    # resolver uses verified Discovery sites plus Source_Identity and preserves raw
+    # collector output company-wide.
+    return _resolved_source_id_scope(package_root, profile)
 
 
 def dict_rows_to_xlsx(path, sheets):
