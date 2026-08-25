@@ -9,8 +9,10 @@ on:
       - 'orchestrator/review_selection*.json'
       - 'orchestrator/cross_layer*.py'
       - 'orchestrator/cross_layer*.json'
+      - 'orchestrator/document_semantics.py'
       - 'tests/test_review_selection.py'
       - 'tests/test_cross_layer_review.py'
+      - 'tests/test_document_semantics.py'
       - '.github/workflows/review-selection-tests.yml'
   pull_request:
     paths:
@@ -18,8 +20,10 @@ on:
       - 'orchestrator/review_selection*.json'
       - 'orchestrator/cross_layer*.py'
       - 'orchestrator/cross_layer*.json'
+      - 'orchestrator/document_semantics.py'
       - 'tests/test_review_selection.py'
       - 'tests/test_cross_layer_review.py'
+      - 'tests/test_document_semantics.py'
       - '.github/workflows/review-selection-tests.yml'
   workflow_dispatch:
 
@@ -36,4 +40,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run review-selection regression tests
-        run: python -m unittest tests.test_review_selection tests.test_cross_layer_review -v
+        run: python -m unittest tests.test_review_selection tests.test_cross_layer_review tests.test_document_semantics -v
