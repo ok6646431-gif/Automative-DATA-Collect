@@ -28,7 +28,6 @@ DOMAIN_WORDS={
 }
 
 FUTURE_MARKERS=['전략','목표','계획','mou','협약','추진','예정','target','strategy','roadmap','2030','2040','2050','2029']
-ACTION_MARKERS=['완료','취득','설치','교체','운영','증설','개선','인증','허가','적용','구축','도입']
 INDUSTRY_DOC_TYPES={'BAT_REFERENCE','GUIDELINE'}
 
 
@@ -89,6 +88,14 @@ def company_action_layer(pkg, scope):
         boundary='Company-stated future direction or planned project; not achieved performance.' if layer=='FUTURE_DIRECTION' else 'Verified event/action context; no causal claim to environmental data.'
         for domain in infer_domains(text):
             out.append(layer_row(layer,domain,cid,e.get('site_name',''),e.get('event_date_start'),e.get('event_title'),e.get('event_description'),e.get('source_key'),e.get('source_locator'),'SEMANTIC_FACT',boundary,e.get('event_id')))
+    # Page-grounded sustainability/policy/business-report extracts are facts about
+    # what the company publicly states.  They remain company-scope context unless a
+    # site is explicitly resolved elsewhere; they are never treated as measured effect.
+    for r in read_csv(pkg/'Document_Semantic_Candidates.csv'):
+        layer=r.get('layer','')
+        if layer not in {'COMPANY_ACTION','FUTURE_DIRECTION'}: continue
+        locator=str(r.get('source_locator') or '') + (('#page='+str(r.get('page'))) if r.get('page') else '')
+        out.append(layer_row(layer,r.get('domain') or 'CROSS_MEDIA','','',r.get('report_year'),f"{r.get('document_id')} p.{r.get('page')}",r.get('statement'),r.get('source_key') or 'CORP_DOCS',locator,'PAGE_GROUNDED_EXTRACT',r.get('interpretation_boundary') or 'Company document excerpt; no performance or causal inference.',r.get('semantic_id')))
     return out
 
 
@@ -173,7 +180,7 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     write_csv(pkg/'Cross_Layer_Review_Candidates.csv',rows,CROSS_FIELDS)
     write_csv(pkg/'Study_Question_Queue.csv',questions,QUESTION_FIELDS)
     summary={
-        'schema_version':'1.1','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.2','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
