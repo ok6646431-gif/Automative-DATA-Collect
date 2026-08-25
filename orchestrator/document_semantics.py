@@ -2,7 +2,7 @@ import csv, json, re
 from html.parser import HTMLParser
 from pathlib import Path
 
-from review_selection_common import read_csv, write_csv, stable_id
+from review_selection_common import read_csv, read_json, write_csv, stable_id
 
 FIELDS=[
     'semantic_id','layer','domain','document_id','document_type','report_year','page','semantic_kind','statement',
@@ -153,14 +153,28 @@ def run_document_semantics(package_root,max_per_document=120):
                     if count>=max_per_document: break
                 if count>=max_per_document: break
             if count>=max_per_document: break
-    # Deduplicate identical document/page/domain/layer statements while preserving first occurrence.
     dedup=[]; seen=set()
     for r in out:
         key=(r['document_id'],r['page'],r['domain'],r['layer'],r['semantic_kind'],r['statement'])
         if key not in seen: seen.add(key); dedup.append(r)
     write_csv(pkg/'Document_Semantic_Candidates.csv',dedup,FIELDS)
-    summary={'schema_version':'1.0','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
-             'layer_counts':{k:sum(r['layer']==k for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
+
+    profile=read_json(pkg/'Company_Profile.json',{}) or {}
+    facts=[]
+    for r in dedup:
+        if r['layer']!='INDUSTRY_TECHNICAL': continue
+        locator=r['source_locator'] + (('#page='+str(r['page'])) if r.get('page') else '')
+        facts.append({
+            'fact_id':r['semantic_id'],'layer':'INDUSTRY_TECHNICAL','domain':r['domain'],'time_key':r.get('report_year',''),
+            'title':f"{r['document_id']} p.{r['page']} {r['semantic_kind']}",'statement':r['statement'],
+            'source_key':'CORP_DOCS','source_locator':locator,'interpretation_boundary':r['interpretation_boundary']
+        })
+    generated={'schema_version':'1.0','request_id':profile.get('request_id',''),'facts':facts,
+               'generation_rule':'Only page-grounded INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. Company action/future excerpts remain candidates until separately corroborated.'}
+    (pkg/'Generated_Semantic_Evidence.json').write_text(json.dumps(generated,ensure_ascii=False,indent=2),encoding='utf-8')
+
+    summary={'schema_version':'1.1','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
+             'generated_industry_facts':len(facts),'layer_counts':{k:sum(r['layer']==k for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
              'failures':failures,'principle':'Extraction is page-grounded candidate evidence; company BAT application, performance and causality are never inferred automatically.'}
     (pkg/'Document_Semantics_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
     return summary
