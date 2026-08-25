@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Select what belongs in the human environmental-management review without preselecting favorite pollutants or forcing every available number into the brief.",
+  "selection_gates": [
+    {
+      "id": "inventory",
+      "rule": "Inventory all available source-native metrics/items first. A metric is never selected merely because it is familiar or easy to plot."
+    },
+    {
+      "id": "comparability",
+      "rule": "Long-term trend interpretation requires at least 4 observations under the same source-native definition. Two or three observations are context only. Definition changes remain separate."
+    },
+    {
+      "id": "signal",
+      "rule": "Detect mathematical candidates such as directional movement, level-shift candidates, persistence, composition change and daily variability. A signal is a reason to inspect, not a performance or risk conclusion."
+    },
+    {
+      "id": "management_relevance",
+      "rule": "Check whether the metric/topic is connected to a site management facility, multi-year action/investment, company management statement, regulation/hazard reference, process context or BAT reference."
+    },
+    {
+      "id": "interpretability",
+      "rule": "Do not call a value high/low, improved/worsened, compliant/non-compliant or efficient/inefficient when required denominators, site-specific limits, inlet load, production scale or operating conditions are missing."
+    }
+  ],
+  "comparability": {
+    "trend_min_observations": 4,
+    "context_min_observations": 2,
+    "do_not_merge_definition_families": [
+      ["COD_AVRG_DNSTY", "TOC_AVRG_DNSTY"],
+      ["COD_DSCAMT", "TOC_DSCAMT"]
+    ]
+  },
+  "signal_rules": {
+    "directional": "With 4+ comparable observations, at least 75% of non-zero adjacent changes have the same sign.",
+    "level_shift_candidate": "With 4+ comparable observations, the largest absolute adjacent change is at least twice the median non-zero absolute adjacent change. This is only a mathematical review candidate.",
+    "persistent_chemical": "The same PRTR chemical appears in at least 3 source-native reporting years.",
+    "definition_change": "A source changes the reported metric/definition and the old/new series must not be stitched into one trend.",
+    "daily_variability": "For available daily TMS rows, retain N, mean, median, P95, maximum and coefficient of variation as descriptive statistics only."
+  },
+  "display_levels": {
+    "EVIDENCE": "Preserve in evidence outputs; not necessarily shown in the main brief.",
+    "OVERVIEW": "Show to explain what the site/media manages or what data exists; no dedicated trend chart required.",
+    "MAIN": "Show in the main review when comparable data plus a review signal or management relevance changes what the user should inspect next.",
+    "DEEP_DIVE_CANDIDATE": "Eligible for deeper review only when at least two independent evidence dimensions overlap. Human adoption is still required."
+  },
+  "media_protocol": {
+    "AIR": {
+      "inventory": "All source-native air metrics from CleanSYS and ENV-INFO.",
+      "main_rule": "Do not repeat every pollutant for every site. Promote only comparable metrics with a signal and/or same-site air-management action."
+    },
+    "WATER": {
+      "inventory": "All available pH, organic-load, solids, nutrient, flow and discharge-load fields from SOOSIRO and ENV-INFO.",
+      "main_rule": "No preselected representative such as T-N. Select after inventory/comparability. Treat COD->TOC as a definition/measurement transition rather than a single continuous trend."
+    },
+    "CHEMICALS": {
+      "inventory": "All PRTR release/transfer chemicals and chemical-statistics substances/products.",
+      "main_rule": "Release quantity alone is not priority. Combine persistence, release/transfer path, regulatory/hazard flags, process/BAT relevance and company action where available."
+    },
+    "WASTE": {
+      "inventory": "Total and available waste categories, recycling, treatment/action evidence.",
+      "main_rule": "Prefer changes in waste composition, treatment/recycling route or material company action over repeating total generation alone."
+    },
+    "GHG_ENERGY": {
+      "inventory": "Site GHG/energy and company-level gas/target/action evidence without forcing incompatible scope definitions together.",
+      "main_rule": "Absolute site emissions may provide scale/context but cannot rank environmental performance without production/product-mix denominators."
+    },
+    "WATER_RESOURCES": {
+      "inventory": "Water use, reuse and reuse/conservation actions.",
+      "main_rule": "Keep resource-use interpretation separate from effluent-quality interpretation."
+    }
+  },
+  "management_action": {
+    "window": "Use every available year in ENV-INFO, not only the latest year.",
+    "fields": ["site", "year", "domain", "action_name", "period", "investment_million_krw", "description", "disclosed_effect", "source_file", "source_caption"],
+    "cross_source_link_rule": "Time/topic/site overlap may create an AI_REVIEW candidate, never an automatic causal claim."
+  },
+  "hard_boundaries": [
+    "Never select a metric merely because it was selected in a previous company.",
+    "Never interpret a short series as a long-term trend.",
+    "Never stitch changed measurement definitions into one trend without an explicit bridge.",
+    "Never equate PRTR quantity with hazard or risk.",
+    "Never infer treatment efficiency from effluent values without inlet/load information.",
+    "Never infer legal compliance without the applicable site/facility-specific requirement.",
+    "Never state that an investment caused a measured change solely from temporal overlap."
+  ]
+}
