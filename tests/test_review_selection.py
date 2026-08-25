@@ -54,6 +54,38 @@ class TestReviewSelection(unittest.TestCase):
             self.assertEqual({r['year'] for r in acts},{'2022','2023','2024'})
             self.assertTrue(all('AIR' in r['domain'] for r in acts))
             self.assertEqual(len({r['action_id'] for r in acts}),3)
+            self.assertTrue(all(r['in_requested_scope']=='YES' for r in acts))
+
+    def test_site_set_scope_preserves_inventory_but_filters_display_and_topics(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); src=root/'src'; pkg=root/'pkg'; pkg.mkdir()
+            rows=[]
+            for y in range(2020,2026):
+                rows.append({'YEAR':str(y),'FACT_CODE':'W1','FACT_FNAME':'Target Site','WAST_NO':1,'TN_AVRG_DNSTY':str(y-2019)})
+            for y in range(2018,2026):
+                rows.append({'YEAR':str(y),'FACT_CODE':'W2','FACT_FNAME':'Other Site','WAST_NO':1,'TN_AVRG_DNSTY':str(y-2017)})
+            write_jsonl(src/'SOOSIRO_WATER'/'annual_rows.jsonl',rows)
+            (src/'SOOSIRO_WATER'/'daily_rows.jsonl').write_text('',encoding='utf-8')
+            for s in ['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR']: (src/s).mkdir(parents=True,exist_ok=True)
+            for s in ['ENVINFO','PRTR','CHEM_STATS']: (src/s/'discovery.csv').write_text('search_year\n',encoding='utf-8')
+            (src/'CLEANSYS_AIR'/'annual_rows.jsonl').write_text('',encoding='utf-8')
+            (src/'PRTR'/'detail_table_rows.jsonl').write_text('',encoding='utf-8')
+            (src/'CHEM_STATS'/'detail_table_rows.jsonl').write_text('',encoding='utf-8')
+            (pkg/'Requested_Scope.json').write_text(json.dumps({'mode':'SITE_SET','label':'Target only','target_canonical_site_ids':[],'target_source_ids':{'SOOSIRO_WATER':['W1']}},ensure_ascii=False),encoding='utf-8')
+            summary=run_review_selection(src,pkg,ROOT/'orchestrator'/'review_selection_protocol.json')
+            inv=list(csv.DictReader((pkg/'Review_Metric_Inventory.csv').open(encoding='utf-8-sig')))
+            self.assertEqual({r['source_site_id'] for r in inv},{'W1','W2'})
+            self.assertTrue(all(r['in_requested_scope']=='YES' for r in inv if r['source_site_id']=='W1'))
+            self.assertTrue(all(r['in_requested_scope']=='NO' for r in inv if r['source_site_id']=='W2'))
+            plan=list(csv.DictReader((pkg/'Review_Display_Plan.csv').open(encoding='utf-8-sig')))
+            self.assertEqual({r['site_name'] for r in plan},{'Target Site'})
+            topics=list(csv.DictReader((pkg/'Review_Topic_Candidates.csv').open(encoding='utf-8-sig')))
+            self.assertEqual({r['site_name'] for r in topics},{'Target Site'})
+            cov=list(csv.DictReader((pkg/'Review_Source_Coverage.csv').open(encoding='utf-8-sig')))
+            water=[r for r in cov if r['source']=='SOOSIRO_WATER'][0]
+            self.assertEqual(water['raw_years'],'2018|2019|2020|2021|2022|2023|2024|2025')
+            self.assertEqual(water['requested_scope_years'],'2020|2021|2022|2023|2024|2025')
+            self.assertEqual(summary['scope_mode'],'SITE_SET')
 
 
 if __name__=='__main__': unittest.main()
