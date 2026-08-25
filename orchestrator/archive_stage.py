@@ -131,6 +131,11 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     archive=root/"Human_Archive"/archive_summary["archive_root"]; idx=archive/"00_자료목록"
     shutil.copy2(root/"Master_Manifest.json",idx/"Master_Manifest.json")
+    # build_archive() copied the pre-finalization BUILDING snapshot into the system raw
+    # control-plane folder.  Keep both manifest copies inside the same final zip aligned.
+    system_manifest=archive/"90_시스템원본"/"control_plane"/"Master_Manifest.json"
+    if system_manifest.parent.exists():
+        shutil.copy2(root/"Master_Manifest.json",system_manifest)
     for extra in [root/"Requested_Scope.json",root/"Analysis_Scope.csv"]:
         if extra.exists(): shutil.copy2(extra,idx/extra.name)
     file_rows=archive_file_index(archive); write_csv(idx/"Archive_File_Index.csv",file_rows,["path","bytes","sha256"])
