@@ -70,7 +70,6 @@ jobs:
           assert sem['pages_scanned']>=1200, sem
           assert sem['generated_industry_facts']>0, sem
           assert cross['four_layer_ready']>0, cross
-          # Strict decode confirms the surrogate that broke Master 121 is sanitized.
           (root/'Document_Semantic_Candidates.csv').read_text(encoding='utf-8-sig')
           rows=list(csv.DictReader((root/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig',newline='')))
           ready=[r for r in rows if r.get('review_state')=='FOUR_LAYER_READY']
@@ -78,7 +77,6 @@ jobs:
               'package_health':manifest['package_health'],
               'validation':manifest['validation'],
               'icis_selection_state':manifest['icis_selection_state'],
-              'semantics':sem,
               'four_layer_ready_count':len(ready),
               'four_layer_ready':[{
                   'review_id':r.get('review_id'),
@@ -86,23 +84,27 @@ jobs:
                   'canonical_site_id':r.get('canonical_site_id'),
                   'site_name':r.get('site_name'),
                   'domain':r.get('domain'),
-                  'industry_source_state':r.get('industry_source_state'),
-                  'industry_evidence_state':r.get('industry_evidence_state'),
-                  'limitations':r.get('limitations'),
               } for r in ready],
           },ensure_ascii=False,indent=2))
           PY
-      - name: Upload compact QA evidence
+      - name: Upload QA evidence for human semantic review
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-package-live-qa
+          name: fresh-package-semantic-qa
           path: |
             package-qa/Master_Manifest.json
             package-qa/Cross_Layer_Review_Summary.json
             package-qa/Cross_Layer_Review_Candidates.csv
+            package-qa/Evidence_Layer_Registry.csv
+            package-qa/Review_Topic_Candidates.csv
+            package-qa/Review_Signal_Registry.csv
+            package-qa/Management_Action_Ledger.csv
+            package-qa/Document_Semantic_Candidates.csv
+            package-qa/Generated_Semantic_Evidence.json
             package-qa/Document_Semantics_Summary.json
             package-qa/Industry_Reference_Applicability.csv
+            package-qa/Study_Question_Queue.csv
             package-qa/REVIEW_REQUIRED.json
           if-no-files-found: warn
           retention-days: 7
