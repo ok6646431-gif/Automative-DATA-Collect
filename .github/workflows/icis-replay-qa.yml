@@ -1,0 +1,79 @@
+name: ICIS replay live QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - '.github/workflows/icis-replay-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay_qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Bootstrap current KKPC request
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download the actual failed ICIS attempts from Master 121
+        uses: actions/download-artifact@v4
+        with:
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+          run-id: 33178406275
+          github-token: ${{ github.token }}
+      - name: Replay against actual Master history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python orchestrator/icis_replay.py replay
+          --current-request requests/current.generated.json
+          --attempts-root collected/icis
+          --out replay-output
+          --current-run-id 33178406275
+          --workflow-id 336947441
+          --branch run/control-plane
+          --max-age-days 30
+          --candidate-limit 12
+      - name: Assert #120 was accepted for both sources
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          decision=json.loads(Path('replay-output/_replay/decision.json').read_text(encoding='utf-8'))
+          assert decision['decision']=='REPLAY_APPLIED', decision
+          assert set(decision['replayed_sources'])=={'PRTR','CHEM_STATS'}, decision
+          for source in ('PRTR','CHEM_STATS'):
+              st=json.loads(Path('replay-output',source,'status.json').read_text(encoding='utf-8'))
+              assert st['status']=='DATA_FOUND', st
+              assert st['freshness']=='REPLAYED_LAST_KNOWN_GOOD', st
+              p=st['replay_provenance']
+              assert p['origin_run_id']=='33175976090', p
+              assert p['origin_artifact_id']=='9687724244', p
+              assert p['current_failure_status']=='REMOTE_HOST_UNREACHABLE', p
+          print(json.dumps(decision,ensure_ascii=False,indent=2))
+          PY
+      - name: Upload replay QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: icis-replay-live-qa
+          path: replay-output/
+          if-no-files-found: warn
+          retention-days: 7
