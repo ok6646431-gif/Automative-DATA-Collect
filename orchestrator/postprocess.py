@@ -76,6 +76,10 @@ def normalize_address(x, profile=None):
     s=str(x or "").strip()
     if not s: return ""
     for old,new in PROVINCE_MAP.items(): s=s.replace(old,new)
+    # Public registers sometimes insert a legal-dong before the road name even when
+    # the first-party road address omits it (e.g. "성암동 처용로", "평여동 여수산단3로").
+    # Remove only 동/가 immediately before a road name; 읍/면 remain address hierarchy.
+    s=re.sub(r"\s+[0-9A-Za-z가-힣]+(?:동|가)\s+(?=[0-9A-Za-z가-힣·._-]+(?:로|길)\s*\d)"," ",s)
     # Prefer the road-address core through the building number. This removes appended
     # lot numbers, plant labels and floor text without guessing a different address.
     m=re.match(r"^(.*?(?:로|길)\s*\d+(?:-\d+)?)\b",s)
@@ -281,6 +285,26 @@ def resolve_identity(candidates,profile):
         site_by_pair[(addr,namekey)]=sid
 
     id_rows=[]; validations=[]
+    # Official company lists can contain multiple organizational units at one road
+    # address. Do not silently equate those units with one environmental legal facility.
+    # If not every official unit name is independently represented by cross-source
+    # identity evidence, keep the relationship explicitly open for human review.
+    for addr,items in sorted(official_by_addr.items()):
+        if len(items)<=1: continue
+        official_names={normalize_name(x.get("site_name_raw"),profile) for x in items if normalize_name(x.get("site_name_raw"),profile)}
+        confirmed_names={namekey for (a,namekey) in strong if a==addr and namekey}
+        missing=sorted(official_names-confirmed_names)
+        if not missing: continue
+        display_names=[str(x.get("site_name_raw") or x.get("candidate_id") or "") for x in items]
+        vid=stable_id("VAL_",company_id,"COLOCATED_OFFICIAL_UNITS",addr,"|".join(sorted(display_names)))
+        validations.append({
+            "validation_id":vid,"company_id":company_id,"object_type":"OFFICIAL_SITE_RELATION","object_key":addr,
+            "issue_type":"COLOCATED_OFFICIAL_UNITS","severity":"HIGH","detected_by":"IDENTITY_RULE",
+            "evidence":f"official_units={' | '.join(display_names)} | shared_address={addr} | unconfirmed_unit_keys={'|'.join(missing)}",
+            "recommended_action":"confirm whether the colocated official units share one legal environmental facility or have distinct source-native environmental identities; do not auto-merge by address alone",
+            "status":"REVIEW_REQUIRED","resolved_by":"","resolved_at":"","notes":"Official organizational-unit identity is not equivalent to environmental legal-facility identity."
+        })
+
     for c in sorted(candidates,key=lambda x:(x["source_key"],str(x["source_site_id"]))):
         ex=excluded(c,profile); years=years_span(c.get("years",[]))
         if c["source_key"]=="CHEM_STATS" and years:
