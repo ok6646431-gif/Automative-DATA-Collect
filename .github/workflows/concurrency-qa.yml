@@ -1,0 +1,27 @@
+name: Concurrency cancellation QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'requests/concurrency_qa.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: concurrency-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hold long enough for replacement run
+        run: |
+          echo "start $(cat requests/concurrency_qa.txt)"
+          sleep 25
+          echo "completed $(cat requests/concurrency_qa.txt)"
