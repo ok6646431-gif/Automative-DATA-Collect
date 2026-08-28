@@ -66,14 +66,14 @@ jobs:
         run: |
           mkdir -p replay-metadata/output
           for file in assembled/*.json assembled/*.csv; do
-            [ -f "$file" ] && cp "$file" replay-metadata/
+            if [ -f "$file" ]; then cp "$file" replay-metadata/; fi
           done
           for source_dir in assembled/output/*; do
             [ -d "$source_dir" ] || continue
             target="replay-metadata/output/$(basename "$source_dir")"
             mkdir -p "$target"
             for name in status.json discovery.csv candidates.json fact_candidates.json document_index.csv attachment_index.csv excluded_rows.jsonl excluded_candidates.json; do
-              [ -f "$source_dir/$name" ] && cp "$source_dir/$name" "$target/"
+              if [ -f "$source_dir/$name" ]; then cp "$source_dir/$name" "$target/"; fi
             done
           done
       - name: Upload replay metadata
