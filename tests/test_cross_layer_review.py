@@ -34,6 +34,9 @@ class TestCrossLayerReview(unittest.TestCase):
         write_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv',[
             {'document_id':'BAT1','collection_status':'DOWNLOADED','document_type':'BAT_REFERENCE','title':'업종 최적가용기법 기준서','report_year':'2020','source_locator':'https://example.com/bat','source_url':'https://example.com/bat.pdf','notes':''}
         ],['document_id','collection_status','document_type','title','report_year','source_locator','source_url','notes'])
+        (pkg/'output'/'CORP_DOCS'/'status.json').write_text(json.dumps({
+            'status':'DATA_FOUND','documents_declared':1,'downloaded':1,'failed':0,'skipped':0
+        }),encoding='utf-8')
         return pkg
 
     def test_reference_document_does_not_become_bat_semantic_claim(self):
@@ -43,9 +46,15 @@ class TestCrossLayerReview(unittest.TestCase):
             rows=list(csv.DictReader((pkg/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig')))
             self.assertEqual(len(rows),1)  # requested scope filters SITE_B
             self.assertEqual(rows[0]['industry_semantic_ready'],'REFERENCE_ONLY')
+            self.assertEqual(rows[0]['industry_source_state'],'AVAILABLE')
+            self.assertEqual(rows[0]['industry_evidence_state'],'REFERENCE_ONLY')
             self.assertEqual(rows[0]['review_state'],'MULTI_LAYER_REVIEW')
             qs=list(csv.DictReader((pkg/'Study_Question_Queue.csv').open(encoding='utf-8-sig')))
             self.assertIn('INDUSTRY_SEMANTIC_GAP',{q['question_type'] for q in qs})
+            availability=list(csv.DictReader((pkg/'Source_Availability.csv').open(encoding='utf-8-sig')))
+            industry=[r for r in availability if r['evidence_family']=='INDUSTRY_REFERENCES'][0]
+            self.assertEqual(industry['availability_state'],'AVAILABLE')
+            self.assertEqual(summary['industry_reference_source_state'],'AVAILABLE')
             self.assertEqual(summary['four_layer_ready'],0)
 
     def test_page_level_bat_fact_upgrades_to_four_layer_ready(self):
@@ -64,6 +73,7 @@ class TestCrossLayerReview(unittest.TestCase):
             summary=run_cross_layer_review(pkg,semantic)
             rows=list(csv.DictReader((pkg/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig')))
             self.assertEqual(rows[0]['industry_semantic_ready'],'YES')
+            self.assertEqual(rows[0]['industry_evidence_state'],'SEMANTIC_READY')
             self.assertEqual(rows[0]['review_state'],'FOUR_LAYER_READY')
             self.assertEqual(summary['four_layer_ready'],1)
 
@@ -108,6 +118,35 @@ class TestCrossLayerReview(unittest.TestCase):
             self.assertIn('COMPANY_ACTION_GAP',qtypes)
             self.assertIn('FUTURE_DIRECTION_GAP',qtypes)
             self.assertEqual(summary['four_layer_ready'],0)
+
+    def test_failed_industry_download_is_not_reported_as_no_reference(self):
+        with tempfile.TemporaryDirectory() as td:
+            pkg=self.fixture(Path(td))
+            write_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv',[
+                {
+                    'document_id':'BAT_FAIL','collection_status':'DOWNLOAD_FAILED','document_type':'BAT_REFERENCE',
+                    'title':'업종 최적가용기법 기준서','report_year':'2020','source_locator':'https://example.com/bat',
+                    'source_url':'https://example.com/bat.pdf','notes':'ConnectTimeout'
+                }
+            ],['document_id','collection_status','document_type','title','report_year','source_locator','source_url','notes'])
+            (pkg/'output'/'CORP_DOCS'/'status.json').write_text(json.dumps({
+                'status':'NO_DOCUMENT_DOWNLOADED','documents_declared':1,'downloaded':0,'failed':1,'skipped':0
+            }),encoding='utf-8')
+            summary=run_cross_layer_review(pkg)
+            rows=list(csv.DictReader((pkg/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig')))
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]['industry_source_state'],'UNAVAILABLE')
+            self.assertEqual(rows[0]['industry_evidence_state'],'SOURCE_UNAVAILABLE')
+            self.assertIn('not treated as evidence absence',rows[0]['why_review'])
+            qs=list(csv.DictReader((pkg/'Study_Question_Queue.csv').open(encoding='utf-8-sig')))
+            qtypes={q['question_type'] for q in qs}
+            self.assertIn('INDUSTRY_SOURCE_UNAVAILABLE',qtypes)
+            self.assertNotIn('INDUSTRY_REFERENCE_GAP',qtypes)
+            availability=list(csv.DictReader((pkg/'Source_Availability.csv').open(encoding='utf-8-sig')))
+            industry=[r for r in availability if r['evidence_family']=='INDUSTRY_REFERENCES'][0]
+            self.assertEqual(industry['availability_state'],'UNAVAILABLE')
+            self.assertEqual(industry['failed_count'],'1')
+            self.assertEqual(summary['industry_reference_source_state'],'UNAVAILABLE')
 
 
 if __name__=='__main__': unittest.main()
