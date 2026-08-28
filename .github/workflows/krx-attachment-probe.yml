@@ -22,39 +22,43 @@ jobs:
           python-version: '3.12'
       - name: Install requests
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe KRX disclosure attachments
+      - name: Resolve original and corrected KRX attachments
         run: |
           mkdir -p krx_probe
           python - <<'PY' | tee krx_probe/summary.txt
           import re
-          from pathlib import Path
           from urllib.parse import urljoin
           import requests
           from bs4 import BeautifulSoup
 
           UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
-          disclosures={
-              2023:{'acpt':'20240613000301','attach':'20240613000421','path':'https://kind.krx.co.kr/external/2024/06/13/000301/20240613000421/99998.htm'},
-              2024:{'acpt':'20250616000602','attach':'20250616001359','path':'https://kind.krx.co.kr/external/2025/06/16/000602/20250616001359/99998.htm'},
-              2025:{'acpt':'20260622000693','attach':'20260622001144','path':'https://kind.krx.co.kr/external/2026/06/22/000693/20260622001144/99998.htm'},
+          docs={
+              '2023_ORIGINAL':('20240613000301','20240613000421'),
+              '2023_CORRECTION':('20240613000301','20240717000511'),
+              '2024_ORIGINAL':('20250616000602','20250616001359'),
+              '2024_CORRECTION_1':('20250616000602','20250708000755'),
+              '2024_CORRECTION_2':('20250616000602','20250820000371'),
+              '2025_ORIGINAL':('20260622000693','20260622001144'),
+              '2025_CORRECTION':('20260622000693','20260722001742'),
           }
           s=requests.Session(); s.headers.update({'User-Agent':UA})
-          out=Path('krx_probe')
-          for year,cfg in disclosures.items():
-              viewer=f"https://kind.krx.co.kr/common/disclsviewer.do?acptNo={cfg['acpt']}&method=searchInitInfo"
-              r=s.get(cfg['path'],headers={'Referer':viewer},timeout=(8,30)); print(f'===== YEAR {year} ATTACHMENT HTML ====='); print('STATUS',r.status_code,'FINAL',r.url,'TYPE',r.headers.get('Content-Type'),'BYTES',len(r.content)); r.raise_for_status()
-              (out/f'{year}_attachment_99998.html').write_bytes(r.content)
-              soup=BeautifulSoup(r.text,'html.parser')
-              for tag in soup.find_all(True):
-                  for attr in ('href','src','data','value','action'):
-                      val=tag.get(attr)
-                      if not val: continue
-                      absu=urljoin(r.url,str(val))
-                      if any(k in str(val).lower() for k in ('pdf','file','down','attach')) or tag.name in ('iframe','embed','object'):
-                          print('LINK',tag.name,attr,str(val),absu,sep='\t')
-              for line in r.text.splitlines():
-                  if any(k in line.lower() for k in ('.pdf','download','file','attach','iframe','embed','object')):
-                      print('LINE',line.strip()[:2500])
+          endpoint='https://kind.krx.co.kr/common/disclsviewer.do'
+          for label,(acpt,docno) in docs.items():
+              viewer=f'https://kind.krx.co.kr/common/disclsviewer.do?acptNo={acpt}&method=searchInitInfo'
+              r=s.get(endpoint,params={'method':'searchContents','docNo':docno},headers={'Referer':viewer},timeout=(8,30)); r.raise_for_status()
+              m=re.search(r"parent\.setPath\('[^']*','([^']+)'",r.text)
+              print('===== ',label,' =====',sep='')
+              print('DOCNO',docno,'SEARCH_STATUS',r.status_code)
+              if not m:
+                  print('NO_ATTACHMENT_PATH'); continue
+              page=m.group(1); print('ATTACHMENT_PAGE',page)
+              p=s.get(page,headers={'Referer':viewer},timeout=(8,30)); print('PAGE_STATUS',p.status_code,'BYTES',len(p.content)); p.raise_for_status()
+              soup=BeautifulSoup(p.text,'html.parser'); links=[]
+              for a in soup.find_all('a',href=True):
+                  href=str(a['href']); absolute=urljoin(p.url,href)
+                  if '.pdf' in href.lower(): links.append(absolute)
+              for link in links: print('PDF',link)
+              if not links: print('NO_PDF_LINK')
           PY
       - name: Upload probe result
         uses: actions/upload-artifact@v4
