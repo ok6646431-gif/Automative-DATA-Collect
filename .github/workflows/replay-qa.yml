@@ -1,0 +1,84 @@
+name: Enterprise environmental artifact replay QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'requests/replay_qa.json'
+      - '.github/workflows/replay-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay_package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read replay configuration
+        id: cfg
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          cfg=json.load(open('requests/replay_qa.json',encoding='utf-8'))
+          print('run_id='+str(cfg['source_run_id']))
+          PY
+      - name: Install package dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Bootstrap current discovery inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download prior stable sources
+        uses: actions/download-artifact@v4
+        with:
+          name: stable-sources
+          path: collected/stable
+          run-id: ${{ steps.cfg.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Download prior ICIS attempts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+          run-id: ${{ steps.cfg.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Reprocess artifacts with current control-plane code
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Preserve discovery summary
+        run: cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
+      - name: Prepare replay metadata
+        run: |
+          mkdir -p replay-metadata/output
+          for file in assembled/*.json assembled/*.csv; do
+            [ -f "$file" ] && cp "$file" replay-metadata/
+          done
+          for source_dir in assembled/output/*; do
+            [ -d "$source_dir" ] || continue
+            target="replay-metadata/output/$(basename "$source_dir")"
+            mkdir -p "$target"
+            for name in status.json discovery.csv candidates.json fact_candidates.json document_index.csv attachment_index.csv excluded_rows.jsonl excluded_candidates.json; do
+              [ -f "$source_dir/$name" ] && cp "$source_dir/$name" "$target/"
+            done
+          done
+      - name: Upload replay metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-replay-metadata
+          path: replay-metadata/
+          retention-days: 14
