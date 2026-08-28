@@ -9,6 +9,8 @@ from review_report import build_review_report
 from archive_builder import render_html_pdf
 
 BAD={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","CONFIG_ERROR"}
+DEGRADABLE_SOURCE_FAILURES={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","COLLECTION_FAILED_RETRY_EXHAUSTED"}
+STRUCTURAL_SOURCE_FAILURES={"CONFIG_ERROR"}
 SOURCES=["ENVINFO","PRTR","CHEM_STATS","CLEANSYS_AIR","SOOSIRO_WATER"]
 ROOT_ARTIFACTS=[
     "Company_Profile.json","Event_Evidence.json","Coverage_Matrix.csv","Coverage_Status.csv","Integration_Summary.json",
@@ -17,7 +19,7 @@ ROOT_ARTIFACTS=[
     "Review_Metric_Inventory.csv","Review_Signal_Registry.csv","Management_Action_Ledger.csv",
     "Chemical_Review_Candidates.csv","Water_Daily_Stats.csv","Review_Display_Plan.csv",
     "Review_Topic_Candidates.csv","Review_Source_Coverage.csv","Review_Selection_Summary.json",
-    "Evidence_Layer_Registry.csv","Cross_Layer_Review_Candidates.csv","Study_Question_Queue.csv",
+    "Source_Availability.csv","Evidence_Layer_Registry.csv","Cross_Layer_Review_Candidates.csv","Study_Question_Queue.csv",
     "Cross_Layer_Review_Summary.json","Document_Semantic_Candidates.csv","Generated_Semantic_Evidence.json",
     "Document_Semantics_Summary.json","Environmental_Review_Brief.html","Environmental_Review_Brief.pdf",
     "Environmental_Review_Evidence.xlsx","Environmental_Review_Summary.json"
@@ -50,22 +52,49 @@ def declared_empty_row_stream(source,path,status_payload):
     except (TypeError,ValueError): return False
 
 
-def good_icis(root):
+def read_icis_statuses(root):
     try:
-        p=read_json(root/"PRTR/status.json"); c=read_json(root/"CHEM_STATS/status.json")
+        return read_json(root/"PRTR/status.json"),read_json(root/"CHEM_STATS/status.json")
     except Exception:
-        return False
-    return p.get("status") not in BAD and c.get("status") not in BAD
+        return None,None
+
+
+def good_icis(root):
+    p,c=read_icis_statuses(root)
+    return bool(p and c and p.get("status") not in BAD and c.get("status") not in BAD)
 
 
 def choose_icis(icis_root):
-    if not icis_root.exists(): return None
-    candidates=[]
+    """Prefer a good ICIS attempt, but preserve a failed attempt when retries exhaust.
+
+    A failed public source is still evidence about source availability. Returning a
+    failed attempt lets downstream packaging retain its status.json instead of turning
+    a known outage into an ambiguous missing-source condition.
+    """
+    if not icis_root.exists(): return None,"NO_ATTEMPT_ARTIFACT"
+    usable=[]
     for d in sorted([x for x in icis_root.iterdir() if x.is_dir()]):
-        roots=[d,d/"output"]
-        for r in roots:
-            if good_icis(r): candidates.append(r); break
-    return candidates[0] if candidates else None
+        for r in [d,d/"output"]:
+            p,c=read_icis_statuses(r)
+            if p and c:
+                if p.get("status") not in BAD and c.get("status") not in BAD:
+                    return r,"GOOD_ATTEMPT"
+                usable.append(r)
+                break
+    if usable: return usable[0],"FAILED_ATTEMPT_PRESERVED"
+    return None,"NO_ATTEMPT_ARTIFACT"
+
+
+def write_unavailable_source(output,source,reason):
+    dst=Path(output)/source; dst.mkdir(parents=True,exist_ok=True)
+    payload={
+        "source_key":source,
+        "status":"COLLECTION_FAILED_RETRY_EXHAUSTED",
+        "failure_reason":reason,
+        "synthetic_status":True,
+        "note":"No collector attempt artifact was available after retries. This is source unavailability, not evidence of no data."
+    }
+    (dst/"status.json").write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
 
 
 def copy_source(src_root,dst_root,source):
@@ -118,7 +147,7 @@ def validate(root):
             continue
         st=read_json(sp); status=st.get("status")
         checks=[]
-        if status in BAD: checks.append("terminal_failure")
+        if status in BAD or status=="COLLECTION_FAILED_RETRY_EXHAUSTED": checks.append("terminal_failure")
         if s=="ENVINFO" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
         if s=="PRTR" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
         if s=="CHEM_STATS" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
@@ -127,11 +156,20 @@ def validate(root):
             if p.is_file() and p.stat().st_size==0 and not declared_empty_row_stream(s,p,st):
                 zero.append(str(p.relative_to(root)))
         if zero: checks.append("zero_byte_artifact")
-        if checks: ok=False; review.append({"source":s,"issues":checks,"zero_byte":zero})
+        if checks: ok=False; review.append({"source":s,"issues":checks,"zero_byte":zero,"status":status})
         normalized_years=years_from_source(root,s)
         status_payload={k:v for k,v in st.items() if k not in {"status","years","checks"}}
         results[s]={"status":status,"years":normalized_years,"checks":checks,**status_payload}
     return ok,results,review
+
+
+def package_health(statuses,source_review):
+    """Separate recoverable source outages from structural package corruption."""
+    for item in source_review:
+        source=item.get("source"); issues=set(item.get("issues") or []); status=str((statuses.get(source) or {}).get("status") or item.get("status") or "")
+        if "missing_status" in issues or "zero_byte_artifact" in issues: return "FAIL"
+        if status in STRUCTURAL_SOURCE_FAILURES: return "FAIL"
+    return "DEGRADED" if source_review else "PASS"
 
 
 def artifact_index(output,package_root):
@@ -183,11 +221,14 @@ def main():
     if out.exists(): shutil.rmtree(out)
     output.mkdir(parents=True,exist_ok=True)
     for s in ["ENVINFO","CLEANSYS_AIR","SOOSIRO_WATER","CORP_DOCS"]: copy_source(stable,output,s) or copy_source(stable/"output",output,s)
-    chosen=choose_icis(icis)
+    chosen,icis_selection_state=choose_icis(icis)
     if chosen:
         for s in ["PRTR","CHEM_STATS"]: copy_source(chosen,output,s)
+    else:
+        for s in ["PRTR","CHEM_STATS"]: write_unavailable_source(output,s,"No ICIS attempt contained both source status files after retries.")
 
-    package_ok,statuses,source_review=validate(output)
+    _,statuses,source_review=validate(output)
+    health=package_health(statuses,source_review)
     (out/"REVIEW_REQUIRED.json").write_text(json.dumps(source_review,ensure_ascii=False,indent=2),encoding="utf-8")
     if profile.exists(): shutil.copy2(profile,out/"Company_Profile.json")
     if events.exists(): shutil.copy2(events,out/"Event_Evidence.json")
@@ -219,9 +260,11 @@ def main():
     with (out/"Artifact_Index.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(idx)
 
-    manifest={"schema_version":"1.6","package_health":"PASS" if package_ok else "FAIL","validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"review_selection":integration.get("review_selection",{}),"cross_layer_review":integration.get("cross_layer_review",{}),"review_report":integration.get("review_report",{}),"artifact_count":len(idx)}
+    manifest={"schema_version":"1.7","package_health":health,"validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"icis_selection_state":icis_selection_state,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"review_selection":integration.get("review_selection",{}),"cross_layer_review":integration.get("cross_layer_review",{}),"review_report":integration.get("review_report",{}),"artifact_count":len(idx)}
     (out/"Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
-    print(json.dumps({"package_health":manifest["package_health"],"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"artifacts":len(idx),"integration":integration},ensure_ascii=False))
-    raise SystemExit(0 if package_ok else 81)
+    print(json.dumps({"package_health":health,"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"icis_selection_state":icis_selection_state,"artifacts":len(idx),"integration":integration},ensure_ascii=False))
+    # A degraded package is intentionally deliverable: source outages remain explicit
+    # REVIEW_REQUIRED evidence gaps. Structural corruption/configuration errors still fail.
+    raise SystemExit(81 if health=="FAIL" else 0)
 
 if __name__=="__main__": main()
