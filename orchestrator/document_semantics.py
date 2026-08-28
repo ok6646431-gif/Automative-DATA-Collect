@@ -43,7 +43,7 @@ def normalize(text):
 def split_units(text):
     raw=str(text or '').replace('\r\n','\n').replace('\r','\n')
     if not raw.strip(): return []
-    # Preserve PDF line structure first.  Collapsing all whitespace before splitting
+    # Preserve PDF line structure first. Collapsing all whitespace before splitting
     # caused long technical pages to become one >900-character block and disappear.
     pieces=[]
     for line in re.split(r'\n+',raw):
@@ -118,7 +118,7 @@ def pdf_reader():
         from pypdf import PdfReader
         return PdfReader
     except ImportError:
-        # The package stage is a controlled GitHub Actions environment.  Bootstrap
+        # The package stage is a controlled GitHub Actions environment. Bootstrap
         # the lightweight parser when the workflow image does not already provide it.
         subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','pypdf'],check=True,capture_output=True,text=True)
         from pypdf import PdfReader
@@ -141,6 +141,27 @@ def extract_pages(path):
     return []
 
 
+def industry_reference_access(row,path):
+    """Return whether a BAT/guideline artifact contains semantic body evidence.
+
+    A catalog, board index, metadata page, or table-of-contents landing page proves
+    that a reference exists, but it is not enough to claim that the workflow read a
+    technical technique/issue statement. BAT PDFs are treated as full-text. A genuine
+    full-text HTML technical reference must be explicitly marked in the evidence note
+    with FULL_TEXT_HTML rather than inferred from keywords on an index page.
+    """
+    dtype=str(row.get('document_type') or '')
+    if dtype not in {'BAT_REFERENCE','GUIDELINE'}:
+        return 'NOT_APPLICABLE'
+    suffix=Path(path).suffix.lower()
+    if suffix in {'.pdf','.txt','.csv'}:
+        return 'FULL_TEXT'
+    notes=str(row.get('notes') or '')
+    if suffix in {'.html','.htm'} and 'FULL_TEXT_HTML' in notes.upper():
+        return 'FULL_TEXT'
+    return 'REFERENCE_INDEX_ONLY'
+
+
 def boundary(layer,kind):
     if layer=='INDUSTRY_TECHNICAL': return 'Page-grounded industry-reference excerpt. It does not prove that the company applies the technique or that the excerpt is site-specific.'
     if layer=='FUTURE_DIRECTION': return 'Page-grounded company statement of a target/plan. It is not evidence that the target has been achieved.'
@@ -156,6 +177,7 @@ def run_document_semantics(package_root,max_per_document=500):
         path=resolve_document_path(pkg,row)
         if not path:
             failures.append({'document_id':row.get('document_id'),'reason':'LOCAL_FILE_NOT_FOUND'}); continue
+        ref_access=industry_reference_access(row,path)
         docs+=1; count=0
         try: page_texts=extract_pages(path)
         except Exception as exc:
@@ -165,12 +187,15 @@ def run_document_semantics(package_root,max_per_document=500):
             for unit in split_units(text):
                 classes=classify_unit(dtype,unit)
                 for domain,layer,kind,terms in classes:
+                    semantic_state='PAGE_GROUNDED_EXTRACT'
+                    if layer=='INDUSTRY_TECHNICAL' and ref_access=='REFERENCE_INDEX_ONLY':
+                        semantic_state='REFERENCE_INDEX_CONTEXT'
                     out.append({
                         'semantic_id':stable_id('SEM_',row.get('document_id'),page_no,domain,layer,kind,unit[:160]),
                         'layer':layer,'domain':domain,'document_id':row.get('document_id',''),'document_type':dtype,
                         'report_year':row.get('report_year',''),'page':page_no,'semantic_kind':kind,'statement':unit[:900],
                         'source_key':'CORP_DOCS','source_locator':row.get('source_locator') or row.get('source_url') or '',
-                        'semantic_state':'PAGE_GROUNDED_EXTRACT','matched_terms':'|'.join(terms),'interpretation_boundary':boundary(layer,kind)
+                        'semantic_state':semantic_state,'matched_terms':'|'.join(terms),'interpretation_boundary':boundary(layer,kind)
                     }); count+=1
                     if count>=max_per_document: break
                 if count>=max_per_document: break
@@ -184,20 +209,21 @@ def run_document_semantics(package_root,max_per_document=500):
     profile=read_json(pkg/'Company_Profile.json',{}) or {}
     facts=[]
     for r in dedup:
-        if r['layer']!='INDUSTRY_TECHNICAL': continue
+        if r['layer']!='INDUSTRY_TECHNICAL' or r.get('semantic_state')!='PAGE_GROUNDED_EXTRACT': continue
         locator=r['source_locator'] + (('#page='+str(r['page'])) if r.get('page') else '')
         facts.append({
             'fact_id':r['semantic_id'],'layer':'INDUSTRY_TECHNICAL','domain':r['domain'],'time_key':r.get('report_year',''),
             'title':f"{r['document_id']} p.{r['page']} {r['semantic_kind']}",'statement':r['statement'],
             'source_key':'CORP_DOCS','source_locator':locator,'interpretation_boundary':r['interpretation_boundary']
         })
-    generated={'schema_version':'1.0','request_id':profile.get('request_id',''),'facts':facts,
-               'generation_rule':'Only page-grounded INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. Company action/future excerpts remain page-grounded candidates and may be used only as statements of company action/plan, never as proof of performance or causality.'}
+    generated={'schema_version':'1.1','request_id':profile.get('request_id',''),'facts':facts,
+               'generation_rule':'Only page-grounded technical-body INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. BAT/guideline catalog, metadata, board-index and table-of-contents HTML remain REFERENCE_INDEX_CONTEXT. Company action/future excerpts remain page-grounded candidates and may be used only as statements of company action/plan, never as proof of performance or causality.'}
     (pkg/'Generated_Semantic_Evidence.json').write_text(json.dumps(generated,ensure_ascii=False,indent=2),encoding='utf-8')
 
-    summary={'schema_version':'1.2','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
-             'generated_industry_facts':len(facts),'layer_counts':{k:sum(r['layer']==k for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
-             'failures':failures,'principle':'Extraction is page-grounded candidate evidence; company BAT application, performance and causality are never inferred automatically.'}
+    summary={'schema_version':'1.3','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
+             'generated_industry_facts':len(facts),'reference_index_candidates':sum(r.get('semantic_state')=='REFERENCE_INDEX_CONTEXT' for r in dedup),
+             'layer_counts':{k:sum(r['layer']==k for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
+             'failures':failures,'principle':'Extraction is page-grounded candidate evidence; BAT/guideline index pages do not satisfy technical-semantic readiness; company BAT application, performance and causality are never inferred automatically.'}
     (pkg/'Document_Semantics_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
     return summary
 
