@@ -12,9 +12,14 @@ LAYER_FIELDS=[
 CROSS_FIELDS=[
     'review_id','topic_id','canonical_site_id','site_name','domain','review_state',
     'observed_evidence_ids','company_action_evidence_ids','industry_reference_evidence_ids','future_direction_evidence_ids',
-    'industry_semantic_ready','evidence_layers','why_review','limitations','human_decision'
+    'industry_semantic_ready','industry_source_state','industry_evidence_state',
+    'evidence_layers','why_review','limitations','human_decision'
 ]
 QUESTION_FIELDS=['question_id','review_id','domain','site_name','question_type','question','needed_evidence','status']
+SOURCE_AVAILABILITY_FIELDS=[
+    'source_key','evidence_family','availability_state','collection_status',
+    'declared_count','available_count','failed_count','skipped_count','notes'
+]
 
 DOMAIN_WORDS={
     'AIR':['대기','nox','sox','hcl','hf','먼지','배기','scrubber','집진','버너','악취'],
@@ -27,6 +32,7 @@ DOMAIN_WORDS={
 FUTURE_MARKERS=['전략','목표','계획','mou','협약','추진','예정','target','strategy','roadmap','2030','2040','2050','2029']
 INDUSTRY_DOC_TYPES={'BAT_REFERENCE','GUIDELINE'}
 NON_READINESS_EVENT_ROLES={'CONTEXT_MARKER','COMPARABILITY_MARKER','IDENTITY_MARKER','BASELINE_MARKER'}
+COLLECTOR_SOURCES=['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER','CORP_DOCS']
 
 
 def infer_domains(text):
@@ -50,6 +56,60 @@ def layer_row(layer,domain,site_id,site_name,time_key,title,statement,source_key
         'statement':statement or '','source_key':source_key or '','source_locator':source_locator or '',
         'semantic_state':state,'interpretation_boundary':boundary
     }
+
+
+def collector_availability(status):
+    state=str((status or {}).get('status') or '').upper()
+    if state in {'DATA_FOUND','COMPLETE','SUCCESS','PASS'}: return 'AVAILABLE'
+    if 'PARTIAL' in state: return 'PARTIAL'
+    if state in {'NOT_RUN','INVALID_SCOPE'}: return 'NOT_COLLECTED'
+    if state.startswith('NO_'): return 'NO_DATA'
+    return 'UNKNOWN'
+
+
+def document_family_availability(rows,family,predicate,collection_status=''):
+    selected=[r for r in rows if predicate(r)]
+    declared=len(selected)
+    available=sum(r.get('collection_status')=='DOWNLOADED' for r in selected)
+    failed=sum(r.get('collection_status')=='DOWNLOAD_FAILED' for r in selected)
+    skipped=sum(str(r.get('collection_status') or '').startswith('SKIPPED') for r in selected)
+    if available and failed:
+        state='PARTIAL'
+    elif available:
+        state='AVAILABLE'
+    elif failed:
+        state='UNAVAILABLE'
+    elif declared and skipped:
+        state='NOT_COLLECTED'
+    elif declared:
+        state='NOT_AVAILABLE'
+    else:
+        state='NOT_DECLARED'
+    failed_ids=[str(r.get('document_id') or '') for r in selected if r.get('collection_status')=='DOWNLOAD_FAILED']
+    notes=('failed_document_ids='+','.join(x for x in failed_ids if x)) if failed_ids else ''
+    return {
+        'source_key':'CORP_DOCS','evidence_family':family,'availability_state':state,
+        'collection_status':collection_status,'declared_count':declared,'available_count':available,
+        'failed_count':failed,'skipped_count':skipped,'notes':notes
+    }
+
+
+def source_availability(pkg):
+    rows=[]
+    for source in COLLECTOR_SOURCES:
+        status=read_json(pkg/'output'/source/'status.json',{}) or {}
+        rows.append({
+            'source_key':source,'evidence_family':'ALL','availability_state':collector_availability(status),
+            'collection_status':str(status.get('status') or ''),'declared_count':str(status.get('documents_declared') or ''),
+            'available_count':str(status.get('downloaded') or ''),'failed_count':str(status.get('failed') or ''),
+            'skipped_count':str(status.get('skipped') or ''),'notes':''
+        })
+    docs=read_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv')
+    corp_status=read_json(pkg/'output'/'CORP_DOCS'/'status.json',{}) or {}
+    cstatus=str(corp_status.get('status') or '')
+    rows.append(document_family_availability(docs,'INDUSTRY_REFERENCES',lambda r:r.get('document_type') in INDUSTRY_DOC_TYPES,cstatus))
+    rows.append(document_family_availability(docs,'COMPANY_DOCUMENTS',lambda r:r.get('document_type') not in INDUSTRY_DOC_TYPES,cstatus))
+    return rows
 
 
 def observed_layer(pkg,scope):
@@ -79,10 +139,8 @@ def company_action_layer(pkg,scope):
         cid=e.get('canonical_site_id','')
         if not site_allowed(cid,scope): continue
         role=str(e.get('analysis_role') or '').strip().upper()
-        # Event_Registry deliberately carries production, identity, disclosure and
-        # baseline context.  Those records remain useful to a human reviewer, but
-        # they must not fill COMPANY_ACTION/FUTURE_DIRECTION readiness merely
-        # because they share a site or date with an environmental signal.
+        # Production/identity/baseline events remain useful context but cannot satisfy
+        # environmental readiness merely because they share a site or date.
         if role in NON_READINESS_EVENT_ROLES: continue
         text=' '.join([e.get('event_title',''),e.get('event_description',''),e.get('event_type','')])
         is_future=any(x in text.lower() for x in FUTURE_MARKERS) and not any(x in text.lower() for x in ['완료','취득'])
@@ -123,20 +181,31 @@ def compatible(topic,evidence):
     return not ecid or ecid==tcid or tcid=='MULTI_SITE'
 
 
-def build_cross_candidates(pkg,layers,scope):
+def industry_evidence_state(industry,semantic_industry,source_state):
+    if semantic_industry: return 'SEMANTIC_READY'
+    if industry: return 'REFERENCE_ONLY'
+    if source_state=='UNAVAILABLE': return 'SOURCE_UNAVAILABLE'
+    if source_state=='PARTIAL': return 'SOURCE_PARTIAL'
+    if source_state in {'NOT_COLLECTED','NOT_AVAILABLE','UNKNOWN'}: return 'SOURCE_NOT_CONFIRMED'
+    return 'NO_EVIDENCE_FOUND'
+
+
+def build_cross_candidates(pkg,layers,scope,availability=None):
     by_layer=defaultdict(list)
     for e in layers: by_layer[e['layer']].append(e)
+    amap={r.get('evidence_family'):r for r in (availability or []) if r.get('source_key')=='CORP_DOCS'}
+    industry_source_state=amap.get('INDUSTRY_REFERENCES',{}).get('availability_state','UNKNOWN')
     rows=[]; questions=[]
     for t in read_csv(pkg/'Review_Topic_Candidates.csv'):
         cid=t.get('canonical_site_id','')
         if not site_allowed(cid,scope): continue
         matches={k:[e for e in by_layer[k] if compatible(t,e)] for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']}
         obs=matches['OBSERVED']; actions_all=matches['COMPANY_ACTION']; industry=matches['INDUSTRY_TECHNICAL']; future=matches['FUTURE_DIRECTION']
-        # A company-wide report statement is useful context, but it must not satisfy
-        # the 'site action' layer for a site-specific topic.  Site readiness requires
-        # action evidence resolved to the same site; MULTI_SITE may use company scope.
+        # Company-wide report statements are context for site-specific topics.  Site
+        # readiness requires action evidence resolved to the same site.
         actions=actions_all if not cid or cid=='MULTI_SITE' else [e for e in actions_all if e.get('canonical_site_id')==cid]
         semantic_industry=[e for e in industry if e.get('semantic_state')=='SEMANTIC_FACT']
+        ind_state=industry_evidence_state(industry,semantic_industry,industry_source_state)
         nonobs=sum(bool(x) for x in [actions,semantic_industry,future])
         if obs and actions and semantic_industry and future: state='FOUR_LAYER_READY'
         elif obs and nonobs>=2: state='MULTI_LAYER_REVIEW'
@@ -151,22 +220,43 @@ def build_cross_candidates(pkg,layers,scope):
         if future: present.append('FUTURE_DIRECTION')
         why='Observed public-data signal'
         if actions: why+=' + same-site company action'
-        if semantic_industry: why+=' + page-grounded industry technical context'
-        elif industry: why+=' + industry reference document available (semantic extraction pending)'
+        if semantic_industry:
+            why+=' + page-grounded industry technical context'
+        elif industry:
+            why+=' + industry reference document available (semantic extraction pending)'
+        elif ind_state=='SOURCE_UNAVAILABLE':
+            why+=' + industry-reference source unavailable; missing evidence is not treated as evidence absence'
+        elif ind_state=='SOURCE_PARTIAL':
+            why+=' + industry-reference collection partial; missing evidence remains unresolved'
         if future: why+=' + company future direction'
+        limitations='Layer overlap is review context only; production/flow/permit/operating denominators and site-specific technology may still be required.'
+        if ind_state in {'SOURCE_UNAVAILABLE','SOURCE_PARTIAL','SOURCE_NOT_CONFIRMED'}:
+            limitations+=' Industry-reference availability is incomplete, so absence of technical evidence must not be interpreted as no relevant reference.'
         rows.append({
             'review_id':rid,'topic_id':t.get('topic_id'),'canonical_site_id':cid,'site_name':t.get('site_name',''),'domain':t.get('domain',''),'review_state':state,
             'observed_evidence_ids':'|'.join(e['evidence_id'] for e in obs),'company_action_evidence_ids':'|'.join(e['evidence_id'] for e in actions),
             'industry_reference_evidence_ids':'|'.join(e['evidence_id'] for e in industry),'future_direction_evidence_ids':'|'.join(e['evidence_id'] for e in future),
-            'industry_semantic_ready':'YES' if semantic_industry else ('REFERENCE_ONLY' if industry else 'NO'),'evidence_layers':'|'.join(present),
-            'why_review':why+'.','limitations':'Layer overlap is review context only; production/flow/permit/operating denominators and site-specific technology may still be required.','human_decision':'UNREVIEWED'
+            'industry_semantic_ready':'YES' if semantic_industry else ('REFERENCE_ONLY' if industry else 'NO'),
+            'industry_source_state':industry_source_state,'industry_evidence_state':ind_state,'evidence_layers':'|'.join(present),
+            'why_review':why+'.','limitations':limitations,'human_decision':'UNREVIEWED'
         })
         def q(qtype,text,need):
             questions.append({'question_id':stable_id('Q_',rid,qtype),'review_id':rid,'domain':t.get('domain',''),'site_name':t.get('site_name',''),'question_type':qtype,'question':text,'needed_evidence':need,'status':'OPEN'})
-        if not actions: q('COMPANY_ACTION_GAP','What same-site management action is publicly confirmed for this observed topic?','Site-resolved official company action, ENVINFO investment, permit or verified event evidence')
-        if not industry: q('INDUSTRY_REFERENCE_GAP','What industry technical reference explains why this environmental topic matters?','Applicable BAT/K-BREF or equivalent industry technical reference')
-        elif not semantic_industry: q('INDUSTRY_SEMANTIC_GAP','What does the available BAT/K-BREF actually say about this issue, process and control technique?','Page-level BAT/K-BREF evidence: issue, technique, applicability/conditions, evidence locator')
-        if not future: q('FUTURE_DIRECTION_GAP','Has the company stated a future target or planned action related to this topic?','Official strategy, target, planned investment or project evidence')
+        if not actions:
+            q('COMPANY_ACTION_GAP','What same-site management action is publicly confirmed for this observed topic?','Site-resolved official company action, ENVINFO investment, permit or verified event evidence')
+        if not industry:
+            if ind_state=='SOURCE_UNAVAILABLE':
+                q('INDUSTRY_SOURCE_UNAVAILABLE','Industry-reference collection failed. What BAT/K-BREF or equivalent reference becomes available after the source is retried?','Retry failed verified industry-reference documents; do not treat collection failure as no relevant reference')
+            elif ind_state=='SOURCE_PARTIAL':
+                q('INDUSTRY_SOURCE_PARTIAL','Industry-reference collection is partial. Does the missing portion contain a relevant BAT/K-BREF or equivalent reference?','Retry failed industry-reference documents before concluding the technical-reference layer is absent')
+            elif ind_state=='SOURCE_NOT_CONFIRMED':
+                q('INDUSTRY_SOURCE_NOT_CONFIRMED','Industry-reference availability is not confirmed. Can the declared technical references be collected and semantically checked?','Confirm collection status, then inspect page-level BAT/K-BREF evidence')
+            else:
+                q('INDUSTRY_REFERENCE_GAP','What industry technical reference explains why this environmental topic matters?','Applicable BAT/K-BREF or equivalent industry technical reference')
+        elif not semantic_industry:
+            q('INDUSTRY_SEMANTIC_GAP','What does the available BAT/K-BREF actually say about this issue, process and control technique?','Page-level BAT/K-BREF evidence: issue, technique, applicability/conditions, evidence locator')
+        if not future:
+            q('FUTURE_DIRECTION_GAP','Has the company stated a future target or planned action related to this topic?','Official strategy, target, planned investment or project evidence')
         q('INTERPRETATION_BOUNDARY','What additional denominator or operating information is needed before judging performance or causality?','Production/throughput, flow/load, applicable limit, process change, equipment/operating data as relevant')
     return rows,questions
 
@@ -182,16 +272,25 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     semantic_summary=run_document_semantics(pkg,2000)
     generated=pkg/'Generated_Semantic_Evidence.json'
     if not semantic_path or not Path(semantic_path).exists(): semantic_path=generated if generated.exists() else None
+    availability=source_availability(pkg)
     layers=observed_layer(pkg,scope)+company_action_layer(pkg,scope)+industry_reference_layer(pkg,semantic_path)
-    rows,questions=build_cross_candidates(pkg,layers,scope)
-    write_csv(pkg/'Evidence_Layer_Registry.csv',layers,LAYER_FIELDS); write_csv(pkg/'Cross_Layer_Review_Candidates.csv',rows,CROSS_FIELDS); write_csv(pkg/'Study_Question_Queue.csv',questions,QUESTION_FIELDS)
+    rows,questions=build_cross_candidates(pkg,layers,scope,availability)
+    write_csv(pkg/'Source_Availability.csv',availability,SOURCE_AVAILABILITY_FIELDS)
+    write_csv(pkg/'Evidence_Layer_Registry.csv',layers,LAYER_FIELDS)
+    write_csv(pkg/'Cross_Layer_Review_Candidates.csv',rows,CROSS_FIELDS)
+    write_csv(pkg/'Study_Question_Queue.csv',questions,QUESTION_FIELDS)
+    availability_counts=defaultdict(int)
+    for r in availability: availability_counts[r.get('availability_state','UNKNOWN')]+=1
+    industry_source_state=next((r.get('availability_state') for r in availability if r.get('evidence_family')=='INDUSTRY_REFERENCES'),'UNKNOWN')
     summary={
-        'schema_version':'1.4','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.5','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
         'scoped_topic_site_ids':len(scoped_topic_ids),'document_semantics':semantic_summary,
-        'principle':'Independent evidence layers overlap to create review questions; context-only events and company-wide actions do not satisfy site-action readiness; overlap never establishes causality.',
+        'source_availability_counts':dict(sorted(availability_counts.items())),
+        'industry_reference_source_state':industry_source_state,
+        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; context-only events and company-wide actions do not satisfy site-action readiness; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
     (pkg/'Cross_Layer_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
