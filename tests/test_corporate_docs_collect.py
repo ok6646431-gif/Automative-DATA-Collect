@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"collectors"))
-from corporate_docs_collect import collect
+from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, collect
 
 
 class FakeResponse:
@@ -17,6 +17,11 @@ class FakeResponse:
 
 
 class CorporateDocsTests(unittest.TestCase):
+    def test_runtime_budget_is_bounded(self):
+        self.assertLessEqual(DOWNLOAD_ATTEMPTS,2)
+        self.assertLessEqual(PREFLIGHT_TIMEOUT[1],10)
+        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)
+
     def test_request_scope_mismatch_fails_closed_without_network(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
@@ -52,7 +57,7 @@ class CorporateDocsTests(unittest.TestCase):
                 status=collect(evidence,profile,out)
             self.assertEqual(status["downloaded"],0)
             self.assertEqual(status["failed"],1)
-            self.assertEqual(session.get.call_count,3)
+            self.assertEqual(session.get.call_count,DOWNLOAD_ATTEMPTS)
             rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
             self.assertEqual(rows[0]["collection_status"],"DOWNLOAD_FAILED")
             self.assertIn("expected PDF payload",rows[0]["notes"])
@@ -72,6 +77,26 @@ class CorporateDocsTests(unittest.TestCase):
             self.assertEqual(session.get.call_count,2)
             _,kwargs=session.get.call_args_list[1]
             self.assertEqual(kwargs["headers"]["Referer"],"https://official.example/post/1")
+
+    def test_shared_source_locator_is_preflighted_once(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            docs=[]
+            for idx in (1,2):
+                docs.append({"document_id":f"D{idx}","document_type":"SUSTAINABILITY_REPORT","title":f"Report {idx}","source_url":f"https://official.example/download/{idx}","source_locator":"https://official.example/reports","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED"})
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":docs}),encoding="utf-8")
+            page=FakeResponse(body=b"<html>source page</html>",content_type="text/html",disposition="",url="https://official.example/reports")
+            pdf1=FakeResponse(url="https://official.example/download/1")
+            pdf2=FakeResponse(url="https://official.example/download/2")
+            session=unittest.mock.MagicMock(); session.get.side_effect=[page,pdf1,pdf2]
+            with patch("corporate_docs_collect.requests.Session",return_value=session):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],2)
+            self.assertEqual(session.get.call_count,3)
+            self.assertEqual(session.get.call_args_list[0].args[0],"https://official.example/reports")
+            self.assertEqual(session.get.call_args_list[1].kwargs["headers"]["Referer"],"https://official.example/reports")
+            self.assertEqual(session.get.call_args_list[2].kwargs["headers"]["Referer"],"https://official.example/reports")
 
     def test_executable_extension_is_never_collected(self):
         with tempfile.TemporaryDirectory() as td:
