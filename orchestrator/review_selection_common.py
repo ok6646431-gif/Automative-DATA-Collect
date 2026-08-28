@@ -33,7 +33,10 @@ def write_csv(path,rows,fields):
     with p.open('w',encoding='utf-8-sig',newline='') as f:
         w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore'); w.writeheader()
         for row in rows:
-            w.writerow({k:utf8_safe(v) for k,v in row.items()})
+            # Sanitize in place as well as on disk because callers often reuse the
+            # same row objects immediately for JSON generation after CSV emission.
+            for k in list(row): row[k]=utf8_safe(row[k])
+            w.writerow(row)
 
 def stable_id(prefix,*parts,n=12):
     raw='|'.join('' if x is None else str(x) for x in parts)
