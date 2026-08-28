@@ -1,0 +1,35 @@
+name: Sustainability coverage tests
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'orchestrator/sustainability_coverage.py'
+      - 'orchestrator/archive_zip_dedup.py'
+      - 'orchestrator/bootstrap_inputs.py'
+      - 'tests/test_sustainability_coverage.py'
+      - '.github/workflows/sustainability-coverage-tests.yml'
+  pull_request:
+    paths:
+      - 'orchestrator/sustainability_coverage.py'
+      - 'orchestrator/archive_zip_dedup.py'
+      - 'orchestrator/bootstrap_inputs.py'
+      - 'tests/test_sustainability_coverage.py'
+      - '.github/workflows/sustainability-coverage-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run sustainability coverage regressions
+        run: python -m unittest tests.test_sustainability_coverage tests.test_bootstrap_inputs tests.test_archive_zip_dedup -v
