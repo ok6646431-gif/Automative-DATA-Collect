@@ -92,14 +92,13 @@ def rank_evidence(rows, terms, layer, limit=4):
     return (positive or [r for _,r in scored])[:limit]
 
 def select_deep_topics(topics,xmap):
-    """Select report deep dives from either early or completed cross-layer readiness.
+    '''Select report deep dives from either early or completed cross-layer readiness.
 
-    Review selection runs before document/cross-layer enrichment.  A topic that later
+    Review selection runs before document/cross-layer enrichment. A topic that later
     reaches FOUR_LAYER_READY has all four independent evidence layers and should not
     disappear from the human report merely because the earlier source-overlap gate was
-    not met.  No hidden score or fixed Top-N ranking is introduced: every transparently
-    ready topic is included, while MULTI_LAYER_REVIEW remains contextual only.
-    """
+    not met. No hidden score or fixed Top-N ranking is introduced.
+    '''
     return [
         t for t in topics
         if t.get('candidate_state')=='DEEP_DIVE_CANDIDATE'
@@ -119,8 +118,8 @@ def sparkline(values):
     dots=''.join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.6"/><text x="{x:.1f}" y="{H-2}" text-anchor="middle">{esc(yr)}</text>' for x,y,yr,_ in pts)
     return f'<svg class="spark" viewBox="0 0 {W} {H}" role="img"><polyline points="{poly}"/>{dots}</svg>'
 
-def evidence_card(title, rows):
-    if not rows: return f'<div class="evi"><b>{esc(title)}</b><p class="muted">근거 없음 또는 추가 확인 필요</p></div>'
+def evidence_card(title, rows, empty_message='근거 없음 또는 추가 확인 필요'):
+    if not rows: return f'<div class="evi"><b>{esc(title)}</b><p class="muted">{esc(empty_message)}</p></div>'
     lis=[]
     for r in rows:
         locator=r.get('source_locator',''); page=''
@@ -129,12 +128,21 @@ def evidence_card(title, rows):
         lis.append(f'<li>{esc(r.get("statement") or r.get("title"))}<span class="src">{esc(r.get("source_key"))}{esc(page)}</span></li>')
     return f'<div class="evi"><b>{esc(title)}</b><ul>{"".join(lis)}</ul></div>'
 
+def industry_empty_message(state):
+    return {
+        'SOURCE_UNAVAILABLE':'기술자료 수집 실패. 근거 부재로 해석하지 않으며 재수집이 필요함.',
+        'SOURCE_PARTIAL':'기술자료 일부 수집 실패. 미수집 범위를 확인하기 전에는 관련 근거가 없다고 판단하지 않음.',
+        'SOURCE_NOT_CONFIRMED':'기술자료 수집 가능 여부가 확인되지 않음. 수집상태를 먼저 검증해야 함.',
+        'NO_EVIDENCE_FOUND':'수집 가능한 기술자료에서 현재 주제와 연결되는 근거를 확인하지 못함.'
+    }.get(str(state or ''),'근거 없음 또는 추가 확인 필요')
+
 def build_review_report(package_root, render_pdf=True):
     root=Path(package_root)
     profile=read_json(root/'Company_Profile.json',{}) or {}; scope=read_json(root/'Requested_Scope.json',{}) or {}
     cov=read_csv(root/'Review_Source_Coverage.csv'); inv=read_csv(root/'Review_Metric_Inventory.csv'); sig=read_csv(root/'Review_Signal_Registry.csv')
     actions=read_csv(root/'Management_Action_Ledger.csv'); chems=read_csv(root/'Chemical_Review_Candidates.csv'); topics=read_csv(root/'Review_Topic_Candidates.csv')
     layers=read_csv(root/'Evidence_Layer_Registry.csv'); cross=read_csv(root/'Cross_Layer_Review_Candidates.csv'); questions=read_csv(root/'Study_Question_Queue.csv')
+    availability=read_csv(root/'Source_Availability.csv')
     review_summary=read_json(root/'Review_Selection_Summary.json',{}) or {}; cross_summary=read_json(root/'Cross_Layer_Review_Summary.json',{}) or {}
     target_ids=set(scope.get('target_canonical_site_ids') or []); sites=[]
     site_master={r.get('canonical_site_id'):r for r in read_csv(root/'Site_Master.csv')}
@@ -148,10 +156,15 @@ def build_review_report(package_root, render_pdf=True):
     deep=select_deep_topics(topics,xmap)
     cvrows=''.join(f'<tr><td>{esc(r.get("source"))}</td><td>{esc(r.get("requested_scope_years"))}</td><td>{esc(r.get("requested_scope_year_count"))}</td></tr>' for r in cov)
     site_rows=''.join(f'<tr><td>{esc(n)}</td><td>{esc(a)}</td><td>{esc(cid or "scope-mapped")}</td></tr>' for n,a,cid in sites)
+    avrows=''.join(
+        f'<tr><td>{esc(r.get("source_key"))}</td><td>{esc(r.get("evidence_family"))}</td><td>{esc(r.get("availability_state"))}</td><td>{esc(r.get("collection_status"))}</td><td>{esc(r.get("available_count"))}/{esc(r.get("declared_count"))}</td></tr>'
+        for r in availability
+    )
+    industry_source_state=cross_summary.get('industry_reference_source_state') or next((r.get('availability_state') for r in availability if r.get('evidence_family')=='INDUSTRY_REFERENCES'),'-')
     domain_html=[]
     for d in DOMAIN_ORDER:
         dinv=[r for r in inv if r.get('in_requested_scope')=='YES' and r.get('domain')==d]
-        dmain=[r for r in dinv if sm.get(r.get('metric_id'),{}).get('signal_type') not in {'SHORT_SERIES','MIXED_OR_STABLE',''} and r.get('comparability')=='TREND_ELIGIBLE']
+        dmain=[r for r in dinv if sm.get(r.get('metric_id'),{}).get('signal_type') not in {'SHORT_SERIES','MIXED_OR_STABLE','ZERO_SEMANTICS_REVIEW',''} and r.get('comparability')=='TREND_ELIGIBLE']
         dacts=[r for r in actions if r.get('in_requested_scope')=='YES' and d in str(r.get('domain','')).split('|')]
         years=sorted(set(r.get('year') for r in dacts if r.get('year'))); labels=[]
         for r in dmain[:8]: labels.append(f'{r.get("site_name")} · {r.get("metric")} ({sm.get(r.get("metric_id"),{}).get("signal_type")})')
@@ -197,9 +210,10 @@ def build_review_report(package_root, render_pdf=True):
         qhtml=''.join(f'<li>{esc(q.get("question"))}<span class="src">필요근거: {esc(q.get("needed_evidence"))}</span></li>' for q in qs) or '<li>생산량·유량·적용기준·운전조건 등 비공개/현장 정보가 필요할 수 있음.</li>'
         deep_html.append(f'''<section class="deep"><h2>Deep Dive {idx}. {esc(t.get('site_name'))} - {esc(DOMAIN_KO.get(t.get('domain'),t.get('domain')))}</h2>
         <p class="lead"><b>왜 보는가:</b> {esc(t.get('why_review'))} <span class="tag">{esc(x.get('review_state') or t.get('candidate_state'))}</span></p>
+        <p class="muted"><b>산업기술 근거 상태:</b> {esc(x.get('industry_evidence_state') or x.get('industry_semantic_ready') or '-')} · <b>수집상태:</b> {esc(x.get('industry_source_state') or '-')}</p>
         <h3>1) 실제 공개데이터에서 관찰된 변화</h3>{''.join(sig_cards)}
         <h3>2) 같은 사업장/영역에서 공개된 관리활동</h3><ul>{act_html}</ul>
-        <div class="grid2">{evidence_card('3) 산업 기술자료: 왜 이 주제를 보는가',industry)}{evidence_card('4) 회사가 밝힌 미래방향',future)}</div>
+        <div class="grid2">{evidence_card('3) 산업 기술자료: 왜 이 주제를 보는가',industry,industry_empty_message(x.get('industry_evidence_state')))}{evidence_card('4) 회사가 밝힌 미래방향',future)}</div>
         <h3>5) 여기서 멈춰야 하는 지점</h3><p class="caveat">{esc(t.get('limitations') or x.get('limitations') or '')}</p>
         <h3>6) 다음에 확인할 질문</h3><ul>{qhtml}</ul></section>''')
     boundaries=review_summary.get('boundaries') or []; bhtml=''.join(f'<li>{esc(x)}</li>' for x in boundaries); report_name=profile.get('requested_company_name') or profile.get('company_display_name') or '기업'
@@ -207,9 +221,10 @@ def build_review_report(package_root, render_pdf=True):
     @page{{size:A4;margin:13mm 12mm 15mm}} body{{font-family:sans-serif;color:#172033;font-size:9.3pt;line-height:1.48}} h1{{font-size:22pt;margin:0 0 4mm}} h2{{font-size:15pt;margin:7mm 0 3mm;border-bottom:2px solid #17365D;padding-bottom:1.5mm}} h3{{font-size:11.5pt;margin:4mm 0 1.5mm;color:#17365D}} h4{{margin:2mm 0 1mm}} p{{margin:1.2mm 0}} ul{{margin:1.2mm 0 2mm;padding-left:5mm}} li{{margin:.8mm 0}} table{{width:100%;border-collapse:collapse;font-size:8.2pt;margin:2mm 0}} th,td{{border:1px solid #c7ced8;padding:1.4mm;vertical-align:top}} th{{background:#eef2f7}} .cover{{min-height:235mm;display:flex;flex-direction:column;justify-content:center}} .kicker{{font-size:10pt;color:#5b6575;letter-spacing:.04em}} .subtitle{{font-size:12pt;color:#465164;margin:3mm 0 8mm}} .box,.domain,.deep{{border:1px solid #d4dbe5;border-radius:6px;padding:4mm;margin:3mm 0;break-inside:avoid}} .domain{{break-inside:auto}} .deep{{break-before:page;border:none;padding:0}} .grid2{{display:grid;grid-template-columns:1fr 1fr;gap:3mm}} .stats{{display:flex;gap:2mm;flex-wrap:wrap;margin:2mm 0}} .stats span,.tag{{background:#eef3f8;border-radius:12px;padding:1mm 2mm;font-size:8pt}} .frame{{background:#f5f7fa;padding:2mm 3mm;border-left:3px solid #17365D}} .caveat{{background:#fff8e7;border-left:3px solid #d49a00;padding:2mm 3mm}} .muted,.src{{color:#697587;font-size:7.6pt}} .src{{display:block;margin-top:.4mm}} .evi{{border:1px solid #d9e0e8;padding:2.5mm;break-inside:avoid}} .signal{{display:inline-block;width:47%;vertical-align:top;border:1px solid #d9e0e8;padding:2mm;margin:1mm;break-inside:avoid}} .spark{{width:100%;height:48px;margin-top:1mm}} .spark polyline{{fill:none;stroke:#17365D;stroke-width:2}} .spark circle{{fill:#17365D}} .spark text{{font-size:8px;fill:#667}} .vals{{font-size:7.5pt;color:#596577;word-break:break-all}} .year{{border-left:3px solid #8fa6bf;padding-left:3mm;margin:3mm 0;break-inside:avoid}} .year h4 span{{font-weight:normal;font-size:8pt;color:#697587}} .lead{{font-size:10pt}} .pagebreak{{break-before:page}}</style></head><body>
     <section class="cover"><div class="kicker">AI-assisted Environmental Management Review</div><h1>{esc(report_name)} 환경관리 검토보고서</h1><div class="subtitle">공개근거 기반 · 요청범위 {esc(scope.get('label') or scope.get('mode'))} · 자동 생성 검증형 프로토타입</div>
     <div class="box"><b>이 보고서의 목적</b><p>기업 환경성과를 평가하거나 현장 원인을 단정하는 문서가 아니다. 비전문가가 공개자료를 통해 <b>무엇을 관리하는 회사인지, 어떤 변화가 보이는지, 무엇을 더 공부해야 하는지</b>를 근거를 따라 이해하도록 돕는 검토자료다.</p></div>
-    <div class="stats"><span>요청범위 지표 {review_summary.get('metric_inventory_in_scope','-')}</span><span>관리 Action {review_summary.get('management_actions_in_scope','-')}</span><span>검토주제 {len(topics)}</span><span>Deep Dive {len(deep)}</span><span>문서 스캔 {cross_summary.get('document_semantics',{}).get('pages_scanned','-')}p</span></div><p class="muted">자동생성 결과는 원자료·페이지 근거와 함께 검토해야 하며, AI가 제시한 연관성은 인과관계를 뜻하지 않는다.</p></section>
-    <h2>1. 먼저 머릿속에 넣을 구조</h2><div class="box"><p><b>회사/사업범위</b> → <b>사업장</b> → <b>환경영역</b> → <b>실제 공개값</b> → <b>회사 관리활동</b> → <b>산업 기술근거</b> → <b>미래방향</b> → <b>추가확인</b></p><p>각 층은 독립 근거로 유지한다. 시간적으로 겹친다는 이유만으로 ‘시설투자 때문에 수치가 개선됐다’고 연결하지 않는다.</p></div>
+    <div class="stats"><span>요청범위 지표 {review_summary.get('metric_inventory_in_scope','-')}</span><span>관리 Action {review_summary.get('management_actions_in_scope','-')}</span><span>검토주제 {len(topics)}</span><span>Deep Dive {len(deep)}</span><span>문서 스캔 {cross_summary.get('document_semantics',{}).get('pages_scanned','-')}p</span><span>산업기술 Source {esc(industry_source_state)}</span></div><p class="muted">자동생성 결과는 원자료·페이지 근거와 함께 검토해야 하며, AI가 제시한 연관성은 인과관계를 뜻하지 않는다.</p></section>
+    <h2>1. 먼저 머릿속에 넣을 구조</h2><div class="box"><p><b>회사/사업범위</b> → <b>사업장</b> → <b>환경영역</b> → <b>실제 공개값</b> → <b>회사 관리활동</b> → <b>산업 기술근거</b> → <b>미래방향</b> → <b>추가확인</b></p><p>각 층은 독립 근거로 유지한다. 시간적으로 겹친다는 이유만으로 ‘시설투자 때문에 수치가 개선됐다’고 연결하지 않는다. 또한 <b>자료를 찾지 못한 것</b>과 <b>자료 수집에 실패한 것</b>을 구분한다.</p></div>
     <h3>요청 사업장</h3><table><thead><tr><th>사업장</th><th>공식 주소</th><th>분석 ID</th></tr></thead><tbody>{site_rows}</tbody></table><h3>공개자료 범위</h3><table><thead><tr><th>Source</th><th>요청범위 연도</th><th>연도 수</th></tr></thead><tbody>{cvrows}</tbody></table><p class="muted">화학물질통계처럼 조사주기가 다른 Source는 동일 연도수로 맞추지 않는다.</p>
+    <h3>Source 수집상태</h3><table><thead><tr><th>Source</th><th>근거군</th><th>상태</th><th>수집결과</th><th>가용/선언</th></tr></thead><tbody>{avrows}</tbody></table><p class="muted">UNAVAILABLE/PARTIAL은 ‘관련 근거가 없다’가 아니라 수집상태가 불완전하다는 뜻이다.</p>
     <h2>2. 환경관리 전체 지도</h2>{''.join(domain_html)}
     <h2>3. 2020-2024 관리시설·개선활동 Timeline</h2><p>ENV-INFO에 회사가 공개한 투자·기술도입·개선활동을 요청 사업장 기준으로 모았다. 투자액 합계는 공개 항목의 단순 합이며 성과평가 지표가 아니다.</p>{''.join(year_blocks)}
     <h2>4. 근거가 겹치는 우선 검토주제</h2><p>전체 {len(topics)}개 검토주제 중 현재 규칙상 상세검토 후보는 {len(deep)}개다. 초기 단계의 <b>다년도 Signal + 같은 사업장/영역 Action + 독립 Source 중첩</b> 또는 후속 단계의 <b>OBSERVED + COMPANY_ACTION + INDUSTRY_TECHNICAL + FUTURE_DIRECTION 4개 근거층 완비</b>를 근거로 포함한다. 이는 중요도·위험도 순위나 인과판정이 아니다.</p>{''.join(deep_html)}
@@ -219,7 +234,7 @@ def build_review_report(package_root, render_pdf=True):
     try:
         import xlsxwriter
         wb=xlsxwriter.Workbook(str(xlsx_path)); hdr=wb.add_format({'bold':True,'bg_color':'#D9E5F2','border':1}); wrap=wb.add_format({'text_wrap':True,'valign':'top'})
-        for name,rows in [('Deep_Dive',deep),('Cross_Layer',cross),('Signals',sig),('Actions',scoped_actions),('Chemicals',chems),('Study_Questions',questions),('Evidence_Layers',layers)]:
+        for name,rows in [('Deep_Dive',deep),('Cross_Layer',cross),('Signals',sig),('Actions',scoped_actions),('Chemicals',chems),('Study_Questions',questions),('Evidence_Layers',layers),('Source_Availability',availability)]:
             ws=wb.add_worksheet(name[:31]); fields=[]
             for r in rows:
                 for k in r:
@@ -237,15 +252,13 @@ def build_review_report(package_root, render_pdf=True):
     if render_pdf:
         browser=next((shutil.which(x) for x in ['google-chrome','google-chrome-stable','chromium','chromium-browser'] if shutil.which(x)),None)
         if browser:
-            # '--headless=new' (not the legacy '--headless' content-shell mode) is required for
-            # correct CJK/complex-script text shaping and font embedding in --print-to-pdf output.
             cmd=[browser,'--headless=new','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf_path.resolve()}',html_path.resolve().as_uri()]
             cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
             pdf_ok=valid_pdf(pdf_path)
             if not pdf_ok: pdf_error=cp.stderr.decode('utf-8',errors='replace')[-1000:]
             elif cp.returncode!=0: pdf_error=f'non-zero exit code {cp.returncode} but PDF is valid: '+cp.stderr.decode('utf-8',errors='replace')[-500:]
         else: pdf_error='no chromium-compatible browser found'
-    summary={'schema_version':'1.0','report_html':html_path.name,'report_pdf':pdf_path.name if pdf_ok else None,'evidence_xlsx':xlsx_path.name if xlsx_path and xlsx_path.exists() else None,'deep_dive_topics':len(deep),'deep_dive_selection_basis':'EARLY_DEEP_DIVE_OR_FOUR_LAYER_READY','scope_sites':len(sites),'pdf_ok':pdf_ok,'pdf_error':pdf_error,'principle':'The report organizes evidence for study; it does not automatically judge environmental performance, compliance, risk or causality.'}
+    summary={'schema_version':'1.1','report_html':html_path.name,'report_pdf':pdf_path.name if pdf_ok else None,'evidence_xlsx':xlsx_path.name if xlsx_path and xlsx_path.exists() else None,'deep_dive_topics':len(deep),'deep_dive_selection_basis':'EARLY_DEEP_DIVE_OR_FOUR_LAYER_READY','scope_sites':len(sites),'industry_reference_source_state':industry_source_state,'pdf_ok':pdf_ok,'pdf_error':pdf_error,'principle':'The report organizes evidence for study; source collection failure is distinct from evidence absence; it does not automatically judge environmental performance, compliance, risk or causality.'}
     (root/'Environmental_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
 
 if __name__=='__main__':
