@@ -32,13 +32,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fonts-noto-cjk fonts-nanum
           sudo fc-cache -f
-      - name: Read source run
+      - name: Read source runs
         id: cfg
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           cfg=json.load(open('requests/archive_replay_qa.json',encoding='utf-8'))
           print('run_id='+str(cfg['source_run_id']))
+          print('document_run_id='+str(cfg.get('document_run_id') or 0))
           PY
       - name: Bootstrap current discovery inputs
         run: >-
@@ -52,6 +53,17 @@ jobs:
           name: stable-sources
           path: collected/stable
           run-id: ${{ steps.cfg.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Clear prior corporate-document lane
+        if: steps.cfg.outputs.document_run_id != '0'
+        run: rm -rf collected/stable/CORP_DOCS && mkdir -p collected/stable/CORP_DOCS
+      - name: Overlay current corporate-document lane
+        if: steps.cfg.outputs.document_run_id != '0'
+        uses: actions/download-artifact@v4
+        with:
+          name: corporate-docs-current-qa
+          path: collected/stable/CORP_DOCS
+          run-id: ${{ steps.cfg.outputs.document_run_id }}
           github-token: ${{ github.token }}
       - name: Download prior ICIS attempts
         uses: actions/download-artifact@v4
