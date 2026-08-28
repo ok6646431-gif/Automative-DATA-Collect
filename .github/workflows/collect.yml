@@ -51,6 +51,9 @@ jobs:
       - name: Collect ENV-INFO
         continue-on-error: true
         run: python collectors/envinfo_collect.py requests/current.generated.json
+      - name: Recover and deduplicate ENV-INFO attachments
+        continue-on-error: true
+        run: python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root .
       - name: Collect SOOSIRO
         continue-on-error: true
         run: python collectors/soosiro_collect.py requests/current.generated.json
@@ -263,7 +266,7 @@ jobs:
             [ -d "$source_dir" ] || continue
             target="delivery-metadata/output/$(basename "$source_dir")"
             mkdir -p "$target"
-            for name in status.json discovery.csv candidates.json fact_candidates.json document_index.csv attachment_index.csv excluded_rows.jsonl excluded_candidates.json; do
+            for name in status.json discovery.csv candidates.json fact_candidates.json document_index.csv attachment_index.csv attachment_recovery_summary.json excluded_rows.jsonl excluded_candidates.json; do
               if [ -f "$source_dir/$name" ]; then cp "$source_dir/$name" "$target/"; fi
             done
           done
