@@ -1,0 +1,53 @@
+name: Corporate document download QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'collectors/corporate_docs_resilient.py'
+      - 'requests/document_evidence.json'
+      - 'requests/company_discovery.json'
+      - 'requests/corporate_docs_qa_token.txt'
+      - '.github/workflows/corporate-docs-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  documents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Bootstrap current company
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download verified official documents with resilient transport
+        run: python collectors/corporate_docs_resilient.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+      - name: Show sustainability report results
+        run: |
+          python - <<'PY'
+          import csv, json
+          rows=list(csv.DictReader(open('output/CORP_DOCS/document_index.csv',encoding='utf-8-sig')))
+          picked=[{k:r.get(k,'') for k in ['document_id','report_year','collection_status','bytes','sha256','notes']} for r in rows if r.get('document_type')=='SUSTAINABILITY_REPORT']
+          print(json.dumps(picked,ensure_ascii=False,indent=2))
+          print(open('output/CORP_DOCS/status.json',encoding='utf-8').read())
+          PY
+      - name: Upload QA results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corporate-docs-resilient-qa
+          path: output/CORP_DOCS/
+          if-no-files-found: error
+          retention-days: 7
