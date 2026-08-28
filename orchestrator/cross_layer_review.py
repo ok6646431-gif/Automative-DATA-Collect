@@ -152,8 +152,12 @@ def company_action_layer(pkg,scope):
     for r in read_csv(pkg/'Document_Semantic_Candidates.csv'):
         layer=r.get('layer','')
         if layer not in {'COMPANY_ACTION','FUTURE_DIRECTION'}: continue
+        # Extractor-side index/catalog guards must survive into the evidence layer.
+        # REFERENCE_INDEX_CONTEXT is useful for provenance, but never satisfies an
+        # action/future readiness layer.
+        if str(r.get('semantic_state') or '')!='PAGE_GROUNDED_EXTRACT': continue
         locator=str(r.get('source_locator') or '')+(('#page='+str(r.get('page'))) if r.get('page') else '')
-        out.append(layer_row(layer,r.get('domain') or 'CROSS_MEDIA','','',r.get('report_year'),f"{r.get('document_id')} p.{r.get('page')}",r.get('statement'),r.get('source_key') or 'CORP_DOCS',locator,'PAGE_GROUNDED_EXTRACT',r.get('interpretation_boundary') or 'Company document excerpt; no performance or causal inference.',r.get('semantic_id')))
+        out.append(layer_row(layer,r.get('domain') or 'CROSS_MEDIA','','',r.get('report_year'),f"{r.get('document_id')} p.{r.get('page')}",r.get('statement'),r.get('source_key') or 'CORP_DOCS',locator,r.get('semantic_state') or 'PAGE_GROUNDED_EXTRACT',r.get('interpretation_boundary') or 'Company document excerpt; no performance or causal inference.',r.get('semantic_id')))
     return out
 
 
@@ -314,7 +318,7 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     for r in availability: availability_counts[r.get('availability_state','UNKNOWN')]+=1
     smap=source_state_map(availability)
     summary={
-        'schema_version':'1.6','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.7','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
@@ -323,7 +327,7 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
         'company_action_source_state':smap.get(('ENVINFO','ALL'),'UNKNOWN'),
         'industry_reference_source_state':smap.get(('CORP_DOCS','INDUSTRY_REFERENCES'),'UNKNOWN'),
         'future_direction_source_state':smap.get(('CORP_DOCS','COMPANY_DOCUMENTS'),'UNKNOWN'),
-        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence in action, technical-reference and future-direction layers; context-only events and company-wide actions do not satisfy site-action readiness; overlap never establishes causality.',
+        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; index/catalog document context never satisfies company action/future or industry-semantic readiness; context-only events and company-wide actions do not satisfy site-action readiness; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
     (pkg/'Cross_Layer_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
