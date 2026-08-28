@@ -8,19 +8,20 @@
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2025",
       "report_year": 2025,
-      "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
+      "notes": "Primary delivery uses the latest versioned KRX corrected attachment dated 2026-07-24; the current company-hosted report is retained as an official fallback.",
       "fallback_sources": [
         {
-          "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
-          "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
           "expected_extension": "pdf",
           "verification_status": "VERIFIED",
-          "source_role": "KRX_CORRECTED_ATTACHMENT",
-          "notes": "Official KRX corrected attachment dated 2026-07-24; resolved through the KRX disclosure viewer and attachment page."
+          "source_role": "COMPANY_HOSTED_OFFICIAL",
+          "notes": "Current company-hosted report; used only if the versioned KRX attachment is unavailable."
         }
       ]
     },
@@ -29,41 +30,42 @@
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2024",
       "report_year": 2024,
-      "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://kind.krx.co.kr/external/2025/08/22/000440/20250820000371/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2025/08/22/000440/20250820000371/99998.htm",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
+      "notes": "Primary delivery uses the latest KRX corrected attachment dated 2025-08-22, superseding earlier KRX attachments; the company-hosted report is retained as an official fallback.",
       "fallback_sources": [
         {
-          "source_url": "https://kind.krx.co.kr/external/2025/08/22/000440/20250820000371/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
-          "source_locator": "https://kind.krx.co.kr/external/2025/08/22/000440/20250820000371/99998.htm",
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
           "expected_extension": "pdf",
           "verification_status": "VERIFIED",
-          "source_role": "KRX_CORRECTED_ATTACHMENT",
-          "notes": "Official latest KRX corrected attachment dated 2025-08-22; supersedes the earlier 2025-06-16 and 2025-07-11 KRX attachments for fallback delivery."
+          "source_role": "COMPANY_HOSTED_OFFICIAL",
+          "notes": "Current company-hosted report; used only if the versioned KRX attachment is unavailable."
         }
       ]
     },
     {
       "document_id": "KKPC_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "Kumho Petrochemical Sustainability Report 2023",
+      "title": "금호석유화학 지속가능경영보고서 2023",
       "report_year": 2023,
-      "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://kind.krx.co.kr/external/2024/07/17/000513/20240717000511/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202023.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2024/07/17/000513/20240717000511/99998.htm",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official company-hosted English report.",
+      "notes": "Primary delivery uses the KRX corrected Korean attachment dated 2024-07-17; the company-hosted English report is retained as an official fallback.",
       "fallback_sources": [
         {
-          "source_url": "https://kind.krx.co.kr/external/2024/07/17/000513/20240717000511/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202023.pdf",
-          "source_locator": "https://kind.krx.co.kr/external/2024/07/17/000513/20240717000511/99998.htm",
+          "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
           "expected_extension": "pdf",
           "verification_status": "VERIFIED",
-          "source_role": "KRX_CORRECTED_ATTACHMENT",
-          "notes": "Official KRX corrected Korean attachment dated 2024-07-17; the same correction page also exposes the English report."
+          "source_role": "COMPANY_HOSTED_OFFICIAL",
+          "notes": "Official company-hosted English report; used only if the versioned KRX corrected attachment is unavailable."
         }
       ]
     },
