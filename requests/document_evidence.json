@@ -1,161 +1,176 @@
 {
   "schema_version": "1.0",
-  "request_id": "skhynix-kr-archive-20260826-v1",
+  "request_id": "kkpc-kr-archive-20260828-v1",
   "discovery_status": "PARTIAL",
   "documents": [
     {
-      "document_id": "SKH_SUSTAINABILITY_2022",
+      "document_id": "KKPC_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "SK hynix Sustainability Report 2022",
-      "report_year": 2022,
-      "source_url": "https://englishdart.fss.or.kr/report/downloadEng.do?dcmNo=8824631&flNm=2022_SK+hynix_Sustainability+Report_ENG.pdf",
-      "source_locator": "https://kind.krx.co.kr/external/2022/07/28/000117/20220725000126/61979.htm",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official disclosure/report. KRX confirms the 2022 sustainability report publication."
-    },
-    {
-      "document_id": "SKH_SUSTAINABILITY_2023",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "SK하이닉스 지속가능경영보고서 2023",
-      "report_year": 2023,
-      "source_url": "https://kind.krx.co.kr/external/2023/08/04/000103/20230803000340/SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202023.pdf",
-      "source_locator": "https://kind.krx.co.kr/external/2023/07/21/000113/20230707000320/61979.htm",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SKH_SUSTAINABILITY_2024",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "SK하이닉스 지속가능경영보고서 2024",
-      "report_year": 2024,
-      "source_url": "https://kind.krx.co.kr/external/2024/07/23/000345/20240723001065/SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
-      "source_locator": "https://kind.krx.co.kr/external/2024/07/23/000345/20240723001065/SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SKH_SUSTAINABILITY_2025_DISCLOSURE",
-      "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "SK하이닉스 지속가능경영보고서 2025 발간 공시",
+      "title": "금호석유화학 지속가능경영보고서 2025",
       "report_year": 2025,
-      "publication_date": "2025-06-19",
-      "source_url": "https://kind.krx.co.kr/external/2025/06/19/000512/20250616000286/61979.htm",
-      "source_locator": "https://kind.krx.co.kr/external/2025/06/19/000512/20250616000286/61979.htm",
-      "expected_extension": "html",
+      "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official KRX publication disclosure. Full report PDF is also present among collected ENV-INFO attachments and should remain traceable to that source until a stable direct official PDF URL is verified."
+      "importance": "CORE"
     },
     {
-      "document_id": "SKH_SUSTAINABILITY_2026_DISCLOSURE",
+      "document_id": "KKPC_SUSTAINABILITY_2024",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "금호석유화학 지속가능경영보고서 2024",
+      "report_year": 2024,
+      "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "KKPC_SUSTAINABILITY_2023",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "Kumho Petrochemical Sustainability Report 2023",
+      "report_year": 2023,
+      "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official company-hosted English report."
+    },
+    {
+      "document_id": "KKPC_SUSTAINABILITY_2022",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2022 금호석유화학 지속가능경영보고서",
+      "report_year": 2022,
+      "source_url": "https://kind.krx.co.kr/external/2023/07/28/000536/20230728000690/2022%20%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C_%EA%B5%AD%EB%AC%B8.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2023/06/30/000744/20230628000253/61979.htm",
+      "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE",
+      "notes": "Official KRX-hosted report attachment."
+    },
+    {
+      "document_id": "KKPC_SUSTAINABILITY_ARCHIVE",
       "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "SK하이닉스 지속가능경영보고서 2026 발간 공시",
-      "report_year": 2026,
-      "publication_date": "2026-06-25",
-      "source_url": "https://kind.krx.co.kr/external/2026/06/25/000489/20260612000788/61979.htm",
-      "source_locator": "https://kind.krx.co.kr/external/2026/06/25/000489/20260612000788/61979.htm",
+      "title": "금호석유화학 지속가능경영 보고서 공식 자료실",
+      "source_url": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official KRX publication disclosure. The report covers 2025 performance and material activities through 2026 H1. Direct full-report PDF URL remains a discovery gap and must not be guessed."
+      "notes": "Official index confirms report series including 2020-2025. It is an index page, not a substitute for each full report PDF."
     },
     {
-      "document_id": "SKH_REPORTS_POLICIES",
+      "document_id": "KKPC_ENVIRONMENT_MANAGEMENT",
       "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "SK hynix Reports & Policies",
-      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA1601/",
-      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA1601/",
+      "title": "금호석유화학 안전환경보건경영 개요 및 환경 전략과제",
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/intro/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/intro/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official company index for sustainability reports, special reports, policies/guidelines and certifications."
+      "notes": "Official page states environmental-impact minimization, emissions reduction, waste management, chemical-management strengthening, compliance, smart environmental management and Carbon Net Zero directions."
     },
     {
-      "document_id": "SKH_PRISM_GOALS",
-      "document_type": "ENVIRONMENT_STRATEGY",
-      "title": "SK hynix PRISM ESG Strategy and 2030 Goals",
-      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA06/",
-      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA06/",
+      "document_id": "KKPC_SHE_POLICY",
+      "document_type": "SHE_POLICY",
+      "title": "금호석유화학 안전환경보건방침",
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/course/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/course/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official company strategy page. Includes climate, water, circular economy and sustainable manufacturing targets including the 2026 water-withdrawal-intensity target."
+      "importance": "CORE"
     },
     {
-      "document_id": "SKH_GREEN_PRODUCT_POLICY",
-      "document_type": "CHEMICAL_POLICY",
-      "title": "SK hynix Green Product Policy",
-      "source_url": "https://www.skhynix.com/quality/UI-FR-QT01_T1/",
-      "source_locator": "https://www.skhynix.com/quality/UI-FR-QT01_T1/",
+      "document_id": "KKPC_CLIMATE_RESPONSE",
+      "document_type": "CLIMATE_ENERGY_POLICY",
+      "title": "금호석유화학 기후변화 대응",
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/climate/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/climate/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official policy covering hazardous-substance-free products, RoHS/REACH monitoring and material information. It is product/supply-chain policy evidence and must not be treated as fab chemical-management proof."
+      "importance": "CORE"
     },
     {
-      "document_id": "SKH_DBL_ENVIRONMENT",
+      "document_id": "KKPC_ESG_STRATEGY",
       "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "SK hynix DBL Environmental Performance",
-      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA04/",
-      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA04/",
+      "title": "금호석유화학 ESG 경영 전략",
+      "source_url": "https://www.kkpc.com/kor/winwin/esg/esgManagement/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgManagement/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "SKH_ECO_ALLIANCE_SHE",
-      "document_type": "SHE_POLICY",
-      "title": "SK hynix SHE Support Center and ECO Alliance",
-      "source_url": "https://www.skhynix.com/sustainability/UI-FR-SA0302/",
-      "source_locator": "https://www.skhynix.com/sustainability/UI-FR-SA0302/",
+      "document_id": "KKPC_ESG_GUIDELINES",
+      "document_type": "ENVIRONMENTAL_POLICY",
+      "title": "금호석유화학 ESG 정책 및 지침서",
+      "source_url": "https://www.kkpc.com/kor/winwin/esg/esgGuidelines/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgGuidelines/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING",
-      "notes": "Official company page describing partner SHE support and semiconductor environmental collaboration."
+      "notes": "Policy index only. Individual policies must not be treated as evidence of site-level implementation without company/site-specific support."
     },
     {
-      "document_id": "SEMICONDUCTOR_KBREF",
+      "document_id": "ORGANIC_CHEMICAL_KBREF_II_PART1_2",
       "document_type": "BAT_REFERENCE",
-      "title": "반도체 제조업 최적가용기법 기준서 K-BREF",
-      "report_year": 2020,
-      "source_url": "https://ieps.nier.go.kr/jfile/readDownloadFile.do?fileId=16f6514268697&fileSeq=2&uploadMode=db&useSecurity=",
-      "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
-      "expected_extension": "pdf",
+      "title": "유기화학산업 최적가용기법 기준서 II Part 1-2",
+      "report_year": 2023,
+      "source_url": "https://dl.nanet.go.kr/detail/MONO12024000009984",
+      "source_locator": "https://dl.nanet.go.kr/detail/MONO12024000009984",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "National Assembly Library catalog for the NIER 2023 publication. The page exposes publication metadata and detailed contents, but a stable direct NIER full-text PDF URL has not yet been verified. Industry technical reference only; it does not prove KKPC applies any specific BAT."
+    },
+    {
+      "document_id": "ORGANIC_CHEMICAL_KBREF_II_PART3_4",
+      "document_type": "BAT_REFERENCE",
+      "title": "유기화학산업 최적가용기법 기준서 II Part 3-4",
+      "report_year": 2024,
+      "source_url": "https://dl.nanet.go.kr/detail/MONO12025000016569",
+      "source_locator": "https://dl.nanet.go.kr/detail/MONO12025000016569",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "National Assembly Library catalog for the NIER 2024 publication. Direct NIER PDF remains a discovery gap."
+    },
+    {
+      "document_id": "ENERGY_KBREF_II",
+      "document_type": "BAT_REFERENCE",
+      "title": "전기 및 증기 생산시설 최적가용기법 기준서 II",
+      "report_year": 2022,
+      "source_url": "https://ieps.nier.go.kr/web/board/5/1898/",
+      "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Industry technical reference only. Presence in the archive does not establish that SK hynix applies any specific BAT."
-    },
-    {
-      "document_id": "SEMICONDUCTOR_SCOPE3_GUIDE",
-      "document_type": "GUIDELINE",
-      "title": "반도체 업종을 위한 스코프3 배출량 산정 안내서",
-      "source_url": "https://me.go.kr/home/file/readDownloadFile.do?fileId=294426&fileSeq=1",
-      "source_locator": "https://me.go.kr/home/web/policy_data/read.do?menuId=10260&seq=8433",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
+      "notes": "Official NIER IEPS reference for energy facilities. This is relevant to the separately listed Yeosu Energy Plants; it must not be generalized automatically to chemical-production plants."
     }
   ],
   "gaps": [
     {
-      "gap_id": "SKH_SUSTAINABILITY_2020_2021_DIRECT_PDF_PENDING",
-      "source_key": "SKHYNIX_OFFICIAL",
+      "gap_id": "KKPC_SUSTAINABILITY_2020_2021_DIRECT_PDF_PENDING",
+      "source_key": "KKPC_OFFICIAL",
       "severity": "MEDIUM",
-      "reason": "2020/2021 report publications are verified historically, and ENV-INFO attachments contain relevant report files, but stable direct official PDF URLs have not yet been verified for this corporate-document lane. Do not guess URLs."
+      "reason": "The official KKPC sustainability archive confirms 2020 and 2021 reports, but stable direct official full-report PDF URLs have not yet been verified in this document lane. Do not guess URLs or use third-party mirrors as official report evidence."
     },
     {
-      "gap_id": "SKH_SUSTAINABILITY_2025_2026_DIRECT_PDF_PENDING",
-      "source_key": "SKHYNIX_OFFICIAL",
+      "gap_id": "ORGANIC_KBREF_II_DIRECT_NIER_PDF_PENDING",
+      "source_key": "NIER_IEPS",
       "severity": "MEDIUM",
-      "reason": "KRX verifies publication of the 2025 and 2026 sustainability reports. 2025 full report is already present in collected ENV-INFO attachments; 2026 full-report direct PDF URL remains unresolved. The KRX publication pages are collected meanwhile for traceable official evidence."
+      "reason": "NIER publication metadata for revised Organic Chemical Industry K-BREF II is verified through national public-library catalogs, but stable direct NIER full-text PDF URLs for Parts 1-4 have not yet been verified. Do not invent download URLs."
+    },
+    {
+      "gap_id": "KKPC_INTEGRATED_PERMIT_PRIMARY_RECORD_PENDING",
+      "source_key": "INTEGRATED_PERMIT",
+      "severity": "MEDIUM",
+      "reason": "Secondary sources indicate integrated-permit history for several KKPC sites, but this first run does not use those events until a first-party government permit record or equivalent primary evidence is anchored."
     },
     {
       "gap_id": "NONPUBLIC_INTERNAL_SOP_NOT_COLLECTABLE",
-      "source_key": "SKHYNIX_INTERNAL",
+      "source_key": "KKPC_INTERNAL",
       "severity": "LOW",
       "reason": "Non-public internal environmental/SHE procedures are outside public-source collection scope and must not be inferred from absence."
     }
