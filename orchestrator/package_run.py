@@ -65,11 +65,13 @@ def good_icis(root):
 
 
 def choose_icis(icis_root):
-    """Prefer a good ICIS attempt, but preserve a failed attempt when retries exhaust.
+    """Prefer a good ICIS attempt, but preserve the latest failed attempt when retries exhaust.
 
     A failed public source is still evidence about source availability. Returning a
     failed attempt lets downstream packaging retain its status.json instead of turning
-    a known outage into an ambiguous missing-source condition.
+    a known outage into an ambiguous missing-source condition. A replay artifact is
+    eligible only because the replay layer already performed its own strict provenance
+    and fingerprint validation.
     """
     if not icis_root.exists(): return None,"NO_ATTEMPT_ARTIFACT"
     usable=[]
@@ -81,7 +83,7 @@ def choose_icis(icis_root):
                     return r,"GOOD_ATTEMPT"
                 usable.append(r)
                 break
-    if usable: return usable[0],"FAILED_ATTEMPT_PRESERVED"
+    if usable: return usable[-1],"FAILED_ATTEMPT_PRESERVED"
     return None,"NO_ATTEMPT_ARTIFACT"
 
 
@@ -148,6 +150,7 @@ def validate(root):
         st=read_json(sp); status=st.get("status")
         checks=[]
         if status in BAD or status=="COLLECTION_FAILED_RETRY_EXHAUSTED": checks.append("terminal_failure")
+        if st.get("freshness")=="REPLAYED_LAST_KNOWN_GOOD": checks.append("replayed_last_known_good")
         if s=="ENVINFO" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
         if s=="PRTR" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
         if s=="CHEM_STATS" and status=="DATA_FOUND" and st.get("detail_fail",0)!=0: checks.append("detail_missing")
@@ -156,7 +159,16 @@ def validate(root):
             if p.is_file() and p.stat().st_size==0 and not declared_empty_row_stream(s,p,st):
                 zero.append(str(p.relative_to(root)))
         if zero: checks.append("zero_byte_artifact")
-        if checks: ok=False; review.append({"source":s,"issues":checks,"zero_byte":zero,"status":status})
+        if checks:
+            ok=False
+            review.append({
+                "source":s,
+                "issues":checks,
+                "zero_byte":zero,
+                "status":status,
+                "freshness":st.get("freshness"),
+                "replay_provenance":st.get("replay_provenance"),
+            })
         normalized_years=years_from_source(root,s)
         status_payload={k:v for k,v in st.items() if k not in {"status","years","checks"}}
         results[s]={"status":status,"years":normalized_years,"checks":checks,**status_payload}
@@ -164,7 +176,7 @@ def validate(root):
 
 
 def package_health(statuses,source_review):
-    """Separate recoverable source outages from structural package corruption."""
+    """Separate recoverable source outages/replay from structural package corruption."""
     for item in source_review:
         source=item.get("source"); issues=set(item.get("issues") or []); status=str((statuses.get(source) or {}).get("status") or item.get("status") or "")
         if "missing_status" in issues or "zero_byte_artifact" in issues: return "FAIL"
@@ -228,6 +240,9 @@ def main():
         for s in ["PRTR","CHEM_STATS"]: write_unavailable_source(output,s,"No ICIS attempt contained both source status files after retries.")
 
     _,statuses,source_review=validate(output)
+    replayed_sources=[s for s,r in statuses.items() if r.get("freshness")=="REPLAYED_LAST_KNOWN_GOOD"]
+    if replayed_sources:
+        icis_selection_state="LAST_KNOWN_GOOD_REPLAY"
     health=package_health(statuses,source_review)
     (out/"REVIEW_REQUIRED.json").write_text(json.dumps(source_review,ensure_ascii=False,indent=2),encoding="utf-8")
     if profile.exists(): shutil.copy2(profile,out/"Company_Profile.json")
@@ -252,6 +267,11 @@ def main():
     integration["review_selection"]=run_review_selection(output,out)
     integration["cross_layer_review"]=run_cross_layer_review(out,semantic if semantic.exists() else None)
     integration["review_report"]=build_human_review(out)
+    integration["icis_freshness"]={
+        "selection_state":icis_selection_state,
+        "replayed_sources":replayed_sources,
+        "fresh_sources":[s for s in ["PRTR","CHEM_STATS"] if s not in replayed_sources and (statuses.get(s) or {}).get("status") not in BAD],
+    }
     with (out/"Validation_Queue.csv").open(encoding="utf-8-sig",newline="") as f: integration["validation_queue"]=sum(1 for _ in csv.DictReader(f))
     (out/"Integration_Summary.json").write_text(json.dumps(integration,ensure_ascii=False,indent=2),encoding="utf-8")
     all_review=read_json(out/"REVIEW_REQUIRED.json"); validation="REVIEW_REQUIRED" if all_review else "PASS"
@@ -260,11 +280,12 @@ def main():
     with (out/"Artifact_Index.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","path","bytes","sha256"]); w.writeheader(); w.writerows(idx)
 
-    manifest={"schema_version":"1.7","package_health":health,"validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"icis_selection_state":icis_selection_state,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"review_selection":integration.get("review_selection",{}),"cross_layer_review":integration.get("cross_layer_review",{}),"review_report":integration.get("review_report",{}),"artifact_count":len(idx)}
+    manifest={"schema_version":"1.8","package_health":health,"validation":validation,"review_count":len(all_review),"selected_icis_attempt":str(chosen) if chosen else None,"icis_selection_state":icis_selection_state,"icis_replayed_sources":replayed_sources,"sources":statuses,"integration":integration,"requested_scope":scope_summary,"review_selection":integration.get("review_selection",{}),"cross_layer_review":integration.get("cross_layer_review",{}),"review_report":integration.get("review_report",{}),"artifact_count":len(idx)}
     (out/"Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
-    print(json.dumps({"package_health":health,"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"icis_selection_state":icis_selection_state,"artifacts":len(idx),"integration":integration},ensure_ascii=False))
-    # A degraded package is intentionally deliverable: source outages remain explicit
-    # REVIEW_REQUIRED evidence gaps. Structural corruption/configuration errors still fail.
+    print(json.dumps({"package_health":health,"validation":validation,"review_count":len(all_review),"selected_icis_attempt":manifest["selected_icis_attempt"],"icis_selection_state":icis_selection_state,"icis_replayed_sources":replayed_sources,"artifacts":len(idx),"integration":integration},ensure_ascii=False))
+    # A degraded package is intentionally deliverable: source outages and explicit
+    # last-known-good replay remain REVIEW_REQUIRED evidence gaps. Structural
+    # corruption/configuration errors still fail.
     raise SystemExit(81 if health=="FAIL" else 0)
 
 if __name__=="__main__": main()
