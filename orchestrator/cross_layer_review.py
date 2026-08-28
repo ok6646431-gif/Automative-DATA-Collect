@@ -65,6 +65,7 @@ def collector_availability(status):
     if state in {'DATA_FOUND','COMPLETE','SUCCESS','PASS'}: return 'AVAILABLE'
     if 'PARTIAL' in state: return 'PARTIAL'
     if state in {'NOT_RUN','INVALID_SCOPE'}: return 'NOT_COLLECTED'
+    if 'FAILED' in state or 'ERROR' in state: return 'UNAVAILABLE'
     if state.startswith('NO_'): return 'NO_DATA'
     return 'UNKNOWN'
 
