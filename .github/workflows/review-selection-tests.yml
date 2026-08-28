@@ -12,6 +12,7 @@ on:
       - 'orchestrator/document_semantics.py'
       - 'orchestrator/review_report.py'
       - 'tests/test_review_selection.py'
+      - 'tests/test_zero_semantics.py'
       - 'tests/test_cross_layer_review.py'
       - 'tests/test_document_semantics.py'
       - 'tests/test_review_report.py'
@@ -25,6 +26,7 @@ on:
       - 'orchestrator/document_semantics.py'
       - 'orchestrator/review_report.py'
       - 'tests/test_review_selection.py'
+      - 'tests/test_zero_semantics.py'
       - 'tests/test_cross_layer_review.py'
       - 'tests/test_document_semantics.py'
       - 'tests/test_review_report.py'
@@ -44,4 +46,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run review-selection regression tests
-        run: python -m unittest tests.test_review_selection tests.test_cross_layer_review tests.test_document_semantics tests.test_review_report -v
+        run: python -m unittest tests.test_review_selection tests.test_zero_semantics tests.test_cross_layer_review tests.test_document_semantics tests.test_review_report -v
