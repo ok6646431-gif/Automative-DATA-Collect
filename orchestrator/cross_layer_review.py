@@ -25,7 +25,7 @@ SOURCE_AVAILABILITY_FIELDS=[
 ]
 APPLICABILITY_FIELDS=[
     'document_id','applicability_state','candidate_ids','canonical_site_ids','unresolved_candidate_ids',
-    'basis','source_locator'
+    'reference_domains','basis','source_locator'
 ]
 
 DOMAIN_WORDS={
@@ -36,6 +36,7 @@ DOMAIN_WORDS={
     'WASTE':['폐기물','재활용','자원순환','waste','zero waste'],
     'GHG_ENERGY':['온실가스','carbon','탄소','scope 1','scope1','scope 2','scope2','pfc','hfc','sf6','nf3','에너지','전력','re100','net zero','넷제로']
 }
+VALID_REFERENCE_DOMAINS=set(DOMAIN_WORDS)|{'CROSS_MEDIA'}
 FUTURE_MARKERS=['전략','목표','계획','mou','협약','추진','예정','target','strategy','roadmap','2030','2040','2050','2029']
 INDUSTRY_DOC_TYPES={'BAT_REFERENCE','GUIDELINE'}
 NON_READINESS_EVENT_ROLES={'CONTEXT_MARKER','COMPARABILITY_MARKER','IDENTITY_MARKER','BASELINE_MARKER'}
@@ -205,15 +206,18 @@ def resolve_reference_applicability(pkg,applicability_path=None):
         docid=str(item.get('document_id') or '')
         state=str(item.get('applicability_state') or 'REVIEW_REQUIRED').upper()
         candidate_ids=[str(x) for x in item.get('candidate_ids',[]) or [] if str(x)]
+        reference_domains=[str(x).upper() for x in item.get('reference_domains',[]) or [] if str(x).upper() in VALID_REFERENCE_DOMAINS]
         cmap,unresolved=_candidate_applicability_map(pkg,candidate_ids)
         canonical_ids=sorted(set(cmap.values()))
         if state=='VERIFIED' and (not candidate_ids or unresolved): state='REVIEW_REQUIRED'
+        if state=='VERIFIED' and not reference_domains: reference_domains=['CROSS_MEDIA']
         row={
             'document_id':docid,'applicability_state':state,'candidate_ids':'|'.join(candidate_ids),
             'canonical_site_ids':'|'.join(canonical_ids),'unresolved_candidate_ids':'|'.join(unresolved),
+            'reference_domains':'|'.join(reference_domains),
             'basis':str(item.get('basis') or ''),'source_locator':str(item.get('source_locator') or '')
         }
-        rows.append(row); resolved[docid]={**row,'canonical_site_ids_list':canonical_ids}
+        rows.append(row); resolved[docid]={**row,'canonical_site_ids_list':canonical_ids,'reference_domains_list':reference_domains}
     write_csv(pkg/'Industry_Reference_Applicability.csv',rows,APPLICABILITY_FIELDS)
     return resolved
 
@@ -230,15 +234,16 @@ def industry_reference_layer(pkg,semantic_path=None,applicability=None):
         if app:
             if app.get('applicability_state')!='VERIFIED': continue
             targets=app.get('canonical_site_ids_list') or []
+            domains=app.get('reference_domains_list') or ['CROSS_MEDIA']
             if not targets: continue
         else:
             targets=['']
-        domains=infer_domains(' '.join([d.get('title',''),d.get('document_type',''),d.get('notes','')]))
-        if d.get('document_type')=='BAT_REFERENCE' and domains==['CROSS_MEDIA']:
-            domains=['AIR','WATER','WATER_RESOURCES','CHEMICALS','WASTE','GHG_ENERGY']
+            domains=infer_domains(' '.join([d.get('title',''),d.get('document_type',''),d.get('notes','')]))
+            if d.get('document_type')=='BAT_REFERENCE' and domains==['CROSS_MEDIA']:
+                domains=['AIR','WATER','WATER_RESOURCES','CHEMICALS','WASTE','GHG_ENERGY']
         for target in targets:
             for domain in domains:
-                out.append(layer_row('INDUSTRY_TECHNICAL',domain,target,site_names.get(target,''),d.get('report_year'),d.get('title'),'Industry technical reference document is available for the explicitly verified site scope; specific technique/issue semantics have not yet been extracted.','CORP_DOCS',d.get('source_locator') or d.get('source_url'),'REFERENCE_AVAILABLE_ONLY','Reference applicability is site-scoped. Do not infer that the company applies any BAT or that a particular technique is relevant until semantic evidence is extracted.',docid,target))
+                out.append(layer_row('INDUSTRY_TECHNICAL',domain,target,site_names.get(target,''),d.get('report_year'),d.get('title'),'Industry technical reference document is available for the explicitly verified site scope; specific technique/issue semantics have not yet been extracted.','CORP_DOCS',d.get('source_locator') or d.get('source_url'),'REFERENCE_AVAILABLE_ONLY','Reference applicability is site-scoped. Reference-level domain context does not establish topic-specific BAT relevance; page-level semantics are still required.',docid,target,domain))
     if semantic_path and Path(semantic_path).exists():
         payload=read_json(semantic_path,{}) or {}; profile=read_json(pkg/'Company_Profile.json',{}) or {}
         sem_doc={r.get('semantic_id'):r.get('document_id') for r in read_csv(pkg/'Document_Semantic_Candidates.csv')}
@@ -267,7 +272,12 @@ def compatible(topic,evidence):
     td=topic.get('domain',''); ed=evidence.get('domain','')
     if not (ed in {td,'CROSS_MEDIA'} or td=='CROSS_MEDIA'): return False
     tcid=topic.get('canonical_site_id',''); ecid=evidence.get('canonical_site_id','')
-    return not ecid or ecid==tcid or tcid=='MULTI_SITE'
+    # MULTI_SITE is an aggregate topic, not a wildcard. A fact from one specific
+    # facility cannot satisfy an aggregate company's layer merely because it is in
+    # scope. Company-wide/unscoped or explicitly MULTI_SITE evidence may do so.
+    if tcid=='MULTI_SITE': return not ecid or ecid=='MULTI_SITE'
+    if ecid=='MULTI_SITE': return False
+    return not ecid or ecid==tcid
 
 
 def missing_evidence_state(has_evidence,source_state,ready_label='EVIDENCE_READY'):
@@ -335,7 +345,7 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
         if industry: present.append('INDUSTRY_TECHNICAL')
         if future: present.append('FUTURE_DIRECTION')
         why='Observed public-data signal'
-        if actions: why+=' + same-site company action'
+        if actions: why+=' + same-site/company-scope company action'
         elif action_state=='SOURCE_UNAVAILABLE': why+=' + ENV-INFO unavailable; missing action evidence is unresolved'
         elif action_state=='SOURCE_PARTIAL': why+=' + ENV-INFO partial; missing action evidence is unresolved'
         if semantic_industry: why+=' + page-grounded industry technical context'
@@ -364,8 +374,8 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
         })
         if not actions:
             add_gap_question(questions,rid,t,'COMPANY_ACTION',action_state,
-                'What same-site management action is publicly confirmed for this observed topic?',
-                'Site-resolved official company action, ENVINFO investment, permit or verified event evidence','ENV-INFO/company-action')
+                'What same-site or aggregate-scope management action is publicly confirmed for this observed topic?',
+                'Site-resolved or company/aggregate-scope official action, ENVINFO investment, permit or verified event evidence','ENV-INFO/company-action')
         if not industry:
             add_gap_question(questions,rid,t,'INDUSTRY',ind_state,
                 'What site-applicable industry technical reference explains why this environmental topic matters?',
@@ -405,7 +415,7 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None,ap
     for r in applicability.values(): app_counts[r.get('applicability_state','UNKNOWN')]+=1
     smap=source_state_map(availability)
     summary={
-        'schema_version':'1.8','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.9','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
@@ -415,7 +425,7 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None,ap
         'company_action_source_state':smap.get(('ENVINFO','ALL'),'UNKNOWN'),
         'industry_reference_source_state':smap.get(('CORP_DOCS','INDUSTRY_REFERENCES'),'UNKNOWN'),
         'future_direction_source_state':smap.get(('CORP_DOCS','COMPANY_DOCUMENTS'),'UNKNOWN'),
-        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; index/catalog context never satisfies readiness; industry references satisfy a site layer only when applicability is explicitly verified; overlap never establishes causality.',
+        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; index/catalog context never satisfies readiness; industry references satisfy a site layer only when applicability is explicitly verified; MULTI_SITE topics do not treat one facility as aggregate evidence; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
     (pkg/'Cross_Layer_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
