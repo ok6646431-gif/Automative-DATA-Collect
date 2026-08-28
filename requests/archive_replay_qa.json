@@ -1,5 +1,5 @@
 {
   "source_run_id": 33156250457,
-  "purpose": "Rebuild the validated Kumho Petrochemical human archive from run 113 raw artifacts with current archive deduplication rules.",
-  "replay_token": "kkpc-human-archive-dedup-v1"
+  "purpose": "Rebuild the validated Kumho Petrochemical human archive from run 113 raw artifacts with current archive deduplication and sustainability-coverage rules.",
+  "replay_token": "kkpc-human-archive-coverage-v2"
 }
