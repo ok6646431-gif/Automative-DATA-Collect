@@ -1,0 +1,154 @@
+import argparse, csv, hashlib, json, shutil, tempfile, zipfile
+from pathlib import Path
+
+
+def sha256(path):
+    h=hashlib.sha256()
+    with Path(path).open('rb') as f:
+        for chunk in iter(lambda:f.read(1024*1024),b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def read_json(path,default=None):
+    p=Path(path)
+    return json.loads(p.read_text(encoding='utf-8')) if p.exists() else default
+
+
+def read_csv(path):
+    p=Path(path)
+    if not p.exists() or p.stat().st_size==0: return []
+    with p.open(encoding='utf-8-sig',newline='') as f: return list(csv.DictReader(f))
+
+
+def write_csv(path,rows,fields):
+    p=Path(path); p.parent.mkdir(parents=True,exist_ok=True)
+    with p.open('w',encoding='utf-8-sig',newline='') as f:
+        w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore'); w.writeheader(); w.writerows(rows)
+
+
+def archive_index(root):
+    rows=[]
+    for p in sorted(Path(root).rglob('*')):
+        if p.is_file() and p.name!='Archive_File_Index.csv':
+            rows.append({'path':str(p.relative_to(root)),'bytes':p.stat().st_size,'sha256':sha256(p)})
+    return rows
+
+
+def _find_archive_root(extract_root):
+    dirs=[p for p in Path(extract_root).iterdir() if p.is_dir()]
+    if len(dirs)!=1:
+        raise RuntimeError(f'expected one human-archive root directory, found {len(dirs)}')
+    return dirs[0]
+
+
+def deduplicate_tree(archive_root):
+    archive_root=Path(archive_root)
+    user=archive_root/'01_사용자자료'; system=archive_root/'90_시스템원본'
+    if not user.exists() or not system.exists():
+        return {'deduplicated_files':0,'deduplicated_bytes':0,'reference_file':''}
+    user_by_hash={}
+    for p in sorted(user.rglob('*')):
+        if not p.is_file(): continue
+        digest=sha256(p)
+        user_by_hash.setdefault(digest,p)
+    refs=[]
+    ref_path=system/'Deduplicated_File_References.csv'
+    for p in sorted(system.rglob('*')):
+        if not p.is_file() or p==ref_path: continue
+        digest=sha256(p)
+        retained=user_by_hash.get(digest)
+        if not retained: continue
+        refs.append({
+            'removed_system_path':str(p.relative_to(archive_root)),
+            'retained_user_path':str(retained.relative_to(archive_root)),
+            'bytes':p.stat().st_size,
+            'sha256':digest,
+            'resolution':'IDENTICAL_SHA256_USER_COPY'
+        })
+        p.unlink()
+    for d in sorted([p for p in system.rglob('*') if p.is_dir()],key=lambda x:len(x.parts),reverse=True):
+        try: d.rmdir()
+        except OSError: pass
+    if refs:
+        write_csv(ref_path,refs,['removed_system_path','retained_user_path','bytes','sha256','resolution'])
+    return {
+        'deduplicated_files':len(refs),
+        'deduplicated_bytes':sum(int(r['bytes']) for r in refs),
+        'reference_file':str(ref_path.relative_to(archive_root)) if refs else ''
+    }
+
+
+def _sync_metadata(package_root,archive_root,stats):
+    package_root=Path(package_root); archive_root=Path(archive_root)
+    summary=read_json(package_root/'Archive_Summary.json',{}) or {}
+    summary.update(stats)
+    summary['system_files']=sum(1 for p in (archive_root/'90_시스템원본').rglob('*') if p.is_file())
+    package_root.joinpath('Archive_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
+
+    manifest=read_json(package_root/'Master_Manifest.json',{}) or {}
+    human=manifest.setdefault('human_archive',{})
+    human.update(stats)
+    human['system_files']=summary['system_files']
+    package_root.joinpath('Master_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+
+    idx=archive_root/'00_자료목록'; idx.mkdir(parents=True,exist_ok=True)
+    archive_manifest=read_json(idx/'Archive_Manifest.json',{}) or {}
+    archive_manifest.update(stats); archive_manifest['system_files']=summary['system_files']
+    (idx/'Archive_Manifest.json').write_text(json.dumps(archive_manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+    shutil.copy2(package_root/'Master_Manifest.json',idx/'Master_Manifest.json')
+    system_manifest=archive_root/'90_시스템원본'/'control_plane'/'Master_Manifest.json'
+    if system_manifest.parent.exists(): shutil.copy2(package_root/'Master_Manifest.json',system_manifest)
+
+    rows=archive_index(archive_root)
+    write_csv(idx/'Archive_File_Index.csv',rows,['path','bytes','sha256'])
+    return summary,manifest
+
+
+def _rewrite_zip(zip_path,archive_root):
+    zip_path=Path(zip_path); archive_root=Path(archive_root)
+    tmp=zip_path.with_suffix('.dedup.zip')
+    if tmp.exists(): tmp.unlink()
+    with zipfile.ZipFile(tmp,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+        for p in sorted(archive_root.rglob('*')):
+            if p.is_file(): z.write(p,arcname=str(Path(archive_root.name)/p.relative_to(archive_root)))
+    tmp.replace(zip_path)
+
+
+def _refresh_root_indexes(package_root,zip_path,stats):
+    package_root=Path(package_root); zip_path=Path(zip_path)
+    summary=read_json(package_root/'Archive_Summary.json',{}) or {}; summary.update(stats)
+    summary['zip_bytes']=zip_path.stat().st_size; summary['zip_sha256']=sha256(zip_path)
+    package_root.joinpath('Archive_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
+    rows=read_csv(package_root/'Artifact_Index.csv')
+    rel=str(zip_path.relative_to(package_root))
+    found=False
+    for r in rows:
+        if r.get('path')==rel:
+            r.update({'source':'HUMAN_ARCHIVE','bytes':zip_path.stat().st_size,'sha256':summary['zip_sha256']}); found=True
+    if not found: rows.append({'source':'HUMAN_ARCHIVE','path':rel,'bytes':zip_path.stat().st_size,'sha256':summary['zip_sha256']})
+    write_csv(package_root/'Artifact_Index.csv',rows,['source','path','bytes','sha256'])
+    return summary
+
+
+def run(package_root='assembled'):
+    package_root=Path(package_root).resolve(); zip_path=package_root/'Human_Archive.zip'
+    if not zip_path.exists(): raise FileNotFoundError(zip_path)
+    before=zip_path.stat().st_size
+    with tempfile.TemporaryDirectory(prefix='human-archive-dedup-') as td:
+        with zipfile.ZipFile(zip_path,'r') as z: z.extractall(td)
+        archive_root=_find_archive_root(td)
+        stats=deduplicate_tree(archive_root)
+        _sync_metadata(package_root,archive_root,stats)
+        _rewrite_zip(zip_path,archive_root)
+    summary=_refresh_root_indexes(package_root,zip_path,stats)
+    result={**stats,'zip_bytes_before':before,'zip_bytes_after':zip_path.stat().st_size,'zip_bytes_saved':before-zip_path.stat().st_size,'zip_sha256':summary['zip_sha256']}
+    print(json.dumps(result,ensure_ascii=False))
+    return result
+
+
+def main():
+    ap=argparse.ArgumentParser(); ap.add_argument('--package',default='assembled'); a=ap.parse_args(); run(a.package)
+
+
+if __name__=='__main__': main()
