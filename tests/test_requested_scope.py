@@ -78,6 +78,47 @@ class RequestedScopeTests(unittest.TestCase):
         finally:
             td.cleanup()
 
+    def test_colocated_official_units_require_name_evidence(self):
+        td = tempfile.TemporaryDirectory(); root = Path(td.name)
+        try:
+            profile = {
+                "company_display_name": "테스트화학 주식회사",
+                "requested_scope": {"mode": "SITE_SET", "label": "생산공장", "candidate_ids": ["R", "L"]},
+                "aliases": [{"term": "테스트화학"}],
+                "site_candidates": [
+                    {"candidate_id": "R", "site_name_raw": "울산고무공장", "address_raw": "울산광역시 남구 상개로 64", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+                    {"candidate_id": "L", "site_name_raw": "울산 LATEX공장", "address_raw": "울산광역시 남구 상개로 64", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+                ],
+            }
+            (root / "Company_Profile.json").write_text(json.dumps(profile, ensure_ascii=False), encoding="utf-8")
+            write_csv(root / "Site_Master.csv", [
+                {"canonical_site_id": "SITE_R", "canonical_site_name": "테스트화학 울산고무", "canonical_address_key": "울산남구상개로64", "identity_status": "CONFIRMED"},
+            ], ["canonical_site_id", "canonical_site_name", "canonical_address_key", "identity_status"])
+            write_csv(root / "Source_Identity.csv", [
+                {"source_key": "PRTR", "source_site_id": "R1", "canonical_site_id": "SITE_R", "source_site_name_raw": "테스트화학 울산고무공장", "source_address_raw": "울산광역시 남구 상개로 64", "match_status": "CONFIRMED"},
+            ], ["source_key", "source_site_id", "canonical_site_id", "source_site_name_raw", "source_address_raw", "match_status"])
+            scope = resolve_requested_scope(root)
+            self.assertEqual(scope["target_canonical_site_ids"], {"SITE_R"})
+            unresolved = {x["candidate_id"]: x for x in scope["unresolved_candidates"]}
+            self.assertNotIn("R", unresolved)
+            self.assertEqual(unresolved["L"]["reason"], "COLOCATED_OFFICIAL_UNIT_NOT_DISTINCTLY_CONFIRMED")
+            self.assertIn("R1", scope["target_source_ids"]["PRTR"])
+        finally:
+            td.cleanup()
+
+    def test_optional_legal_dong_does_not_break_road_address_match(self):
+        td, root = self.make_package()
+        try:
+            scope = resolve_requested_scope(root)
+            self.assertTrue(scope["target_canonical_site_ids"])
+            from requested_scope import normalize_address
+            self.assertEqual(
+                normalize_address("울산광역시 남구 성암동 처용로 260-257"),
+                normalize_address("울산광역시 남구 처용로 260-257"),
+            )
+        finally:
+            td.cleanup()
+
 
 if __name__ == "__main__":
     unittest.main()
