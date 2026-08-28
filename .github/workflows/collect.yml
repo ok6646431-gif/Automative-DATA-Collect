@@ -25,6 +25,10 @@ permissions:
   contents: read
   statuses: write
 
+concurrency:
+  group: enterprise-env-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stable_sources:
     runs-on: ubuntu-latest
