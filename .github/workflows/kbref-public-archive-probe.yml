@@ -22,87 +22,101 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Crawl IEPS BAT board for organic K-BREF
+      - name: Resolve original and revised organic K-BREF posts
         run: |
           python - <<'PY'
-          import json,re,time
-          from collections import deque
+          import json,re
           from pathlib import Path
-          from urllib.parse import urljoin,urlparse,urldefrag
+          from urllib.parse import urljoin, quote
           import requests
           from bs4 import BeautifulSoup
 
-          start='https://ieps.nier.go.kr/web/board/5/'
-          host='ieps.nier.go.kr'
           s=requests.Session()
           s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
           Path('probe').mkdir(exist_ok=True)
-          q=deque([start])
-          seen=set(); matches=[]; errors=[]; discovered=[]
-          max_pages=180
-          keywords=('유기화학산업','유기화학 산업')
-          while q and len(seen)<max_pages:
-              url=q.popleft()
-              url=urldefrag(url)[0]
-              if url in seen: continue
-              seen.add(url)
+          result={'board404':{},'neighbors':{},'searches':{}}
+
+          # Extract the exact next/previous links around the 2017 non-ferrous K-BREF post.
+          u404='https://ieps.nier.go.kr/web/board/5/404/?pMENUMST_ID=95'
+          r=s.get(u404,timeout=(8,20)); r.raise_for_status()
+          soup=BeautifulSoup(r.text,'html.parser')
+          links=[]
+          for a in soup.find_all('a',href=True):
+              text=' '.join(a.stripped_strings)
+              if text:
+                  links.append({'text':text,'url':urljoin(r.url,a['href'])})
+          result['board404']={'url':r.url,'text':' '.join(soup.stripped_strings)[:7000],
+                              'organic_links':[x for x in links if '유기화학' in x['text']]}
+
+          # Inspect neighboring numeric posts because the next-post control may not expose href cleanly.
+          for post_id in range(400,411):
+              url=f'https://ieps.nier.go.kr/web/board/5/{post_id}/?pMENUMST_ID=95'
               try:
-                  r=s.get(url,timeout=(5,12),allow_redirects=True)
-                  if r.status_code!=200:
-                      errors.append({'url':url,'status':r.status_code}); continue
-                  ctype=(r.headers.get('content-type') or '').lower()
-                  if 'html' not in ctype and not r.text.lstrip().startswith('<'):
-                      continue
-                  soup=BeautifulSoup(r.text,'html.parser')
-                  text=' '.join(soup.stripped_strings)
-                  if any(k in text for k in keywords):
-                      files=[]
-                      for a in soup.find_all('a',href=True):
-                          label=' '.join(a.stripped_strings)
-                          href=urljoin(r.url,a['href'])
-                          if 'readDownloadFile.do' in href or '.pdf' in label.lower() or '.pdf' in href.lower():
-                              files.append({'label':label,'url':href})
-                      matches.append({'url':r.url,'title':soup.title.get_text(' ',strip=True) if soup.title else '', 'text':text[:5000], 'files':files})
-                  for a in soup.find_all('a',href=True):
-                      nxt=urldefrag(urljoin(r.url,a['href']))[0]
-                      p=urlparse(nxt)
-                      if p.scheme not in ('http','https') or p.netloc!=host: continue
-                      # Stay on the BAT reference board only; include list/detail/query pages.
-                      if '/web/board/5' not in p.path: continue
-                      if nxt not in seen and nxt not in q:
-                          q.append(nxt); discovered.append(nxt)
+                  rr=s.get(url,timeout=(6,15)); rr.raise_for_status()
+                  ss=BeautifulSoup(rr.text,'html.parser')
+                  text=' '.join(ss.stripped_strings)
+                  files=[]
+                  for a in ss.find_all('a',href=True):
+                      label=' '.join(a.stripped_strings)
+                      href=urljoin(rr.url,a['href'])
+                      if 'readDownloadFile.do' in href or '.pdf' in label.lower():
+                          files.append({'label':label,'url':href})
+                  result['neighbors'][str(post_id)]={'url':rr.url,'text':text[:5000],'files':files,
+                      'is_organic_title':('제목 유기화학산업' in text or '제목 유기화학 산업' in text)}
               except Exception as exc:
-                  errors.append({'url':url,'error':f'{type(exc).__name__}: {exc}'})
-          result={'start':start,'pages_checked':len(seen),'queue_remaining':len(q),'matches':matches,'errors':errors[:50],'sample_discovered':discovered[:100]}
-          Path('probe/ieps_organic_search.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+                  result['neighbors'][str(post_id)]={'error':f'{type(exc).__name__}: {exc}'}
+
+          # Use IEPS's own board search with exact terms, including revised-edition vocabulary.
+          terms=['유기화학산업','유기화학산업 최적가용기법 기준서','유기화학산업 최적가용기법 기준서 II','최적가용기법 기준서(Ⅱ) 유기화학']
+          for term in terms:
+              url='https://ieps.nier.go.kr/web/board/5/?pMENUMST_ID=95&searchType=ALL&searchWord='+quote(term)
+              try:
+                  rr=s.get(url,timeout=(8,20)); rr.raise_for_status(); ss=BeautifulSoup(rr.text,'html.parser')
+                  entries=[]
+                  for a in ss.find_all('a',href=True):
+                      label=' '.join(a.stripped_strings)
+                      href=urljoin(rr.url,a['href'])
+                      if '/web/board/5/' in href and re.search(r'/web/board/5/\d+/',href):
+                          entries.append({'label':label,'url':href})
+                  # Deduplicate links while preserving order.
+                  seen=set(); clean=[]
+                  for x in entries:
+                      key=x['url']
+                      if key in seen: continue
+                      seen.add(key); clean.append(x)
+                  result['searches'][term]={'url':rr.url,'text':' '.join(ss.stripped_strings)[:9000],'entries':clean[:80]}
+              except Exception as exc:
+                  result['searches'][term]={'url':url,'error':f'{type(exc).__name__}: {exc}'}
+
+          Path('probe/organic_exact_posts.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
           print(json.dumps(result,ensure_ascii=False,indent=2))
           PY
-      - name: Verify any discovered organic PDF payloads
+      - name: Verify PDFs from exact organic-title posts
         run: |
           python - <<'PY'
           import hashlib,json
           from pathlib import Path
           import requests
-          data=json.loads(Path('probe/ieps_organic_search.json').read_text(encoding='utf-8'))
-          urls=[]
-          for match in data.get('matches',[]):
-              for item in match.get('files',[]):
-                  u=item.get('url','')
-                  if u and u not in urls: urls.append(u)
+          data=json.loads(Path('probe/organic_exact_posts.json').read_text(encoding='utf-8'))
+          candidates=[]
+          for post_id,rec in data.get('neighbors',{}).items():
+              if rec.get('is_organic_title'):
+                  for f in rec.get('files',[]):
+                      candidates.append({'post_id':post_id,**f})
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
           out=[]
-          for url in urls[:12]:
+          for item in candidates:
               try:
-                  with s.get(url,stream=True,timeout=(8,60)) as r:
+                  with s.get(item['url'],stream=True,timeout=(8,90)) as r:
                       r.raise_for_status(); h=hashlib.sha256(); size=0; head=b''
                       for chunk in r.iter_content(1024*1024):
                           if not chunk: continue
                           if not head: head=chunk[:16]
-                          size += len(chunk); h.update(chunk)
-                      out.append({'url':url,'bytes':size,'sha256':h.hexdigest(),'is_pdf':head.startswith(b'%PDF-'),'head':head.decode('latin1',errors='replace')})
+                          size+=len(chunk); h.update(chunk)
+                      out.append({**item,'bytes':size,'sha256':h.hexdigest(),'is_pdf':head.startswith(b'%PDF-'),'head':head.decode('latin1',errors='replace')})
               except Exception as exc:
-                  out.append({'url':url,'error':f'{type(exc).__name__}: {exc}'})
-          Path('probe/ieps_organic_pdf_probe.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
+                  out.append({**item,'error':f'{type(exc).__name__}: {exc}'})
+          Path('probe/organic_exact_pdf_probe.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
           print(json.dumps(out,ensure_ascii=False,indent=2))
           PY
       - name: Upload probe
