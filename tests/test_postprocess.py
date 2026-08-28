@@ -10,6 +10,22 @@ class TestPostprocessIdentity(unittest.TestCase):
         b=normalize_address("충남 서산시 대산읍 독곶1로 54",PROFILE)
         self.assertEqual(a,b)
 
+    def test_optional_legal_dong_before_road_is_ignored(self):
+        self.assertEqual(
+            normalize_address("울산광역시 남구 성암동 처용로 260-257 테스트화학 울산수지공장",PROFILE),
+            normalize_address("울산광역시 남구 처용로 260-257",PROFILE),
+        )
+        self.assertEqual(
+            normalize_address("전라남도 여수시 평여동 여수산단3로 118 테스트화학 여수고무공장",PROFILE),
+            normalize_address("전라남도 여수시 여수산단3로 118",PROFILE),
+        )
+
+    def test_eup_myeon_is_not_removed_from_road_address(self):
+        self.assertEqual(
+            normalize_address("충청남도 예산군 고덕면 예덕로 1033-9",PROFILE),
+            "충남예산군고덕면예덕로10339",
+        )
+
     def test_same_address_different_unit_not_auto_merged(self):
         cs=[
           {"source_key":"PRTR","source_site_id":"1","source_site_name_raw":"테스트화학 익산공장","source_address_raw":"전북 익산시 석암로 99","years":[2024]},
@@ -58,7 +74,24 @@ class TestPostprocessIdentity(unittest.TestCase):
         _,sites,ids,vals=resolve_identity(cs,profile)
         self.assertEqual(ids[0]["match_status"],"REVIEW_REQUIRED")
         self.assertNotEqual(ids[0]["match_basis"],"OFFICIAL_SITE_EXACT_ADDRESS")
-        self.assertEqual(len(vals),1)
+        self.assertTrue(any(v["issue_type"]=="COLOCATED_OFFICIAL_UNITS" for v in vals))
+        self.assertTrue(any(v["object_key"]=="PRTR:1" for v in vals))
+
+    def test_colocated_units_are_not_flagged_when_both_names_are_cross_source_confirmed(self):
+        profile={**PROFILE,"site_candidates":[
+            {"candidate_id":"unit-a","site_name_raw":"고무공장","address_raw":"울산 남구 상개로 64","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+            {"candidate_id":"unit-b","site_name_raw":"LATEX공장","address_raw":"울산 남구 상개로 64","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+        ]}
+        cs=[
+          {"source_key":"PRTR","source_site_id":"1","source_site_name_raw":"테스트화학 고무공장","source_address_raw":"울산 남구 상개로 64","years":[2024]},
+          {"source_key":"CHEM_STATS","source_site_id":"A","source_site_name_raw":"테스트화학 고무공장","source_address_raw":"울산 남구 상개로 64","years":[2024]},
+          {"source_key":"PRTR","source_site_id":"2","source_site_name_raw":"테스트화학 LATEX공장","source_address_raw":"울산 남구 상개로 64","years":[2024]},
+          {"source_key":"CHEM_STATS","source_site_id":"B","source_site_name_raw":"테스트화학 LATEX공장","source_address_raw":"울산 남구 상개로 64","years":[2024]},
+        ]
+        _,sites,ids,vals=resolve_identity(cs,profile)
+        self.assertEqual(sum(x["identity_status"]=="CONFIRMED" for x in sites),2)
+        self.assertTrue(all(x["match_status"]=="CONFIRMED" for x in ids))
+        self.assertFalse(any(v["issue_type"]=="COLOCATED_OFFICIAL_UNITS" for v in vals))
 
     def test_name_only_stays_review_required(self):
         cs=[
