@@ -39,8 +39,8 @@ class TestIndustryReferenceApplicability(unittest.TestCase):
             {'topic_id':'TOP_C','canonical_site_id':'SITE_CHEM','site_name':'여수화학','domain':'AIR','signal_metric_ids':'MET_C','signal_labels':'NOX:DIRECTIONAL_UP','scope_label':'TEST'}
         ],['topic_id','canonical_site_id','site_name','domain','signal_metric_ids','signal_labels','scope_label'])
         write_csv(pkg/'Management_Action_Ledger.csv',[
-            {'action_id':'ACT_E','canonical_site_id':'SITE_ENERGY','site_name':'여수에너지','year':'2024','domain':'AIR','action_name':'저감설비','description':'대기 저감설비 운영','disclosed_effect':'','source_file':'e.html'},
-            {'action_id':'ACT_C','canonical_site_id':'SITE_CHEM','site_name':'여수화학','year':'2024','domain':'AIR','action_name':'저감설비','description':'대기 저감설비 운영','disclosed_effect':'','source_file':'c.html'}
+            {'action_id':'ACT_E','canonical_site_id':'SITE_ENERGY','site_name':'여수에너지','year':'2024','domain':'AIR','action_name':'NOx 저감설비','description':'NOx 저감을 위한 대기 저감설비 운영','disclosed_effect':'','source_file':'e.html'},
+            {'action_id':'ACT_C','canonical_site_id':'SITE_CHEM','site_name':'여수화학','year':'2024','domain':'AIR','action_name':'NOx 저감설비','description':'NOx 저감을 위한 대기 저감설비 운영','disclosed_effect':'','source_file':'c.html'}
         ],['action_id','canonical_site_id','site_name','year','domain','action_name','description','disclosed_effect','source_file'])
         write_csv(pkg/'Event_Registry.csv',[
             {'event_id':'FUT','canonical_site_id':'','event_date_start':'2025','event_title':'대기 배출 저감 목표','event_description':'향후 대기오염물질 저감 목표를 추진한다.','event_type':'ENVIRONMENT_STRATEGY_CHANGE','analysis_role':'','source_key':'OFFICIAL','source_locator':'https://example.com/future'}
@@ -93,6 +93,8 @@ class TestIndustryReferenceApplicability(unittest.TestCase):
             rows={r['canonical_site_id']:r for r in csv.DictReader((pkg/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig'))}
             self.assertEqual(rows['SITE_ENERGY']['industry_semantic_ready'],'YES')
             self.assertEqual(rows['SITE_ENERGY']['review_state'],'FOUR_LAYER_READY')
+            self.assertEqual(rows['SITE_ENERGY']['semantic_bridge_state'],'READY')
+            self.assertIn('NOX',rows['SITE_ENERGY']['semantic_bridge_anchors'].split('|'))
             self.assertEqual(rows['SITE_CHEM']['industry_semantic_ready'],'NO')
             self.assertNotEqual(rows['SITE_CHEM']['review_state'],'FOUR_LAYER_READY')
             self.assertEqual(summary['four_layer_ready'],1)
@@ -100,7 +102,7 @@ class TestIndustryReferenceApplicability(unittest.TestCase):
     def test_unresolved_applicability_is_not_promoted(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td); pkg,app=self.fixture(root)
-            app.write_text(json.dumps({'request_id':'REQ_APP','references':[{
+            app.write_text(json.dumps({'request_id':'REQ_APP','references':[{ 
                 'document_id':'ENERGY_KBREF_II','applicability_state':'REVIEW_REQUIRED','candidate_ids':[],
                 'basis':'Exact site applicability not yet verified.','source_locator':'https://example.com/energy-bat'
             }]}),encoding='utf-8')
