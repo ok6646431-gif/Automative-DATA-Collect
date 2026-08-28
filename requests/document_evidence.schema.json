@@ -43,7 +43,24 @@
           "expected_extension": {"type": ["string", "null"]},
           "verification_status": {"enum": ["VERIFIED", "SOURCE_VERIFIED", "PARTIAL", "UNVERIFIED"]},
           "importance": {"enum": ["CORE", "SUPPORTING", "EVIDENCE_ONLY", "UNCLASSIFIED"]},
-          "notes": {"type": ["string", "null"]}
+          "notes": {"type": ["string", "null"]},
+          "fallback_sources": {
+            "type": "array",
+            "description": "Independently verified alternate official delivery sources for the same declared document. Tried only after the primary source fails; they do not change document identity/year/type.",
+            "items": {
+              "type": "object",
+              "required": ["source_url", "verification_status"],
+              "properties": {
+                "source_url": {"type": "string", "pattern": "^https?://"},
+                "source_locator": {"type": ["string", "null"]},
+                "expected_extension": {"type": ["string", "null"]},
+                "verification_status": {"enum": ["VERIFIED", "SOURCE_VERIFIED", "PARTIAL", "UNVERIFIED"]},
+                "source_role": {"type": ["string", "null"]},
+                "notes": {"type": ["string", "null"]}
+              },
+              "additionalProperties": true
+            }
+          }
         },
         "additionalProperties": true
       }
