@@ -1,0 +1,108 @@
+name: Fresh package live QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - '.github/workflows/fresh-package-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package_qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check xlsxwriter
+      - name: Bootstrap current KKPC request
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download verified stable sources from Master 121
+        uses: actions/download-artifact@v4
+        with:
+          name: stable-sources
+          path: collected/stable
+          run-id: 33178406275
+          github-token: ${{ github.token }}
+      - name: Download fresh ICIS attempt from Master 122
+        uses: actions/download-artifact@v4
+        with:
+          name: icis-attempt-1
+          path: collected/icis/icis-attempt-1
+          run-id: 33181052754
+          github-token: ${{ github.token }}
+      - name: Assemble fresh package candidate
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out package-qa
+      - name: Assert fresh path and Unicode-safe semantics
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          root=Path('package-qa')
+          manifest=json.loads((root/'Master_Manifest.json').read_text(encoding='utf-8'))
+          assert manifest['package_health']=='PASS', manifest
+          assert manifest['validation']=='REVIEW_REQUIRED', manifest
+          assert manifest['icis_selection_state']=='GOOD_ATTEMPT', manifest
+          assert manifest['icis_replayed_sources']==[], manifest
+          for source in ('PRTR','CHEM_STATS'):
+              src=manifest['sources'][source]
+              assert src['status']=='DATA_FOUND', src
+              assert src.get('freshness') != 'REPLAYED_LAST_KNOWN_GOOD', src
+          sem=json.loads((root/'Document_Semantics_Summary.json').read_text(encoding='utf-8'))
+          cross=json.loads((root/'Cross_Layer_Review_Summary.json').read_text(encoding='utf-8'))
+          assert sem['failures']==[], sem
+          assert sem['pages_scanned']>=1200, sem
+          assert sem['generated_industry_facts']>0, sem
+          assert cross['four_layer_ready']>0, cross
+          # Strict decode confirms the surrogate that broke Master 121 is sanitized.
+          (root/'Document_Semantic_Candidates.csv').read_text(encoding='utf-8-sig')
+          rows=list(csv.DictReader((root/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig',newline='')))
+          ready=[r for r in rows if r.get('review_state')=='FOUR_LAYER_READY']
+          print(json.dumps({
+              'package_health':manifest['package_health'],
+              'validation':manifest['validation'],
+              'icis_selection_state':manifest['icis_selection_state'],
+              'semantics':sem,
+              'four_layer_ready_count':len(ready),
+              'four_layer_ready':[{
+                  'review_id':r.get('review_id'),
+                  'topic_id':r.get('topic_id'),
+                  'canonical_site_id':r.get('canonical_site_id'),
+                  'site_name':r.get('site_name'),
+                  'domain':r.get('domain'),
+                  'industry_source_state':r.get('industry_source_state'),
+                  'industry_evidence_state':r.get('industry_evidence_state'),
+                  'limitations':r.get('limitations'),
+              } for r in ready],
+          },ensure_ascii=False,indent=2))
+          PY
+      - name: Upload compact QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-package-live-qa
+          path: |
+            package-qa/Master_Manifest.json
+            package-qa/Cross_Layer_Review_Summary.json
+            package-qa/Cross_Layer_Review_Candidates.csv
+            package-qa/Document_Semantics_Summary.json
+            package-qa/Industry_Reference_Applicability.csv
+            package-qa/REVIEW_REQUIRED.json
+          if-no-files-found: warn
+          retention-days: 7
