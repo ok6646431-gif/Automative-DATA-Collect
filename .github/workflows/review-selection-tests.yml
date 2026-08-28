@@ -11,11 +11,13 @@ on:
       - 'orchestrator/cross_layer*.json'
       - 'orchestrator/document_semantics.py'
       - 'orchestrator/review_report.py'
+      - 'orchestrator/package_run.py'
       - 'tests/test_review_selection.py'
       - 'tests/test_zero_semantics.py'
       - 'tests/test_cross_layer_review.py'
       - 'tests/test_document_semantics.py'
       - 'tests/test_review_report.py'
+      - 'tests/test_package_validation.py'
       - '.github/workflows/review-selection-tests.yml'
   pull_request:
     paths:
@@ -25,11 +27,13 @@ on:
       - 'orchestrator/cross_layer*.json'
       - 'orchestrator/document_semantics.py'
       - 'orchestrator/review_report.py'
+      - 'orchestrator/package_run.py'
       - 'tests/test_review_selection.py'
       - 'tests/test_zero_semantics.py'
       - 'tests/test_cross_layer_review.py'
       - 'tests/test_document_semantics.py'
       - 'tests/test_review_report.py'
+      - 'tests/test_package_validation.py'
       - '.github/workflows/review-selection-tests.yml'
   workflow_dispatch:
 
@@ -45,5 +49,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run review-selection regression tests
-        run: python -m unittest tests.test_review_selection tests.test_zero_semantics tests.test_cross_layer_review tests.test_document_semantics tests.test_review_report -v
+      - name: Run review-selection and package regression tests
+        run: python -m unittest tests.test_review_selection tests.test_zero_semantics tests.test_cross_layer_review tests.test_document_semantics tests.test_review_report tests.test_package_validation -v
