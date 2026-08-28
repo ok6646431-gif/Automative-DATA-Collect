@@ -1,66 +1,20 @@
 {
   "schema_version": "1.0",
-  "request_id": "skhynix-kr-archive-20260826-v1",
+  "request_id": "kkpc-kr-archive-20260828-v1",
   "discovery_status": "PARTIAL",
-  "events": [
-    {
-      "event_id": "SKH_EVT_20210201_M16_COMPLETION",
-      "event_scope": "SITE",
-      "event_type": "PRODUCTION_CAPACITY_CHANGE",
-      "event_date_start": "2021-02-01",
-      "event_title": "이천 M16 공장 완공",
-      "event_description": "SK하이닉스는 2021년 2월 1일 이천 본사에서 M16 공장 완공식을 열었다. 회사는 M16을 DRAM 중심 생산시설로 설명했으며 2018년 착공 이후 공장 건설에 3.5조원을 투자했다고 밝혔다.",
-      "source_key": "SKHYNIX_NEWSROOM",
-      "source_locator": "https://news.skhynix.com/en/sk-hynix-announces-the-completion-of-m16-plant-construction/",
-      "verification_status": "SOURCE_VERIFIED",
-      "source_site_ref": {"source_key": "ENVINFO", "source_site_id": "00000000000000095375"},
-      "analysis_role": "CONTEXT_MARKER",
-      "affected_sources": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
-      "notes": "생산기반 확대의 시계열 맥락으로만 사용한다. M16 완공이 특정 배출량·용수·폐기물 변화의 원인이라고 자동 해석하지 않는다."
-    },
-    {
-      "event_id": "SKH_EVT_20220906_M15X_PLAN",
-      "event_scope": "SITE",
-      "event_type": "PRODUCTION_CAPACITY_PLAN",
-      "event_date_start": "2022-09-06",
-      "event_title": "청주 M15X 신규 Fab 건설계획 발표",
-      "event_description": "SK하이닉스는 2022년 9월 청주 M15X 건설계획을 발표했다. 당시 계획은 2022년 10월 착공, 2025년 초 완공, 향후 5년간 15조원 투자였다.",
-      "source_key": "SKHYNIX_NEWSROOM",
-      "source_locator": "https://news.skhynix.com/sk-hynix-to-build-m15x-fab-in-cheongju-in-october/",
-      "verification_status": "SOURCE_VERIFIED",
-      "source_site_ref": {"source_key": "ENVINFO", "source_site_id": "00000000000000362175"},
-      "analysis_role": "CONTEXT_MARKER",
-      "affected_sources": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
-      "notes": "계획 발표 이벤트다. 발표 시점의 계획을 실제 가동 또는 환경성과 변화와 동일시하지 않는다."
-    },
-    {
-      "event_id": "SKH_EVT_20240424_M15X_REVISED_PLAN",
-      "event_scope": "SITE",
-      "event_type": "PRODUCTION_CAPACITY_PLAN_UPDATE",
-      "event_date_start": "2024-04-24",
-      "event_title": "청주 M15X DRAM 생산기반 투자계획 구체화",
-      "event_description": "SK하이닉스는 2024년 4월 M15X를 HBM을 포함한 차세대 DRAM 생산기반으로 구축하고 공장 건설에 약 5.3조원, 장기적으로 총 20조원 이상을 투자할 계획이라고 밝혔다. 회사가 제시한 당시 목표는 2025년 11월 공장 건설 완료 후 조기 양산이었다.",
-      "source_key": "SKHYNIX_NEWSROOM",
-      "source_locator": "https://news.skhynix.com/en/sk-hynix-to-produce-dram-from-m15x-in-cheongju/",
-      "verification_status": "SOURCE_VERIFIED",
-      "source_site_ref": {"source_key": "ENVINFO", "source_site_id": "00000000000000362175"},
-      "analysis_role": "CONTEXT_MARKER",
-      "affected_sources": ["ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"],
-      "notes": "2022년 계획의 후속·변경 맥락이다. 계획된 생산능력 확대를 2024년까지의 환경수치 변화 원인으로 소급하지 않는다."
-    }
-  ],
+  "events": [],
   "gaps": [
     {
-      "gap_id": "M15X_ACTUAL_OPERATION_START_NOT_USED",
-      "source_key": "SKHYNIX_NEWSROOM",
+      "gap_id": "KKPC_INTEGRATED_PERMIT_PRIMARY_EVENT_PENDING",
+      "source_key": "INTEGRATED_PERMIT",
       "severity": "MEDIUM",
-      "reason": "2022년과 2024년 공식 발표는 건설·투자 계획을 제공하지만, 현재 2020~2024 관측자료의 해석에서 M15X의 실제 가동·양산 개시를 확정 근거로 사용하지 않는다. 계획과 실제 운영을 구분한다."
+      "reason": "Integrated-permit history is relevant to several Kumho Petrochemical sites, but no event is injected into the first cross-company run until a first-party government record is anchored to the exact site and date. This prevents contextual permit events from influencing topic selection prematurely."
     },
     {
-      "gap_id": "2026_FUTURE_FAB_PLANS_CONTEXT_ONLY",
-      "source_key": "SKHYNIX_NEWSROOM",
+      "gap_id": "KKPC_SITE_RELATION_EVENTS_NOT_PRESEEDED",
+      "source_key": "KKPC_OFFICIAL",
       "severity": "LOW",
-      "reason": "2026년 8월 SK하이닉스는 청주 M17과 용인 Y2 신규 Fab 투자계획을 발표했으나, 아직 운영 중인 requested scope의 2020~2024 관측치와 직접 연결하지 않는다. 향후 생산기반 방향을 볼 때만 별도 참고한다."
+      "reason": "The official network lists Ulsan Rubber and Ulsan LATEX at the same address and Yeosu Energy Plants as separate facilities. These are identity/relationship questions, not pre-seeded causal or operational events."
     }
   ]
 }
