@@ -1,0 +1,79 @@
+name: K-BREF public archive probe
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - '.github/workflows/kbref-public-archive-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Probe National Archives publication records
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          import requests
+          from bs4 import BeautifulSoup
+
+          url='https://theme.archives.go.kr/next/publishment/organSearch.do?page=519'
+          s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
+          r=s.get(url,timeout=(8,25)); r.raise_for_status()
+          Path('probe').mkdir(exist_ok=True)
+          Path('probe/archive_page.html').write_text(r.text,encoding='utf-8')
+          soup=BeautifulSoup(r.text,'html.parser')
+          result={'source_url':url,'status_code':r.status_code,'records':{}}
+          for management_no in ('CM00079359','CM00079360'):
+              text=soup.find(string=lambda x: x and management_no in x)
+              rec={'found':bool(text),'management_no':management_no}
+              if text:
+                  node=text.parent
+                  # Climb until the block contains the title and action controls, but keep the probe bounded.
+                  for _ in range(8):
+                      parent=node.parent
+                      if parent is None: break
+                      if len(' '.join(parent.stripped_strings))>2000: break
+                      node=parent
+                  rec['text']=' '.join(node.stripped_strings)[:3000]
+                  rec['html']=str(node)[:20000]
+                  attrs=[]
+                  for tag in node.find_all(True):
+                      interesting={k:str(v) for k,v in tag.attrs.items() if k in {'href','onclick','action','value','name','id','data-id','data-url','class'}}
+                      if interesting: attrs.append({'tag':tag.name,**interesting})
+                  rec['attributes']=attrs[:200]
+                  urls=sorted(set(re.findall(r'https?://[^\"\'<> ]+',str(node))))
+                  rec['absolute_urls']=urls
+              result['records'][management_no]=rec
+          Path('probe/probe.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+      - name: Probe current IEPS reference page
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import requests
+          url='https://ieps.nier.go.kr/web/board/5/1898/'
+          r=requests.get(url,timeout=(8,20),headers={'User-Agent':'Mozilla/5.0'})
+          print('IEPS',r.status_code,len(r.content),r.url)
+          PY
+      - name: Upload probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: kbref-public-archive-probe
+          path: probe/
+          if-no-files-found: error
+          retention-days: 7
