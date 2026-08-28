@@ -1,0 +1,91 @@
+name: Human archive replay QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'requests/archive_replay_qa.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: archive-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay_archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Install Korean/CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-nanum
+          sudo fc-cache -f
+      - name: Read source run
+        id: cfg
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          cfg=json.load(open('requests/archive_replay_qa.json',encoding='utf-8'))
+          print('run_id='+str(cfg['source_run_id']))
+          PY
+      - name: Bootstrap current discovery inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download prior stable sources
+        uses: actions/download-artifact@v4
+        with:
+          name: stable-sources
+          path: collected/stable
+          run-id: ${{ steps.cfg.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Download prior ICIS attempts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+          run-id: ${{ steps.cfg.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Rebuild package with current code
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Preserve discovery summary
+        run: cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
+      - name: Build deduplicated human archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
+      - name: Show archive summary
+        run: cat assembled/Archive_Summary.json
+      - name: Upload archive replay result
+        uses: actions/upload-artifact@v4
+        with:
+          name: human-archive-replay-qa
+          path: |
+            assembled/Human_Archive.zip
+            assembled/Archive_Summary.json
+            assembled/Master_Manifest.json
+            assembled/Artifact_Index.csv
+          if-no-files-found: error
+          retention-days: 7
