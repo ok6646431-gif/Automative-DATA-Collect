@@ -11,10 +11,8 @@ BLOCKED_EXTENSIONS = {"exe", "msi", "bat", "cmd", "ps1", "sh", "scr", "com", "dl
 ALLOWED_EXTENSIONS = {"pdf", "html", "htm", "txt", "csv", "png", "jpg", "jpeg", "gif", "webp", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx"}
 MAX_FILE_BYTES = 100 * 1024 * 1024
 MAX_TOTAL_BYTES = 500 * 1024 * 1024
-# Public-document collection is an evidence lane, not a reason to block the whole
-# control-plane for tens of minutes. Two bounded attempts are enough to distinguish
-# a temporarily slow/unreachable locator from an available source; downstream
-# Source_Availability keeps failures explicit instead of treating them as no evidence.
+# Keep each source attempt bounded. A document may declare separately verified
+# fallback_sources; the collector tries them only after the primary source fails.
 DOWNLOAD_ATTEMPTS = 2
 PREFLIGHT_TIMEOUT = (5, 10)
 DOWNLOAD_TIMEOUT = (8, 25)
@@ -24,6 +22,10 @@ FIELDS = [
     "document_category", "importance", "title", "report_year", "coverage_start", "coverage_end",
     "publication_date", "original_filename", "stored_path", "source_locator", "source_url", "retrieved_at",
     "bytes", "sha256", "content_type", "verification_status", "collection_status", "notes"
+]
+ATTEMPT_FIELDS = [
+    "document_id", "source_order", "source_role", "source_url", "source_locator", "verification_status",
+    "attempt_status", "error", "bytes", "content_type"
 ]
 
 
@@ -46,14 +48,7 @@ def read_json(path, default=None):
 
 
 def repair_header_filename(value):
-    """Repair UTF-8 filename bytes that requests decoded as ISO-8859-1.
-
-    RFC 5987 ``filename*=UTF-8''`` values are handled before this function. Some
-    Korean public sites instead send raw UTF-8 bytes in the legacy ``filename=``
-    parameter; HTTP libraries then expose mojibake such as ``SKíì´...``.
-    Re-decoding latin-1 as UTF-8 is safe only when that byte sequence is valid,
-    so genuine Latin-1/ASCII names are left unchanged when conversion fails.
-    """
+    """Repair UTF-8 filename bytes that requests decoded as ISO-8859-1."""
     text = str(value or "")
     try:
         fixed = text.encode("latin-1").decode("utf-8")
@@ -61,7 +56,6 @@ def repair_header_filename(value):
         return text
     if fixed == text:
         return text
-    # Adopt only when conversion clearly improves a legacy-header filename.
     old_controls = sum(0x80 <= ord(ch) <= 0x9F for ch in text)
     new_controls = sum(0x80 <= ord(ch) <= 0x9F for ch in fixed)
     old_hangul = sum("가" <= ch <= "힣" for ch in text)
@@ -124,6 +118,12 @@ def write_index(path, rows):
         w.writeheader(); w.writerows(rows)
 
 
+def write_attempts(path, rows):
+    with Path(path).open("w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=ATTEMPT_FIELDS, extrasaction="ignore")
+        w.writeheader(); w.writerows(rows)
+
+
 def is_http_url(value):
     try:
         return urlparse(str(value or "")).scheme in {"http", "https"}
@@ -157,11 +157,7 @@ def validate_payload(expected_ext, content_type, path):
 
 
 def preflight(session, doc, source_url):
-    """Visit a verified source page once per locator to establish cookies/Referer.
-
-    Preflight is best-effort and bounded. Reusing the result prevents a shared report
-    index page from adding the same network delay for every document in a run.
-    """
+    """Visit a verified source page once per locator to establish cookies/Referer."""
     locator = str(doc.get("source_locator") or "")
     if not is_http_url(locator) or locator == source_url:
         return {}
@@ -210,64 +206,139 @@ def download_one(session, doc, target, total_bytes):
     raise last_exc
 
 
+def source_candidates(doc):
+    """Return primary then independently verified official fallback sources.
+
+    Fallback entries may override only source-specific fields. They never change the
+    document identity, report year, type, or importance declared by Discovery.
+    """
+    primary = dict(doc)
+    primary["_source_role"] = "PRIMARY"
+    primary["_source_order"] = 0
+    result = [primary]
+    seen = {str(primary.get("source_url") or "")}
+    for idx, alt in enumerate(doc.get("fallback_sources") or [], 1):
+        if not isinstance(alt, dict):
+            continue
+        candidate = dict(doc)
+        for key in ("source_url", "source_locator", "expected_extension", "verification_status"):
+            if key in alt:
+                candidate[key] = alt[key]
+        candidate["_source_role"] = f"FALLBACK_{idx}"
+        candidate["_source_order"] = idx
+        candidate["_source_note"] = str(alt.get("notes") or alt.get("source_role") or "")
+        url = str(candidate.get("source_url") or "")
+        if not url or url in seen:
+            continue
+        seen.add(url); result.append(candidate)
+    return result
+
+
+def attempt_row(doc, candidate, status, error="", count="", ctype=""):
+    return {
+        "document_id": str(doc.get("document_id") or ""),
+        "source_order": candidate.get("_source_order", ""),
+        "source_role": candidate.get("_source_role", ""),
+        "source_url": str(candidate.get("source_url") or ""),
+        "source_locator": str(candidate.get("source_locator") or candidate.get("source_url") or ""),
+        "verification_status": str(candidate.get("verification_status") or "UNVERIFIED"),
+        "attempt_status": status, "error": str(error or "")[:2000], "bytes": count, "content_type": ctype
+    }
+
+
 def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
     out = Path(out_dir); raw = out / "raw_documents"; raw.mkdir(parents=True, exist_ok=True)
     profile = read_json(profile_path, {}) or {}; company_id = str(profile.get("company_id") or "")
     expected_request = str(profile.get("request_id") or "")
     evidence = read_json(evidence_path, None)
-    rows = []; gaps = []; downloaded = failed = skipped = total_bytes = 0
+    rows = []; attempts = []; gaps = []; downloaded = failed = skipped = fallback_downloaded = total_bytes = 0
     status = {"source_key": "CORP_DOCS", "status": "RUNNING", "request_id": expected_request}
     if evidence is None:
-        status.update({"status": "NOT_RUN", "documents_declared": 0, "downloaded": 0, "failed": 0, "skipped": 0})
-        write_index(out / "document_index.csv", rows)
+        status.update({"status": "NOT_RUN", "documents_declared": 0, "downloaded": 0, "failed": 0, "skipped": 0, "fallback_downloaded": 0})
+        write_index(out / "document_index.csv", rows); write_attempts(out / "download_attempts.csv", attempts)
         (out / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
         return status
+
     supplied_request = str(evidence.get("request_id") or "")
     if not expected_request or supplied_request != expected_request:
-        status.update({"status": "INVALID_SCOPE", "supplied_request_id": supplied_request, "documents_declared": len(evidence.get("documents", []) or []), "downloaded": 0, "failed": 0, "skipped": len(evidence.get("documents", []) or [])})
-        for doc in evidence.get("documents", []) or []:
+        docs = evidence.get("documents", []) or []
+        status.update({"status": "INVALID_SCOPE", "supplied_request_id": supplied_request, "documents_declared": len(docs), "downloaded": 0, "failed": 0, "skipped": len(docs), "fallback_downloaded": 0})
+        for doc in docs:
             rows.append(blank_row(doc, company_id, "SKIPPED_SCOPE_MISMATCH", f"expected_request_id={expected_request}; supplied_request_id={supplied_request}"))
-        write_index(out / "document_index.csv", rows)
+        write_index(out / "document_index.csv", rows); write_attempts(out / "download_attempts.csv", attempts)
         (out / "discovery_gaps.json").write_text(json.dumps(evidence.get("gaps", []) or [], ensure_ascii=False, indent=2), encoding="utf-8")
         (out / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
         return status
+
     gaps = evidence.get("gaps", []) or []
-    session = requests.Session(); session.headers.update({"User-Agent": UA})
-    PREFLIGHT_CACHE.clear()
+    session = requests.Session(); session.headers.update({"User-Agent": UA}); PREFLIGHT_CACHE.clear()
+
     for doc in evidence.get("documents", []) or []:
         verification = str(doc.get("verification_status") or "UNVERIFIED")
         if verification not in STRONG_VERIFICATION:
             skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_UNVERIFIED", "Only VERIFIED/SOURCE_VERIFIED document evidence is downloaded.")); continue
-        url = str(doc.get("source_url") or "")
-        if not is_http_url(url):
-            skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_UNSAFE_URL", "Only http/https document locators are allowed.")); continue
-        try:
-            # Filename/type decisions are made from evidence first; the response is
-            # validated after download so a server-side HTML error page can never be
-            # accepted merely because the URL or expected extension says '.pdf'.
-            expected = str(doc.get("expected_extension") or "").lower().lstrip(".")
+
+        base_expected = str(doc.get("expected_extension") or "").lower().lstrip(".")
+        if base_expected in BLOCKED_EXTENSIONS or (base_expected and base_expected not in ALLOWED_EXTENSIONS):
+            skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", f"extension={base_expected or 'unknown'}")); continue
+
+        year = safe(doc.get("report_year") or "UNDATED"); dtype = safe(doc.get("document_type") or "OTHER_OFFICIAL_DOCUMENT")
+        target_dir = raw / dtype / year; target_dir.mkdir(parents=True, exist_ok=True)
+        provisional_name = safe(doc.get("title") or doc.get("document_id") or "document") + (("." + base_expected) if base_expected else "")
+        provisional_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(provisional_name)}"
+        errors = []; blocked_only = True; success = False
+
+        for candidate in source_candidates(doc):
+            role = str(candidate.get("_source_role") or "PRIMARY")
+            candidate_verification = str(candidate.get("verification_status") or "UNVERIFIED")
+            url = str(candidate.get("source_url") or "")
+            if candidate_verification not in STRONG_VERIFICATION:
+                attempts.append(attempt_row(doc, candidate, "SKIPPED_UNVERIFIED_SOURCE", "Fallback source is not independently verified.")); errors.append(f"{role}:unverified"); continue
+            if not is_http_url(url):
+                attempts.append(attempt_row(doc, candidate, "SKIPPED_UNSAFE_SOURCE", "Only http/https source URLs are allowed.")); errors.append(f"{role}:unsafe_url"); continue
+            expected = str(candidate.get("expected_extension") or base_expected or "").lower().lstrip(".")
             if expected in BLOCKED_EXTENSIONS or (expected and expected not in ALLOWED_EXTENSIONS):
-                skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", f"extension={expected or 'unknown'}")); continue
-            year = safe(doc.get("report_year") or "UNDATED"); dtype = safe(doc.get("document_type") or "OTHER_OFFICIAL_DOCUMENT")
-            target_dir = raw / dtype / year; target_dir.mkdir(parents=True, exist_ok=True)
-            provisional_name = safe(doc.get("title") or doc.get("document_id") or "document") + (("." + expected) if expected else "")
-            provisional_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(provisional_name)}"
-            r, count, ctype = download_one(session, doc, provisional_target, total_bytes)
-            name = remote_filename(doc, r); ext = infer_extension(doc, r, name)
-            if ext in BLOCKED_EXTENSIONS or (ext and ext not in ALLOWED_EXTENSIONS):
+                attempts.append(attempt_row(doc, candidate, "SKIPPED_FILE_TYPE", f"extension={expected or 'unknown'}")); errors.append(f"{role}:blocked_extension={expected}"); continue
+
+            blocked_only = False
+            try:
+                r, count, ctype = download_one(session, candidate, provisional_target, total_bytes)
+                name = remote_filename(candidate, r); ext = infer_extension(candidate, r, name)
+                if ext in BLOCKED_EXTENSIONS or (ext and ext not in ALLOWED_EXTENSIONS):
+                    provisional_target.unlink(missing_ok=True)
+                    attempts.append(attempt_row(doc, candidate, "SKIPPED_FILE_TYPE", f"response_extension={ext or 'unknown'}")); errors.append(f"{role}:blocked_response_extension={ext}"); blocked_only = True; continue
+                if not Path(name).suffix and ext:
+                    name += "." + ext
+                final_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(name)}"
+                if final_target != provisional_target:
+                    provisional_target.replace(final_target)
+                total_bytes += count
+                note_parts = [str(doc.get("notes") or ""), f"source_selection={role}"]
+                if role != "PRIMARY":
+                    note_parts.append(f"primary_source_url={doc.get('source_url','')}")
+                    if candidate.get("_source_note"):
+                        note_parts.append(f"fallback_note={candidate.get('_source_note')}")
+                row = blank_row(doc, company_id, "DOWNLOADED", "; ".join(x for x in note_parts if x))
+                row.update({
+                    "original_filename": name, "stored_path": str(final_target), "retrieved_at": datetime.now(timezone.utc).isoformat(),
+                    "bytes": count, "sha256": sha256(final_target), "content_type": ctype,
+                    "source_url": url, "source_locator": str(candidate.get("source_locator") or url),
+                    "verification_status": candidate_verification
+                })
+                rows.append(row); attempts.append(attempt_row(doc, candidate, "DOWNLOADED", count=count, ctype=ctype))
+                downloaded += 1; fallback_downloaded += int(role != "PRIMARY"); success = True; break
+            except Exception as exc:
                 provisional_target.unlink(missing_ok=True)
-                skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", f"extension={ext or 'unknown'}")); continue
-            if not Path(name).suffix and ext:
-                name += "." + ext
-            final_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(name)}"
-            if final_target != provisional_target:
-                provisional_target.replace(final_target)
-            total_bytes += count
-            row = blank_row(doc, company_id, "DOWNLOADED")
-            row.update({"original_filename": name, "stored_path": str(final_target), "retrieved_at": datetime.now(timezone.utc).isoformat(), "bytes": count, "sha256": sha256(final_target), "content_type": ctype})
-            rows.append(row); downloaded += 1
-        except Exception as exc:
-            failed += 1; rows.append(blank_row(doc, company_id, "DOWNLOAD_FAILED", f"{type(exc).__name__}: {exc}"))
+                msg = f"{type(exc).__name__}: {exc}"
+                attempts.append(attempt_row(doc, candidate, "DOWNLOAD_FAILED", msg)); errors.append(f"{role}:{msg}")
+
+        if success:
+            continue
+        if blocked_only and errors and all("blocked" in x for x in errors):
+            skipped += 1; rows.append(blank_row(doc, company_id, "SKIPPED_FILE_TYPE", " | ".join(errors)))
+        else:
+            failed += 1; rows.append(blank_row(doc, company_id, "DOWNLOAD_FAILED", " | ".join(errors) or "No usable verified source candidate."))
+
     declared = len(evidence.get("documents", []) or [])
     if downloaded:
         final = "DATA_FOUND" if failed == 0 else "PARTIAL_DOWNLOAD"
@@ -275,8 +346,13 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
         final = "NO_DOCUMENTS_DECLARED"
     else:
         final = "NO_DOCUMENT_DOWNLOADED"
-    status.update({"status": final, "discovery_status": str(evidence.get("discovery_status") or "UNKNOWN"), "documents_declared": declared, "downloaded": downloaded, "failed": failed, "skipped": skipped, "gaps": len(gaps), "bytes": total_bytes})
-    write_index(out / "document_index.csv", rows)
+    status.update({
+        "status": final, "discovery_status": str(evidence.get("discovery_status") or "UNKNOWN"),
+        "documents_declared": declared, "downloaded": downloaded, "fallback_downloaded": fallback_downloaded,
+        "failed": failed, "skipped": skipped, "gaps": len(gaps), "bytes": total_bytes,
+        "source_attempt_rows": len(attempts)
+    })
+    write_index(out / "document_index.csv", rows); write_attempts(out / "download_attempts.csv", attempts)
     (out / "discovery_gaps.json").write_text(json.dumps(gaps, ensure_ascii=False, indent=2), encoding="utf-8")
     (out / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(status, ensure_ascii=False))
