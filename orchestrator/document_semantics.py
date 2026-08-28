@@ -23,7 +23,14 @@ FUTURE_WORDS=['목표','계획','예정','추진','확대할','도입할','달�
 ACTION_WORDS=['설치','도입','적용','운영','개선','교체','구축','증설','감축','저감','재이용','회수','인증','허가','취득','완료','installed','introduced','applied','reduced','reused','certified']
 POLICY_WORDS=['정책','방침','규칙','절차','관리체계','위원회','검토','승인','관리기준','금지','제한','policy','procedure','committee','prohibit','restrict']
 
-SUPPORTED_TYPES={'BAT_REFERENCE','GUIDELINE','SUSTAINABILITY_REPORT','ENVIRONMENTAL_POLICY','CHEMICAL_POLICY','SHE_POLICY','ANNUAL_REPORT'}
+SUPPORTED_TYPES={
+    'BAT_REFERENCE','GUIDELINE','SUSTAINABILITY_REPORT','ENVIRONMENTAL_POLICY','CHEMICAL_POLICY','SHE_POLICY',
+    'ANNUAL_REPORT','CLIMATE_ENERGY_POLICY','ENVIRONMENTAL_DISCLOSURE','ENVIRONMENT_STRATEGY'
+}
+COMPANY_INDEX_MARKERS=[
+    'index only','index page','policy index','자료실','목록 페이지','목록만','not a substitute',
+    '개별 정책','individual policies','catalog metadata','detailed contents only','metadata and detailed contents'
+]
 
 class TextHTMLParser(HTMLParser):
     def __init__(self):
@@ -43,8 +50,6 @@ def normalize(text):
 def split_units(text):
     raw=str(text or '').replace('\r\n','\n').replace('\r','\n')
     if not raw.strip(): return []
-    # Preserve PDF line structure first. Collapsing all whitespace before splitting
-    # caused long technical pages to become one >900-character block and disappear.
     pieces=[]
     for line in re.split(r'\n+',raw):
         line=normalize(line)
@@ -56,7 +61,6 @@ def split_units(text):
         if len(piece)<35: continue
         if len(piece)<=900:
             out.append(piece); continue
-        # Long table/text rows are retained in bounded chunks rather than dropped.
         for i in range(0,len(piece),850):
             chunk=normalize(piece[i:i+850])
             if len(chunk)>=35: out.append(chunk)
@@ -118,8 +122,6 @@ def pdf_reader():
         from pypdf import PdfReader
         return PdfReader
     except ImportError:
-        # The package stage is a controlled GitHub Actions environment. Bootstrap
-        # the lightweight parser when the workflow image does not already provide it.
         subprocess.run([sys.executable,'-m','pip','install','--disable-pip-version-check','pypdf'],check=True,capture_output=True,text=True)
         from pypdf import PdfReader
         return PdfReader
@@ -142,14 +144,7 @@ def extract_pages(path):
 
 
 def industry_reference_access(row,path):
-    """Return whether a BAT/guideline artifact contains semantic body evidence.
-
-    A catalog, board index, metadata page, or table-of-contents landing page proves
-    that a reference exists, but it is not enough to claim that the workflow read a
-    technical technique/issue statement. BAT PDFs are treated as full-text. A genuine
-    full-text HTML technical reference must be explicitly marked in the evidence note
-    with FULL_TEXT_HTML rather than inferred from keywords on an index page.
-    """
+    """Separate technical-body evidence from BAT/guideline catalog/index context."""
     dtype=str(row.get('document_type') or '')
     if dtype not in {'BAT_REFERENCE','GUIDELINE'}:
         return 'NOT_APPLICABLE'
@@ -160,6 +155,23 @@ def industry_reference_access(row,path):
     if suffix in {'.html','.htm'} and 'FULL_TEXT_HTML' in notes.upper():
         return 'FULL_TEXT'
     return 'REFERENCE_INDEX_ONLY'
+
+
+def company_document_access(row,path):
+    """Keep company archive/policy-index pages as context, not action/plan evidence.
+
+    The evidence declaration can explicitly say a page is an index/catalog. Those
+    pages may contain words such as policy, target or reduction in navigation text,
+    but that does not mean the company disclosed the corresponding action on that
+    page. Substantive company HTML/PDF remains eligible for page-grounded extraction.
+    """
+    dtype=str(row.get('document_type') or '')
+    if dtype in {'BAT_REFERENCE','GUIDELINE'}:
+        return 'NOT_APPLICABLE'
+    notes=' '.join([str(row.get('notes') or ''),str(row.get('title') or '')]).lower()
+    if any(marker in notes for marker in COMPANY_INDEX_MARKERS):
+        return 'COMPANY_INDEX_ONLY'
+    return 'SUBSTANTIVE'
 
 
 def boundary(layer,kind):
@@ -178,6 +190,7 @@ def run_document_semantics(package_root,max_per_document=500):
         if not path:
             failures.append({'document_id':row.get('document_id'),'reason':'LOCAL_FILE_NOT_FOUND'}); continue
         ref_access=industry_reference_access(row,path)
+        company_access=company_document_access(row,path)
         docs+=1; count=0
         try: page_texts=extract_pages(path)
         except Exception as exc:
@@ -189,6 +202,8 @@ def run_document_semantics(package_root,max_per_document=500):
                 for domain,layer,kind,terms in classes:
                     semantic_state='PAGE_GROUNDED_EXTRACT'
                     if layer=='INDUSTRY_TECHNICAL' and ref_access=='REFERENCE_INDEX_ONLY':
+                        semantic_state='REFERENCE_INDEX_CONTEXT'
+                    elif layer in {'COMPANY_ACTION','FUTURE_DIRECTION'} and company_access=='COMPANY_INDEX_ONLY':
                         semantic_state='REFERENCE_INDEX_CONTEXT'
                     out.append({
                         'semantic_id':stable_id('SEM_',row.get('document_id'),page_no,domain,layer,kind,unit[:160]),
@@ -216,14 +231,15 @@ def run_document_semantics(package_root,max_per_document=500):
             'title':f"{r['document_id']} p.{r['page']} {r['semantic_kind']}",'statement':r['statement'],
             'source_key':'CORP_DOCS','source_locator':locator,'interpretation_boundary':r['interpretation_boundary']
         })
-    generated={'schema_version':'1.1','request_id':profile.get('request_id',''),'facts':facts,
-               'generation_rule':'Only page-grounded technical-body INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. BAT/guideline catalog, metadata, board-index and table-of-contents HTML remain REFERENCE_INDEX_CONTEXT. Company action/future excerpts remain page-grounded candidates and may be used only as statements of company action/plan, never as proof of performance or causality.'}
+    generated={'schema_version':'1.2','request_id':profile.get('request_id',''),'facts':facts,
+               'generation_rule':'Only page-grounded technical-body INDUSTRY_TECHNICAL excerpts are auto-promoted as reference facts. BAT/guideline catalog and company index/archive pages remain REFERENCE_INDEX_CONTEXT. Company action/future excerpts are usable only when PAGE_GROUNDED_EXTRACT and never prove performance or causality.'}
     (pkg/'Generated_Semantic_Evidence.json').write_text(json.dumps(generated,ensure_ascii=False,indent=2),encoding='utf-8')
 
-    summary={'schema_version':'1.3','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
+    summary={'schema_version':'1.4','documents_processed':docs,'pages_scanned':pages,'semantic_candidates':len(dedup),
              'generated_industry_facts':len(facts),'reference_index_candidates':sum(r.get('semantic_state')=='REFERENCE_INDEX_CONTEXT' for r in dedup),
              'layer_counts':{k:sum(r['layer']==k for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
-             'failures':failures,'principle':'Extraction is page-grounded candidate evidence; BAT/guideline index pages do not satisfy technical-semantic readiness; company BAT application, performance and causality are never inferred automatically.'}
+             'usable_layer_counts':{k:sum(r['layer']==k and r.get('semantic_state')=='PAGE_GROUNDED_EXTRACT' for r in dedup) for k in ['INDUSTRY_TECHNICAL','COMPANY_ACTION','FUTURE_DIRECTION']},
+             'failures':failures,'principle':'Extraction is page-grounded candidate evidence; BAT/guideline and company index pages do not satisfy semantic readiness; company BAT application, performance and causality are never inferred automatically.'}
     (pkg/'Document_Semantics_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
     return summary
 
