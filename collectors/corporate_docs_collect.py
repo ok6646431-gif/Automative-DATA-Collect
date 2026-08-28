@@ -11,7 +11,14 @@ BLOCKED_EXTENSIONS = {"exe", "msi", "bat", "cmd", "ps1", "sh", "scr", "com", "dl
 ALLOWED_EXTENSIONS = {"pdf", "html", "htm", "txt", "csv", "png", "jpg", "jpeg", "gif", "webp", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx"}
 MAX_FILE_BYTES = 100 * 1024 * 1024
 MAX_TOTAL_BYTES = 500 * 1024 * 1024
-DOWNLOAD_ATTEMPTS = 3
+# Public-document collection is an evidence lane, not a reason to block the whole
+# control-plane for tens of minutes. Two bounded attempts are enough to distinguish
+# a temporarily slow/unreachable locator from an available source; downstream
+# Source_Availability keeps failures explicit instead of treating them as no evidence.
+DOWNLOAD_ATTEMPTS = 2
+PREFLIGHT_TIMEOUT = (5, 10)
+DOWNLOAD_TIMEOUT = (8, 25)
+PREFLIGHT_CACHE = {}
 FIELDS = [
     "document_id", "company_id", "canonical_site_id", "site_name_raw", "source_key", "document_type",
     "document_category", "importance", "title", "report_year", "coverage_start", "coverage_end",
@@ -150,21 +157,24 @@ def validate_payload(expected_ext, content_type, path):
 
 
 def preflight(session, doc, source_url):
-    """Visit a verified source page first when it is a distinct HTTP locator.
+    """Visit a verified source page once per locator to establish cookies/Referer.
 
-    Some institutional download endpoints require cookies and/or a Referer established
-    by the public source page. Preflight failure is non-fatal; the download itself is
-    still attempted and independently validated.
+    Preflight is best-effort and bounded. Reusing the result prevents a shared report
+    index page from adding the same network delay for every document in a run.
     """
     locator = str(doc.get("source_locator") or "")
     if not is_http_url(locator) or locator == source_url:
         return {}
+    if locator in PREFLIGHT_CACHE:
+        return dict(PREFLIGHT_CACHE[locator])
     try:
-        with session.get(locator, timeout=(8, 30), allow_redirects=True) as r:
+        with session.get(locator, timeout=PREFLIGHT_TIMEOUT, allow_redirects=True) as r:
             r.raise_for_status()
-            return {"Referer": r.url}
+            headers = {"Referer": r.url}
     except Exception:
-        return {"Referer": locator}
+        headers = {"Referer": locator}
+    PREFLIGHT_CACHE[locator] = headers
+    return dict(headers)
 
 
 def download_one(session, doc, target, total_bytes):
@@ -173,7 +183,7 @@ def download_one(session, doc, target, total_bytes):
     last_exc = None
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
-            with session.get(url, stream=True, timeout=(8, 60), allow_redirects=True, headers=headers) as r:
+            with session.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT, allow_redirects=True, headers=headers) as r:
                 r.raise_for_status()
                 length = int(r.headers.get("Content-Length") or 0)
                 if length and length > MAX_FILE_BYTES:
@@ -223,6 +233,7 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
         return status
     gaps = evidence.get("gaps", []) or []
     session = requests.Session(); session.headers.update({"User-Agent": UA})
+    PREFLIGHT_CACHE.clear()
     for doc in evidence.get("documents", []) or []:
         verification = str(doc.get("verification_status") or "UNVERIFIED")
         if verification not in STRONG_VERIFICATION:
