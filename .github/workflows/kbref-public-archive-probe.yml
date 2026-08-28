@@ -77,29 +77,39 @@ jobs:
               detail_html=dr.text
               Path(f'probe/{management_no}_detail.html').write_text(detail_html,encoding='utf-8')
               dsoup=BeautifulSoup(detail_html,'html.parser')
-              links=[]
-              for tag in dsoup.find_all(['a','form','input','button']):
-                  attrs={k:str(v) for k,v in tag.attrs.items() if k in {'href','onclick','action','value','name','id','data-url','data-file','data-id'}}
-                  if attrs:
-                      links.append({'tag':tag.name,'text':' '.join(tag.stripped_strings)[:200],**attrs})
               rec['detail_status']=dr.status_code
               rec['detail_text']=' '.join(dsoup.stripped_strings)[:5000]
-              rec['detail_controls']=links[:300]
+              rec['detail_controls']=[{'tag':tag.name,'text':' '.join(tag.stripped_strings)[:200],**{k:str(v) for k,v in tag.attrs.items() if k in {'href','onclick','action','value','name','id','data-url','data-file','data-id'}}} for tag in dsoup.find_all(['a','form','input','button']) if tag.attrs][:300]
               rec['detail_urls']=sorted(set(re.findall(r'https?://[^\"\'<> ]+',detail_html)))
-              rec['downloadish_strings']=sorted(set(re.findall(r'[^\"\']*(?:download|Download|file|File|view|View|원문)[^\"\']*',detail_html,re.I)))[:200]
               result['records'][management_no]=rec
 
           Path('probe/probe.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
           print(json.dumps(result,ensure_ascii=False,indent=2))
           PY
-      - name: Probe current IEPS reference page
-        continue-on-error: true
+      - name: Probe current IEPS reference page and attachment links
         run: |
           python - <<'PY'
+          import json,re
+          from pathlib import Path
+          from urllib.parse import urljoin
           import requests
+          from bs4 import BeautifulSoup
           url='https://ieps.nier.go.kr/web/board/5/1898/'
           r=requests.get(url,timeout=(8,20),headers={'User-Agent':'Mozilla/5.0'})
-          print('IEPS',r.status_code,len(r.content),r.url)
+          r.raise_for_status()
+          soup=BeautifulSoup(r.text,'html.parser')
+          controls=[]
+          for tag in soup.find_all(['a','form','input','button']):
+              attrs={k:str(v) for k,v in tag.attrs.items() if k in {'href','onclick','action','value','name','id','data-url','data-file','data-id','download'}}
+              text=' '.join(tag.stripped_strings)[:300]
+              hay=(text+' '+json.dumps(attrs,ensure_ascii=False)).lower()
+              if any(x in hay for x in ('첨부','다운','download','file','pdf','hwp','zip')):
+                  if 'href' in attrs: attrs['resolved_href']=urljoin(url,attrs['href'])
+                  controls.append({'tag':tag.name,'text':text,**attrs})
+          result={'url':url,'status':r.status_code,'bytes':len(r.content),'title':soup.title.get_text(' ',strip=True) if soup.title else '', 'controls':controls, 'raw_paths':sorted(set(re.findall(r'[\"\']([^\"\']+\.(?:pdf|hwp|hwpx|zip)(?:\?[^\"\']*)?)[\"\']',r.text,re.I)))}
+          Path('probe/ieps_page.html').write_text(r.text,encoding='utf-8')
+          Path('probe/ieps.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
           PY
       - name: Upload probe
         uses: actions/upload-artifact@v4
