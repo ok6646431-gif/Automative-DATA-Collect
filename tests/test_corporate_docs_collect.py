@@ -43,9 +43,13 @@ class CorporateDocsTests(unittest.TestCase):
             with patch("corporate_docs_collect.requests.Session",return_value=session):
                 status=collect(evidence,profile,out)
             self.assertEqual(status["downloaded"],1)
+            self.assertEqual(status["fallback_downloaded"],0)
             rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
             self.assertEqual(rows[0]["collection_status"],"DOWNLOADED")
             self.assertTrue(rows[0]["sha256"])
+            attempts=list(csv.DictReader((out/"download_attempts.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(attempts[0]["source_role"],"PRIMARY")
+            self.assertEqual(attempts[0]["attempt_status"],"DOWNLOADED")
 
     def test_expected_pdf_rejects_html_error_payload(self):
         with tempfile.TemporaryDirectory() as td:
@@ -62,6 +66,57 @@ class CorporateDocsTests(unittest.TestCase):
             self.assertEqual(rows[0]["collection_status"],"DOWNLOAD_FAILED")
             self.assertIn("expected PDF payload",rows[0]["notes"])
             self.assertFalse(any((out/"raw_documents").rglob("*.pdf")))
+
+    def test_verified_fallback_is_used_only_after_primary_failure(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            doc={
+                "document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Report","report_year":2025,
+                "source_url":"https://company.example/report.pdf","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE",
+                "fallback_sources":[{
+                    "source_url":"https://exchange.example/report.pdf","source_locator":"https://exchange.example/disclosure",
+                    "expected_extension":"pdf","verification_status":"VERIFIED","source_role":"official_exchange_attachment"
+                }]
+            }
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[doc]}),encoding="utf-8")
+            blocked=FakeResponse(body=b"<html>temporary error</html>",content_type="text/html",disposition="",url="https://company.example/report.pdf")
+            fallback=FakeResponse(body=b"%PDF-fallback",content_type="application/pdf",disposition='attachment; filename="fallback.pdf"',url="https://exchange.example/report.pdf")
+            source_page=FakeResponse(body=b"<html>disclosure</html>",content_type="text/html",disposition="",url="https://exchange.example/disclosure")
+            session=unittest.mock.MagicMock(); session.get.side_effect=[blocked,blocked,source_page,fallback]
+            with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],1)
+            self.assertEqual(status["fallback_downloaded"],1)
+            rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(rows[0]["collection_status"],"DOWNLOADED")
+            self.assertEqual(rows[0]["source_url"],"https://exchange.example/report.pdf")
+            self.assertIn("source_selection=FALLBACK_1",rows[0]["notes"])
+            attempts=list(csv.DictReader((out/"download_attempts.csv").open(encoding="utf-8-sig")))
+            self.assertEqual([(r["source_role"],r["attempt_status"]) for r in attempts],[
+                ("PRIMARY","DOWNLOAD_FAILED"),("FALLBACK_1","DOWNLOADED")
+            ])
+
+    def test_unverified_fallback_is_never_used(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            doc={
+                "document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Report",
+                "source_url":"https://company.example/report.pdf","expected_extension":"pdf","verification_status":"VERIFIED",
+                "fallback_sources":[{"source_url":"https://mirror.example/report.pdf","verification_status":"UNVERIFIED"}]
+            }
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"PARTIAL","documents":[doc]}),encoding="utf-8")
+            blocked=FakeResponse(body=b"<html>error</html>",content_type="text/html",disposition="",url="https://company.example/report.pdf")
+            session=unittest.mock.MagicMock(); session.get.side_effect=[blocked,blocked]
+            with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],0)
+            self.assertEqual(status["fallback_downloaded"],0)
+            self.assertEqual(status["failed"],1)
+            self.assertEqual(session.get.call_count,DOWNLOAD_ATTEMPTS)
+            attempts=list(csv.DictReader((out/"download_attempts.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(attempts[-1]["attempt_status"],"SKIPPED_UNVERIFIED_SOURCE")
 
     def test_source_locator_is_preflighted_and_used_as_referer(self):
         with tempfile.TemporaryDirectory() as td:
