@@ -52,6 +52,18 @@ def normalize_address(value):
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
+    # Some public registers insert a legal-dong before the road name while the
+    # first-party road address omits it (e.g. "성암동 처용로", "평여동 여수산단3로").
+    # Remove only a 동/가 token immediately before a road name. 읍/면 remain because
+    # they are part of the road-address hierarchy.
+    text = re.sub(
+        r"\s+[0-9A-Za-z가-힣]+(?:동|가)\s+(?=[0-9A-Za-z가-힣·._-]+(?:로|길)\s*\d)",
+        " ",
+        text,
+    )
+    m = re.match(r"^(.*?(?:로|길)\s*\d+(?:-\d+)?)\b", text)
+    if m:
+        text = m.group(1)
     return _plain(text)
 
 
@@ -110,6 +122,28 @@ def selected_candidates(profile):
     return selected, mode
 
 
+def _selected_address_counts(candidates):
+    counts = {}
+    for candidate in candidates:
+        key = normalize_address(candidate.get("address_raw"))
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+def _candidate_matches(candidate, site_name, site_address, profile, address_counts):
+    addr_match = _address_match(candidate.get("address_raw"), site_address)
+    name_match = _site_name_match(candidate.get("site_name_raw"), site_name, profile)
+    key = normalize_address(candidate.get("address_raw"))
+    # If the company's official list has multiple units at one address, address alone
+    # cannot decide which organizational unit a public environmental facility belongs
+    # to. Require both address and unit-name evidence and keep unmatched colocated units
+    # explicitly unresolved rather than silently merging them.
+    if key and address_counts.get(key, 0) > 1:
+        return addr_match and name_match
+    return addr_match or name_match
+
+
 def resolve_requested_scope(package_root, profile=None):
     root = Path(package_root)
     profile = profile or (read_json(root / "Company_Profile.json", {}) or {})
@@ -134,6 +168,7 @@ def resolve_requested_scope(package_root, profile=None):
             "source_labels": labels, "unresolved_candidates": [],
         }
 
+    address_counts = _selected_address_counts(candidates)
     canonical = set()
     unresolved = []
     for candidate in candidates:
@@ -141,17 +176,19 @@ def resolve_requested_scope(package_root, profile=None):
         for site in sites:
             if site.get("identity_status") != "CONFIRMED":
                 continue
-            if _address_match(candidate.get("address_raw"), site.get("canonical_address_key")) or _site_name_match(candidate.get("site_name_raw"), site.get("canonical_site_name"), profile):
+            if _candidate_matches(candidate, site.get("canonical_site_name"), site.get("canonical_address_key"), profile, address_counts):
                 matching.append(site.get("canonical_site_id", ""))
         matching = [x for x in dict.fromkeys(matching) if x]
         if matching:
             canonical.update(matching)
         else:
+            key = normalize_address(candidate.get("address_raw"))
+            reason = "COLOCATED_OFFICIAL_UNIT_NOT_DISTINCTLY_CONFIRMED" if key and address_counts.get(key, 0) > 1 else "NO_CONFIRMED_CANONICAL_SITE_MATCH"
             unresolved.append({
                 "candidate_id": candidate.get("candidate_id", ""),
                 "site_name_raw": candidate.get("site_name_raw", ""),
                 "address_raw": candidate.get("address_raw", ""),
-                "reason": "NO_CONFIRMED_CANONICAL_SITE_MATCH",
+                "reason": reason,
             })
 
     source_ids = {s: set() for s in CORE_SOURCES}
@@ -164,8 +201,7 @@ def resolve_requested_scope(package_root, profile=None):
         include = row.get("canonical_site_id") in canonical
         if not include:
             include = any(
-                _address_match(c.get("address_raw"), row.get("source_address_raw")) or
-                _site_name_match(c.get("site_name_raw"), row.get("source_site_name_raw"), profile)
+                _candidate_matches(c, row.get("source_site_name_raw"), row.get("source_address_raw"), profile, address_counts)
                 for c in candidates
             )
         if include:
@@ -238,13 +274,13 @@ def apply_requested_scope(package_root):
     for row in rows:
         source = row.get("source_key", "")
         sid = str(row.get("source_site_id") or "")
-        canonical = row.get("canonical_site_id", "")
-        if scope["mode"] == "SITE_SET" and canonical not in scope["target_canonical_site_ids"] and sid not in scope["target_source_ids"].get(source, set()):
+        canonical_id = row.get("canonical_site_id", "")
+        if scope["mode"] == "SITE_SET" and canonical_id not in scope["target_canonical_site_ids"] and sid not in scope["target_source_ids"].get(source, set()):
             continue
         inherited = []
         inherited.extend(company_links.get((source, ""), []))
-        if canonical:
-            inherited.extend(site_links.get((source, canonical), []))
+        if canonical_id:
+            inherited.extend(site_links.get((source, canonical_id), []))
         existing = [x for x in str(row.get("event_link_ids") or "").split("|") if x]
         merged = list(dict.fromkeys(existing + [x for x in inherited if x]))
         row["event_link_ids"] = "|".join(merged)
