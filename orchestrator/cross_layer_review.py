@@ -26,6 +26,7 @@ DOMAIN_WORDS={
 }
 FUTURE_MARKERS=['전략','목표','계획','mou','협약','추진','예정','target','strategy','roadmap','2030','2040','2050','2029']
 INDUSTRY_DOC_TYPES={'BAT_REFERENCE','GUIDELINE'}
+NON_READINESS_EVENT_ROLES={'CONTEXT_MARKER','COMPARABILITY_MARKER','IDENTITY_MARKER','BASELINE_MARKER'}
 
 
 def infer_domains(text):
@@ -77,6 +78,12 @@ def company_action_layer(pkg,scope):
     for e in read_csv(pkg/'Event_Registry.csv'):
         cid=e.get('canonical_site_id','')
         if not site_allowed(cid,scope): continue
+        role=str(e.get('analysis_role') or '').strip().upper()
+        # Event_Registry deliberately carries production, identity, disclosure and
+        # baseline context.  Those records remain useful to a human reviewer, but
+        # they must not fill COMPANY_ACTION/FUTURE_DIRECTION readiness merely
+        # because they share a site or date with an environmental signal.
+        if role in NON_READINESS_EVENT_ROLES: continue
         text=' '.join([e.get('event_title',''),e.get('event_description',''),e.get('event_type','')])
         is_future=any(x in text.lower() for x in FUTURE_MARKERS) and not any(x in text.lower() for x in ['완료','취득'])
         layer='FUTURE_DIRECTION' if is_future or 'STRATEGY' in str(e.get('event_type') or '') or 'MOU' in str(e.get('event_type') or '') else 'COMPANY_ACTION'
@@ -179,12 +186,12 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     rows,questions=build_cross_candidates(pkg,layers,scope)
     write_csv(pkg/'Evidence_Layer_Registry.csv',layers,LAYER_FIELDS); write_csv(pkg/'Cross_Layer_Review_Candidates.csv',rows,CROSS_FIELDS); write_csv(pkg/'Study_Question_Queue.csv',questions,QUESTION_FIELDS)
     summary={
-        'schema_version':'1.3','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.4','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
         'scoped_topic_site_ids':len(scoped_topic_ids),'document_semantics':semantic_summary,
-        'principle':'Independent evidence layers overlap to create review questions; company-wide action does not satisfy site-action readiness; overlap never establishes causality.',
+        'principle':'Independent evidence layers overlap to create review questions; context-only events and company-wide actions do not satisfy site-action readiness; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
     (pkg/'Cross_Layer_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
