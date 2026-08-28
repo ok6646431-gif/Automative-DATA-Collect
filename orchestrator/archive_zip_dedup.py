@@ -1,12 +1,13 @@
 import argparse, csv, hashlib, json, shutil, tempfile, zipfile
 from pathlib import Path
 
+from sustainability_coverage import evaluate as evaluate_sustainability_coverage
+
 
 def sha256(path):
     h=hashlib.sha256()
     with Path(path).open('rb') as f:
-        for chunk in iter(lambda:f.read(1024*1024),b''):
-            h.update(chunk)
+        for chunk in iter(lambda:f.read(1024*1024),b''): h.update(chunk)
     return h.hexdigest()
 
 
@@ -79,22 +80,48 @@ def deduplicate_tree(archive_root):
     }
 
 
+def _apply_sustainability_coverage(package_root,archive_root,summary):
+    package_root=Path(package_root); archive_root=Path(archive_root)
+    profile=read_json(package_root/'Company_Profile.json',{}) or {}
+    docs=read_csv(package_root/'output'/'CORP_DOCS'/'document_index.csv')
+    folder=archive_root/'01_사용자자료'/'04_지속가능경영보고서'
+    paths=[p for p in sorted(folder.rglob('*')) if p.is_file()] if folder.exists() else []
+    coverage=evaluate_sustainability_coverage(profile,docs,paths)
+    checks=dict(summary.get('acceptance_checks') or {})
+    # Keep the old key for downstream compatibility, but its meaning is now explicit
+    # year/file coverage rather than a raw distinct-file count.
+    checks['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
+    checks['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
+    summary['acceptance_checks']=checks
+    summary['sustainability_coverage']=coverage
+    summary['archive_completeness']='COMPLETE' if checks and all(bool(v) for v in checks.values()) else 'INCOMPLETE'
+    return summary
+
+
 def _sync_metadata(package_root,archive_root,stats):
     package_root=Path(package_root); archive_root=Path(archive_root)
     summary=read_json(package_root/'Archive_Summary.json',{}) or {}
     summary.update(stats)
     summary['system_files']=sum(1 for p in (archive_root/'90_시스템원본').rglob('*') if p.is_file())
+    summary=_apply_sustainability_coverage(package_root,archive_root,summary)
     package_root.joinpath('Archive_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
 
     manifest=read_json(package_root/'Master_Manifest.json',{}) or {}
     human=manifest.setdefault('human_archive',{})
     human.update(stats)
     human['system_files']=summary['system_files']
+    human['archive_completeness']=summary.get('archive_completeness')
+    human['acceptance_checks']=summary.get('acceptance_checks') or {}
+    human['sustainability_coverage']=summary.get('sustainability_coverage') or {}
     package_root.joinpath('Master_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
 
     idx=archive_root/'00_자료목록'; idx.mkdir(parents=True,exist_ok=True)
     archive_manifest=read_json(idx/'Archive_Manifest.json',{}) or {}
-    archive_manifest.update(stats); archive_manifest['system_files']=summary['system_files']
+    archive_manifest.update(stats)
+    archive_manifest['system_files']=summary['system_files']
+    archive_manifest['archive_completeness']=summary.get('archive_completeness')
+    archive_manifest['acceptance_checks']=summary.get('acceptance_checks') or {}
+    archive_manifest['sustainability_coverage']=summary.get('sustainability_coverage') or {}
     (idx/'Archive_Manifest.json').write_text(json.dumps(archive_manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     shutil.copy2(package_root/'Master_Manifest.json',idx/'Master_Manifest.json')
     system_manifest=archive_root/'90_시스템원본'/'control_plane'/'Master_Manifest.json'
