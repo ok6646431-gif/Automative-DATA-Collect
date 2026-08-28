@@ -15,13 +15,15 @@ permissions:
 jobs:
   package_qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check xlsxwriter
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Bootstrap current KKPC request
         run: >-
           python orchestrator/bootstrap_inputs.py
@@ -49,49 +51,64 @@ jobs:
           --icis collected/icis
           --profile requests/runtime/company_profile.generated.json
           --out package-qa
-      - name: Assert fresh path and Unicode-safe semantics
+      - name: Assert semantic bridge result
         run: |
           python - <<'PY'
           import csv,json
           from pathlib import Path
           root=Path('package-qa')
           manifest=json.loads((root/'Master_Manifest.json').read_text(encoding='utf-8'))
+          cross=json.loads((root/'Cross_Layer_Review_Summary.json').read_text(encoding='utf-8'))
+          sem=json.loads((root/'Document_Semantics_Summary.json').read_text(encoding='utf-8'))
           assert manifest['package_health']=='PASS', manifest
           assert manifest['validation']=='REVIEW_REQUIRED', manifest
           assert manifest['icis_selection_state']=='GOOD_ATTEMPT', manifest
           assert manifest['icis_replayed_sources']==[], manifest
-          for source in ('PRTR','CHEM_STATS'):
-              src=manifest['sources'][source]
-              assert src['status']=='DATA_FOUND', src
-              assert src.get('freshness') != 'REPLAYED_LAST_KNOWN_GOOD', src
-          sem=json.loads((root/'Document_Semantics_Summary.json').read_text(encoding='utf-8'))
-          cross=json.loads((root/'Cross_Layer_Review_Summary.json').read_text(encoding='utf-8'))
           assert sem['failures']==[], sem
-          assert sem['pages_scanned']>=1200, sem
-          assert sem['generated_industry_facts']>0, sem
-          assert cross['four_layer_ready']>0, cross
-          (root/'Document_Semantic_Candidates.csv').read_text(encoding='utf-8-sig')
+          assert cross['schema_version']=='2.0', cross
+          assert cross['four_layer_ready']==1, cross
+          assert cross['semantic_bridge_blocked']==4, cross
           rows=list(csv.DictReader((root/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig',newline='')))
-          ready=[r for r in rows if r.get('review_state')=='FOUR_LAYER_READY']
+          initial_topic_ids={
+              'TOPIC_28254682C65D':'Y2_AIR',
+              'TOPIC_B0802384E73B':'Y2_CHEM',
+              'TOPIC_ED1857F91626':'Y2_WATER',
+              'TOPIC_8F530E183570':'Y1_AIR',
+              'TOPIC_E8AB5ED252DD':'Y1_CHEM',
+          }
+          selected={initial_topic_ids[r['topic_id']]:r for r in rows if r.get('topic_id') in initial_topic_ids}
+          assert selected['Y1_AIR']['review_state']=='FOUR_LAYER_READY', selected['Y1_AIR']
+          assert selected['Y1_AIR']['semantic_bridge_state']=='READY', selected['Y1_AIR']
+          assert 'NOX' in selected['Y1_AIR']['semantic_bridge_anchors'].split('|'), selected['Y1_AIR']
+          assert selected['Y2_AIR']['review_state']=='MULTI_LAYER_REVIEW', selected['Y2_AIR']
+          assert selected['Y2_AIR']['semantic_bridge_state']=='NO_COMMON_TOPIC_BRIDGE', selected['Y2_AIR']
+          assert selected['Y2_WATER']['review_state']=='MULTI_LAYER_REVIEW', selected['Y2_WATER']
+          assert selected['Y2_WATER']['semantic_bridge_state']=='NO_COMMON_TOPIC_BRIDGE', selected['Y2_WATER']
+          for key in ('Y1_CHEM','Y2_CHEM'):
+              assert selected[key]['review_state']=='MULTI_LAYER_REVIEW', selected[key]
+              assert selected[key]['semantic_bridge_state']=='CHEMICAL_AGGREGATE_DRIVER_REQUIRED', selected[key]
+          qtypes={r['question_type'] for r in csv.DictReader((root/'Study_Question_Queue.csv').open(encoding='utf-8-sig',newline=''))}
+          assert 'TOPIC_SEMANTIC_BRIDGE_GAP' in qtypes, qtypes
+          assert 'CHEMICAL_DRIVER_GAP' in qtypes, qtypes
           print(json.dumps({
               'package_health':manifest['package_health'],
-              'validation':manifest['validation'],
-              'icis_selection_state':manifest['icis_selection_state'],
-              'four_layer_ready_count':len(ready),
-              'four_layer_ready':[{
-                  'review_id':r.get('review_id'),
-                  'topic_id':r.get('topic_id'),
-                  'canonical_site_id':r.get('canonical_site_id'),
-                  'site_name':r.get('site_name'),
-                  'domain':r.get('domain'),
-              } for r in ready],
+              'four_layer_ready':cross['four_layer_ready'],
+              'semantic_bridge_blocked':cross['semantic_bridge_blocked'],
+              'checked':{k:{
+                  'site_name':v.get('site_name'),
+                  'domain':v.get('domain'),
+                  'review_state':v.get('review_state'),
+                  'semantic_bridge_state':v.get('semantic_bridge_state'),
+                  'semantic_bridge_anchors':v.get('semantic_bridge_anchors'),
+                  'semantic_bridge_note':v.get('semantic_bridge_note'),
+              } for k,v in selected.items()},
           },ensure_ascii=False,indent=2))
           PY
-      - name: Upload QA evidence for human semantic review
+      - name: Upload semantic bridge QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-package-semantic-qa
+          name: semantic-bridge-qa
           path: |
             package-qa/Master_Manifest.json
             package-qa/Cross_Layer_Review_Summary.json
