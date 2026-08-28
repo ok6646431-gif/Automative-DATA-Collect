@@ -173,12 +173,12 @@
       "document_type": "BAT_REFERENCE",
       "title": "전기 및 증기 생산시설 최적가용기법 기준서 II",
       "report_year": 2022,
-      "source_url": "https://ieps.nier.go.kr/web/board/5/1898/",
+      "source_url": "https://ieps.nier.go.kr/jfile/readDownloadFile.do?fileId=18556eef00760&fileSeq=2&useSecurity=&uploadMode=db",
       "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/",
-      "expected_extension": "html",
+      "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official NIER IEPS reference for energy facilities. This is relevant to the separately listed Yeosu Energy Plants; it must not be generalized automatically to chemical-production plants."
+      "notes": "Official NIER IEPS full-text PDF, verified on GitHub Actions (11,366,591 bytes; SHA256 600da16cd5e9ad9554cc954305aace523668ef0c7916ef5797ede2ded8c2da85). Applicability is separately restricted to Yeosu Energy Plants; this does not establish company-specific BAT application."
     }
   ],
   "gaps": [
