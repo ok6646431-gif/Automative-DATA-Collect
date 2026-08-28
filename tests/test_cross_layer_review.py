@@ -29,8 +29,8 @@ class TestCrossLayerReview(unittest.TestCase):
             {'action_id':'ACT2','canonical_site_id':'SITE_B','site_name':'B사업장','year':'2023','domain':'AIR','action_name':'다른 사업장 설비','description':'NOx','disclosed_effect':'','source_file':'ENVINFO/b.html'}
         ],['action_id','canonical_site_id','site_name','year','domain','action_name','description','disclosed_effect','source_file'])
         write_csv(pkg/'Event_Registry.csv',[
-            {'event_id':'EV1','canonical_site_id':'','event_date_start':'2022-09-15','event_title':'신환경전략','event_description':'2050 탄소중립 및 대기오염물질 최소화 목표','event_type':'ENVIRONMENT_STRATEGY_CHANGE','source_key':'OFFICIAL','source_locator':'https://example.com/strategy'}
-        ],['event_id','canonical_site_id','event_date_start','event_title','event_description','event_type','source_key','source_locator'])
+            {'event_id':'EV1','canonical_site_id':'','event_date_start':'2022-09-15','event_title':'신환경전략','event_description':'2050 탄소중립 및 대기오염물질 최소화 목표','event_type':'ENVIRONMENT_STRATEGY_CHANGE','analysis_role':'','source_key':'OFFICIAL','source_locator':'https://example.com/strategy'}
+        ],['event_id','canonical_site_id','event_date_start','event_title','event_description','event_type','analysis_role','source_key','source_locator'])
         write_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv',[
             {'document_id':'BAT1','collection_status':'DOWNLOADED','document_type':'BAT_REFERENCE','title':'업종 최적가용기법 기준서','report_year':'2020','source_locator':'https://example.com/bat','source_url':'https://example.com/bat.pdf','notes':''}
         ],['document_id','collection_status','document_type','title','report_year','source_locator','source_url','notes'])
@@ -66,6 +66,48 @@ class TestCrossLayerReview(unittest.TestCase):
             self.assertEqual(rows[0]['industry_semantic_ready'],'YES')
             self.assertEqual(rows[0]['review_state'],'FOUR_LAYER_READY')
             self.assertEqual(summary['four_layer_ready'],1)
+
+    def test_context_only_events_do_not_fill_action_or_future_layers(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); pkg=self.fixture(root)
+            write_csv(pkg/'Management_Action_Ledger.csv',[],[
+                'action_id','canonical_site_id','site_name','year','domain','action_name','description','disclosed_effect','source_file'
+            ])
+            write_csv(pkg/'Event_Registry.csv',[
+                {
+                    'event_id':'EV_BUILD','canonical_site_id':'SITE_A','event_date_start':'2021-02-01',
+                    'event_title':'신규 Fab 완공','event_description':'생산능력 확대를 위한 신규 공장을 완공했다.',
+                    'event_type':'PRODUCTION_CAPACITY_CHANGE','analysis_role':'CONTEXT_MARKER',
+                    'source_key':'OFFICIAL','source_locator':'https://example.com/build'
+                },
+                {
+                    'event_id':'EV_PLAN','canonical_site_id':'SITE_A','event_date_start':'2024-04-24',
+                    'event_title':'신규 Fab 투자계획','event_description':'향후 생산능력 확대를 위한 투자 계획을 발표했다.',
+                    'event_type':'PRODUCTION_CAPACITY_PLAN','analysis_role':'CONTEXT_MARKER',
+                    'source_key':'OFFICIAL','source_locator':'https://example.com/plan'
+                }
+            ],['event_id','canonical_site_id','event_date_start','event_title','event_description','event_type','analysis_role','source_key','source_locator'])
+            semantic=root/'semantic.json'
+            semantic.write_text(json.dumps({
+                'request_id':'REQ1',
+                'facts':[{
+                    'fact_id':'BAT_FACT_1','layer':'INDUSTRY_TECHNICAL','domain':'AIR','year':2020,
+                    'title':'BAT 대기관리 근거','statement':'업종 기준서에서 대기 배출 관리기술을 기술한다.',
+                    'source_key':'BAT_KBREF','source_locator':'https://example.com/bat#page=10',
+                    'interpretation_boundary':'Industry reference only; company application not confirmed.'
+                }]
+            },ensure_ascii=False),encoding='utf-8')
+            summary=run_cross_layer_review(pkg,semantic)
+            rows=list(csv.DictReader((pkg/'Cross_Layer_Review_Candidates.csv').open(encoding='utf-8-sig')))
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]['company_action_evidence_ids'],'')
+            self.assertEqual(rows[0]['future_direction_evidence_ids'],'')
+            self.assertEqual(rows[0]['review_state'],'CONTEXT_ONLY')
+            qs=list(csv.DictReader((pkg/'Study_Question_Queue.csv').open(encoding='utf-8-sig')))
+            qtypes={q['question_type'] for q in qs}
+            self.assertIn('COMPANY_ACTION_GAP',qtypes)
+            self.assertIn('FUTURE_DIRECTION_GAP',qtypes)
+            self.assertEqual(summary['four_layer_ready'],0)
 
 
 if __name__=='__main__': unittest.main()
