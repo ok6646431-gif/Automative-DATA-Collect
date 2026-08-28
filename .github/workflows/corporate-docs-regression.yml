@@ -1,0 +1,45 @@
+name: Corporate docs regression
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'collectors/corporate_docs_collect.py'
+      - 'tests/test_corporate_docs_collect.py'
+      - 'requests/document_evidence.schema.json'
+      - '.github/workflows/corporate-docs-regression.yml'
+  pull_request:
+    paths:
+      - 'collectors/corporate_docs_collect.py'
+      - 'tests/test_corporate_docs_collect.py'
+      - 'requests/document_evidence.schema.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests
+      - name: Run corporate document regressions
+        run: python -m unittest tests.test_corporate_docs_collect -v
+      - name: Validate current document evidence schema
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema
+          python - <<'PY'
+          import json
+          from jsonschema import Draft202012Validator
+          schema=json.load(open('requests/document_evidence.schema.json',encoding='utf-8'))
+          evidence=json.load(open('requests/document_evidence.json',encoding='utf-8'))
+          Draft202012Validator(schema).validate(evidence)
+          print('document_evidence schema PASS')
+          PY
