@@ -5,6 +5,7 @@ from pathlib import Path
 from review_selection_common import read_csv, read_json, write_csv, stable_id
 from document_semantics import run_document_semantics
 from requested_scope import _selected_address_counts, _candidate_matches
+from topic_semantic_bridge import evaluate_semantic_bridge
 
 LAYER_FIELDS=[
     'evidence_id','layer','domain','canonical_site_id','site_name','time_key','title','statement',
@@ -16,6 +17,8 @@ CROSS_FIELDS=[
     'company_action_source_state','company_action_evidence_state',
     'industry_semantic_ready','industry_source_state','industry_evidence_state',
     'future_direction_source_state','future_direction_evidence_state',
+    'semantic_bridge_state','semantic_bridge_anchors','semantic_bridge_action_evidence_ids',
+    'semantic_bridge_industry_evidence_ids','semantic_bridge_future_evidence_ids','semantic_bridge_note',
     'evidence_layers','why_review','limitations','human_decision'
 ]
 QUESTION_FIELDS=['question_id','review_id','domain','site_name','question_type','question','needed_evidence','status']
@@ -272,9 +275,6 @@ def compatible(topic,evidence):
     td=topic.get('domain',''); ed=evidence.get('domain','')
     if not (ed in {td,'CROSS_MEDIA'} or td=='CROSS_MEDIA'): return False
     tcid=topic.get('canonical_site_id',''); ecid=evidence.get('canonical_site_id','')
-    # MULTI_SITE is an aggregate topic, not a wildcard. A fact from one specific
-    # facility cannot satisfy an aggregate company's layer merely because it is in
-    # scope. Company-wide/unscoped or explicitly MULTI_SITE evidence may do so.
     if tcid=='MULTI_SITE': return not ecid or ecid=='MULTI_SITE'
     if ecid=='MULTI_SITE': return False
     return not ecid or ecid==tcid
@@ -333,7 +333,12 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
         ind_state=industry_evidence_state(industry,semantic_industry,industry_source_state)
         future_state=missing_evidence_state(bool(future),company_docs_source_state)
         nonobs=sum(bool(x) for x in [actions,semantic_industry,future])
-        if obs and actions and semantic_industry and future: state='FOUR_LAYER_READY'
+        bridge=evaluate_semantic_bridge(t,obs,actions,semantic_industry,future) if obs else {
+            'state':'NO_OBSERVED_SIGNAL','anchors':[],'action_evidence_ids':[],
+            'industry_evidence_ids':[],'future_evidence_ids':[],'note':'No observed signal.'
+        }
+        broad_four=bool(obs and actions and semantic_industry and future)
+        if broad_four and bridge.get('state')=='READY': state='FOUR_LAYER_READY'
         elif obs and nonobs>=2: state='MULTI_LAYER_REVIEW'
         elif obs and (actions or industry or future): state='CONTEXT_ONLY'
         elif obs: state='OBSERVED_ONLY'
@@ -355,6 +360,8 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
         if future: why+=' + company future direction'
         elif future_state=='SOURCE_UNAVAILABLE': why+=' + company-document source unavailable; missing future-direction evidence is unresolved'
         elif future_state=='SOURCE_PARTIAL': why+=' + company-document collection partial; missing future-direction evidence is unresolved'
+        if broad_four and bridge.get('state')!='READY':
+            why+=f" + broad-domain four-layer overlap blocked by semantic bridge gate ({bridge.get('state')})"
         limitations='Layer overlap is review context only; production/flow/permit/operating denominators and site-specific technology may still be required.'
         incomplete=[]
         if action_state in {'SOURCE_UNAVAILABLE','SOURCE_PARTIAL','SOURCE_NOT_CONFIRMED'}: incomplete.append('company-action source')
@@ -362,6 +369,8 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
         if future_state in {'SOURCE_UNAVAILABLE','SOURCE_PARTIAL','SOURCE_NOT_CONFIRMED'}: incomplete.append('future-direction source')
         if incomplete:
             limitations+=' Incomplete availability: '+', '.join(incomplete)+'. Missing evidence in these layers must not be interpreted as confirmed absence.'
+        if broad_four and bridge.get('state')!='READY':
+            limitations+=' Four broad evidence layers exist, but topic-level semantic coherence is not sufficient for READY.'
         rows.append({
             'review_id':rid,'topic_id':t.get('topic_id'),'canonical_site_id':cid,'site_name':t.get('site_name',''),'domain':t.get('domain',''),'review_state':state,
             'observed_evidence_ids':'|'.join(e['evidence_id'] for e in obs),'company_action_evidence_ids':'|'.join(e['evidence_id'] for e in actions),
@@ -370,6 +379,11 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
             'industry_semantic_ready':'YES' if semantic_industry else ('REFERENCE_ONLY' if industry else 'NO'),
             'industry_source_state':industry_source_state,'industry_evidence_state':ind_state,
             'future_direction_source_state':company_docs_source_state,'future_direction_evidence_state':future_state,
+            'semantic_bridge_state':bridge.get('state',''),'semantic_bridge_anchors':'|'.join(bridge.get('anchors') or []),
+            'semantic_bridge_action_evidence_ids':'|'.join(bridge.get('action_evidence_ids') or []),
+            'semantic_bridge_industry_evidence_ids':'|'.join(bridge.get('industry_evidence_ids') or []),
+            'semantic_bridge_future_evidence_ids':'|'.join(bridge.get('future_evidence_ids') or []),
+            'semantic_bridge_note':bridge.get('note',''),
             'evidence_layers':'|'.join(present),'why_review':why+'.','limitations':limitations,'human_decision':'UNREVIEWED'
         })
         if not actions:
@@ -386,6 +400,10 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
             add_gap_question(questions,rid,t,'FUTURE_DIRECTION',future_state,
                 'Has the company stated a future target or planned action related to this topic?',
                 'Official strategy, target, planned investment or project evidence','company-document/future-direction')
+        if broad_four and bridge.get('state')!='READY':
+            qtype='CHEMICAL_DRIVER_GAP' if str(bridge.get('state','')).startswith('CHEMICAL_') else 'TOPIC_SEMANTIC_BRIDGE_GAP'
+            needed='Substance-level observed driver and evidence linking that substance to the action/reference.' if qtype=='CHEMICAL_DRIVER_GAP' else 'Evidence showing that the observed metric/subtopic, company action, technical reference and future direction address the same environmental issue.'
+            questions.append({'question_id':stable_id('Q_',rid,qtype),'review_id':rid,'domain':t.get('domain',''),'site_name':t.get('site_name',''),'question_type':qtype,'question':'The four broad layers exist, but what evidence proves they address the same observed subtopic?','needed_evidence':needed,'status':'OPEN'})
         questions.append({'question_id':stable_id('Q_',rid,'INTERPRETATION_BOUNDARY'),'review_id':rid,'domain':t.get('domain',''),'site_name':t.get('site_name',''),'question_type':'INTERPRETATION_BOUNDARY','question':'What additional denominator or operating information is needed before judging performance or causality?','needed_evidence':'Production/throughput, flow/load, applicable limit, process change, equipment/operating data as relevant','status':'OPEN'})
     return rows,questions
 
@@ -415,17 +433,19 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None,ap
     for r in applicability.values(): app_counts[r.get('applicability_state','UNKNOWN')]+=1
     smap=source_state_map(availability)
     summary={
-        'schema_version':'1.9','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'2.0','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
+        'semantic_bridge_ready':sum(r.get('semantic_bridge_state')=='READY' for r in rows),
+        'semantic_bridge_blocked':sum(bool(r.get('observed_evidence_ids') and r.get('company_action_evidence_ids') and r.get('industry_reference_evidence_ids') and r.get('future_direction_evidence_ids')) and r.get('semantic_bridge_state')!='READY' for r in rows),
         'scoped_topic_site_ids':len(scoped_topic_ids),'document_semantics':semantic_summary,
         'source_availability_counts':dict(sorted(availability_counts.items())),
         'industry_reference_applicability_counts':dict(sorted(app_counts.items())),
         'company_action_source_state':smap.get(('ENVINFO','ALL'),'UNKNOWN'),
         'industry_reference_source_state':smap.get(('CORP_DOCS','INDUSTRY_REFERENCES'),'UNKNOWN'),
         'future_direction_source_state':smap.get(('CORP_DOCS','COMPANY_DOCUMENTS'),'UNKNOWN'),
-        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; index/catalog context never satisfies readiness; industry references satisfy a site layer only when applicability is explicitly verified; MULTI_SITE topics do not treat one facility as aggregate evidence; overlap never establishes causality.',
+        'principle':'Independent evidence layers overlap to create review questions; FOUR_LAYER_READY additionally requires a topic-level semantic bridge across the observed subtopic, same-site action, page-grounded industry context and future direction; aggregate chemical totals require a substance-level driver; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
     (pkg/'Cross_Layer_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
