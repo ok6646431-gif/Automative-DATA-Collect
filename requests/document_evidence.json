@@ -12,7 +12,17 @@
       "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "fallback_sources": [
+        {
+          "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
+          "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "source_role": "KRX_CORRECTED_ATTACHMENT",
+          "notes": "Official KRX corrected attachment dated 2026-07-24; resolved through the KRX disclosure viewer and attachment page."
+        }
+      ]
     },
     {
       "document_id": "KKPC_SUSTAINABILITY_2024",
@@ -23,7 +33,17 @@
       "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "fallback_sources": [
+        {
+          "source_url": "https://kind.krx.co.kr/external/2025/08/22/000440/20250820000371/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf",
+          "source_locator": "https://kind.krx.co.kr/external/2025/08/22/000440/20250820000371/99998.htm",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "source_role": "KRX_CORRECTED_ATTACHMENT",
+          "notes": "Official latest KRX corrected attachment dated 2025-08-22; supersedes the earlier 2025-06-16 and 2025-07-11 KRX attachments for fallback delivery."
+        }
+      ]
     },
     {
       "document_id": "KKPC_SUSTAINABILITY_2023",
@@ -35,7 +55,17 @@
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official company-hosted English report."
+      "notes": "Official company-hosted English report.",
+      "fallback_sources": [
+        {
+          "source_url": "https://kind.krx.co.kr/external/2024/07/17/000513/20240717000511/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202023.pdf",
+          "source_locator": "https://kind.krx.co.kr/external/2024/07/17/000513/20240717000511/99998.htm",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "source_role": "KRX_CORRECTED_ATTACHMENT",
+          "notes": "Official KRX corrected Korean attachment dated 2024-07-17; the same correction page also exposes the English report."
+        }
+      ]
     },
     {
       "document_id": "KKPC_SUSTAINABILITY_2022",
