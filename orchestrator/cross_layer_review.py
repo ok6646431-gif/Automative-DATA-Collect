@@ -4,6 +4,7 @@ from pathlib import Path
 
 from review_selection_common import read_csv, read_json, write_csv, stable_id
 from document_semantics import run_document_semantics
+from requested_scope import _selected_address_counts, _candidate_matches
 
 LAYER_FIELDS=[
     'evidence_id','layer','domain','canonical_site_id','site_name','time_key','title','statement',
@@ -21,6 +22,10 @@ QUESTION_FIELDS=['question_id','review_id','domain','site_name','question_type',
 SOURCE_AVAILABILITY_FIELDS=[
     'source_key','evidence_family','availability_state','collection_status',
     'declared_count','available_count','failed_count','skipped_count','notes'
+]
+APPLICABILITY_FIELDS=[
+    'document_id','applicability_state','candidate_ids','canonical_site_ids','unresolved_candidate_ids',
+    'basis','source_locator'
 ]
 
 DOMAIN_WORDS={
@@ -152,30 +157,109 @@ def company_action_layer(pkg,scope):
     for r in read_csv(pkg/'Document_Semantic_Candidates.csv'):
         layer=r.get('layer','')
         if layer not in {'COMPANY_ACTION','FUTURE_DIRECTION'}: continue
-        # Extractor-side index/catalog guards must survive into the evidence layer.
-        # REFERENCE_INDEX_CONTEXT is useful for provenance, but never satisfies an
-        # action/future readiness layer.
         if str(r.get('semantic_state') or '')!='PAGE_GROUNDED_EXTRACT': continue
         locator=str(r.get('source_locator') or '')+(('#page='+str(r.get('page'))) if r.get('page') else '')
         out.append(layer_row(layer,r.get('domain') or 'CROSS_MEDIA','','',r.get('report_year'),f"{r.get('document_id')} p.{r.get('page')}",r.get('statement'),r.get('source_key') or 'CORP_DOCS',locator,r.get('semantic_state') or 'PAGE_GROUNDED_EXTRACT',r.get('interpretation_boundary') or 'Company document excerpt; no performance or causal inference.',r.get('semantic_id')))
     return out
 
 
-def industry_reference_layer(pkg,semantic_path=None):
+def _candidate_applicability_map(pkg,candidate_ids):
+    profile=read_json(pkg/'Company_Profile.json',{}) or {}
+    candidates=[c for c in profile.get('site_candidates',[]) or [] if isinstance(c,dict)]
+    by_id={str(c.get('candidate_id') or ''):c for c in candidates}
+    scope_ids=set((profile.get('requested_scope') or {}).get('candidate_ids',[]) or [])
+    scoped=[c for c in candidates if not scope_ids or str(c.get('candidate_id') or '') in scope_ids]
+    address_counts=_selected_address_counts(scoped)
+    sites=read_csv(pkg/'Site_Master.csv')
+    result={}; unresolved=[]
+    for candidate_id in candidate_ids:
+        candidate=by_id.get(str(candidate_id))
+        if not candidate:
+            unresolved.append(str(candidate_id)); continue
+        matching=[]
+        for site in sites:
+            if site.get('identity_status')!='CONFIRMED': continue
+            if _candidate_matches(candidate,site.get('canonical_site_name'),site.get('canonical_address_key'),profile,address_counts):
+                sid=str(site.get('canonical_site_id') or '')
+                if sid and sid not in matching: matching.append(sid)
+        if len(matching)==1:
+            result[str(candidate_id)]=matching[0]
+        else:
+            unresolved.append(str(candidate_id))
+    return result,unresolved
+
+
+def resolve_reference_applicability(pkg,applicability_path=None):
+    if applicability_path is None:
+        default=Path('requests/industry_reference_applicability.json')
+        applicability_path=default if default.exists() else None
+    rows=[]; resolved={}
+    if not applicability_path or not Path(applicability_path).exists():
+        write_csv(pkg/'Industry_Reference_Applicability.csv',rows,APPLICABILITY_FIELDS)
+        return resolved
+    payload=read_json(applicability_path,{}) or {}; profile=read_json(pkg/'Company_Profile.json',{}) or {}
+    if str(payload.get('request_id') or '')!=str(profile.get('request_id') or ''):
+        write_csv(pkg/'Industry_Reference_Applicability.csv',rows,APPLICABILITY_FIELDS)
+        return resolved
+    for item in payload.get('references',[]) or []:
+        docid=str(item.get('document_id') or '')
+        state=str(item.get('applicability_state') or 'REVIEW_REQUIRED').upper()
+        candidate_ids=[str(x) for x in item.get('candidate_ids',[]) or [] if str(x)]
+        cmap,unresolved=_candidate_applicability_map(pkg,candidate_ids)
+        canonical_ids=sorted(set(cmap.values()))
+        if state=='VERIFIED' and (not candidate_ids or unresolved): state='REVIEW_REQUIRED'
+        row={
+            'document_id':docid,'applicability_state':state,'candidate_ids':'|'.join(candidate_ids),
+            'canonical_site_ids':'|'.join(canonical_ids),'unresolved_candidate_ids':'|'.join(unresolved),
+            'basis':str(item.get('basis') or ''),'source_locator':str(item.get('source_locator') or '')
+        }
+        rows.append(row); resolved[docid]={**row,'canonical_site_ids_list':canonical_ids}
+    write_csv(pkg/'Industry_Reference_Applicability.csv',rows,APPLICABILITY_FIELDS)
+    return resolved
+
+
+def industry_reference_layer(pkg,semantic_path=None,applicability=None):
+    applicability=applicability or {}
+    site_names={r.get('canonical_site_id'):r.get('canonical_site_name','') for r in read_csv(pkg/'Site_Master.csv')}
+    docs=read_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv')
     out=[]
-    for d in read_csv(pkg/'output'/'CORP_DOCS'/'document_index.csv'):
+    for d in docs:
         if d.get('collection_status')!='DOWNLOADED' or d.get('document_type') not in INDUSTRY_DOC_TYPES: continue
+        docid=str(d.get('document_id') or '')
+        app=applicability.get(docid)
+        if app:
+            if app.get('applicability_state')!='VERIFIED': continue
+            targets=app.get('canonical_site_ids_list') or []
+            if not targets: continue
+        else:
+            targets=['']
         domains=infer_domains(' '.join([d.get('title',''),d.get('document_type',''),d.get('notes','')]))
         if d.get('document_type')=='BAT_REFERENCE' and domains==['CROSS_MEDIA']:
             domains=['AIR','WATER','WATER_RESOURCES','CHEMICALS','WASTE','GHG_ENERGY']
-        for domain in domains:
-            out.append(layer_row('INDUSTRY_TECHNICAL',domain,'','',d.get('report_year'),d.get('title'),'Industry technical reference document is available; specific technique/issue semantics have not yet been extracted.','CORP_DOCS',d.get('source_locator') or d.get('source_url'),'REFERENCE_AVAILABLE_ONLY','Do not infer that the company applies any BAT or that a particular technique is relevant until semantic evidence is extracted.',d.get('document_id')))
+        for target in targets:
+            for domain in domains:
+                out.append(layer_row('INDUSTRY_TECHNICAL',domain,target,site_names.get(target,''),d.get('report_year'),d.get('title'),'Industry technical reference document is available for the explicitly verified site scope; specific technique/issue semantics have not yet been extracted.','CORP_DOCS',d.get('source_locator') or d.get('source_url'),'REFERENCE_AVAILABLE_ONLY','Reference applicability is site-scoped. Do not infer that the company applies any BAT or that a particular technique is relevant until semantic evidence is extracted.',docid,target))
     if semantic_path and Path(semantic_path).exists():
         payload=read_json(semantic_path,{}) or {}; profile=read_json(pkg/'Company_Profile.json',{}) or {}
+        sem_doc={r.get('semantic_id'):r.get('document_id') for r in read_csv(pkg/'Document_Semantic_Candidates.csv')}
         if str(payload.get('request_id') or '')==str(profile.get('request_id') or ''):
             for f in payload.get('facts',[]) or []:
                 if str(f.get('layer') or '')!='INDUSTRY_TECHNICAL': continue
-                out.append(layer_row('INDUSTRY_TECHNICAL',str(f.get('domain') or 'CROSS_MEDIA'),str(f.get('canonical_site_id') or ''),str(f.get('site_name') or ''),str(f.get('time_key') or f.get('year') or ''),str(f.get('title') or ''),str(f.get('statement') or ''),str(f.get('source_key') or ''),str(f.get('source_locator') or ''),'SEMANTIC_FACT',str(f.get('interpretation_boundary') or 'Industry reference only; company application requires company-specific evidence.'),str(f.get('fact_id') or '')))
+                fact_id=str(f.get('fact_id') or '')
+                docid=str(f.get('document_id') or sem_doc.get(fact_id) or '')
+                app=applicability.get(docid) if docid else None
+                explicit_site=str(f.get('canonical_site_id') or '')
+                if app:
+                    if app.get('applicability_state')!='VERIFIED': continue
+                    targets=app.get('canonical_site_ids_list') or []
+                    if explicit_site:
+                        targets=[x for x in targets if x==explicit_site]
+                elif explicit_site:
+                    targets=[explicit_site]
+                else:
+                    targets=['']
+                for target in targets:
+                    out.append(layer_row('INDUSTRY_TECHNICAL',str(f.get('domain') or 'CROSS_MEDIA'),target,site_names.get(target,str(f.get('site_name') or '')),str(f.get('time_key') or f.get('year') or ''),str(f.get('title') or ''),str(f.get('statement') or ''),str(f.get('source_key') or ''),str(f.get('source_locator') or ''),'SEMANTIC_FACT',str(f.get('interpretation_boundary') or 'Industry reference only; company application requires company-specific evidence.'),fact_id,target))
     return out
 
 
@@ -255,7 +339,7 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
         elif action_state=='SOURCE_UNAVAILABLE': why+=' + ENV-INFO unavailable; missing action evidence is unresolved'
         elif action_state=='SOURCE_PARTIAL': why+=' + ENV-INFO partial; missing action evidence is unresolved'
         if semantic_industry: why+=' + page-grounded industry technical context'
-        elif industry: why+=' + industry reference document available (semantic extraction pending)'
+        elif industry: why+=' + site-applicable industry reference document available (semantic extraction pending)'
         elif ind_state=='SOURCE_UNAVAILABLE': why+=' + industry-reference source unavailable; missing evidence is not treated as evidence absence'
         elif ind_state=='SOURCE_PARTIAL': why+=' + industry-reference collection partial; missing evidence remains unresolved'
         if future: why+=' + company future direction'
@@ -284,10 +368,10 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
                 'Site-resolved official company action, ENVINFO investment, permit or verified event evidence','ENV-INFO/company-action')
         if not industry:
             add_gap_question(questions,rid,t,'INDUSTRY',ind_state,
-                'What industry technical reference explains why this environmental topic matters?',
-                'Applicable BAT/K-BREF or equivalent industry technical reference','industry-reference')
+                'What site-applicable industry technical reference explains why this environmental topic matters?',
+                'Applicable BAT/K-BREF or equivalent industry technical reference with verified site/industry applicability','industry-reference')
         elif not semantic_industry:
-            questions.append({'question_id':stable_id('Q_',rid,'INDUSTRY_SEMANTIC_GAP'),'review_id':rid,'domain':t.get('domain',''),'site_name':t.get('site_name',''),'question_type':'INDUSTRY_SEMANTIC_GAP','question':'What does the available BAT/K-BREF actually say about this issue, process and control technique?','needed_evidence':'Page-level BAT/K-BREF evidence: issue, technique, applicability/conditions, evidence locator','status':'OPEN'})
+            questions.append({'question_id':stable_id('Q_',rid,'INDUSTRY_SEMANTIC_GAP'),'review_id':rid,'domain':t.get('domain',''),'site_name':t.get('site_name',''),'question_type':'INDUSTRY_SEMANTIC_GAP','question':'What does the site-applicable BAT/K-BREF actually say about this issue, process and control technique?','needed_evidence':'Page-level BAT/K-BREF evidence: issue, technique, applicability/conditions, evidence locator','status':'OPEN'})
         if not future:
             add_gap_question(questions,rid,t,'FUTURE_DIRECTION',future_state,
                 'Has the company stated a future target or planned action related to this topic?',
@@ -296,7 +380,7 @@ def build_cross_candidates(pkg,layers,scope,availability=None):
     return rows,questions
 
 
-def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
+def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None,applicability_path=None):
     pkg=Path(package_root); scope=read_json(pkg/'Requested_Scope.json',{}) or {}; protocol=read_json(protocol_path or Path(__file__).with_name('cross_layer_protocol.json'),{}) or {}
     label=str(scope.get('label') or '')
     scoped_topic_ids=set()
@@ -308,7 +392,8 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     generated=pkg/'Generated_Semantic_Evidence.json'
     if not semantic_path or not Path(semantic_path).exists(): semantic_path=generated if generated.exists() else None
     availability=source_availability(pkg)
-    layers=observed_layer(pkg,scope)+company_action_layer(pkg,scope)+industry_reference_layer(pkg,semantic_path)
+    applicability=resolve_reference_applicability(pkg,applicability_path)
+    layers=observed_layer(pkg,scope)+company_action_layer(pkg,scope)+industry_reference_layer(pkg,semantic_path,applicability)
     rows,questions=build_cross_candidates(pkg,layers,scope,availability)
     write_csv(pkg/'Source_Availability.csv',availability,SOURCE_AVAILABILITY_FIELDS)
     write_csv(pkg/'Evidence_Layer_Registry.csv',layers,LAYER_FIELDS)
@@ -316,24 +401,27 @@ def run_cross_layer_review(package_root,semantic_path=None,protocol_path=None):
     write_csv(pkg/'Study_Question_Queue.csv',questions,QUESTION_FIELDS)
     availability_counts=defaultdict(int)
     for r in availability: availability_counts[r.get('availability_state','UNKNOWN')]+=1
+    app_counts=defaultdict(int)
+    for r in applicability.values(): app_counts[r.get('applicability_state','UNKNOWN')]+=1
     smap=source_state_map(availability)
     summary={
-        'schema_version':'1.7','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
+        'schema_version':'1.8','protocol_version':protocol.get('schema_version'),'evidence_rows':len(layers),
         'layer_counts':{k:sum(e['layer']==k for e in layers) for k in ['OBSERVED','COMPANY_ACTION','INDUSTRY_TECHNICAL','FUTURE_DIRECTION']},
         'review_candidates':len(rows),'four_layer_ready':sum(r['review_state']=='FOUR_LAYER_READY' for r in rows),
         'multi_layer_review':sum(r['review_state']=='MULTI_LAYER_REVIEW' for r in rows),'open_study_questions':len(questions),
         'scoped_topic_site_ids':len(scoped_topic_ids),'document_semantics':semantic_summary,
         'source_availability_counts':dict(sorted(availability_counts.items())),
+        'industry_reference_applicability_counts':dict(sorted(app_counts.items())),
         'company_action_source_state':smap.get(('ENVINFO','ALL'),'UNKNOWN'),
         'industry_reference_source_state':smap.get(('CORP_DOCS','INDUSTRY_REFERENCES'),'UNKNOWN'),
         'future_direction_source_state':smap.get(('CORP_DOCS','COMPANY_DOCUMENTS'),'UNKNOWN'),
-        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; index/catalog document context never satisfies company action/future or industry-semantic readiness; context-only events and company-wide actions do not satisfy site-action readiness; overlap never establishes causality.',
+        'principle':'Independent evidence layers overlap to create review questions; source collection failure is distinct from evidence absence; index/catalog context never satisfies readiness; industry references satisfy a site layer only when applicability is explicitly verified; overlap never establishes causality.',
         'hard_boundaries':protocol.get('hard_boundaries',[])
     }
     (pkg/'Cross_Layer_Review_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
 
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('--package-root',default='assembled'); ap.add_argument('--semantic',default=None); ap.add_argument('--protocol',default=None); a=ap.parse_args(); print(json.dumps(run_cross_layer_review(a.package_root,a.semantic,a.protocol),ensure_ascii=False))
+    ap=argparse.ArgumentParser(); ap.add_argument('--package-root',default='assembled'); ap.add_argument('--semantic',default=None); ap.add_argument('--protocol',default=None); ap.add_argument('--applicability',default=None); a=ap.parse_args(); print(json.dumps(run_cross_layer_review(a.package_root,a.semantic,a.protocol,a.applicability),ensure_ascii=False))
 
 if __name__=='__main__': main()
