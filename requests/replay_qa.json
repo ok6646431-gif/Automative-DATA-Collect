@@ -1,4 +1,5 @@
 {
   "source_run_id": 33156250457,
-  "purpose": "Reprocess the validated Kumho Petrochemical raw artifacts from run 113 with the latest identity, requested-scope, and semantic evidence rules."
+  "purpose": "Reprocess the validated Kumho Petrochemical raw artifacts from run 113 with the latest identity, requested-scope, semantic evidence, and canonical-site topic aggregation rules.",
+  "replay_token": "kkpc-topic-aggregation-v1"
 }
