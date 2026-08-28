@@ -22,80 +22,88 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe National Archives publication records, JavaScript and detail responses
+      - name: Crawl IEPS BAT board for organic K-BREF
         run: |
           python - <<'PY'
-          import json,re
+          import json,re,time
+          from collections import deque
           from pathlib import Path
-          from urllib.parse import urljoin
+          from urllib.parse import urljoin,urlparse,urldefrag
           import requests
           from bs4 import BeautifulSoup
 
-          base='https://theme.archives.go.kr'
-          url=base+'/next/publishment/organSearch.do?page=519'
-          detail_url=base+'/next/publishment/detailInfo.do'
-          s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
-          r=s.get(url,timeout=(8,25)); r.raise_for_status()
+          start='https://ieps.nier.go.kr/web/board/5/'
+          host='ieps.nier.go.kr'
+          s=requests.Session()
+          s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
           Path('probe').mkdir(exist_ok=True)
-          Path('probe/archive_page.html').write_text(r.text,encoding='utf-8')
-          soup=BeautifulSoup(r.text,'html.parser')
-          scripts=[urljoin(url,tag.get('src')) for tag in soup.find_all('script') if tag.get('src')]
-          result={'source_url':url,'status_code':r.status_code,'detail_url':detail_url,'scripts':scripts,'records':{}}
-          for script_url in scripts:
-              if 'publishment' not in script_url: continue
-              js=s.get(script_url,timeout=(8,25)); js.raise_for_status()
-              Path('probe/publishment.js').write_text(js.text,encoding='utf-8')
-              match=re.search(r'function\s+detailInfo\s*\([^)]*\)\s*\{',js.text)
-              if match:
-                  result['detailInfo_endpoint_verified']='/next/publishment/detailInfo.do' in js.text
-          targets={
-              'CM00079359':('1310377','202511677368','000000000001'),
-              'CM00079360':('1310377','202511677369','000000000001'),
-          }
-          for management_no,(code,bsid,dsid) in targets.items():
-              text=soup.find(string=lambda x: x and management_no in x)
-              rec={'found':bool(text),'management_no':management_no}
-              if text:
-                  li=text.find_parent('li')
-                  rec['text']=' '.join(li.stripped_strings)[:3000]
-                  rec['view_tag']=str(li.find(class_=re.compile(r'viewrecord')))[:500]
-              dr=s.post(detail_url,data={'code':code,'bsid':bsid,'dsid':dsid,'gubun':'D'},headers={'Referer':url,'X-Requested-With':'XMLHttpRequest'},timeout=(8,25))
-              dr.raise_for_status(); dsoup=BeautifulSoup(dr.text,'html.parser')
-              rec['detail_status']=dr.status_code
-              rec['detail_text']=' '.join(dsoup.stripped_strings)[:5000]
-              rec['detail_links']=[str(a.get('href')) for a in dsoup.find_all('a',href=True)]
-              result['records'][management_no]=rec
-          Path('probe/probe.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          q=deque([start])
+          seen=set(); matches=[]; errors=[]; discovered=[]
+          max_pages=180
+          keywords=('유기화학산업','유기화학 산업')
+          while q and len(seen)<max_pages:
+              url=q.popleft()
+              url=urldefrag(url)[0]
+              if url in seen: continue
+              seen.add(url)
+              try:
+                  r=s.get(url,timeout=(5,12),allow_redirects=True)
+                  if r.status_code!=200:
+                      errors.append({'url':url,'status':r.status_code}); continue
+                  ctype=(r.headers.get('content-type') or '').lower()
+                  if 'html' not in ctype and not r.text.lstrip().startswith('<'):
+                      continue
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  text=' '.join(soup.stripped_strings)
+                  if any(k in text for k in keywords):
+                      files=[]
+                      for a in soup.find_all('a',href=True):
+                          label=' '.join(a.stripped_strings)
+                          href=urljoin(r.url,a['href'])
+                          if 'readDownloadFile.do' in href or '.pdf' in label.lower() or '.pdf' in href.lower():
+                              files.append({'label':label,'url':href})
+                      matches.append({'url':r.url,'title':soup.title.get_text(' ',strip=True) if soup.title else '', 'text':text[:5000], 'files':files})
+                  for a in soup.find_all('a',href=True):
+                      nxt=urldefrag(urljoin(r.url,a['href']))[0]
+                      p=urlparse(nxt)
+                      if p.scheme not in ('http','https') or p.netloc!=host: continue
+                      # Stay on the BAT reference board only; include list/detail/query pages.
+                      if '/web/board/5' not in p.path: continue
+                      if nxt not in seen and nxt not in q:
+                          q.append(nxt); discovered.append(nxt)
+              except Exception as exc:
+                  errors.append({'url':url,'error':f'{type(exc).__name__}: {exc}'})
+          result={'start':start,'pages_checked':len(seen),'queue_remaining':len(q),'matches':matches,'errors':errors[:50],'sample_discovered':discovered[:100]}
+          Path('probe/ieps_organic_search.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
           print(json.dumps(result,ensure_ascii=False,indent=2))
           PY
-      - name: Verify current IEPS reference PDF
+      - name: Verify any discovered organic PDF payloads
         run: |
           python - <<'PY'
           import hashlib,json
           from pathlib import Path
-          from urllib.parse import urljoin
           import requests
-          from bs4 import BeautifulSoup
-          page='https://ieps.nier.go.kr/web/board/5/1898/'
+          data=json.loads(Path('probe/ieps_organic_search.json').read_text(encoding='utf-8'))
+          urls=[]
+          for match in data.get('matches',[]):
+              for item in match.get('files',[]):
+                  u=item.get('url','')
+                  if u and u not in urls: urls.append(u)
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
-          r=s.get(page,timeout=(8,20)); r.raise_for_status()
-          soup=BeautifulSoup(r.text,'html.parser')
-          link=None
-          for a in soup.find_all('a',href=True):
-              text=' '.join(a.stripped_strings)
-              if '최적가용기법 기준서' in text and '.pdf' in text.lower():
-                  link=urljoin(page,a['href']); break
-          if not link: raise RuntimeError('IEPS K-BREF PDF link not found')
-          with s.get(link,stream=True,timeout=(8,60),headers={'Referer':page}) as pdf:
-              pdf.raise_for_status(); head=b''; size=0; h=hashlib.sha256()
-              for chunk in pdf.iter_content(1024*1024):
-                  if not chunk: continue
-                  if not head: head=chunk[:16]
-                  size+=len(chunk); h.update(chunk)
-              if not head.startswith(b'%PDF-'): raise RuntimeError(f'IEPS attachment is not PDF: {head!r}')
-          result={'page':page,'pdf_url':link,'bytes':size,'sha256':h.hexdigest(),'head':head.decode('latin1',errors='replace')}
-          Path('probe/ieps.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
-          print(json.dumps(result,ensure_ascii=False,indent=2))
+          out=[]
+          for url in urls[:12]:
+              try:
+                  with s.get(url,stream=True,timeout=(8,60)) as r:
+                      r.raise_for_status(); h=hashlib.sha256(); size=0; head=b''
+                      for chunk in r.iter_content(1024*1024):
+                          if not chunk: continue
+                          if not head: head=chunk[:16]
+                          size += len(chunk); h.update(chunk)
+                      out.append({'url':url,'bytes':size,'sha256':h.hexdigest(),'is_pdf':head.startswith(b'%PDF-'),'head':head.decode('latin1',errors='replace')})
+              except Exception as exc:
+                  out.append({'url':url,'error':f'{type(exc).__name__}: {exc}'})
+          Path('probe/ieps_organic_pdf_probe.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(out,ensure_ascii=False,indent=2))
           PY
       - name: Upload probe
         uses: actions/upload-artifact@v4
