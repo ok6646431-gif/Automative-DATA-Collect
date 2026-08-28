@@ -40,15 +40,24 @@ def bootstrap_inputs(
         discovery = _read_json(discovery_path)
         profile, summary = compile_discovery(discovery)
         # Collection remains legal-entity-wide, while the requested scope may narrow
-        # human delivery and downstream analysis to a verified site set.  This field
+        # human delivery and downstream analysis to a verified site set. This field
         # is control-plane metadata and therefore does not change collector queries.
         requested_scope = discovery.get("requested_scope") or {"mode": "COMPANY"}
         profile["requested_scope"] = requested_scope
         summary["requested_scope"] = requested_scope
+        # Archive completeness needs the same history policy and legal-name active
+        # period that Discovery used. Preserve them explicitly instead of making the
+        # archive layer guess a fixed five-report requirement for every company.
+        profile["minimum_history_years"] = int(
+            (summary.get("collection_policies_selected") or {}).get("minimum_history_years") or 5
+        )
+        profile["current_legal_name_active_period"] = discovery.get("current_legal_name_active_period") or {}
         mode = "DISCOVERY"
     elif profile_fallback_path.exists():
         profile = _read_json(profile_fallback_path)
         profile.setdefault("requested_scope", {"mode": "COMPANY"})
+        profile.setdefault("minimum_history_years", 5)
+        profile.setdefault("current_legal_name_active_period", {})
         mode = "PROFILE_FALLBACK"
         summary = {
             "summary_schema_version": "runtime-bootstrap-1.0",
