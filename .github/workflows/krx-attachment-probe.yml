@@ -24,47 +24,51 @@ jobs:
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
       - name: Probe KRX disclosure attachments
         run: |
-          python - <<'PY' | tee krx_attachment_probe.txt
+          mkdir -p krx_probe
+          python - <<'PY' | tee krx_probe/summary.txt
           import html, re
+          from pathlib import Path
           from urllib.parse import urljoin
           import requests
           from bs4 import BeautifulSoup
 
           UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
           disclosures={
-              2023:'20240613000301',
-              2024:'20250616000602',
-              2025:'20260622000693',
+              2023:{'acpt':'20240613000301','external':'https://kind.krx.co.kr/external/2024/06/13/000301/20240611000568/61979.htm'},
+              2024:{'acpt':'20250616000602','external':'https://kind.krx.co.kr/external/2025/06/16/000602/20250611000545/61979.htm'},
+              2025:{'acpt':'20260622000693','external':'https://kind.krx.co.kr/external/2026/06/22/000693/20260616000818/61979.htm'},
           }
           s=requests.Session(); s.headers.update({'User-Agent':UA})
-          for year,acpt in disclosures.items():
-              url=f'https://kind.krx.co.kr/common/disclsviewer.do?acptNo={acpt}&method=searchInitInfo'
-              print(f'===== YEAR {year} VIEWER {url} =====')
-              r=s.get(url,timeout=(8,30)); print('STATUS',r.status_code,'FINAL',r.url,'BYTES',len(r.content)); r.raise_for_status()
-              text=r.text
-              soup=BeautifulSoup(text,'html.parser')
-              candidates=[]
-              for tag in soup.find_all(True):
-                  for attr in ('href','src','value','action','data'):
-                      val=tag.get(attr)
-                      if not val: continue
-                      val=html.unescape(str(val))
-                      if any(k in val.lower() for k in ('pdf','attach','download','external','acptno','docno')):
-                          candidates.append((tag.name,attr,val,urljoin(r.url,val)))
-              for m in re.finditer(r'''(?i)(https?://[^\s"'<>]+|/[^\s"'<>]+\.pdf(?:\?[^\s"'<>]*)?)''',text):
-                  val=html.unescape(m.group(1))
-                  if 'pdf' in val.lower() or 'external' in val.lower():
-                      candidates.append(('regex','text',val,urljoin(r.url,val)))
-              seen=set()
-              for row in candidates:
-                  if row[3] in seen: continue
-                  seen.add(row[3]); print('CANDIDATE',*row,sep='\t')
-              print('RAW_PDF_OCCURRENCES',len(re.findall(r'(?i)\.pdf',text)))
+          out=Path('krx_probe')
+          for year,cfg in disclosures.items():
+              urls={
+                  'viewer':f"https://kind.krx.co.kr/common/disclsviewer.do?acptNo={cfg['acpt']}&method=searchInitInfo",
+                  'external':cfg['external'],
+              }
+              for kind,url in urls.items():
+                  print(f'===== YEAR {year} {kind.upper()} {url} =====')
+                  r=s.get(url,timeout=(8,30)); print('STATUS',r.status_code,'FINAL',r.url,'BYTES',len(r.content)); r.raise_for_status()
+                  path=out/f'{year}_{kind}.html'; path.write_bytes(r.content)
+                  text=r.text; soup=BeautifulSoup(text,'html.parser'); candidates=[]
+                  for tag in soup.find_all(True):
+                      attrs=' '.join(f'{k}={v}' for k,v in tag.attrs.items())
+                      if any(k in attrs.lower() for k in ('pdf','attach','download','external','acptno','docno','file')):
+                          candidates.append(('TAG',tag.name,attrs[:1000]))
+                  for script in soup.find_all('script'):
+                      body=script.get_text('\n')
+                      for line in body.splitlines():
+                          if any(k in line.lower() for k in ('pdf','attach','download','external','acptno','docno','file')):
+                              candidates.append(('SCRIPT','line',line.strip()[:1500]))
+                  seen=set()
+                  for row in candidates:
+                      key='\t'.join(row)
+                      if key in seen: continue
+                      seen.add(key); print('CANDIDATE',*row,sep='\t')
           PY
       - name: Upload probe result
         uses: actions/upload-artifact@v4
         with:
           name: krx-attachment-probe
-          path: krx_attachment_probe.txt
+          path: krx_probe/
           if-no-files-found: error
           retention-days: 3
