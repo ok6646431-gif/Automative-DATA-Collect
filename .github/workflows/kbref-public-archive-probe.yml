@@ -22,7 +22,7 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe National Archives publication records and detail JavaScript
+      - name: Probe National Archives publication records, JavaScript and detail responses
         run: |
           python - <<'PY'
           import json,re
@@ -33,13 +33,14 @@ jobs:
 
           base='https://theme.archives.go.kr'
           url=base+'/next/publishment/organSearch.do?page=519'
+          detail_url=base+'/next/publishment/detailInfo.do'
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'
           r=s.get(url,timeout=(8,25)); r.raise_for_status()
           Path('probe').mkdir(exist_ok=True)
           Path('probe/archive_page.html').write_text(r.text,encoding='utf-8')
           soup=BeautifulSoup(r.text,'html.parser')
           scripts=[urljoin(url,tag.get('src')) for tag in soup.find_all('script') if tag.get('src')]
-          result={'source_url':url,'status_code':r.status_code,'scripts':scripts,'records':{}}
+          result={'source_url':url,'status_code':r.status_code,'detail_url':detail_url,'scripts':scripts,'records':{}}
 
           for script_url in scripts:
               if 'publishment' not in script_url: continue
@@ -56,20 +57,36 @@ jobs:
                               end=i+1; break
                   block=js.text[start:end] if end else js.text[start:start+5000]
                   result['detailInfo_function']=block
-                  result['detailInfo_paths']=sorted(set(re.findall(r'[\"\']([^\"\']*(?:detail|Detail|publishment)[^\"\']*)[\"\']',block)))
 
-          for management_no in ('CM00079359','CM00079360'):
+          targets={
+              'CM00079359':('1310377','202511677368','000000000001'),
+              'CM00079360':('1310377','202511677369','000000000001'),
+          }
+          for management_no,(code,bsid,dsid) in targets.items():
               text=soup.find(string=lambda x: x and management_no in x)
-              rec={'found':bool(text),'management_no':management_no}
+              rec={'found':bool(text),'management_no':management_no,'code':code,'bsid':bsid,'dsid':dsid}
               if text:
                   li=text.find_parent('li')
                   rec['text']=' '.join(li.stripped_strings)[:3000]
-                  rec['html']=str(li)[:20000]
-                  checkbox=li.find('input',{'name':'idChk'})
-                  rec['record_value']=checkbox.get('value') if checkbox else ''
+                  rec['list_html']=str(li)[:20000]
                   detail=li.find('a',onclick=re.compile(r'detailInfo'))
                   rec['detail_onclick']=detail.get('onclick') if detail else ''
                   rec['view_tag']=str(li.find(class_=re.compile(r'viewrecord')))[:500]
+              dr=s.post(detail_url,data={'code':code,'bsid':bsid,'dsid':dsid,'gubun':'D'},headers={'Referer':url,'X-Requested-With':'XMLHttpRequest'},timeout=(8,25))
+              dr.raise_for_status()
+              detail_html=dr.text
+              Path(f'probe/{management_no}_detail.html').write_text(detail_html,encoding='utf-8')
+              dsoup=BeautifulSoup(detail_html,'html.parser')
+              links=[]
+              for tag in dsoup.find_all(['a','form','input','button']):
+                  attrs={k:str(v) for k,v in tag.attrs.items() if k in {'href','onclick','action','value','name','id','data-url','data-file','data-id'}}
+                  if attrs:
+                      links.append({'tag':tag.name,'text':' '.join(tag.stripped_strings)[:200],**attrs})
+              rec['detail_status']=dr.status_code
+              rec['detail_text']=' '.join(dsoup.stripped_strings)[:5000]
+              rec['detail_controls']=links[:300]
+              rec['detail_urls']=sorted(set(re.findall(r'https?://[^\"\'<> ]+',detail_html)))
+              rec['downloadish_strings']=sorted(set(re.findall(r'[^\"\']*(?:download|Download|file|File|view|View|원문)[^\"\']*',detail_html,re.I)))[:200]
               result['records'][management_no]=rec
 
           Path('probe/probe.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
