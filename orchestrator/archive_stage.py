@@ -3,6 +3,7 @@ from pathlib import Path
 
 import archive_builder
 from archive_builder import build_archive, archive_file_index, write_csv, sha256
+from archive_zip_dedup import run as deduplicate_archive_zip
 from requested_scope import source_id_scope as requested_source_id_scope
 from postprocess import stable_id
 
@@ -109,10 +110,9 @@ def add_archive_zip_to_artifact_index(package_root,zip_path):
 
 def refresh_manifest(package_root,docs,env,artifact_count):
     root=Path(package_root); manifest=read_json(root/"Master_Manifest.json",{}) or {}; review=read_json(root/"REVIEW_REQUIRED.json",[]) or []
-    # Preserve the schema version written by package_run.py (currently 1.6, which already
-    # includes review_selection/cross_layer_review/review_report). Archive stage only adds
+    # Preserve the schema version written by package_run.py. Archive stage only adds
     # document_lane/envinfo_attachments/human_archive fields on top; it must never regress
-    # the version to an older package_run schema.
+    # the package schema to an older version.
     manifest.setdefault("schema_version","1.6")
     manifest["review_count"]=len(review); manifest["validation"]="REVIEW_REQUIRED" if review else "PASS"; manifest["artifact_count"]=artifact_count
     manifest["document_lane"]={"status":docs.get("status","NOT_RUN"),"documents_declared":docs.get("documents_declared",0),"downloaded":docs.get("downloaded",0),"failed":docs.get("failed",0),"skipped":docs.get("skipped",0),"gaps":docs.get("gaps",0)}
@@ -132,7 +132,7 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
     archive=root/"Human_Archive"/archive_summary["archive_root"]; idx=archive/"00_자료목록"
     shutil.copy2(root/"Master_Manifest.json",idx/"Master_Manifest.json")
     # build_archive() copied the pre-finalization BUILDING snapshot into the system raw
-    # control-plane folder.  Keep both manifest copies inside the same final zip aligned.
+    # control-plane folder. Keep both manifest copies inside the same final zip aligned.
     system_manifest=archive/"90_시스템원본"/"control_plane"/"Master_Manifest.json"
     if system_manifest.parent.exists():
         shutil.copy2(root/"Master_Manifest.json",system_manifest)
@@ -152,14 +152,19 @@ def run(package_root,stable,evidence=None):
     vals,docs,env=document_reviews(root); merge_validations(root,vals)
     count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,count)
     # Archive v2 must use the exact same requested-scope resolver as Analysis.
-    # This only affects human-facing copies; 90_시스템원본 remains legal-entity-wide.
+    # This only affects human-facing copies; the source package remains legal-entity-wide.
     archive_builder.source_id_scope=requested_source_id_scope
     summary=build_archive(root); final=finalize_archive_manifest(root,manifest,summary)
+    # Human Archive keeps user-facing files directly accessible, while identical binary
+    # copies under 90_시스템원본 are replaced by a SHA-256 reference table. The complete
+    # raw package remains in the enterprise-env-final/stable-source artifacts.
+    deduplicate_archive_zip(root)
+    final=read_json(root/"Archive_Summary.json",final) or final
     artifact_count=add_archive_zip_to_artifact_index(root,root/final["zip_path"])
     manifest=read_json(root/"Master_Manifest.json",{}) or {}; manifest["artifact_count"]=artifact_count
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     # Final GitHub artifact keeps the validated core package plus one compact Human_Archive.zip.
-    # The expanded human folder is intentionally removed to avoid multi-hundred-MB duplicate copies.
+    # The expanded human folder is intentionally removed to avoid duplicate delivery copies.
     shutil.rmtree(root/"Human_Archive",ignore_errors=True)
     print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals)},ensure_ascii=False))
     return final
