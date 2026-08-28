@@ -18,14 +18,29 @@ def read_csv(path):
     if not p.exists(): return []
     with p.open(encoding='utf-8-sig',newline='') as f: return list(csv.DictReader(f))
 
+def utf8_safe(value):
+    """Return text that can always be emitted as strict UTF-8.
+
+    Some PDF extractors can surface isolated UTF-16 surrogate code points. They are
+    not valid Unicode scalar values and must never be allowed to crash packaging.
+    Normal text is unchanged; only malformed surrogate content is replaced.
+    """
+    if not isinstance(value,str): return value
+    return value.encode('utf-8',errors='replace').decode('utf-8')
+
 def write_csv(path,rows,fields):
     p=Path(path); p.parent.mkdir(parents=True,exist_ok=True)
     with p.open('w',encoding='utf-8-sig',newline='') as f:
-        w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore'); w.writeheader(); w.writerows(rows)
+        w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore'); w.writeheader()
+        for row in rows:
+            w.writerow({k:utf8_safe(v) for k,v in row.items()})
 
 def stable_id(prefix,*parts,n=12):
     raw='|'.join('' if x is None else str(x) for x in parts)
-    return prefix+hashlib.sha1(raw.encode('utf-8')).hexdigest()[:n].upper()
+    # backslashreplace preserves a deterministic representation of malformed
+    # surrogate code points without changing IDs for ordinary valid Unicode.
+    safe_bytes=raw.encode('utf-8',errors='backslashreplace')
+    return prefix+hashlib.sha1(safe_bytes).hexdigest()[:n].upper()
 
 def num(v):
     if v is None: return None
