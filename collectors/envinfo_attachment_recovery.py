@@ -2,13 +2,13 @@
 
 The primary collector preserves broad source evidence but has a bounded attachment
 storage budget. This recovery stage is intentionally generic:
+- repair stale DOWNLOADED rows whose physical file is missing;
 - deduplicate already downloaded attachments by SHA-256;
 - count the storage budget by unique physical bytes;
-- retry only failures caused by the old total-budget condition;
-- recover higher-value evidence first;
+- retry total-budget and interrupted-recovery rows in evidence priority order;
 - bound recovery runtime so one large source cannot starve later collectors;
 - checkpoint logical dedup references before deleting duplicate physical files;
-- expose storage/time-budget skips explicitly instead of calling them download failures.
+- expose storage/time-budget skips explicitly instead of calling them source failures.
 """
 
 import argparse
@@ -27,6 +27,7 @@ except ImportError:
 
 RECOVERY_FIELDS = list(base.ATTACHMENT_FIELDS) + ["storage_state", "storage_reference"]
 TOTAL_BUDGET_ERROR = "attachment collection size safety limit exceeded"
+MISSING_FILE_ERROR = "stored attachment file missing before recovery"
 TIME_BUDGET_STATUS = "SKIPPED_RECOVERY_TIME_BUDGET"
 DEFAULT_MAX_SECONDS = 360
 
@@ -51,12 +52,7 @@ def _atomic_text(path, text, encoding="utf-8"):
 
 
 def write_rows(out, rows):
-    """Atomically checkpoint attachment indexes.
-
-    The CSV/JSONL checkpoint is written before any deduplicated physical file is
-    deleted. A killed job can therefore leave harmless extra files, but never a
-    manifest that still points at a file recovery already removed.
-    """
+    """Atomically checkpoint attachment indexes."""
     out = Path(out)
     fields = []
     for name in RECOVERY_FIELDS:
@@ -87,12 +83,38 @@ def existing_file(row, repo_root):
     return p if p.exists() else None
 
 
+def requeue_missing_downloaded(rows, repo_root="."):
+    """Turn stale DOWNLOADED references into explicit recovery candidates.
+
+    Older recovery versions could be cancelled after unlinking a duplicate but before
+    persisting its canonical reference. A future run must never continue to claim that
+    such a row is downloaded. The source locator stays in the row, so it can be retried
+    normally or deliberately time-budget-skipped.
+    """
+    changed = 0
+    for row in rows:
+        if row.get("collection_status") != "DOWNLOADED":
+            continue
+        if existing_file(row, repo_root) is not None:
+            continue
+        old_path = str(row.get("stored_path") or "")
+        row.update({
+            "stored_path": "",
+            "collection_status": "DOWNLOAD_FAILED",
+            "error": MISSING_FILE_ERROR,
+            "storage_state": "MISSING_FILE_RETRY_REQUIRED",
+            "storage_reference": old_path,
+        })
+        changed += 1
+    return changed
+
+
 def deduplicate_downloaded(rows, repo_root="."):
     """Plan SHA dedup without deleting files.
 
-    Returns duplicate physical paths separately. The caller must persist the updated
-    logical references before deleting those paths. This ordering makes recovery safe
-    when GitHub cancels a job at its wall-clock limit.
+    Returns duplicate physical paths separately. The caller persists the canonical
+    references before deleting those paths, so cancellation can leave only harmless
+    extra files, never broken manifest references.
     """
     by_sha = {}
     unique_bytes = 0
@@ -141,8 +163,6 @@ def _delete_checkpointed_duplicates(paths):
             Path(p).unlink(missing_ok=True)
             deleted += 1
         except OSError:
-            # The logical manifest already points at the canonical file. A leftover
-            # duplicate is storage overhead, not a broken reference.
             pass
     return deleted
 
@@ -234,7 +254,7 @@ def _mark_time_budget(rows):
             "collection_status": TIME_BUDGET_STATUS,
             "error": "Recovery runtime budget exhausted before this attachment was retried; source reference retained for later/manual retrieval.",
             "storage_state": "TIME_BUDGET_SKIPPED",
-            "storage_reference": "",
+            "storage_reference": row.get("storage_reference") or "",
         })
 
 
@@ -247,18 +267,27 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
         return {"recovered": 0, "deduplicated": 0, "skipped_budget": 0, "skipped_time_budget": 0, "remaining_failed": 0}
 
     total_limit = int(total_limit or base.MAX_ATTACHMENT_TOTAL_BYTES)
+
+    missing_files_requeued = requeue_missing_downloaded(rows, repo_root)
+    if missing_files_requeued:
+        # Persist the honest state before any new network work. If this run is later
+        # cancelled, the manifest no longer claims missing files are downloaded.
+        write_rows(out, rows)
+
     by_sha, unique_bytes, duplicate_rows, duplicate_bytes, duplicate_paths = deduplicate_downloaded(rows, repo_root)
 
-    # Commit canonical references before physical cleanup. If the process is killed
-    # afterwards, every manifest path still resolves; at worst duplicate files remain.
     if duplicate_paths:
+        # Canonical references become durable before physical duplicate cleanup.
         write_rows(out, rows)
         _delete_checkpointed_duplicates(duplicate_paths)
 
     candidates = [
         r for r in rows
         if r.get("collection_status") == "DOWNLOAD_FAILED"
-        and TOTAL_BUDGET_ERROR in str(r.get("error") or "")
+        and (
+            TOTAL_BUDGET_ERROR in str(r.get("error") or "")
+            or MISSING_FILE_ERROR in str(r.get("error") or "")
+        )
     ]
     candidates.sort(key=recovery_priority)
 
@@ -309,7 +338,8 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
                 continue
 
             try:
-                stored = str(target.resolve().relative_to(Path(repo_root).resolve()))
+                stored = str(target.resolve().relative_to(Path(repo_root).resolve())
+                )
             except ValueError:
                 stored = str(target)
             by_sha[digest] = str(target)
@@ -342,6 +372,7 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
         "attachment_fail": len(remaining_failed),
         "attachment_skipped_budget": len(budget_skipped),
         "attachment_skipped_recovery_time_budget": len(time_skipped),
+        "attachment_missing_files_requeued": missing_files_requeued,
         "attachment_deduplicated": sum(1 for r in downloaded_rows if r.get("storage_state") == "DEDUPLICATED_REFERENCE"),
         "attachment_bytes": logical_bytes,
         "attachment_unique_bytes": unique_bytes,
@@ -355,10 +386,11 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
     summary = {
         "recovered": recovered,
         "deduplicated": duplicate_rows,
+        "missing_files_requeued": missing_files_requeued,
         "duplicate_bytes_saved": duplicate_bytes,
         "unique_bytes": unique_bytes,
-        "skipped_budget": skipped_budget,
-        "skipped_time_budget": skipped_time_budget,
+        "skipped_budget": len(budget_skipped),
+        "skipped_time_budget": len(time_skipped),
         "time_budget_seconds": max_seconds,
         "time_budget_exhausted": time_budget_exhausted,
         "remaining_failed": len(remaining_failed),
