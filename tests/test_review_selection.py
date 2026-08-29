@@ -87,5 +87,47 @@ class TestReviewSelection(unittest.TestCase):
             self.assertEqual(water['requested_scope_years'],'2020|2021|2022|2023|2024|2025')
             self.assertEqual(summary['scope_mode'],'SITE_SET')
 
+    def test_current_entity_period_excludes_pre_start_years_from_target_series(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); src=root/'src'; pkg=root/'pkg'; pkg.mkdir()
+            annual=[
+                {'YEAR':str(y),'FACT_CODE':'W1','FACT_FNAME':'Target Site','WAST_NO':1,'TN_AVRG_DNSTY':str(y-2019)}
+                for y in range(2020,2026)
+            ]
+            write_jsonl(src/'SOOSIRO_WATER'/'annual_rows.jsonl',annual)
+            write_jsonl(src/'SOOSIRO_WATER'/'daily_rows.jsonl',[
+                {'query_year':2021,'FACT_CODE':'W1','FACT_FNAME':'Target Site','WAST_NO':1,'TN_AVRG_DNSTY':'100'},
+                {'query_year':2024,'FACT_CODE':'W1','FACT_FNAME':'Target Site','WAST_NO':1,'TN_AVRG_DNSTY':'10'},
+            ])
+            for s in ['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR']: (src/s).mkdir(parents=True,exist_ok=True)
+            for s in ['ENVINFO','PRTR','CHEM_STATS']: (src/s/'discovery.csv').write_text('search_year\n',encoding='utf-8')
+            (src/'CLEANSYS_AIR'/'annual_rows.jsonl').write_text('',encoding='utf-8')
+            (src/'PRTR'/'detail_table_rows.jsonl').write_text('',encoding='utf-8')
+            (src/'CHEM_STATS'/'detail_table_rows.jsonl').write_text('',encoding='utf-8')
+            (pkg/'Requested_Scope.json').write_text(json.dumps({
+                'mode':'SITE_SET','label':'Current company only','target_canonical_site_ids':[],
+                'target_source_ids':{'SOOSIRO_WATER':['W1']},
+                'current_legal_entity_active_period':{'start_year':2022,'end_year':None},
+            },ensure_ascii=False),encoding='utf-8')
+
+            summary=run_review_selection(src,pkg,ROOT/'orchestrator'/'review_selection_protocol.json')
+            inv=list(csv.DictReader((pkg/'Review_Metric_Inventory.csv').open(encoding='utf-8-sig')))
+            tn=[r for r in inv if r['source']=='SOOSIRO_WATER' and r['source_site_id']=='W1' and r['metric']=='TN_CONC'][0]
+            self.assertEqual(tn['years'],'2022|2023|2024|2025')
+            self.assertEqual(tn['observation_count'],'4')
+            self.assertEqual(tn['in_requested_scope'],'YES')
+            self.assertIn('legal entity active period',tn['definition_note'])
+
+            cov=list(csv.DictReader((pkg/'Review_Source_Coverage.csv').open(encoding='utf-8-sig')))
+            water=[r for r in cov if r['source']=='SOOSIRO_WATER'][0]
+            self.assertEqual(water['raw_years'],'2020|2021|2022|2023|2024|2025')
+            self.assertEqual(water['requested_scope_years'],'2022|2023|2024|2025')
+
+            daily=list(csv.DictReader((pkg/'Water_Daily_Stats.csv').open(encoding='utf-8-sig')))
+            tn_daily=[r for r in daily if r['source_site_id']=='W1' and r['metric']=='TN_CONC'][0]
+            self.assertEqual(tn_daily['n'],'1')
+            self.assertEqual(float(tn_daily['mean']),10.0)
+            self.assertEqual(summary['current_legal_entity_active_period'],{'start_year':2022,'end_year':None})
+
 
 if __name__=='__main__': unittest.main()
