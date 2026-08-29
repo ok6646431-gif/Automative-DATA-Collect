@@ -1,14 +1,14 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-generalization-20260829-v1",
+  "request_id": "lottechem-generalization-20260829-v1",
   "discovery_status": "NOT_RUN",
   "events": [],
   "gaps": [
     {
-      "gap_id": "POSCO_EVENT_DISCOVERY_NOT_PRESEEDED",
+      "gap_id": "LOTTECHEM_EVENT_DISCOVERY_NOT_PRESEEDED",
       "source_key": "OFFICIAL_EVENT_DISCOVERY",
       "severity": "LOW",
-      "reason": "No company/site event is pre-seeded for the no-code-change generalization test. The verified 2022 spin-off is corporate identity context in company_discovery.json, not an environmental event link."
+      "reason": "No environmental operating event is pre-seeded for this no-code-change generalization test. The 2020 merger and 2026 Daesan spin-off remain corporate identity/scope context in company_discovery.json rather than environmental event claims."
     }
   ]
 }
