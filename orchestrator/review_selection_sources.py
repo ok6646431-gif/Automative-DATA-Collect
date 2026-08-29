@@ -1,7 +1,7 @@
 import math, statistics
 from collections import defaultdict
 from pathlib import Path
-from review_selection_common import read_jsonl, num, year, resolve_site, stable_id
+from review_selection_common import read_jsonl, num, year, resolve_site, stable_id, scope_allows
 
 AIR={'tsp_dscamt':'TSP','sox_dscamt':'SOx','nox_dscamt':'NOx','hcl_dscamt':'HCl','hf_dscamt':'HF','nh3_dscamt':'NH3','co_dscamt':'CO','dscamt_sm':'TOTAL_DISCLOSED'}
 WATER={'PH_AVRG_DNSTY':'pH','BOD_AVRG_DNSTY':'BOD_CONC','COD_AVRG_DNSTY':'COD_CONC','TOC_AVRG_DNSTY':'TOC_CONC','SS_AVRG_DNSTY':'SS_CONC','TN_AVRG_DNSTY':'TN_CONC','TP_AVRG_DNSTY':'TP_CONC','INTGFL_AVRG_DNSTY':'INTEGRATED_CONC','AMOUNT_FLOW':'FLOW','BOD_DSCAMT':'BOD_LOAD','COD_DSCAMT':'COD_LOAD','TOC_DSCAMT':'TOC_LOAD','SS_DSCAMT':'SS_LOAD','TN_DSCAMT':'TN_LOAD','TP_DSCAMT':'TP_LOAD'}
@@ -69,10 +69,13 @@ def chemical_candidates(prtr,stats):
         out.append({'chemical_id':stable_id('CHEM_',name,'|'.join(sorted(x['cas']))),'chemical':name,'cas':'|'.join(sorted(x['cas'])),'site_count':len(x['sites']),'year_count':len(x['years']),'site_year_count':len(x['siteyears']),'years':'|'.join(map(str,sorted(x['years']))),'release_kg':x['release'],'transfer_kg':x['transfer'],'landfill_kg':x['landfill'],'regulatory_hazard_flags':'|'.join(sorted(fs)),'evidence_dimensions':'|'.join(dims),'display_level':'MAIN' if len(dims)>=2 else 'OVERVIEW','interpretation_boundary':'Quantity is not hazard/risk; flags are management relevance, not a risk score.'})
     return out
 
-def daily_stats(root,idmap):
+def daily_stats(root,idmap,scope=None):
     g=defaultdict(list)
     for r in read_jsonl(Path(root)/'SOOSIRO_WATER'/'daily_rows.jsonl'):
         sid=str(r.get('FACT_CODE') or r.get('source_fact_code') or ''); cid,cname=resolve_site(idmap,'SOOSIRO_WATER',sid,r.get('FACT_FNAME') or r.get('FACT_NAME') or sid); outlet=str(r.get('WAST_NO','') or '')
+        time_key=r.get('query_year',r.get('YEAR',r.get('year')))
+        if scope is not None and not scope_allows(scope,'SOOSIRO_WATER',sid,cid,time_key):
+            continue
         for f,m in WATER.items():
             if not (f.endswith('_AVRG_DNSTY') or f=='AMOUNT_FLOW'): continue
             v=num(r.get(f))
