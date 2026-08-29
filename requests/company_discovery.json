@@ -1,109 +1,162 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-generalization-20260829-v1",
-  "requested_company_name": "포스코",
-  "current_legal_name": "주식회사 포스코",
-  "current_legal_name_active_period": {"start_year": 2022, "end_year": null},
+  "request_id": "lottechem-generalization-20260829-v1",
+  "requested_company_name": "롯데케미칼",
+  "current_legal_name": "롯데케미칼 주식회사",
+  "current_legal_name_active_period": {"start_year": 2012, "end_year": null},
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "국내 일관제철 생산거점 2개(포항·광양제철소)",
-    "candidate_ids": ["posco-pohang", "posco-gwangyang"],
+    "label": "현재 롯데케미칼 법인의 국내 생산거점(기초화학 여수·첨단소재 여수·울산·대구 수처리)",
+    "candidate_ids": [
+      "lottechem-yeosu-basic",
+      "lottechem-yeosu-advanced",
+      "lottechem-ulsan",
+      "lottechem-daegu-water"
+    ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
   "company_aliases": [
     {
-      "name": "포스코",
+      "name": "롯데케미칼",
       "alias_type": "current_brand_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp"
+      "source_locator": "https://www.lottechem.com/ko/company/about.do"
     },
     {
-      "name": "(주)포스코",
+      "name": "(주)롯데케미칼",
       "alias_type": "source_native_alias",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/docs/kor7/jsp/resources/file/ir/POSCO_consolidated_FY25_3Q.pdf"
+      "verification_state": "REVIEW_REQUIRED",
+      "source_locator": "https://www.lottechem.com/ko/company/about.do",
+      "notes": "Collection spelling variant only; do not use this alias to override legal-entity conflicts."
     },
     {
-      "name": "POSCO",
-      "alias_type": "english_name",
+      "name": "LOTTE Chemical",
+      "alias_type": "english_brand_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/eng/index.do"
+      "source_locator": "https://www.lottechem.com/ko/company/about.do"
     }
   ],
-  "historical_legal_names": [],
+  "historical_legal_names": [
+    {
+      "name": "호남석유화학",
+      "alias_type": "former_legal_name",
+      "active_period": {"start_year": 1976, "end_year": 2012},
+      "verification_state": "VERIFIED",
+      "source_locator": "https://www.lottechem.com/ko/media/news/102/view.do",
+      "search_policy": "DISABLED_OUTSIDE_REQUEST_WINDOW",
+      "notes": "Same corporate lineage before the 2012 name change, but outside this blind-test collection window."
+    }
+  ],
   "corporate_restructuring_evidence": [
     {
-      "event_type": "spin_off",
-      "effective_date": "2022-03-01",
-      "predecessor_entity": "분할 전 주식회사 포스코",
-      "continuing_entity_after_event": "포스코홀딩스 주식회사",
-      "new_operating_entity": "주식회사 포스코",
-      "transferred_business": "철강 생산 및 판매 등 사업부문",
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "event_type": "merger_absorption",
+      "effective_date": "2020-01-02",
+      "predecessor_entity": "롯데첨단소재 주식회사",
+      "continuing_entity_after_event": "롯데케미칼 주식회사",
+      "transferred_business": "첨단소재 사업",
+      "source_locator": "https://www.lottechem.com/ko/media/news/217/view.do",
       "verification_state": "VERIFIED",
-      "notes": "Restructuring context only. Do not create an alias or automatic legal-entity merge for pre-2022 records."
+      "notes": "Context only. Do not turn the predecessor name into an unbounded current-company alias or automatically rewrite pre-merger source identity."
+    },
+    {
+      "event_type": "spin_off",
+      "effective_date": "2026-06-01",
+      "predecessor_entity": "롯데케미칼 주식회사",
+      "new_operating_entity": "롯데대산석화 주식회사",
+      "transferred_business": "기존 대산사업장 석유화학 사업",
+      "source_locator": "https://www.lottechem.com/ko/media/news/1200/view.do",
+      "verification_state": "VERIFIED",
+      "notes": "The former Daesan site is no longer a current Lotte Chemical production site. Preserve historical raw evidence but do not include Daesan in the requested current-site analysis scope."
     }
   ],
   "domestic_site_candidates": [
     {
-      "candidate_id": "posco-pohang",
-      "site_name_raw": "포항제철소",
-      "address_raw": "경상북도 포항시 남구 동해안로 6262",
-      "business_unit_raw": "일관제철 생산",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
+      "candidate_id": "lottechem-yeosu-basic",
+      "site_name_raw": "기초화학 여수공장",
+      "address_raw": "전라남도 여수시 여수산단4로 53",
+      "business_unit_raw": "기초화학 생산",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "posco-gwangyang",
-      "site_name_raw": "광양제철소",
-      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
-      "business_unit_raw": "일관제철 생산",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+      "candidate_id": "lottechem-yeosu-advanced",
+      "site_name_raw": "첨단소재 여수공장",
+      "address_raw": "전라남도 여수시 평여동 62",
+      "business_unit_raw": "첨단소재 생산",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "lottechem-ulsan",
+      "site_name_raw": "울산공장",
+      "address_raw": "울산광역시 남구 사평로 119",
+      "business_unit_raw": "아로마틱 계열 제품 생산",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "lottechem-daegu-water",
+      "site_name_raw": "대구수처리공장",
+      "address_raw": "대구광역시 달성군 구지면 국가산단대로40길 35",
+      "business_unit_raw": "수처리용 분리막 생산",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
-      "source_value_raw": "2022-03-01 철강 생산 및 판매 등 사업부문을 물적분할하여 주식회사 포스코를 신설하고, 분할존속회사는 포스코홀딩스 주식회사로 상호 변경",
+      "source_locator": "https://www.lottechem.com/ko/company/about.do",
+      "source_value_raw": "회사명: 롯데케미칼 주식회사 / 설립일: 1976년 3월 16일",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-      "source_value_raw": "포항제철소 / 경상북도 포항시 남구 동해안로 6262",
+      "source_locator": "https://www.lottechem.com/ko/media/news/102/view.do",
+      "source_value_raw": "2012년 12월 27일부터 호남석유화학 사명을 롯데케미칼로 변경",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
-      "source_value_raw": "광양제철소 / 전라남도 광양시 폭포사랑길 20-26",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "source_value_raw": "기초화학 여수공장 / 전라남도 여수시 여수산단4로 53; 첨단소재 여수공장 / 전라남도 여수시 평여동 62; 울산공장 / 울산광역시 남구 사평로 119; 대구수처리공장 / 대구광역시 달성군 구지면 국가산단대로40길 35",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
+      "source_value_raw": "롯데대산석화는 2026년 6월 롯데케미칼로부터 물적분할되어 출범",
       "verification_state": "VERIFIED"
     }
   ],
   "related_entity_exclusions": [
     {
-      "name": "포스코홀딩스",
-      "reason": "2022 spin-off continuing holding company; separate legal entity from the current steel operating company",
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "name": "롯데대산석화",
+      "reason": "2026-06 spin-off company operating the former Daesan site; separate current legal entity",
+      "source_locator": "https://www.lottechem.com/ko/company/network2.do",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "포스코홀딩스 주식회사",
-      "reason": "2022 spin-off continuing holding company; separate legal entity from the current steel operating company",
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "name": "롯데대산석화 주식회사",
+      "reason": "2026-06 spin-off company operating the former Daesan site; separate current legal entity",
+      "source_locator": "https://www.lottechem.com/ko/media/news/1200/view.do",
       "verification_state": "VERIFIED"
     }
   ],
   "unresolved_items": [
     {
-      "code": "PRE_2022_LEGAL_ENTITY_CONTINUITY_NOT_AUTO_ASSUMED",
-      "subject": "주식회사 포스코",
-      "detail": "Pre-2022 records may describe the predecessor corporation that later became POSCO Holdings. The identical historical text must not by itself establish current-company continuity."
+      "code": "DAESAN_HISTORICAL_RAW_NOT_CURRENT_SITE_SCOPE",
+      "subject": "대산사업장",
+      "detail": "2020-2024 public records may correctly belong to Lotte Chemical at the time, but the site was spun off in 2026 and is intentionally outside this test's current production-site analysis scope."
+    },
+    {
+      "code": "ADVANCED_MATERIALS_2020_MERGER_BOUNDARY",
+      "subject": "첨단소재 여수공장",
+      "detail": "Lotte Advanced Materials was absorbed on 2020-01-02. Any predecessor-named source evidence must remain provenance-explicit rather than being silently rewritten as current-company identity."
     }
   ],
   "event_evidence_references": [],
