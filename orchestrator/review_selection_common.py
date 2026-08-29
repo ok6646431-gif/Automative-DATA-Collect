@@ -74,13 +74,34 @@ def requested_scope(package_root):
     source_ids={}
     for source,ids in (raw.get('target_source_ids',{}) or {}).items():
         source_ids[str(source)]={str(x) for x in (ids or []) if str(x)}
-    return {'mode':mode,'label':raw.get('label') or mode,'target_canonical_site_ids':canonical,'target_source_ids':source_ids,'raw':raw}
+    period=raw.get('current_legal_entity_active_period') or {}
+    return {
+        'mode':mode,'label':raw.get('label') or mode,
+        'target_canonical_site_ids':canonical,'target_source_ids':source_ids,
+        'current_legal_entity_active_period':period,'raw':raw
+    }
 
-def scope_allows(scope,source='',source_site_id='',canonical_site_id=''):
-    if not scope or str(scope.get('mode') or 'COMPANY').upper()!='SITE_SET': return True
-    cid=str(canonical_site_id or ''); sid=str(source_site_id or ''); src=str(source or '')
-    if cid and cid in scope.get('target_canonical_site_ids',set()): return True
-    return bool(sid and sid in scope.get('target_source_ids',{}).get(src,set()))
+def _time_allowed(scope,time_key=None):
+    period=(scope or {}).get('current_legal_entity_active_period') or {}
+    if not period or time_key in (None,''): return True
+    y=year(time_key)
+    if y is None: return True
+    start=period.get('start_year'); end=period.get('end_year')
+    if start not in (None,'') and y<int(start): return False
+    if end not in (None,'') and y>int(end): return False
+    return True
 
-def scope_flag(scope,source='',source_site_id='',canonical_site_id=''):
-    return 'YES' if scope_allows(scope,source,source_site_id,canonical_site_id) else 'NO'
+def scope_allows(scope,source='',source_site_id='',canonical_site_id='',time_key=None):
+    if not scope:
+        return True
+    if str(scope.get('mode') or 'COMPANY').upper()=='SITE_SET':
+        cid=str(canonical_site_id or ''); sid=str(source_site_id or ''); src=str(source or '')
+        site_allowed=bool(
+            (cid and cid in scope.get('target_canonical_site_ids',set()))
+            or (sid and sid in scope.get('target_source_ids',{}).get(src,set()))
+        )
+        if not site_allowed: return False
+    return _time_allowed(scope,time_key)
+
+def scope_flag(scope,source='',source_site_id='',canonical_site_id='',time_key=None):
+    return 'YES' if scope_allows(scope,source,source_site_id,canonical_site_id,time_key) else 'NO'

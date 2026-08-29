@@ -35,17 +35,29 @@ def metric_selection(metrics,actions,protocol,scope):
         g[(r['source'],str(r.get('source_site_id') or ''),r['canonical_site_id'],r['site_name'],r['sub_scope'],r['domain'],r['metric'],r.get('definition_note',''))].append(r)
     amin=defaultdict(list)
     for a in actions:
-        a['in_requested_scope']=scope_flag(scope,a.get('source',''),a.get('source_site_id',''),a.get('canonical_site_id',''))
+        a['in_requested_scope']=scope_flag(
+            scope,a.get('source',''),a.get('source_site_id',''),a.get('canonical_site_id',''),a.get('year')
+        )
         if a['in_requested_scope']!='YES': continue
         for d in str(a['domain']).split('|'): amin[(a['canonical_site_id'],d)].append(a['action_id'])
     min_obs=int(protocol.get('comparability',{}).get('trend_min_observations',4)); inv=[]; sig=[]; plan=[]
     for k,rs in sorted(g.items()):
-        source,sid,cid,cname,sub,domain,metric,note=k; vals=sorted((r['year'],r['value']) for r in rs if r.get('year') is not None and r.get('value') is not None); ys=sorted(set(y for y,x in vals)); s=series_signal(vals,min_obs,source)
+        source,sid,cid,cname,sub,domain,metric,note=k
+        site_allowed=scope_allows(scope,source,sid,cid)
+        eligible_rs=[r for r in rs if scope_allows(scope,source,sid,cid,r.get('year'))] if site_allowed else []
+        value_rows=eligible_rs if site_allowed else rs
+        vals=sorted((r['year'],r['value']) for r in value_rows if r.get('year') is not None and r.get('value') is not None)
+        ys=sorted(set(y for y,x in vals)); s=series_signal(vals,min_obs,source)
         comp='ZERO_SEMANTICS_REVIEW' if s=='ZERO_SEMANTICS_REVIEW' else ('TREND_ELIGIBLE' if len(ys)>=min_obs else ('CONTEXT_ONLY' if len(ys)>=2 else 'EVIDENCE_ONLY'))
-        allowed=scope_allows(scope,source,sid,cid); acts=sorted(set(amin[(cid,domain)])) if allowed else []; level='OVERVIEW' if ys else 'EVIDENCE'; reason=['available_metric'] if ys else []
+        allowed=bool(eligible_rs) if site_allowed else False
+        acts=sorted(set(amin[(cid,domain)])) if allowed else []; level='OVERVIEW' if ys else 'EVIDENCE'; reason=['available_metric'] if ys else []
         if comp=='TREND_ELIGIBLE' and s not in NON_ACTIONABLE_SIGNALS: level='MAIN'; reason.append('comparable_signal')
         if comp=='TREND_ELIGIBLE' and acts: level='MAIN'; reason.append('same_site_domain_action')
         note_out=note
+        if site_allowed and len(eligible_rs)<len(rs):
+            extra='Observations outside the current legal entity active period are preserved in raw evidence but excluded from this current-company series.'
+            note_out=(str(note_out).strip()+' '+extra).strip()
+            reason.append('legal_entity_period_applied')
         if s=='ZERO_SEMANTICS_REVIEW':
             extra='Leading CleanSYS zero is retained as source-native data but excluded from automatic trend interpretation until zero semantics are verified.'
             note_out=(str(note_out).strip()+' '+extra).strip()
@@ -99,11 +111,11 @@ def coverage(root,metrics,prtr,stats,scope):
         rows=read_csv(Path(root)/s/f) if kind=='csv' else read_jsonl(Path(root)/s/f); raw[s]=sorted(set(y for y in (year(r.get(k)) for r in rows) if y))
     scoped=defaultdict(set)
     for r in metrics:
-        if scope_allows(scope,r.get('source',''),r.get('source_site_id',''),r.get('canonical_site_id','')) and r.get('year') is not None: scoped[r['source']].add(r['year'])
+        if scope_allows(scope,r.get('source',''),r.get('source_site_id',''),r.get('canonical_site_id',''),r.get('year')) and r.get('year') is not None: scoped[r['source']].add(r['year'])
     for r in prtr:
-        if scope_allows(scope,'PRTR',r.get('source_site_id',''),r.get('canonical_site_id','')) and r.get('year') is not None: scoped['PRTR'].add(r['year'])
+        if scope_allows(scope,'PRTR',r.get('source_site_id',''),r.get('canonical_site_id',''),r.get('year')) and r.get('year') is not None: scoped['PRTR'].add(r['year'])
     for r in stats:
-        if scope_allows(scope,'CHEM_STATS',r.get('source_site_id',''),r.get('canonical_site_id','')) and r.get('year') is not None: scoped['CHEM_STATS'].add(r['year'])
+        if scope_allows(scope,'CHEM_STATS',r.get('source_site_id',''),r.get('canonical_site_id',''),r.get('year')) and r.get('year') is not None: scoped['CHEM_STATS'].add(r['year'])
     out=[]
     for s in ['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER']:
         sy=sorted(scoped[s]); ry=raw.get(s,[]); out.append({'source':s,'raw_years':'|'.join(map(str,ry)),'raw_year_count':len(ry),'requested_scope_years':'|'.join(map(str,sy)),'requested_scope_year_count':len(sy),'scope_mode':scope.get('mode','COMPANY'),'scope_label':scope.get('label','')})
@@ -113,10 +125,13 @@ def coverage(root,metrics,prtr,stats,scope):
 def run_review_selection(source_root,package_root,protocol_path=None):
     root=Path(source_root); pkg=Path(package_root); pkg.mkdir(parents=True,exist_ok=True); protocol=read_json(protocol_path or Path(__file__).with_name('review_selection_protocol.json'),{}) or {}; scope=requested_scope(pkg); idmap=source_identity_map(pkg)
     metrics=env_metrics(root,idmap)+parse_cleansys(root,idmap)+parse_soosiro(root,idmap); actions=parse_actions(root,idmap); inv,sig,plan=metric_selection(metrics,actions,protocol,scope)
-    prtr=parse_prtr(root,idmap); stats=parse_chem_stats(root,idmap); prtr_scope=[r for r in prtr if scope_allows(scope,'PRTR',r.get('source_site_id',''),r.get('canonical_site_id',''))]; stats_scope=[r for r in stats if scope_allows(scope,'CHEM_STATS',r.get('source_site_id',''),r.get('canonical_site_id',''))]; chems=chemical_candidates(prtr_scope,stats_scope)
+    prtr=parse_prtr(root,idmap); stats=parse_chem_stats(root,idmap)
+    prtr_scope=[r for r in prtr if scope_allows(scope,'PRTR',r.get('source_site_id',''),r.get('canonical_site_id',''),r.get('year'))]
+    stats_scope=[r for r in stats if scope_allows(scope,'CHEM_STATS',r.get('source_site_id',''),r.get('canonical_site_id',''),r.get('year'))]
+    chems=chemical_candidates(prtr_scope,stats_scope)
     plan += [{'object_id':c['chemical_id'],'object_type':'CHEMICAL','domain':'CHEMICALS','site_name':'MULTI_SITE' if c['site_count']>1 else 'SINGLE_SITE','label':c['chemical'],'display_level':c['display_level'],'selection_reason':'requested_scope_evidence_stack','evidence_dimensions':c['evidence_dimensions'],'related_action_ids':'','scope_label':scope.get('label',''),'human_decision':'UNREVIEWED'} for c in chems]
     site_names={r.get('canonical_site_id',''):r.get('canonical_site_name','') for r in read_csv(pkg/'Site_Master.csv') if r.get('canonical_site_id')}
-    topics=topic_candidates(inv,sig,actions,chems,scope,site_names); daily=daily_stats(root,idmap)
+    topics=topic_candidates(inv,sig,actions,chems,scope,site_names); daily=daily_stats(root,idmap,scope)
     for r in daily: r['scope_label']=scope.get('label',''); r['in_requested_scope']=scope_flag(scope,r.get('source',''),r.get('source_site_id',''),r.get('canonical_site_id',''))
     cov=coverage(root,metrics,prtr,stats,scope)
     write_csv(pkg/'Review_Metric_Inventory.csv',inv,['metric_id','source','source_site_id','canonical_site_id','site_name','sub_scope','domain','metric','years','observation_count','comparability','definition_note','source_ref','scope_label','in_requested_scope'])
@@ -127,7 +142,7 @@ def run_review_selection(source_root,package_root,protocol_path=None):
     write_csv(pkg/'Review_Display_Plan.csv',plan,['object_id','object_type','domain','site_name','label','display_level','selection_reason','evidence_dimensions','related_action_ids','scope_label','human_decision'])
     write_csv(pkg/'Review_Topic_Candidates.csv',topics,['topic_id','canonical_site_id','site_name','domain','candidate_state','signal_metric_ids','signal_labels','action_ids','evidence_sources','evidence_dimensions','why_review','limitations','scope_label','human_decision'])
     write_csv(pkg/'Review_Source_Coverage.csv',cov,['source','raw_years','raw_year_count','requested_scope_years','requested_scope_year_count','scope_mode','scope_label'])
-    summary={'schema_version':'1.3','protocol_version':protocol.get('schema_version'),'scope_mode':scope.get('mode'),'scope_label':scope.get('label'),'metric_rows':len(metrics),'metric_inventory':len(inv),'metric_inventory_in_scope':sum(r['in_requested_scope']=='YES' for r in inv),'signals':len(sig),'signals_in_scope':sum(r['in_requested_scope']=='YES' for r in sig),'zero_semantics_review':sum(r['signal_type']=='ZERO_SEMANTICS_REVIEW' for r in sig),'management_actions':len(actions),'management_actions_in_scope':sum(r.get('in_requested_scope')=='YES' for r in actions),'prtr_chemical_rows':len(prtr),'prtr_chemical_rows_in_scope':len(prtr_scope),'chem_stats_substance_rows':len(stats),'chem_stats_substance_rows_in_scope':len(stats_scope),'chemical_candidates':len(chems),'topic_candidates':len(topics),'deep_dive_candidates':sum(t['candidate_state']=='DEEP_DIVE_CANDIDATE' for t in topics),'daily_stat_rows':len(daily),'daily_stat_rows_in_scope':sum(r['in_requested_scope']=='YES' for r in daily),'boundaries':protocol.get('hard_boundaries',[])}
+    summary={'schema_version':'1.4','protocol_version':protocol.get('schema_version'),'scope_mode':scope.get('mode'),'scope_label':scope.get('label'),'current_legal_entity_active_period':scope.get('current_legal_entity_active_period',{}),'metric_rows':len(metrics),'metric_inventory':len(inv),'metric_inventory_in_scope':sum(r['in_requested_scope']=='YES' for r in inv),'signals':len(sig),'signals_in_scope':sum(r['in_requested_scope']=='YES' for r in sig),'zero_semantics_review':sum(r['signal_type']=='ZERO_SEMANTICS_REVIEW' for r in sig),'management_actions':len(actions),'management_actions_in_scope':sum(r.get('in_requested_scope')=='YES' for r in actions),'prtr_chemical_rows':len(prtr),'prtr_chemical_rows_in_scope':len(prtr_scope),'chem_stats_substance_rows':len(stats),'chem_stats_substance_rows_in_scope':len(stats_scope),'chemical_candidates':len(chems),'topic_candidates':len(topics),'deep_dive_candidates':sum(t['candidate_state']=='DEEP_DIVE_CANDIDATE' for t in topics),'daily_stat_rows':len(daily),'daily_stat_rows_in_scope':sum(r['in_requested_scope']=='YES' for r in daily),'boundaries':protocol.get('hard_boundaries',[])}
     (pkg/'Review_Selection_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8'); return summary
 
 
