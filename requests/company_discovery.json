@@ -1,84 +1,111 @@
 {
   "schema_version": "1.0",
-  "request_id": "hyundai-motor-generalization-20260829-v1",
-  "requested_company_name": "현대자동차",
-  "current_legal_name": "현대자동차 주식회사",
-  "current_legal_name_active_period": {"start_year": 1967, "end_year": null},
+  "request_id": "posco-generalization-20260829-v1",
+  "requested_company_name": "포스코",
+  "current_legal_name": "주식회사 포스코",
+  "current_legal_name_active_period": {"start_year": 2022, "end_year": null},
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "국내 완성차 생산공장 3개(울산·아산·전주)",
-    "candidate_ids": ["hmc-ulsan", "hmc-asan", "hmc-jeonju"],
+    "label": "국내 일관제철 생산거점 2개(포항·광양제철소)",
+    "candidate_ids": ["posco-pohang", "posco-gwangyang"],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
   "company_aliases": [
     {
-      "name": "현대자동차",
+      "name": "포스코",
       "alias_type": "current_brand_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory"
+      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp"
     },
     {
-      "name": "현대자동차(주)",
+      "name": "(주)포스코",
       "alias_type": "source_native_alias",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.hyundai.com/kr/ko/sustain-manage/manage-system/sustainability-report"
+      "source_locator": "https://www.posco.com/docs/kor7/jsp/resources/file/ir/POSCO_consolidated_FY25_3Q.pdf"
     },
     {
-      "name": "HYUNDAI MOTOR COMPANY",
+      "name": "POSCO",
       "alias_type": "english_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.hyundai.com/kr/ko/sustain-manage/manage-system/sustainability-report"
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/eng/index.do"
     }
   ],
   "historical_legal_names": [],
-  "corporate_restructuring_evidence": [],
+  "corporate_restructuring_evidence": [
+    {
+      "event_type": "spin_off",
+      "effective_date": "2022-03-01",
+      "predecessor_entity": "분할 전 주식회사 포스코",
+      "continuing_entity_after_event": "포스코홀딩스 주식회사",
+      "new_operating_entity": "주식회사 포스코",
+      "transferred_business": "철강 생산 및 판매 등 사업부문",
+      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "verification_state": "VERIFIED",
+      "notes": "Restructuring context only. Do not create an alias or automatic legal-entity merge for pre-2022 records."
+    }
+  ],
   "domestic_site_candidates": [
     {
-      "candidate_id": "hmc-ulsan",
-      "site_name_raw": "울산공장",
-      "address_raw": "울산광역시 북구 염포로 700",
-      "business_unit_raw": "완성차 생산",
-      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory",
+      "candidate_id": "posco-pohang",
+      "site_name_raw": "포항제철소",
+      "address_raw": "경상북도 포항시 남구 동해안로 6262",
+      "business_unit_raw": "일관제철 생산",
+      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "hmc-asan",
-      "site_name_raw": "아산공장",
-      "address_raw": "충청남도 아산시 인주면 현대로 1077",
-      "business_unit_raw": "완성차 생산",
-      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory/asan-factory",
-      "identity_status": "VERIFIED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "hmc-jeonju",
-      "site_name_raw": "전주공장",
-      "address_raw": "전라북도 완주군 봉동읍 완주산단5로 163",
-      "business_unit_raw": "상용차 생산",
-      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory/jeonju-factory",
+      "candidate_id": "posco-gwangyang",
+      "site_name_raw": "광양제철소",
+      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
+      "business_unit_raw": "일관제철 생산",
+      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://www.hyundai.com/content/dam/hyundai/kr/ko/images/company-intro/sustain-manage/2026/hmc-sr-kor-2026.pdf",
-      "source_value_raw": "회사명 현대자동차 주식회사 / 설립일 1967년 12월 29일 / 대표업종 자동차 제조업",
+      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "source_value_raw": "2022-03-01 철강 생산 및 판매 등 사업부문을 물적분할하여 주식회사 포스코를 신설하고, 분할존속회사는 포스코홀딩스 주식회사로 상호 변경",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory",
-      "source_value_raw": "공식 국내 공장: 울산공장, 아산공장, 전주공장",
+      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
+      "source_value_raw": "포항제철소 / 경상북도 포항시 남구 동해안로 6262",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+      "source_value_raw": "광양제철소 / 전라남도 광양시 폭포사랑길 20-26",
       "verification_state": "VERIFIED"
     }
   ],
-  "related_entity_exclusions": [],
-  "unresolved_items": [],
+  "related_entity_exclusions": [
+    {
+      "name": "포스코홀딩스",
+      "reason": "2022 spin-off continuing holding company; separate legal entity from the current steel operating company",
+      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "name": "포스코홀딩스 주식회사",
+      "reason": "2022 spin-off continuing holding company; separate legal entity from the current steel operating company",
+      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "verification_state": "VERIFIED"
+    }
+  ],
+  "unresolved_items": [
+    {
+      "code": "PRE_2022_LEGAL_ENTITY_CONTINUITY_NOT_AUTO_ASSUMED",
+      "subject": "주식회사 포스코",
+      "detail": "Pre-2022 records may describe the predecessor corporation that later became POSCO Holdings. The identical historical text must not by itself establish current-company continuity."
+    }
+  ],
   "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
