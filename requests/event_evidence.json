@@ -1,20 +1,14 @@
 {
   "schema_version": "1.0",
-  "request_id": "kkpc-kr-archive-20260828-v1",
-  "discovery_status": "PARTIAL",
+  "request_id": "hyundai-motor-generalization-20260829-v1",
+  "discovery_status": "NOT_RUN",
   "events": [],
   "gaps": [
     {
-      "gap_id": "KKPC_INTEGRATED_PERMIT_PRIMARY_EVENT_PENDING",
-      "source_key": "INTEGRATED_PERMIT",
-      "severity": "MEDIUM",
-      "reason": "Integrated-permit history is relevant to several Kumho Petrochemical sites, but no event is injected into the first cross-company run until a first-party government record is anchored to the exact site and date. This prevents contextual permit events from influencing topic selection prematurely."
-    },
-    {
-      "gap_id": "KKPC_SITE_RELATION_EVENTS_NOT_PRESEEDED",
-      "source_key": "KKPC_OFFICIAL",
+      "gap_id": "HMC_EVENT_DISCOVERY_NOT_PRESEEDED",
+      "source_key": "OFFICIAL_EVENT_DISCOVERY",
       "severity": "LOW",
-      "reason": "The official network lists Ulsan Rubber and Ulsan LATEX at the same address and Yeosu Energy Plants as separate facilities. These are identity/relationship questions, not pre-seeded causal or operational events."
+      "reason": "No company/site event is pre-seeded for the no-code-change generalization test. Event evidence may be added only after first-party source and exact site/date are verified."
     }
   ]
 }
