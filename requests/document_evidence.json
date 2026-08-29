@@ -1,99 +1,72 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-generalization-20260829-v1",
+  "request_id": "lottechem-generalization-20260829-v1",
   "discovery_status": "PARTIAL",
   "documents": [
     {
-      "document_id": "POSCO_SUSTAINABILITY_2025_DIGITAL",
+      "document_id": "LOTTECHEM_ESG_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 POSCO Sustainability Report",
+      "title": "2025 롯데케미칼 ESG Report",
       "report_year": 2025,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/index.do",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
-      "expected_extension": "html",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_260803112356995",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
+      "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "POSCO states the 2025 report is published in digital format."
+      "notes": "Official company ESG report endpoint exposed by the company ESG page."
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_2024",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 포스코 지속가능경영보고서",
-      "report_year": 2024,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2024_kor.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=1745996979005381",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "POSCO_SUSTAINABILITY_2023",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 포스코 지속가능경영보고서",
-      "report_year": 2023,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2023_kor.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "POSCO_SUSTAINABILITY_2022",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Sustainability Report 2022",
-      "report_year": 2022,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2022_eng.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "POSCO_ENVIRONMENT_MANAGEMENT_CURRENT",
+      "document_id": "LOTTECHEM_ENVIRONMENT_MANAGEMENT_CURRENT",
       "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "포스코 환경영향 및 환경관리 체계",
-      "report_year": 2025,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
+      "title": "롯데케미칼 환경경영",
+      "report_year": 2026,
+      "source_url": "https://www.lottechem.com/ko/esg/green_management.do",
+      "source_locator": "https://www.lottechem.com/ko/esg/green_management.do",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official POSCO ESG page describing environmental organization, permitting/control-equipment inspection responsibilities, chemical training, waste recycling and energy management."
+      "notes": "Official current environmental-management page."
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_ARCHIVE",
+      "document_id": "LOTTECHEM_ESG_REPORT_ARCHIVE",
       "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "포스코 지속가능경영보고서 공식 자료실",
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "title": "롯데케미칼 ESG Report 공식 자료실",
+      "source_url": "https://www.lottechem.com/ko/esg/management_report.do",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING",
-      "notes": "Official archive/index. It must not by itself satisfy a site-level action or BAT semantic layer."
+      "notes": "Official archive/index confirming ESG reports for 2021-2025. The index itself must not satisfy a site-level action or industry-technical semantic layer."
     }
   ],
   "gaps": [
     {
-      "gap_id": "POSCO_STEEL_KBREF_DIRECT_REFERENCE_PENDING",
+      "gap_id": "LOTTECHEM_ESG_2021_2024_DIRECT_FILES_PENDING",
+      "source_key": "LOTTECHEM_ESG_ARCHIVE",
+      "severity": "MEDIUM",
+      "reason": "The official archive confirms 2021-2024 reports, but their direct file endpoints were not independently verified before this frozen blind test. Do not fabricate or infer direct URLs."
+    },
+    {
+      "gap_id": "LOTTECHEM_ORGANIC_KBREF_II_FULLTEXT_PENDING",
       "source_key": "NIER_IEPS",
       "severity": "MEDIUM",
-      "reason": "An exact first-party steel-industry K-BREF document and applicability record were not injected before the frozen run. Industry technical evidence must remain NOT_DECLARED rather than inferred."
+      "reason": "The revised Organic Chemical K-BREF II full text is not pre-seeded as a stable verified direct public file. The official 2017 first edition must not be substituted for the 2023/2024 revised reference."
     },
     {
-      "gap_id": "POSCO_INTEGRATED_PERMIT_PRIMARY_RECORD_PENDING",
+      "gap_id": "LOTTECHEM_INTEGRATED_PERMIT_PRIMARY_RECORD_PENDING",
       "source_key": "INTEGRATED_PERMIT",
       "severity": "MEDIUM",
-      "reason": "No site-specific integrated-permit primary record is pre-seeded. Exact permit dates and conditions must be verified before use."
+      "reason": "No site-specific integrated-permit primary record or permit-condition dataset is pre-seeded. Exact permit conditions must remain unclaimed until verified."
     },
     {
-      "gap_id": "PRE_2022_REPORT_ENTITY_BOUNDARY",
-      "source_key": "POSCO_CORPORATE_HISTORY",
+      "gap_id": "DAESAN_2026_SPINOFF_DOCUMENT_BOUNDARY",
+      "source_key": "LOTTECHEM_CORPORATE_HISTORY",
       "severity": "MEDIUM",
-      "reason": "Reports and environmental data before the 2022-03-01 spin-off may belong to the predecessor corporation. They are not declared as current-company sustainability-report history in this test."
+      "reason": "Company-wide historical reports may include the former Daesan business. The blind test must not interpret those company-wide historical disclosures as evidence that Daesan remains a current Lotte Chemical requested site after the June 2026 spin-off."
     },
     {
       "gap_id": "NONPUBLIC_INTERNAL_SOP_NOT_COLLECTABLE",
-      "source_key": "POSCO_INTERNAL",
+      "source_key": "LOTTECHEM_INTERNAL",
       "severity": "LOW",
       "reason": "Non-public internal environmental procedures are outside public-source collection scope and must not be inferred from absence."
     }
