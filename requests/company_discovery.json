@@ -1,214 +1,84 @@
 {
   "schema_version": "1.0",
-  "request_id": "kkpc-kr-archive-20260828-v1",
-  "requested_company_name": "금호석유화학",
-  "current_legal_name": "금호석유화학주식회사",
-  "current_legal_name_active_period": {"start_year": 1976, "end_year": null},
+  "request_id": "hyundai-motor-generalization-20260829-v1",
+  "requested_company_name": "현대자동차",
+  "current_legal_name": "현대자동차 주식회사",
+  "current_legal_name_active_period": {"start_year": 1967, "end_year": null},
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "국내 생산공장 10개(울산·여수·예산·율촌)",
-    "candidate_ids": [
-      "kkpc-ulsan-rubber",
-      "kkpc-ulsan-resin",
-      "kkpc-ulsan-latex",
-      "kkpc-yeosu-rubber-1",
-      "kkpc-yeosu-rubber-2",
-      "kkpc-yeosu-finechem",
-      "kkpc-yeosu-energy-1",
-      "kkpc-yeosu-energy-2",
-      "kkpc-yesan-building",
-      "kkpc-yulchon-cnt"
-    ],
+    "label": "국내 완성차 생산공장 3개(울산·아산·전주)",
+    "candidate_ids": ["hmc-ulsan", "hmc-asan", "hmc-jeonju"],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
   "company_aliases": [
     {
-      "name": "금호석유화학(주)",
-      "alias_type": "source_native_alias",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
-    },
-    {
-      "name": "금호석유화학",
+      "name": "현대자동차",
       "alias_type": "current_brand_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
+      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory"
     },
     {
-      "name": "KUMHO PETROCHEMICAL CO., LTD.",
-      "alias_type": "english_legal_name",
+      "name": "현대자동차(주)",
+      "alias_type": "source_native_alias",
       "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
+      "source_locator": "https://www.hyundai.com/kr/ko/sustain-manage/manage-system/sustainability-report"
     },
     {
-      "name": "KKPC",
-      "alias_type": "official_abbreviation",
+      "name": "HYUNDAI MOTOR COMPANY",
+      "alias_type": "english_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
+      "source_locator": "https://www.hyundai.com/kr/ko/sustain-manage/manage-system/sustainability-report"
     }
   ],
   "historical_legal_names": [],
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "kkpc-ulsan-rubber",
-      "site_name_raw": "울산고무공장",
-      "address_raw": "울산광역시 남구 상개로 64",
-      "business_unit_raw": "합성고무",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
+      "candidate_id": "hmc-ulsan",
+      "site_name_raw": "울산공장",
+      "address_raw": "울산광역시 북구 염포로 700",
+      "business_unit_raw": "완성차 생산",
+      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory",
+      "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "kkpc-ulsan-resin",
-      "site_name_raw": "울산수지공장",
-      "address_raw": "울산광역시 남구 처용로 260-257",
-      "business_unit_raw": "합성수지",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
+      "candidate_id": "hmc-asan",
+      "site_name_raw": "아산공장",
+      "address_raw": "충청남도 아산시 인주면 현대로 1077",
+      "business_unit_raw": "완성차 생산",
+      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory/asan-factory",
+      "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "kkpc-ulsan-latex",
-      "site_name_raw": "울산 LATEX공장",
-      "address_raw": "울산광역시 남구 상개로 64",
-      "business_unit_raw": "LATEX",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yeosu-rubber-1",
-      "site_name_raw": "여수고무제1공장",
-      "address_raw": "전라남도 여수시 여수산단3로 118",
-      "business_unit_raw": "합성고무",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yeosu-rubber-2",
-      "site_name_raw": "여수고무제2공장",
-      "address_raw": "전라남도 여수시 산단중앙로 331",
-      "business_unit_raw": "합성고무",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yeosu-finechem",
-      "site_name_raw": "여수정밀화학공장",
-      "address_raw": "전라남도 여수시 여수산단2로 227",
-      "business_unit_raw": "정밀화학",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yeosu-energy-1",
-      "site_name_raw": "여수제1에너지",
-      "address_raw": "전라남도 여수시 여수산단2로 46-51",
-      "business_unit_raw": "증기·전기",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yeosu-energy-2",
-      "site_name_raw": "여수제2에너지",
-      "address_raw": "전라남도 여수시 여수산단2로 223-84",
-      "business_unit_raw": "증기·전기",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yesan-building",
-      "site_name_raw": "예산건자재공장",
-      "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9",
-      "business_unit_raw": "건자재",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-yulchon-cnt",
-      "site_name_raw": "율촌CNT공장",
-      "address_raw": "전라남도 여수시 율촌면 율촌산단6로 115",
-      "business_unit_raw": "CNT",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
+      "candidate_id": "hmc-jeonju",
+      "site_name_raw": "전주공장",
+      "address_raw": "전라북도 완주군 봉동읍 완주산단5로 163",
+      "business_unit_raw": "상용차 생산",
+      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory/jeonju-factory",
+      "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm",
-      "source_value_raw": "법적ㆍ상업적 명칭: 금호석유화학주식회사 / KUMHO PETROCHEMICAL CO., LTD.(KKPC)",
+      "source_locator": "https://www.hyundai.com/content/dam/hyundai/kr/ko/images/company-intro/sustain-manage/2026/hmc-sr-kor-2026.pdf",
+      "source_value_raw": "회사명 현대자동차 주식회사 / 설립일 1967년 12월 29일 / 대표업종 자동차 제조업",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "source_value_raw": "공식 글로벌네트워크 생산공장: 울산고무, 울산수지, 울산 LATEX, 여수고무제1·제2, 여수정밀화학, 여수제1·제2에너지, 예산건자재, 율촌CNT",
-      "verification_state": "VERIFIED"
-    }
-  ],
-  "related_entity_exclusions": [
-    {
-      "name": "금호피앤비화학",
-      "reason": "공식 패밀리사이트에 별도 계열사로 표시됨. 금호석유화학 본법인 requested scope에서 제외.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "금호폴리켐",
-      "reason": "공식 패밀리사이트에 별도 계열사로 표시됨. 금호석유화학 본법인 requested scope에서 제외.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "금호미쓰이화학",
-      "reason": "공식 패밀리사이트에 별도 계열사로 표시됨. 금호석유화학 본법인 requested scope에서 제외.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "금호티앤엘",
-      "reason": "공식 패밀리사이트에 별도 계열사로 표시됨. 금호석유화학 본법인 requested scope에서 제외.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "금호리조트",
-      "reason": "공식 패밀리사이트에 별도 계열사로 표시됨. 금호석유화학 본법인 requested scope에서 제외.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyundai.com/kr/ko/brand/business-network/korea/factory",
+      "source_value_raw": "공식 국내 공장: 울산공장, 아산공장, 전주공장",
       "verification_state": "VERIFIED"
     }
   ],
-  "unresolved_items": [
-    {
-      "code": "KKPC_SAME_ADDRESS_SEPARATE_UNITS",
-      "subject": "울산고무공장 / 울산 LATEX공장",
-      "detail": "공식 회사 페이지에서 두 생산공장이 동일 주소(상개로 64)에 별도 명칭으로 등재된다. 동일 주소만으로 하나의 환경사업장으로 자동 병합하지 않고 source별 법적 시설 관계를 별도 검증한다.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/"
-    },
-    {
-      "code": "KKPC_ENERGY_FACILITIES_SEPARATE_SITES",
-      "subject": "여수제1에너지 / 여수제2에너지",
-      "detail": "공식 회사 페이지에서 증기·전기 생산시설이 별도 생산공장과 주소로 등재된다. 주변 화학 생산공장과 운영상 연계될 수 있으나 동일 사업장으로 자동 병합하지 않는다.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/"
-    },
-    {
-      "code": "KKPC_ADMIN_RND_SALES_EXCLUDED",
-      "subject": "본사·중앙연구소·영업사무소",
-      "detail": "공식 네트워크에는 등재되지만 이번 requested scope는 국내 생산공장으로 한정하여 제외한다. Raw collector 결과는 회사 전체 범위로 보존한다.",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/"
-    }
-  ],
+  "related_entity_exclusions": [],
+  "unresolved_items": [],
   "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
