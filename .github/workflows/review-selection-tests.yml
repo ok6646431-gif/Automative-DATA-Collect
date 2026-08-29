@@ -5,6 +5,7 @@ on:
     branches:
       - 'run/control-plane'
     paths:
+      - 'orchestrator/requested_scope.py'
       - 'orchestrator/review_selection*.py'
       - 'orchestrator/review_selection*.json'
       - 'orchestrator/cross_layer*.py'
@@ -13,6 +14,7 @@ on:
       - 'orchestrator/review_report.py'
       - 'orchestrator/package_run.py'
       - 'orchestrator/archive*.py'
+      - 'tests/test_requested_scope*.py'
       - 'tests/test_review_selection.py'
       - 'tests/test_zero_semantics.py'
       - 'tests/test_cross_layer_review.py'
@@ -26,6 +28,7 @@ on:
       - '.github/workflows/review-selection-tests.yml'
   pull_request:
     paths:
+      - 'orchestrator/requested_scope.py'
       - 'orchestrator/review_selection*.py'
       - 'orchestrator/review_selection*.json'
       - 'orchestrator/cross_layer*.py'
@@ -34,6 +37,7 @@ on:
       - 'orchestrator/review_report.py'
       - 'orchestrator/package_run.py'
       - 'orchestrator/archive*.py'
+      - 'tests/test_requested_scope*.py'
       - 'tests/test_review_selection.py'
       - 'tests/test_zero_semantics.py'
       - 'tests/test_cross_layer_review.py'
@@ -59,5 +63,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Run review-selection and package regression tests
-        run: python -m unittest tests.test_review_selection tests.test_zero_semantics tests.test_cross_layer_review tests.test_cross_layer_semantic_state tests.test_industry_reference_applicability tests.test_multi_site_evidence_boundary tests.test_archive_zip_dedup tests.test_document_semantics tests.test_review_report tests.test_package_validation -v
+      - name: Run requested-scope, review-selection and package regression tests
+        run: python -m unittest tests.test_requested_scope tests.test_requested_scope_subunits tests.test_review_selection tests.test_zero_semantics tests.test_cross_layer_review tests.test_cross_layer_semantic_state tests.test_industry_reference_applicability tests.test_multi_site_evidence_boundary tests.test_archive_zip_dedup tests.test_document_semantics tests.test_review_report tests.test_package_validation -v
