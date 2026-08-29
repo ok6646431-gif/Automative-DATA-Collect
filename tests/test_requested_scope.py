@@ -106,6 +106,79 @@ class RequestedScopeTests(unittest.TestCase):
         finally:
             td.cleanup()
 
+    def test_same_address_related_entity_is_not_requested_scope(self):
+        td = tempfile.TemporaryDirectory(); root = Path(td.name)
+        try:
+            profile = {
+                "company_display_name": "테스트산업 주식회사",
+                "requested_company_name": "테스트산업",
+                "requested_scope": {"mode": "SITE_SET", "label": "제철소", "candidate_ids": ["P"]},
+                "aliases": [
+                    {"term": "테스트산업 주식회사", "alias_type": "current_legal_name", "year_start": 2022, "year_end": "auto"},
+                    {"term": "테스트산업", "alias_type": "current_brand_name"},
+                ],
+                "site_candidates": [
+                    {"candidate_id": "P", "site_name_raw": "포항제철소", "address_raw": "경상북도 포항시 남구 동해안로 6262", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+                ],
+            }
+            (root / "Company_Profile.json").write_text(json.dumps(profile, ensure_ascii=False), encoding="utf-8")
+            write_csv(root / "Site_Master.csv", [
+                {"canonical_site_id": "SITE_P", "canonical_site_name": "테스트산업 포항제철소", "canonical_address_key": "경북포항시남구동해안로6262", "identity_status": "CONFIRMED"},
+                {"canonical_site_id": "CAND_REL", "canonical_site_name": "테스트산업퓨처엠 라임공장(포항)", "canonical_address_key": "경북포항시남구동해안로6262", "identity_status": "NEW_SITE_CANDIDATE"},
+            ], ["canonical_site_id", "canonical_site_name", "canonical_address_key", "identity_status"])
+            write_csv(root / "Source_Identity.csv", [
+                {"source_key": "ENVINFO", "source_site_id": "CUR", "canonical_site_id": "SITE_P", "source_site_name_raw": "테스트산업 포항제철소", "source_address_raw": "경상북도 포항시 남구 동해안로 6262", "match_status": "CONFIRMED"},
+                {"source_key": "ENVINFO", "source_site_id": "REL", "canonical_site_id": "CAND_REL", "source_site_name_raw": "(주)테스트산업퓨처엠 라임공장(포항)", "source_address_raw": "경상북도 포항시 남구 동해안로 6262", "match_status": "REVIEW_REQUIRED"},
+            ], ["source_key", "source_site_id", "canonical_site_id", "source_site_name_raw", "source_address_raw", "match_status"])
+            scope = resolve_requested_scope(root)
+            self.assertEqual(scope["target_canonical_site_ids"], {"SITE_P"})
+            self.assertIn("CUR", scope["target_source_ids"]["ENVINFO"])
+            self.assertNotIn("REL", scope["target_source_ids"]["ENVINFO"])
+            excluded = {(x["source_key"], x["source_site_id"]): x["reason"] for x in scope["excluded_source_ids"]}
+            self.assertEqual(excluded[("ENVINFO", "REL")], "SOURCE_ENTITY_NAME_EXTENDS_CURRENT_COMPANY")
+        finally:
+            td.cleanup()
+
+    def test_pre_entity_rows_are_retained_but_held_from_current_analysis(self):
+        td = tempfile.TemporaryDirectory(); root = Path(td.name)
+        try:
+            profile = {
+                "company_display_name": "테스트산업 주식회사",
+                "requested_company_name": "테스트산업",
+                "requested_scope": {"mode": "SITE_SET", "label": "제철소", "candidate_ids": ["P"]},
+                "aliases": [
+                    {"term": "테스트산업 주식회사", "alias_type": "current_legal_name", "year_start": 2022, "year_end": "auto"},
+                    {"term": "테스트산업", "alias_type": "current_brand_name"},
+                ],
+                "site_candidates": [
+                    {"candidate_id": "P", "site_name_raw": "포항제철소", "address_raw": "경상북도 포항시 남구 동해안로 6262", "identity_status": "CONFIRMED", "verification_state": "VERIFIED"},
+                ],
+            }
+            (root / "Company_Profile.json").write_text(json.dumps(profile, ensure_ascii=False), encoding="utf-8")
+            write_csv(root / "Site_Master.csv", [
+                {"canonical_site_id": "SITE_P", "canonical_site_name": "테스트산업 포항제철소", "canonical_address_key": "경북포항시남구동해안로6262", "identity_status": "CONFIRMED"},
+            ], ["canonical_site_id", "canonical_site_name", "canonical_address_key", "identity_status"])
+            write_csv(root / "Source_Identity.csv", [
+                {"source_key": "PRTR", "source_site_id": "P1", "canonical_site_id": "SITE_P", "source_site_name_raw": "테스트산업 포항제철소", "source_address_raw": "경상북도 포항시 남구 동해안로 6262", "match_status": "CONFIRMED"},
+            ], ["source_key", "source_site_id", "canonical_site_id", "source_site_name_raw", "source_address_raw", "match_status"])
+            write_csv(root / "Analysis_Ready_Index.csv", [
+                {"analysis_id": "OLD", "canonical_site_id": "SITE_P", "source_key": "PRTR", "source_site_id": "P1", "time_key": "2020", "event_link_ids": "", "analysis_readiness": "READY", "analysis_eligible": True, "notes": ""},
+                {"analysis_id": "CUR", "canonical_site_id": "SITE_P", "source_key": "PRTR", "source_site_id": "P1", "time_key": "2022", "event_link_ids": "", "analysis_readiness": "READY", "analysis_eligible": True, "notes": ""},
+            ], ["analysis_id", "canonical_site_id", "source_key", "source_site_id", "time_key", "event_link_ids", "analysis_readiness", "analysis_eligible", "notes"])
+            write_csv(root / "Coverage_Event_Links.csv", [], ["link_id", "source_key", "canonical_site_id"])
+
+            summary = apply_requested_scope(root)
+            self.assertEqual(summary["current_legal_entity_active_period"], {"start_year": 2022, "end_year": None})
+            self.assertEqual(summary["temporal_rows_held"], 1)
+            rows = {r["analysis_id"]: r for r in csv.DictReader((root / "Analysis_Ready_Index.csv").open(encoding="utf-8-sig"))}
+            self.assertEqual(set(rows), {"OLD", "CUR"})
+            self.assertEqual(rows["OLD"]["analysis_readiness"], "TEMPORAL_ENTITY_REVIEW")
+            self.assertEqual(rows["OLD"]["analysis_eligible"], "False")
+            self.assertEqual(rows["CUR"]["analysis_readiness"], "READY")
+            self.assertEqual(rows["CUR"]["analysis_eligible"], "True")
+        finally:
+            td.cleanup()
+
     def test_optional_legal_dong_does_not_break_road_address_match(self):
         td, root = self.make_package()
         try:
