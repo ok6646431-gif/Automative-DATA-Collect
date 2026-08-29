@@ -135,6 +135,23 @@ def _core_match(left, right):
     return a == b or (len(a) >= 2 and len(b) >= 2 and (a.startswith(b) or b.startswith(a)))
 
 
+def _subunit_core_match(left, right):
+    """Recognize a numbered/qualified facility label without weakening entity scope.
+
+    Public sources often split one first-party site label into numbered operating
+    units (e.g. "여수1공장" under an official "기초화학 여수공장").  This relation is
+    used only to decide whether the source name can still belong to the current
+    company.  Actual requested-site inclusion still requires the normal address/name
+    candidate matching below.  Matching is intentionally one-directional: the shorter
+    source subunit must fit inside the official requested-site label, not vice versa.
+    """
+    a = re.sub(r"\d+", "", str(left or ""))
+    b = re.sub(r"\d+", "", str(right or ""))
+    if not a or not b or len(a) < 2 or len(b) < 2:
+        return False
+    return a == b or a in b
+
+
 def _source_entity_compatible(value, profile, candidates):
     """Fail closed when a source-native name looks like another legal entity.
 
@@ -154,7 +171,8 @@ def _source_entity_compatible(value, profile, candidates):
     ]
 
     for excluded in profile.get("related_entity_exclusions", []) or []:
-        ex = _entity_plain(excluded)
+        excluded_name = excluded.get("name") if isinstance(excluded, dict) else excluded
+        ex = _entity_plain(excluded_name)
         if ex and raw.startswith(ex):
             return False, "VERIFIED_RELATED_ENTITY_EXCLUSION"
 
@@ -175,6 +193,8 @@ def _source_entity_compatible(value, profile, candidates):
         remainder_core = _site_core(remainder, {})
         if any(_core_match(remainder_core, site) for site in site_cores):
             return True, "CURRENT_COMPANY_REQUESTED_SITE"
+        if any(_subunit_core_match(remainder_core, site) for site in site_cores):
+            return True, "CURRENT_COMPANY_REQUESTED_SUBUNIT"
         if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):
             return True, "CURRENT_COMPANY_FACILITY_LABEL"
         # A longer corporate-looking name after the current-company token is not
