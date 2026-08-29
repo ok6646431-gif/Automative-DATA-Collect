@@ -142,13 +142,14 @@ def _subunit_core_match(left, right):
     units (e.g. "여수1공장" under an official "기초화학 여수공장").  This relation is
     used only to decide whether the source name can still belong to the current
     company.  Actual requested-site inclusion still requires the normal address/name
-    candidate matching below.
+    candidate matching below.  Matching is intentionally one-directional: the shorter
+    source subunit must fit inside the official requested-site label, not vice versa.
     """
     a = re.sub(r"\d+", "", str(left or ""))
     b = re.sub(r"\d+", "", str(right or ""))
     if not a or not b or len(a) < 2 or len(b) < 2:
         return False
-    return a == b or a in b or b in a
+    return a == b or a in b
 
 
 def _source_entity_compatible(value, profile, candidates):
