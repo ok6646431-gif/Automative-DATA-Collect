@@ -1,0 +1,88 @@
+name: ENV-INFO recovery budget QA
+
+on:
+  pull_request:
+    paths:
+      - 'collectors/envinfo_attachment_recovery.py'
+      - 'tests/test_envinfo_attachment_recovery.py'
+      - '.github/workflows/envinfo-recovery-budget-qa.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Download POSCO timeout artifact from run 132
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import os, urllib.request
+          url=f"https://api.github.com/repos/{os.environ['REPOSITORY']}/actions/artifacts/9711103707/zip"
+          req=urllib.request.Request(url,headers={
+              'Authorization':f"Bearer {os.environ['GH_TOKEN']}",
+              'Accept':'application/vnd.github+json',
+              'X-GitHub-Api-Version':'2022-11-28',
+          })
+          with urllib.request.urlopen(req,timeout=60) as r, open('/tmp/stable.zip','wb') as f:
+              while True:
+                  chunk=r.read(1024*1024)
+                  if not chunk: break
+                  f.write(chunk)
+          PY
+          rm -rf prior output
+          mkdir -p prior output
+          unzip -q /tmp/stable.zip -d prior
+          if [ -d prior/ENVINFO ]; then cp -a prior/ENVINFO output/ENVINFO; elif [ -d prior/output/ENVINFO ]; then cp -a prior/output/ENVINFO output/ENVINFO; else echo 'ENVINFO missing'; find prior -maxdepth 2 -type d; exit 1; fi
+      - name: Run bounded recovery on real timeout state
+        run: python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root . --max-seconds 60
+      - name: Assert clean bounded state
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          out=Path('output/ENVINFO')
+          summary=json.loads((out/'attachment_recovery_summary.json').read_text(encoding='utf-8'))
+          status=json.loads((out/'status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader((out/'attachment_index.csv').open(encoding='utf-8-sig')))
+          assert summary['time_budget_seconds']==60, summary
+          assert summary['time_budget_exhausted'] is True, summary
+          assert status.get('attachment_skipped_recovery_time_budget',0)>0, status
+          missing=[]
+          for row in rows:
+              if row.get('collection_status')!='DOWNLOADED' or not row.get('stored_path'): continue
+              p=Path(row['stored_path'])
+              if not p.exists(): missing.append(row['stored_path'])
+          assert not missing, missing[:10]
+          print(json.dumps({'summary':summary,'attachment_fail':status.get('attachment_fail'),'missing_references':len(missing)},ensure_ascii=False))
+          PY
+      - name: Bootstrap runtime inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Prove downstream stable sources still run
+        run: |
+          python collectors/soosiro_collect.py requests/current.generated.json
+          python collectors/cleansys_collect.py requests/current.generated.json
+          python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for source in ['SOOSIRO_WATER','CLEANSYS_AIR','CORP_DOCS']:
+              p=Path('output')/source/'status.json'
+              assert p.exists(), f'missing {p}'
+              print(source, json.loads(p.read_text(encoding='utf-8')).get('status'))
+          PY
