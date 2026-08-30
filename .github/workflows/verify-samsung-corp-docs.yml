@@ -1,0 +1,38 @@
+name: Verify Samsung corporate environmental documents
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/verify-samsung-corp-docs.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Bootstrap Samsung profile
+        run: python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Collect corporate documents
+        run: python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+      - name: Show status and failures
+        run: |
+          cat output/CORP_DOCS/status.json
+          echo '--- failed/skipped ---'
+          python - <<'PY'
+          import csv
+          rows=list(csv.DictReader(open('output/CORP_DOCS/document_index.csv',encoding='utf-8-sig')))
+          for r in rows:
+              if r.get('collection_status')!='DOWNLOADED':
+                  print(r.get('document_id'),r.get('collection_status'),r.get('notes'))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: samsung-corp-docs-validation
+          path: output/CORP_DOCS/
+          retention-days: 7
