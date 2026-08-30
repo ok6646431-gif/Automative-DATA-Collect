@@ -178,7 +178,7 @@ def extract_candidates(root,profile):
         if eid: out.append({"source_key":"PRTR","source_site_id":eid,"source_site_name_raw":r.get("company_name_raw","") ,"source_address_raw":r.get("address_raw","") ,"years":[r.get("search_year")],"raw_ref":"PRTR/discovery.csv"})
     for r in read_csv(root/"CHEM_STATS"/"discovery.csv"):
         bid=str(r.get("bplcId") or "")
-        if bid: out.append({"source_key":"CHEM_STATS","source_site_id":bid,"source_site_name_raw":r.get("bplcNm","") ,"source_address_raw":r.get("locplcAdres","") ,"years":[r.get("search_year") or r.get("reportYear")],"raw_ref":"CHEM_STATS/discovery.csv"})
+        if bid: out.append({"source_key":"CHEM_STATS","source_site_id":bid,"source_site_name_raw":r.get("bplcNm") or r.get("identity_anchor_bplcNm","") ,"source_address_raw":r.get("locplcAdres") or r.get("identity_anchor_locplcAdres","") ,"years":[r.get("search_year") or r.get("reportYear")],"raw_ref":"CHEM_STATS/discovery.csv"})
     cy=defaultdict(set)
     for r in read_jsonl(root/"CLEANSYS_AIR"/"annual_rows.jsonl"):
         fc=str(r.get("source_fact_code") or ""); y=r.get("examin_year")
