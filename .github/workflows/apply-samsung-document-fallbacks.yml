@@ -1,0 +1,74 @@
+name: Apply Samsung document fallbacks
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/apply-samsung-document-fallbacks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch_and_verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Patch document evidence
+        run: python tools/patch_samsung_document_fallbacks.py
+      - name: Validate JSON and fallback count
+        run: |
+          python -m json.tool requests/document_evidence.json >/dev/null
+          python - <<'PY'
+          import json
+          d=json.load(open('requests/document_evidence.json',encoding='utf-8'))
+          docs={x['document_id']:x for x in d['documents']}
+          ids=[
+            'SAMSUNG_SEC_PRODUCT_ENV_RULE_CURRENT','SAMSUNG_REGULATED_SUBSTANCES_CURRENT','SAMSUNG_EHS_POLICY_CURRENT',
+            'SAMSUNG_GREEN_PROCUREMENT_POLICY','SAMSUNG_BIODIVERSITY_POLICY','SAMSUNG_ENV_STRATEGY_CURRENT',
+            'SAMSUNG_SUSTAINABILITY_DATA_CURRENT','SAMSUNG_AWS_COMMITMENT','SAMSUNG_AWS_OUTCOMES','SAMSUNG_ZERO_WASTE_TO_LANDFILL'
+          ]
+          assert all(docs[i].get('fallback_sources') for i in ids)
+          print('fallback_docs',len(ids),'fallback_sources',sum(len(docs[i]['fallback_sources']) for i in ids))
+          PY
+      - name: Commit evidence patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add requests/document_evidence.json
+          if git diff --cached --quiet; then
+            echo 'No evidence change'
+          else
+            git commit -m 'Add official fallbacks for Samsung corporate documents'
+            git push origin HEAD:run/control-plane
+          fi
+      - name: Bootstrap Samsung profile
+        run: python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Recollect corporate documents
+        run: python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+      - name: Verify all declared documents
+        run: |
+          cat output/CORP_DOCS/status.json
+          python - <<'PY'
+          import csv,json
+          status=json.load(open('output/CORP_DOCS/status.json',encoding='utf-8'))
+          rows=list(csv.DictReader(open('output/CORP_DOCS/document_index.csv',encoding='utf-8-sig')))
+          bad=[(r.get('document_id'),r.get('collection_status'),r.get('notes')) for r in rows if r.get('collection_status')!='DOWNLOADED']
+          print('non_downloaded',json.dumps(bad,ensure_ascii=False))
+          print('fallback_downloaded',status.get('fallback_downloaded'))
+          if bad:
+            raise SystemExit(2)
+          if int(status.get('documents_declared') or 0) != int(status.get('downloaded') or 0):
+            raise SystemExit(3)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: samsung-corp-docs-fallback-validation
+          path: output/CORP_DOCS/
+          retention-days: 7
