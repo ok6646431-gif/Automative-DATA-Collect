@@ -228,13 +228,34 @@ def audit_chem(output, cfg):
         failed = year in failures or (status.get("status") in TERMINAL_FAILURES and not complete)
         rows.append(query_row(source, year, complete, failed, year in data_years,
                               f"terms={len(terms)}; page1={sum(p.exists() for p in files)}; search_error={year in failures}; status={status.get('status')}"))
+
+    # A source-native facility ID can remain valid in an older survey round even
+    # when that round's name index no longer exposes the facility.  The collector
+    # probes such missing ID-year pairs and writes an explicit audit trail.  Count
+    # successful empty probes as NO_DATA_CONFIRMED, not as a collection omission.
+    backfill_path = root/"source_id_backfill_audit.jsonl"
+    for item in read_jsonl(backfill_path):
+        year=as_year(item.get("search_year")); bid=str(item.get("bplcId") or "")
+        if year is None or not bid: continue
+        state=str(item.get("query_status") or "").upper(); period=f"{year}:{bid}"
+        evidence=f"anchor_year={item.get('identity_anchor_year','')}; substantive_rows={item.get('substantive_rows','')}; http={item.get('http_status','')}"
+        if state=="DATA_PRESENT":
+            rows.append(row("CHEM_STATS_SOURCE_ID","SOURCE_ID_YEAR",period,"DATA_PRESENT",query_state="COMPLETE",data=True,evidence=evidence))
+        elif state=="NO_DATA_CONFIRMED":
+            rows.append(row("CHEM_STATS_SOURCE_ID","SOURCE_ID_YEAR",period,"NO_DATA_CONFIRMED",query_state="COMPLETE",data=False,evidence=evidence,note="동일 source-native 사업장 ID를 해당 조사연도에 정상 조회했으나 공개 상세자료가 없음"))
+        else:
+            rows.append(row("CHEM_STATS_SOURCE_ID","SOURCE_ID_YEAR",period,"QUERY_FAILED",query_state="FAILED",data=False,evidence=evidence or str(item.get('error') or ''),note="source-native 사업장 ID의 조사연도 역추적 조회 실패"))
+
+    expected_backfills=int(status.get("source_id_backfill_attempts") or 0)
+    if expected_backfills and len(read_jsonl(backfill_path)) != expected_backfills:
+        rows.append(row(source,"ARTIFACT","SOURCE_ID_BACKFILL_AUDIT","ARTIFACT_INCOMPLETE",query_state="COMPLETE",data=backfill_path.exists(),evidence=f"declared_attempts={expected_backfills}; audit_rows={len(read_jsonl(backfill_path))}",note="source-native ID 역추적 시도 기록이 완전하지 않음"))
+
     discovered = int(status.get("rows") or 0); detail_ok = int(status.get("detail_ok") or 0)
     if cfg.get("collect_details", True) and discovered and detail_ok != discovered:
         rows.append(row(source, "ARTIFACT", "DETAILS", "ARTIFACT_INCOMPLETE", query_state="COMPLETE",
                         data=detail_ok > 0, evidence=f"discovery_rows={discovered}; detail_ok={detail_ok}; detail_fail={status.get('detail_fail',0)}",
-                        note="검색된 사업장-연도 중 화학물질통계 상세 원문이 전부 확보되지 않음"))
+                        note="검색 또는 source-native ID 역추적으로 확인된 사업장-연도 중 화학물질통계 상세 원문이 전부 확보되지 않음"))
     return rows
-
 
 def audit_cleansys(output, cfg):
     source = "CLEANSYS_AIR"; root = output/source; status = read_json(root/"status.json", {}) or {}

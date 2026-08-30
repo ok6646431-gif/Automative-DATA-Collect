@@ -137,6 +137,39 @@ class CollectionCompletenessTests(unittest.TestCase):
             })
             self.assertEqual(rows[0]["completeness_state"], "NO_DATA_CONFIRMED")
 
+    def test_chem_source_id_backfill_is_audited_per_round(self):
+        from orchestrator.collection_completeness import audit_chem
+        with tempfile.TemporaryDirectory() as td:
+            output=Path(td); root=output/"CHEM_STATS"; (root/"raw_discovery").mkdir(parents=True)
+            for year in [2020,2022]:
+                (root/"raw_discovery"/f"{year}_기업_p1.json").write_text("{}", encoding="utf-8")
+            write_csv(root/"discovery.csv", [
+                {"search_year":2020,"bplcId":"SITE1"},
+                {"search_year":2022,"bplcId":"SITE1"},
+            ])
+            write_json(root/"status.json", {"status":"DATA_FOUND","rows":2,"detail_ok":2,"source_id_backfill_attempts":1})
+            (root/"source_id_backfill_audit.jsonl").write_text(json.dumps({
+                "search_year":2020,"bplcId":"SITE1","identity_anchor_year":2022,
+                "query_status":"DATA_PRESENT","substantive_rows":30,"http_status":200,
+            },ensure_ascii=False)+"\n",encoding="utf-8")
+            rows=audit_chem(output,{"years":[2020,2022],"search_terms":["기업"],"collect_details":True})
+            found=[r for r in rows if r["source"]=="CHEM_STATS_SOURCE_ID" and r["period"]=="2020:SITE1"]
+            self.assertEqual(found[0]["completeness_state"],"DATA_PRESENT")
+
+    def test_chem_source_id_empty_probe_is_no_data_confirmed(self):
+        from orchestrator.collection_completeness import audit_chem
+        with tempfile.TemporaryDirectory() as td:
+            output=Path(td); root=output/"CHEM_STATS"; (root/"raw_discovery").mkdir(parents=True)
+            (root/"raw_discovery"/"2020_기업_p1.json").write_text("{}", encoding="utf-8")
+            write_json(root/"status.json", {"status":"NO_MATCH","rows":0,"detail_ok":0,"source_id_backfill_attempts":1})
+            (root/"source_id_backfill_audit.jsonl").write_text(json.dumps({
+                "search_year":2020,"bplcId":"SITE1","identity_anchor_year":2022,
+                "query_status":"NO_DATA_CONFIRMED","substantive_rows":0,"http_status":200,
+            },ensure_ascii=False)+"\n",encoding="utf-8")
+            rows=audit_chem(output,{"years":[2020],"search_terms":["기업"],"collect_details":True})
+            found=[r for r in rows if r["source"]=="CHEM_STATS_SOURCE_ID"]
+            self.assertEqual(found[0]["completeness_state"],"NO_DATA_CONFIRMED")
+
 
 if __name__ == "__main__":
     unittest.main()
