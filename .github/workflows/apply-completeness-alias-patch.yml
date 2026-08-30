@@ -1,0 +1,33 @@
+name: Apply completeness alias path patch
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/patch_completeness_alias_paths.py'
+      - '.github/workflows/apply-completeness-alias-patch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/patch_completeness_alias_paths.py
+      - name: Test patch
+        run: python -m unittest tests.test_collection_completeness -v
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add orchestrator/collection_completeness.py tests/test_collection_completeness.py
+          git diff --cached --quiet && exit 0
+          git commit -m "Align completeness checks with collector filenames"
+          git push
