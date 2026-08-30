@@ -88,7 +88,10 @@ def write_artifact_index(path,rows):
 
 def append_artifact_rows(package_root):
     root=Path(package_root); p=root/"Artifact_Index.csv"; rows=read_csv(p); seen={x.get("path") for x in rows}
-    for candidate in [root/"Document_Evidence.json",root/"Requested_Scope.json",root/"Analysis_Scope.csv"]:
+    for candidate in [
+        root/"Document_Evidence.json", root/"Requested_Scope.json", root/"Analysis_Scope.csv",
+        root/"Collection_Completeness.json", root/"Collection_Completeness.csv", root/"Collection_No_Data.csv",
+    ]:
         if candidate.exists():
             rel=str(candidate.relative_to(root))
             if rel not in seen: rows.append({"source":"DOCUMENT" if candidate.name=="Document_Evidence.json" else "INTEGRATION","path":rel,"bytes":candidate.stat().st_size,"sha256":sha256(candidate)}); seen.add(rel)
