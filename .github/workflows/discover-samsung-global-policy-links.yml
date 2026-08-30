@@ -31,22 +31,29 @@ jobs:
               'Environmental, Health and Safety Management Policy',
               'Standards for Control of Substances Used in Products',
               'List of Regulated Substances',
-              'AWS', 'Biodiversity', 'Zero Waste',
-              '환경안전보건', '제품 유해', '규제물질', '녹색조달', '녹색 구매', '수자원', '생물다양성', '폐기물 매립',
+              'AWS', 'Biodiversity', 'Zero Waste', 'Green',
+              '환경안전보건', '제품 유해', '제품환경', '규제물질', '녹색조달', '녹색 구매', '수자원', '생물다양성', '폐기물 매립',
           ]
           s = requests.Session()
           s.headers.update({'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'})
           for page in pages:
               print('\n=== PAGE', page, '===')
-              r=s.get(page,timeout=(8,30)); print('HTTP',r.status_code,'bytes',len(r.content),'final',r.url); r.raise_for_status()
-              soup=BeautifulSoup(r.text,'html.parser')
-              for a in soup.find_all('a',href=True):
-                  href=urljoin(r.url,a['href'])
-                  text=' '.join(a.get_text(' ',strip=True).split())
-                  parent=' '.join(a.parent.get_text(' ',strip=True).split()) if a.parent else ''
-                  context=(text+' '+parent+' '+href)
-                  if any(n.lower() in context.lower() for n in needles) or 'policy-file/' in href or 'resources/others/' in href:
-                      print('TEXT=',text[:180])
-                      print('PARENT=',parent[:300])
-                      print('HREF=',href)
+              try:
+                  r=s.get(page,timeout=(8,30))
+                  print('HTTP',r.status_code,'bytes',len(r.content),'final',r.url)
+                  if r.status_code >= 400:
+                      print('SKIP_HTTP_ERROR', r.status_code)
+                      continue
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  for a in soup.find_all('a',href=True):
+                      href=urljoin(r.url,a['href'])
+                      text=' '.join(a.get_text(' ',strip=True).split())
+                      parent=' '.join(a.parent.get_text(' ',strip=True).split()) if a.parent else ''
+                      context=(text+' '+parent+' '+href)
+                      if any(n.lower() in context.lower() for n in needles) or 'policy-file/' in href or 'resources/others/' in href:
+                          print('TEXT=',text[:180])
+                          print('PARENT=',parent[:350])
+                          print('HREF=',href)
+              except Exception as e:
+                  print('PAGE_ERROR',type(e).__name__,e)
           PY
