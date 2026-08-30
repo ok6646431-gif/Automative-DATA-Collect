@@ -14,43 +14,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect Samsung official download metadata
+      - run: python -m pip install --disable-pip-version-check requests pypdf
+      - name: Probe official green procurement fallback candidates
         run: |
           python - <<'PY'
-          import html, re, requests
-          from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
+          import io, requests
+          from pypdf import PdfReader
 
-          pages = [
-              'https://www.samsung.com/global/sustainability/digital-library/policy-document/',
-              'https://www.samsung.com/sec/sustainability/digital-library/policy-document/',
-              'https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/',
-          ]
-          needles = [
-              'Environmental, Health and Safety Management Policy','Standards for Control of Substances Used in Products',
-              'List of Regulated Substances','AWS','Biodiversity','Zero Waste','Green Procurement','Green Purchasing',
-              '환경안전보건','제품 유해','제품환경','규제물질','녹색조달','녹색 구매','녹색구매','수자원','생물다양성','폐기물 매립',
+          candidates = [
+            'https://www.samsung.com/sec/sustainability/policy-file/AYTGcZ56AS8AIyDc/Green_Procurement_Policy_new.pdf',
+            'https://www.samsung.com/global/sustainability/policy-file/AYTGcZ56AS8AIyDc/Green_Procurement_Policy_new.pdf',
+            'https://www.samsung.com/global/sustainability/policy-file/AYTGcZ56AS8AIyDc/Green%20Procurement%20Policy_KR.pdf',
+            'https://images.samsung.com/kdp/aboutsamsung/overview/Green_Procurement_Policy_new.pdf',
+            'https://images.samsung.com/kdp/aboutsamsung/sustainability/Green_Procurement_Policy_new.pdf',
+            'https://images.samsung.com/kdp/aboutsamsung/overview/Green_Procurement_Policy_KR.pdf',
+            'https://download.semiconductor.samsung.com/resources/others/Green_Procurement_Policy_new.pdf',
+            'https://download.semiconductor.samsung.com/resources/others/Green_Procurement_Policy_KR.pdf',
+            'https://download.semiconductor.samsung.com/resources/others/Green_Procurement_Policy.pdf',
           ]
           s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36'})
-          for page in pages:
-              print('\n=== PAGE',page,'===')
-              try:
-                  r=s.get(page,timeout=(8,30)); print('HTTP',r.status_code,'bytes',len(r.content),'final',r.url)
-                  if r.status_code>=400: continue
-                  soup=BeautifulSoup(r.text,'html.parser')
-                  for a in soup.find_all('a',href=True):
-                      href=urljoin(r.url,a['href']); text=' '.join(a.get_text(' ',strip=True).split())
-                      parent=' '.join(a.parent.get_text(' ',strip=True).split()) if a.parent else ''
-                      context=text+' '+parent+' '+href
-                      if any(n.lower() in context.lower() for n in needles) or 'policy-file/' in href or 'resources/others/' in href:
-                          print('A_TEXT=',text[:180]); print('A_PARENT=',parent[:350]); print('A_HREF=',href)
-                  raw=html.unescape(r.text)
-                  for needle in ['녹색 구매','녹색구매','녹색 조달','녹색조달','Green Procurement','Green Purchasing']:
-                      for m in list(re.finditer(re.escape(needle),raw,re.I))[:5]:
-                          lo=max(0,m.start()-1000); hi=min(len(raw),m.end()+1800)
-                          print('\nRAW_CONTEXT',needle,'@',m.start())
-                          print(re.sub(r'\s+',' ',raw[lo:hi]))
-              except Exception as e:
-                  print('PAGE_ERROR',type(e).__name__,e)
+          for url in candidates:
+            try:
+              r=s.get(url,timeout=(8,30),allow_redirects=True)
+              print('\nURL',url); print('HTTP',r.status_code,'bytes',len(r.content),'ctype',r.headers.get('content-type'),'final',r.url)
+              if r.status_code==200 and r.content.startswith(b'%PDF-'):
+                try:
+                  pdf=PdfReader(io.BytesIO(r.content)); text=' '.join((p.extract_text() or '') for p in pdf.pages[:3])
+                  text=' '.join(text.split())
+                  print('PDF_PAGES',len(pdf.pages),'TEXT',text[:1200])
+                  print('GREEN_MATCH', any(k in text for k in ['녹색구매','녹색 구매','친환경상품','Green Procurement']))
+                except Exception as e: print('PDF_PARSE_ERROR',type(e).__name__,e)
+            except Exception as e: print('\nURL',url,'ERROR',type(e).__name__,e)
           PY
