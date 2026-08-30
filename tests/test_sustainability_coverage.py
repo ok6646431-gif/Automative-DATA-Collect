@@ -22,11 +22,11 @@ class SustainabilityCoverageTests(unittest.TestCase):
             profile={"minimum_history_years":5,"current_legal_name_active_period":{"start_year":1976}}
             result=evaluate(profile,rows,delivered)
             self.assertEqual(result["state"],"FILE_COVERAGE_PARTIAL")
-            self.assertEqual(result["target_report_years"],[2021,2022,2023,2024,2025])
+            self.assertEqual(result["target_report_years"],[2020,2021,2022,2023,2024,2025])
             self.assertEqual(result["missing_target_years"],[2023,2024,2025])
             self.assertFalse(result["coverage_sufficient"])
 
-    def test_five_delivered_years_pass_even_with_six_year_series(self):
+    def test_older_verified_year_cannot_be_dropped_when_minimum_is_met(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td); delivered=[]
             for year in [2021,2022,2023,2024,2025]:
@@ -36,9 +36,10 @@ class SustainabilityCoverageTests(unittest.TestCase):
                 "verification_status":"VERIFIED","collection_status":"DOWNLOADED",
             } for year in [2020,2021,2022,2023,2024,2025]]
             result=evaluate({"minimum_history_years":5},rows,delivered)
-            self.assertEqual(result["state"],"FILE_COVERAGE_COMPLETE")
-            self.assertEqual(result["target_report_years"],[2021,2022,2023,2024,2025])
-            self.assertTrue(result["coverage_sufficient"])
+            self.assertEqual(result["state"],"FILE_COVERAGE_PARTIAL")
+            self.assertEqual(result["target_report_years"],[2020,2021,2022,2023,2024,2025])
+            self.assertEqual(result["missing_target_years"],[2020])
+            self.assertFalse(result["coverage_sufficient"])
 
     def test_recent_spin_off_caps_required_history_to_company_age(self):
         with tempfile.TemporaryDirectory() as td:
@@ -65,6 +66,23 @@ class SustainabilityCoverageTests(unittest.TestCase):
             self.assertEqual(result["expected_report_years"],[2021,2022,2023,2024,2025])
             self.assertEqual(result["missing_target_years"],[2021,2022,2023,2024])
             self.assertFalse(result["coverage_sufficient"])
+
+    def test_requested_window_expands_verified_annual_series(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); delivered=[]
+            for year in [2024,2025,2026]:
+                p=root/f"report_{year}.pdf"; p.write_bytes(b"%PDF-test"); delivered.append(p)
+            rows=[{
+                "document_type":"SUSTAINABILITY_REPORT","title":f"report {year}","report_year":year,
+                "verification_status":"VERIFIED","collection_status":"DOWNLOADED",
+            } for year in [2024,2025,2026]]
+            result=evaluate({
+                "minimum_history_years":5,
+                "requested_history_window":{"start_year":2020,"end_year":2026},
+            },rows,delivered)
+            self.assertEqual(result["target_report_years"],[2020,2021,2022,2023,2024,2025,2026])
+            self.assertEqual(result["missing_target_years"],[2020,2021,2022,2023])
+            self.assertEqual(result["state"],"FILE_COVERAGE_PARTIAL")
 
 
 if __name__ == "__main__":
