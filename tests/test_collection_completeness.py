@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from orchestrator.collection_completeness import audit_envinfo, audit_prtr, document_rows
+from orchestrator.archive_stage import append_artifact_rows
 
 
 def write_json(path, payload):
@@ -94,6 +95,18 @@ class CollectionCompletenessTests(unittest.TestCase):
             }]}
             rows=document_rows(package, {}, evidence)
             self.assertEqual(rows[0]["completeness_state"], "DOCUMENT_DOWNLOAD_FAILED")
+
+    def test_completeness_outputs_are_added_to_artifact_index(self):
+        with tempfile.TemporaryDirectory() as td:
+            package=Path(td)
+            with (package/"Artifact_Index.csv").open("w", encoding="utf-8-sig", newline="") as f:
+                w=csv.DictWriter(f, fieldnames=["source","path","bytes","sha256"]); w.writeheader()
+            for name in ["Collection_Completeness.json","Collection_Completeness.csv","Collection_No_Data.csv"]:
+                (package/name).write_text("test", encoding="utf-8")
+            append_artifact_rows(package)
+            with (package/"Artifact_Index.csv").open(encoding="utf-8-sig", newline="") as f:
+                paths={r["path"] for r in csv.DictReader(f)}
+            self.assertTrue({"Collection_Completeness.json","Collection_Completeness.csv","Collection_No_Data.csv"}.issubset(paths))
 
 
 if __name__ == "__main__":
