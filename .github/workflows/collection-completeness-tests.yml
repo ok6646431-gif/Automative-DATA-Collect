@@ -1,0 +1,44 @@
+name: Collection completeness tests
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'orchestrator/collection_completeness.py'
+      - 'orchestrator/sustainability_coverage.py'
+      - 'orchestrator/bootstrap_inputs.py'
+      - 'tests/test_collection_completeness.py'
+      - 'tests/test_sustainability_coverage.py'
+      - 'tests/test_bootstrap_inputs.py'
+      - '.github/workflows/collection-completeness-tests.yml'
+  pull_request:
+    paths:
+      - 'orchestrator/collection_completeness.py'
+      - 'orchestrator/sustainability_coverage.py'
+      - 'orchestrator/bootstrap_inputs.py'
+      - 'tests/test_collection_completeness.py'
+      - 'tests/test_sustainability_coverage.py'
+      - 'tests/test_bootstrap_inputs.py'
+      - '.github/workflows/collection-completeness-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run completeness regressions
+        run: >-
+          python -m unittest
+          tests.test_collection_completeness
+          tests.test_sustainability_coverage
+          tests.test_bootstrap_inputs
+          -v
