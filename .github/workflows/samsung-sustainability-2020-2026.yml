@@ -1,0 +1,73 @@
+name: Samsung sustainability reports 2020-2026
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - '.github/workflows/samsung-sustainability-2020-2026.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Collect official Samsung Electronics sustainability reports
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+
+          cat > reports/source_urls.tsv <<'EOF'
+          2026	https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf
+          2025	https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2025_KOR.pdf
+          2024	https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2024_KOR.pdf
+          2023	https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2023_KOR.pdf
+          2022	https://images.samsung.com/kdp/aboutsamsung/sustainability/pdf/sustainability_report_kr_2022___01.pdf
+          2021	https://images.samsung.com/kdp/aboutsamsung/overview/sustainability_report_kr_2021_01.pdf
+          2020	https://images.samsung.com/is/content/samsung/p5/sec/aboutsamsung/pdf/sustainability_report_kr_2020.pdf
+          EOF
+
+          printf 'year\tfilename\tsize_bytes\tsha256\tstatus\turl\n' > reports/collection_manifest.tsv
+
+          while IFS=$'\t' read -r year url; do
+            file="reports/삼성전자_지속가능경영보고서_${year}_KOR.pdf"
+            echo "Downloading ${year}: ${url}"
+            curl -L --fail --retry 3 --retry-delay 2 --connect-timeout 30 --max-time 300 \
+              -A 'Mozilla/5.0' "$url" -o "$file"
+
+            python - "$file" <<'PY'
+          import pathlib, sys
+          p = pathlib.Path(sys.argv[1])
+          data = p.read_bytes()
+          if len(data) < 100_000:
+              raise SystemExit(f"file too small: {p} ({len(data)} bytes)")
+          if not data.startswith(b"%PDF-"):
+              raise SystemExit(f"not a PDF: {p}")
+          PY
+
+            size=$(stat -c%s "$file")
+            sha=$(sha256sum "$file" | awk '{print $1}')
+            printf '%s\t%s\t%s\t%s\tVERIFIED_PDF\t%s\n' \
+              "$year" "$(basename "$file")" "$size" "$sha" "$url" >> reports/collection_manifest.tsv
+          done < reports/source_urls.tsv
+
+          test "$(find reports -maxdepth 1 -name '삼성전자_지속가능경영보고서_*_KOR.pdf' | wc -l)" -eq 7
+          for y in 2020 2021 2022 2023 2024 2025 2026; do
+            test -s "reports/삼성전자_지속가능경영보고서_${y}_KOR.pdf"
+          done
+
+          echo 'All seven report years 2020-2026 were collected and passed PDF validation.' | tee reports/verification_summary.txt
+          ls -lh reports
+
+      - name: Upload collected reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: samsung-sustainability-reports-2020-2026
+          path: reports/
+          if-no-files-found: error
+          retention-days: 30
