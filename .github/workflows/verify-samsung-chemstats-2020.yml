@@ -1,0 +1,25 @@
+name: Verify Samsung 2020 chemical statistics
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/verify_samsung_chemstats_2020.py'
+      - '.github/workflows/verify-samsung-chemstats-2020.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - run: python tools/verify_samsung_chemstats_2020.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: samsung-chemstats-2020-verification
+          path: verification/samsung_chemstats_2020/
+          retention-days: 7
