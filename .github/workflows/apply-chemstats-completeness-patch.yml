@@ -1,0 +1,30 @@
+name: Apply chemical source-ID completeness patch
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/patch_chemstats_completeness.py'
+      - '.github/workflows/apply-chemstats-completeness-patch.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/patch_chemstats_completeness.py
+      - run: python -m unittest tests.test_collection_completeness -v
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add orchestrator/collection_completeness.py tests/test_collection_completeness.py
+          git diff --cached --quiet && exit 0
+          git commit -m "Audit chemical source-ID backfill completeness"
+          git push
