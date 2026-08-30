@@ -1,8 +1,13 @@
 import csv
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+# archive_stage is intentionally executable both as a package module and as a script;
+# add the orchestrator directory so its script-style sibling imports resolve here too.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "orchestrator"))
 
 from orchestrator.collection_completeness import audit_envinfo, audit_prtr, document_rows
 from orchestrator.archive_stage import append_artifact_rows
