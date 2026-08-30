@@ -6,6 +6,7 @@ from archive_builder import build_archive, archive_file_index, write_csv, sha256
 from archive_zip_dedup import run as deduplicate_archive_zip
 from requested_scope import source_id_scope as requested_source_id_scope
 from postprocess import stable_id
+from collection_completeness import audit as audit_collection_completeness
 
 VALIDATION_FIELDS=["validation_id","company_id","object_type","object_key","issue_type","severity","detected_by","evidence","recommended_action","status","resolved_by","resolved_at","notes"]
 
@@ -149,6 +150,7 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
 
 def run(package_root,stable,evidence=None):
     root=Path(package_root).resolve(); copy_document_lane(root,stable,evidence)
+    audit_collection_completeness(root, root/"Company_Profile.json", None, root/"Document_Evidence.json" if (root/"Document_Evidence.json").exists() else None)
     vals,docs,env=document_reviews(root); merge_validations(root,vals)
     count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,count)
     # Archive v2 must use the exact same requested-scope resolver as Analysis.

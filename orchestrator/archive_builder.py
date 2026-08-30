@@ -12,6 +12,7 @@ except Exception:
 CONTRACT_PATH = Path(__file__).with_name("archive_contract.json")
 ROOT_INDEX_FILES = [
     "Company_Profile.json", "Company_Discovery_Summary.json", "Master_Manifest.json", "Artifact_Index.csv",
+    "Collection_Completeness.json", "Collection_Completeness.csv", "Collection_No_Data.csv",
     "Site_Master.csv", "Source_Identity.csv", "Coverage_Status.csv", "Coverage_Matrix.csv", "Validation_Queue.csv",
     "Event_Registry.csv", "Coverage_Event_Links.csv", "Analysis_Ready_Index.csv", "REVIEW_REQUIRED.json"
 ]

@@ -14,6 +14,11 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
+try:
+    from .request_builder import build as build_request
+except ImportError:
+    from request_builder import build as build_request
+
 STRONG_VERIFICATION = {"VERIFIED", "SOURCE_VERIFIED"}
 TERMINAL_FAILURES = {
     "REMOTE_HOST_UNREACHABLE", "REQUEST_OR_PARSE_FAILED", "CONFIG_ERROR",
@@ -376,9 +381,11 @@ def merge_validations(package, additions):
     return len(review)
 
 
-def audit(package_root, profile_path, request_path, evidence_path=None):
+def audit(package_root, profile_path, request_path=None, evidence_path=None):
     package = Path(package_root); output = package/"output"
-    profile = read_json(profile_path, {}) or {}; request = read_json(request_path, {}) or {}
+    profile = read_json(profile_path, {}) or {}
+    request = read_json(request_path, {}) if request_path and Path(request_path).exists() else build_request(profile)
+    request = request or {}
     evidence = read_json(evidence_path, {}) if evidence_path and Path(evidence_path).exists() else {}
     rows = public_rows(output, request) + document_rows(package, profile, evidence or {})
     incomplete = [x for x in rows if x["completeness_state"] in INCOMPLETE_STATES]
