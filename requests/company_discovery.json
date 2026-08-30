@@ -1,120 +1,174 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-generalization-20260829-v1",
-  "requested_company_name": "포스코",
-  "current_legal_name": "주식회사 포스코",
-  "current_legal_name_active_period": {"start_year": 2022, "end_year": null},
+  "request_id": "samsung-electronics-ds-env-20260830-v1",
+  "requested_company_name": "삼성전자 DS",
+  "current_legal_name": "삼성전자 주식회사",
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "국내 일관제철 생산거점 2개(포항·광양제철소)",
-    "candidate_ids": ["posco-pohang", "posco-gwangyang"],
+    "label": "삼성전자 DS 국내 사업장 6개(기흥·화성·평택·천안·온양·수원(SAIT))",
+    "candidate_ids": [
+      "samsung-ds-giheung",
+      "samsung-ds-hwaseong",
+      "samsung-ds-pyeongtaek",
+      "samsung-ds-cheonan",
+      "samsung-ds-onyang",
+      "samsung-ds-suwon-sait"
+    ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
   "company_aliases": [
     {
-      "name": "포스코",
+      "name": "삼성전자",
       "alias_type": "current_brand_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp"
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
     },
     {
-      "name": "(주)포스코",
+      "name": "삼성전자(주)",
       "alias_type": "source_native_alias",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/docs/kor7/jsp/resources/file/ir/POSCO_consolidated_FY25_3Q.pdf"
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
     },
     {
-      "name": "POSCO",
+      "name": "삼성전자㈜",
+      "alias_type": "source_native_alias",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
+    },
+    {
+      "name": "Samsung Electronics Co., Ltd.",
       "alias_type": "english_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/eng/index.do"
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
     }
   ],
   "historical_legal_names": [],
-  "corporate_restructuring_evidence": [
-    {
-      "event_type": "spin_off",
-      "effective_date": "2022-03-01",
-      "predecessor_entity": "분할 전 주식회사 포스코",
-      "continuing_entity_after_event": "포스코홀딩스 주식회사",
-      "new_operating_entity": "주식회사 포스코",
-      "transferred_business": "철강 생산 및 판매 등 사업부문",
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
-      "verification_state": "VERIFIED",
-      "notes": "Restructuring context only. Do not create an alias or automatic legal-entity merge for pre-2022 records."
-    }
-  ],
+  "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "posco-pohang",
-      "site_name_raw": "포항제철소",
-      "address_raw": "경상북도 포항시 남구 동해안로 6262",
-      "business_unit_raw": "일관제철 생산",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
+      "candidate_id": "samsung-ds-giheung",
+      "site_name_raw": "기흥사업장",
+      "address_raw": "경기도 용인시 기흥구 삼성로 1",
+      "business_unit_raw": "반도체 제조",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "posco-gwangyang",
-      "site_name_raw": "광양제철소",
-      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
-      "business_unit_raw": "일관제철 생산",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+      "candidate_id": "samsung-ds-hwaseong",
+      "site_name_raw": "화성사업장",
+      "address_raw": "경기도 화성시 삼성전자로 1",
+      "business_unit_raw": "반도체 제조",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "samsung-ds-pyeongtaek",
+      "site_name_raw": "평택사업장",
+      "address_raw": "경기도 평택시 고덕면 삼성로 114",
+      "business_unit_raw": "반도체 제조",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "samsung-ds-cheonan",
+      "site_name_raw": "천안사업장",
+      "address_raw": "충청남도 천안시 서북구 번영로 465",
+      "business_unit_raw": "반도체 패키지/제조",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "samsung-ds-onyang",
+      "site_name_raw": "온양사업장",
+      "address_raw": "충청남도 아산시 배방읍 배방로 158",
+      "business_unit_raw": "반도체 패키지/제조",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "samsung-ds-suwon-sait",
+      "site_name_raw": "수원(SAIT) 사업장",
+      "address_raw": "경기도 수원시 영통구 삼성로 130",
+      "business_unit_raw": "반도체 R&D",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
-      "source_value_raw": "2022-03-01 철강 생산 및 판매 등 사업부문을 물적분할하여 주식회사 포스코를 신설하고, 분할존속회사는 포스코홀딩스 주식회사로 상호 변경",
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/DS-ERU-026_ver3.0_KR.pdf",
+      "source_value_raw": "DS 제품환경 관리물질 운영규칙 적용장소: 기흥, 화성, 평택, 천안, 온양, 수원(SAIT) 사업장",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-      "source_value_raw": "포항제철소 / 경상북도 포항시 남구 동해안로 6262",
+      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "source_value_raw": "삼성반도체 공식 Locations 페이지의 국내 반도체 제조·R&D 거점 주소",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
-      "source_value_raw": "광양제철소 / 전라남도 광양시 폭포사랑길 20-26",
+      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf",
+      "source_value_raw": "삼성전자 사업부문은 DX와 DS로 구분되며 DS는 Memory, Foundry, System LSI 사업으로 구성",
       "verification_state": "VERIFIED"
     }
   ],
   "related_entity_exclusions": [
     {
-      "name": "포스코홀딩스",
-      "reason": "2022 spin-off continuing holding company; separate legal entity from the current steel operating company",
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "name": "삼성디스플레이",
+      "reason": "삼성전자 DS와 별도 법인",
+      "source_locator": "https://www.samsungdisplay.com/",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "포스코홀딩스 주식회사",
-      "reason": "2022 spin-off continuing holding company; separate legal entity from the current steel operating company",
-      "source_locator": "https://posco.com/homepage/docs/kor7/jsp/resources/file/ir/220302_end_of_division.pdf",
+      "name": "삼성SDI",
+      "reason": "삼성전자 DS와 별도 법인",
+      "source_locator": "https://www.samsungsdi.com/",
       "verification_state": "VERIFIED"
     }
   ],
   "unresolved_items": [
     {
-      "code": "PRE_2022_LEGAL_ENTITY_CONTINUITY_NOT_AUTO_ASSUMED",
-      "subject": "주식회사 포스코",
-      "detail": "Pre-2022 records may describe the predecessor corporation that later became POSCO Holdings. The identical historical text must not by itself establish current-company continuity."
+      "code": "SOURCE_NATIVE_SITE_NAME_VARIANTS_EXPECTED",
+      "subject": "삼성전자 DS 사업장",
+      "detail": "공공 DB마다 사업장명이 '삼성전자 주식회사 기흥사업장', '삼성전자(주) 화성사업장' 등으로 다를 수 있어 주소·사업장명 조합으로 교차확인한다."
     }
   ],
   "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
     "sources": {
-      "ENVINFO": {"requested_window": {"start_year": 2020, "end_year": 2024}, "prefer_full_history": false, "max_details": 500},
-      "PRTR": {"requested_window": {"start_year": 2020, "end_year": 2024}, "prefer_full_history": false},
-      "CHEM_STATS": {"requested_survey_rounds": [2020, 2022, 2024], "available_survey_rounds": [2020, 2022, 2024], "prefer_full_history": true},
-      "CLEANSYS_AIR": {"requested_window": {"start_year": 2020, "end_year": 2025}, "prefer_full_history": false},
-      "SOOSIRO_WATER": {"requested_window": {"start_year": 2020, "end_year": 2025}, "daily_available_years": [2024], "prefer_full_history": false}
+      "ENVINFO": {
+        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "prefer_full_history": false,
+        "max_details": 500
+      },
+      "PRTR": {
+        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "prefer_full_history": false
+      },
+      "CHEM_STATS": {
+        "requested_survey_rounds": [2020, 2022, 2024],
+        "available_survey_rounds": [2020, 2022, 2024],
+        "prefer_full_history": true
+      },
+      "CLEANSYS_AIR": {
+        "requested_window": {"start_year": 2020, "end_year": 2025},
+        "prefer_full_history": false
+      },
+      "SOOSIRO_WATER": {
+        "requested_window": {"start_year": 2020, "end_year": 2025},
+        "daily_available_years": [2024],
+        "prefer_full_history": false
+      }
     }
   }
 }

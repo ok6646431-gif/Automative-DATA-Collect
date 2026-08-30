@@ -1,101 +1,23 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-generalization-20260829-v1",
+  "request_id": "samsung-electronics-ds-env-20260830-v1",
   "discovery_status": "PARTIAL",
   "documents": [
-    {
-      "document_id": "POSCO_SUSTAINABILITY_2025_DIGITAL",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 POSCO Sustainability Report",
-      "report_year": 2025,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/index.do",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "POSCO states the 2025 report is published in digital format."
-    },
-    {
-      "document_id": "POSCO_SUSTAINABILITY_2024",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 포스코 지속가능경영보고서",
-      "report_year": 2024,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2024_kor.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=1745996979005381",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "POSCO_SUSTAINABILITY_2023",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 포스코 지속가능경영보고서",
-      "report_year": 2023,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2023_kor.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "POSCO_SUSTAINABILITY_2022",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Sustainability Report 2022",
-      "report_year": 2022,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2022_eng.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "POSCO_ENVIRONMENT_MANAGEMENT_CURRENT",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "포스코 환경영향 및 환경관리 체계",
-      "report_year": 2025,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "Official POSCO ESG page describing environmental organization, permitting/control-equipment inspection responsibilities, chemical training, waste recycling and energy management."
-    },
-    {
-      "document_id": "POSCO_SUSTAINABILITY_ARCHIVE",
-      "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "포스코 지속가능경영보고서 공식 자료실",
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING",
-      "notes": "Official archive/index. It must not by itself satisfy a site-level action or BAT semantic layer."
-    }
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2026","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2026","report_year":2026,"source_url":"https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2025","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2025","report_year":2025,"source_url":"https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2025_KOR.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2024","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2024","report_year":2024,"source_url":"https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2024_KOR.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2023","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2023","report_year":2023,"source_url":"https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2023_KOR.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2022","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2022","report_year":2022,"source_url":"https://images.samsung.com/kdp/aboutsamsung/sustainability/pdf/sustainability_report_kr_2022___01.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2021","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2021","report_year":2021,"source_url":"https://images.samsung.com/kdp/ir/annual-reports/sustainability_report_2021_kr.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_SUSTAINABILITY_2020","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2020","report_year":2020,"source_url":"https://images.samsung.com/is/content/samsung/p5/sec/ir/financialinfo/companyreports/sustainability_report_2020_kr_new.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/sustainability-report/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_DS_PRODUCT_ENV_RULE","document_type":"ENVIRONMENTAL_POLICY","title":"DS 부문 제품환경 관리물질 운영규칙 DS-ERU-026","report_year":2025,"source_url":"https://download.semiconductor.samsung.com/resources/others/DS-ERU-026_ver3.0_KR.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_DS_EHS_POLICY","document_type":"ENVIRONMENTAL_POLICY","title":"삼성전자 DS Environment Health and Safety Management Policy","report_year":2025,"source_url":"https://download.semiconductor.samsung.com/resources/others/Environmental_Health_and_Safety_Management_Policy_KR.pdf","source_locator":"https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/","expected_extension":"pdf","verification_status":"VERIFIED","importance":"CORE"},
+    {"document_id":"SAMSUNG_DS_ENVIRONMENT_OVERVIEW","document_type":"ENVIRONMENTAL_DISCLOSURE","title":"삼성반도체 환경(Environment) 공식 페이지","report_year":2026,"source_url":"https://semiconductor.samsung.com/kr/sustainability/environment/","source_locator":"https://semiconductor.samsung.com/kr/sustainability/environment/","expected_extension":"html","verification_status":"VERIFIED","importance":"SUPPORTING"},
+    {"document_id":"SAMSUNG_NEW_ENV_STRATEGY","document_type":"ENVIRONMENTAL_STRATEGY","title":"삼성전자 신환경경영전략 공식 발표","report_year":2022,"source_url":"https://semiconductor.samsung.com/kr/news-events/news/samsung-electronics-announces-new-environmental-strategy/","source_locator":"https://semiconductor.samsung.com/kr/news-events/news/samsung-electronics-announces-new-environmental-strategy/","expected_extension":"html","verification_status":"VERIFIED","importance":"SUPPORTING"}
   ],
   "gaps": [
-    {
-      "gap_id": "POSCO_STEEL_KBREF_DIRECT_REFERENCE_PENDING",
-      "source_key": "NIER_IEPS",
-      "severity": "MEDIUM",
-      "reason": "An exact first-party steel-industry K-BREF document and applicability record were not injected before the frozen run. Industry technical evidence must remain NOT_DECLARED rather than inferred."
-    },
-    {
-      "gap_id": "POSCO_INTEGRATED_PERMIT_PRIMARY_RECORD_PENDING",
-      "source_key": "INTEGRATED_PERMIT",
-      "severity": "MEDIUM",
-      "reason": "No site-specific integrated-permit primary record is pre-seeded. Exact permit dates and conditions must be verified before use."
-    },
-    {
-      "gap_id": "PRE_2022_REPORT_ENTITY_BOUNDARY",
-      "source_key": "POSCO_CORPORATE_HISTORY",
-      "severity": "MEDIUM",
-      "reason": "Reports and environmental data before the 2022-03-01 spin-off may belong to the predecessor corporation. They are not declared as current-company sustainability-report history in this test."
-    },
-    {
-      "gap_id": "NONPUBLIC_INTERNAL_SOP_NOT_COLLECTABLE",
-      "source_key": "POSCO_INTERNAL",
-      "severity": "LOW",
-      "reason": "Non-public internal environmental procedures are outside public-source collection scope and must not be inferred from absence."
-    }
+    {"gap_id":"PUBLIC_OPERATIONAL_2026_ANNUAL_NOT_EXPECTED_YET","source_key":"PUBLIC_ENV_DATABASES","severity":"LOW","reason":"2026 연간 실적 공공 DB는 공시 주기상 아직 완결 연도가 아니므로 미수집을 누락으로 판정하지 않는다."},
+    {"gap_id":"SOURCE_NATIVE_SITE_VARIANTS_REQUIRE_POST_COLLECTION_MATCHING","source_key":"PUBLIC_ENV_DATABASES","severity":"MEDIUM","reason":"사업장명 표기가 소스별로 달라 6개 DS 사업장 Identity 기준으로 결과를 재필터링한다."},
+    {"gap_id":"NONPUBLIC_INTERNAL_SOP_OUT_OF_SCOPE","source_key":"SAMSUNG_INTERNAL","severity":"LOW","reason":"비공개 내부 SOP와 내부 인허가 문서는 공개자료 수집 범위 밖이다."}
   ]
 }
