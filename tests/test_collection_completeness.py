@@ -113,6 +113,30 @@ class CollectionCompletenessTests(unittest.TestCase):
                 paths={r["path"] for r in csv.DictReader(f)}
             self.assertTrue({"Collection_Completeness.json","Collection_Completeness.csv","Collection_No_Data.csv"}.issubset(paths))
 
+    def test_prtr_uses_collector_filename_normalization(self):
+        with tempfile.TemporaryDirectory() as td:
+            output=Path(td); root=output/"PRTR"; (root/"raw_search").mkdir(parents=True)
+            (root/"raw_search"/"2024_Samsung_Electronics_Co_Ltd_p1.html").write_text("ok", encoding="utf-8")
+            write_json(root/"status.json", {"status":"NO_MATCH","rows":0,"detail_ok":0})
+            rows=audit_prtr(output, {
+                "start_year":2024,"end_year":2024,
+                "search_terms":[{"term":"Samsung Electronics Co., Ltd.","year_start":2024,"year_end":2024}],
+            })
+            self.assertEqual(rows[0]["completeness_state"], "NO_DATA_CONFIRMED")
+
+    def test_soosiro_uses_collector_filename_normalization(self):
+        from orchestrator.collection_completeness import audit_soosiro
+        with tempfile.TemporaryDirectory() as td:
+            output=Path(td); root=output/"SOOSIRO_WATER"; (root/"raw_annual").mkdir(parents=True)
+            (root/"raw_annual"/"2024_Samsung_Electronics_Co_Ltd.json").write_text("{}", encoding="utf-8")
+            write_json(root/"status.json", {"status":"NO_MATCH","annual_rows":0,"errors":0})
+            write_json(root/"fact_candidates.json", [])
+            rows=audit_soosiro(output, {
+                "annual_years":[2024],"daily_years":[],
+                "search_terms":["Samsung Electronics Co., Ltd."],
+            })
+            self.assertEqual(rows[0]["completeness_state"], "NO_DATA_CONFIRMED")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -48,6 +48,20 @@ def safe(value):
     return re.sub(r"[^0-9A-Za-z가-힣._-]+", "_", str(value or "")).strip("_")
 
 
+def collector_term_key(source, value):
+    """Mirror each collector's on-disk search-term filename normalization.
+
+    Query completeness is checked against retained raw responses. PRTR and
+    SOOSIRO intentionally strip punctuation from their filenames, while
+    ENV-INFO and Chemical Statistics preserve dot/underscore/hyphen. Keeping
+    this mapping explicit prevents false UNQUERIED_PERIOD results when the
+    auditor and collector sanitize the same exact search term differently.
+    """
+    if source in {"PRTR", "SOOSIRO_WATER"}:
+        return re.sub(r"[^0-9A-Za-z가-힣]+", "_", str(value or "")).strip("_")
+    return safe(value)
+
+
 def read_json(path, default=None):
     p = Path(path)
     if not p.exists():
@@ -189,7 +203,7 @@ def audit_prtr(output, cfg):
     failures = error_years(root/"errors.log", {"SEARCH"}); rows = []
     for year in years_in(cfg.get("start_year"), cfg.get("end_year")):
         terms = terms_for_year(cfg, year)
-        files = [root/"raw_search"/f"{year}_{safe(term)}_p1.html" for term in terms]
+        files = [root/"raw_search"/f"{year}_{collector_term_key(source, term)}_p1.html" for term in terms]
         complete = bool(terms) and all(p.exists() and p.stat().st_size > 0 for p in files)
         failed = year in failures or (status.get("status") in TERMINAL_FAILURES and not complete)
         rows.append(query_row(source, year, complete, failed, year in data_years,
@@ -245,7 +259,7 @@ def audit_soosiro(output, cfg):
     for year in [as_year(x) for x in cfg.get("annual_years", [])]:
         if year is None: continue
         terms = terms_for_year(cfg, year)
-        term_files = [root/"raw_annual"/f"{year}_{safe(term)}.json" for term in terms]
+        term_files = [root/"raw_annual"/f"{year}_{collector_term_key(source, term)}.json" for term in terms]
         complete = bool(terms) and all(p.exists() and p.stat().st_size > 0 for p in term_files)
         failed = year in annual_fail or (status.get("status") in TERMINAL_FAILURES and not complete)
         r = query_row(source, year, complete, failed, year in annual_data,
