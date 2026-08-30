@@ -1,0 +1,32 @@
+name: Verify chemical-statistics source-ID backfill
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/verify-chemstats-backfill.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Bootstrap Samsung request
+        run: python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Collect chemical statistics
+        run: python collectors/chem_stats_collect.py requests/current.generated.json
+      - name: Show status
+        run: |
+          cat output/CHEM_STATS/status.json
+          echo '--- backfill audit ---'
+          cat output/CHEM_STATS/source_id_backfill_audit.jsonl || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chemstats-backfill-validation
+          path: output/CHEM_STATS/
+          retention-days: 7
