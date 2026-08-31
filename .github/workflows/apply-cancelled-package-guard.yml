@@ -1,0 +1,25 @@
+name: Apply cancelled package guard
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/patch_cancelled_package_guard.py'
+      - '.github/workflows/apply-cancelled-package-guard.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python tools/patch_cancelled_package_guard.py
+      - name: Verify guard
+        run: grep -F 'if: ${{ always() && !cancelled() }}' .github/workflows/collect.yml
+      - name: Commit generic cancellation guard
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/collect.yml
+          git diff --cached --exit-code && exit 0
+          git commit -m 'Skip packaging for cancelled collection runs'
+          git push
