@@ -1,5 +1,6 @@
 name: Verify Kumho failed documents matrix
 on:
+  workflow_dispatch:
   push:
     branches: [run/control-plane]
     paths:
