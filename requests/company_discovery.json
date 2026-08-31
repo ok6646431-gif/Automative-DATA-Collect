@@ -1,148 +1,205 @@
 {
   "schema_version": "1.0",
-  "request_id": "samsung-electronics-ds-env-20260830-v1",
-  "requested_company_name": "삼성전자 DS",
-  "current_legal_name": "삼성전자 주식회사",
+  "request_id": "kumho-petrochemical-env-20260831-v1",
+  "requested_company_name": "금호석유화학",
+  "current_legal_name": "금호석유화학주식회사",
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
-    "mode": "SITE_SET",
-    "label": "삼성전자 DS 국내 핵심 생산사업장 5개(기흥·화성·평택·천안·온양)",
-    "candidate_ids": [
-      "samsung-ds-giheung",
-      "samsung-ds-hwaseong",
-      "samsung-ds-pyeongtaek",
-      "samsung-ds-cheonan",
-      "samsung-ds-onyang"
-    ],
+    "mode": "COMPANY",
+    "label": "금호석유화학주식회사 국내 법인 전체",
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
-    "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
-    "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+    "archive_policy": "COMPANY_WIDE",
+    "analysis_policy": "COMPANY_WIDE"
   },
   "scope_notes": [
     {
-      "code": "SOURCE_NATIVE_SITE_NAME_VARIANTS_EXPECTED",
-      "subject": "삼성전자 DS 핵심 생산사업장 5개",
-      "detail": "공공 DB마다 사업장명이 '삼성전자 주식회사 기흥사업장', '삼성전자(주) 화성사업장' 등으로 다를 수 있어 주소·사업장명 조합으로 교차확인한다."
+      "code": "COLOCATED_OFFICIAL_UNITS_EXPECTED",
+      "subject": "울산고무공장·울산 LATEX공장",
+      "detail": "금호석유화학 공식 글로벌네트워크에서 두 생산공장이 동일한 울산 남구 상개로 64 주소에 별도 명칭으로 공시된다. 주소만으로 자동 병합하지 않고 사업장명과 source-native ID를 함께 확인한다."
     },
     {
-      "code": "SAIT_SUPPORTING_SCOPE_ONLY",
-      "subject": "수원(SAIT) 사업장",
-      "detail": "수원 SAIT는 DS 정책·인증 또는 R&D 관련 보조 범위에는 포함될 수 있으나, 본 환경성과 핵심 생산사업장 5개 분석 범위에는 포함하지 않는다. Raw 검색자료는 회사 전체 보존 원칙에 따라 유지한다."
+      "code": "COMPANY_WIDE_ACCEPTANCE_TEST",
+      "subject": "금호석유화학주식회사",
+      "detail": "이번 실행은 특정 채용 사업장으로 좁히지 않고 국내 법인 전체 공개 환경자료 수집의 범용성을 검증한다."
     }
   ],
   "company_aliases": [
     {
-      "name": "삼성전자",
+      "name": "금호석유화학",
       "alias_type": "current_brand_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
     },
     {
-      "name": "삼성전자(주)",
+      "name": "금호석유화학(주)",
       "alias_type": "source_native_alias",
       "verification_state": "VERIFIED",
-      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
+      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
     },
     {
-      "name": "삼성전자㈜",
+      "name": "금호석유화학㈜",
       "alias_type": "source_native_alias",
       "verification_state": "VERIFIED",
-      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
+      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
     },
     {
-      "name": "Samsung Electronics Co., Ltd.",
+      "name": "KUMHO PETROCHEMICAL CO., LTD.",
       "alias_type": "english_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf"
+      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
     }
   ],
   "historical_legal_names": [],
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "samsung-ds-giheung",
-      "site_name_raw": "기흥사업장",
-      "address_raw": "경기도 용인시 기흥구 삼성로 1",
-      "business_unit_raw": "반도체 제조",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "candidate_id": "kkpc-ulsan-rubber",
+      "site_name_raw": "울산고무공장",
+      "address_raw": "울산광역시 남구 상개로 64(상개동)",
+      "business_unit_raw": "합성고무",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "samsung-ds-hwaseong",
-      "site_name_raw": "화성사업장",
-      "address_raw": "경기도 화성시 삼성전자로 1",
-      "business_unit_raw": "반도체 제조",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "candidate_id": "kkpc-ulsan-resin",
+      "site_name_raw": "울산수지공장",
+      "address_raw": "울산광역시 남구 처용로 260-257(성암동)",
+      "business_unit_raw": "합성수지",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "samsung-ds-pyeongtaek",
-      "site_name_raw": "평택사업장",
-      "address_raw": "경기도 평택시 고덕면 삼성로 114",
-      "business_unit_raw": "반도체 제조",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "candidate_id": "kkpc-ulsan-latex",
+      "site_name_raw": "울산 LATEX공장",
+      "address_raw": "울산광역시 남구 상개로 64(상개동)",
+      "business_unit_raw": "Latex",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "samsung-ds-cheonan",
-      "site_name_raw": "천안사업장",
-      "address_raw": "충청남도 천안시 서북구 번영로 465",
-      "business_unit_raw": "반도체 패키지/제조",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "candidate_id": "kkpc-yeosu-rubber-1",
+      "site_name_raw": "여수고무제1공장",
+      "address_raw": "전라남도 여수시 여수산단3로 118(평여동)",
+      "business_unit_raw": "합성고무",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "samsung-ds-onyang",
-      "site_name_raw": "온양사업장",
-      "address_raw": "충청남도 아산시 배방읍 배방로 158",
-      "business_unit_raw": "반도체 패키지/제조",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "candidate_id": "kkpc-yeosu-rubber-2",
+      "site_name_raw": "여수고무제2공장",
+      "address_raw": "전라남도 여수시 산단중앙로 331(평여동)",
+      "business_unit_raw": "합성고무",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "samsung-ds-suwon-sait",
-      "site_name_raw": "수원(SAIT) 사업장",
-      "address_raw": "경기도 수원시 영통구 삼성로 130",
-      "business_unit_raw": "반도체 R&D",
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
+      "candidate_id": "kkpc-yeosu-fine-chemical",
+      "site_name_raw": "여수정밀화학공장",
+      "address_raw": "전라남도 여수시 여수산단2로 227(화치동)",
+      "business_unit_raw": "정밀화학",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-yeosu-energy-1",
+      "site_name_raw": "여수제1에너지",
+      "address_raw": "전라남도 여수시 여수산단2로 46-51(월하동)",
+      "business_unit_raw": "증기·전기 생산",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-yeosu-energy-2",
+      "site_name_raw": "여수제2에너지",
+      "address_raw": "전라남도 여수시 여수산단2로 223-84(화치동)",
+      "business_unit_raw": "증기·전기 생산",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-yesan-building-materials",
+      "site_name_raw": "예산건자재공장",
+      "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9(호음리)",
+      "business_unit_raw": "건자재",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-yulchon-cnt",
+      "site_name_raw": "율촌CNT공장",
+      "address_raw": "전라남도 여수시 율촌면 율촌산단6로 115",
+      "business_unit_raw": "탄소나노튜브",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-daejeon-central-rd",
+      "site_name_raw": "중앙연구소",
+      "address_raw": "대전광역시 유성구 유성대로 1557(화암동)",
+      "business_unit_raw": "연구개발",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://download.semiconductor.samsung.com/resources/others/DS-ERU-026_ver3.0_KR.pdf",
-      "source_value_raw": "DS 제품환경 관리물질 운영규칙 적용장소: 기흥, 화성, 평택, 천안, 온양, 수원(SAIT) 사업장",
+      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm",
+      "source_value_raw": "법적·상업적 명칭: 금호석유화학주식회사 / KUMHO PETROCHEMICAL CO., LTD. (KKPC)",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://semiconductor.samsung.com/kr/about-us/locations/",
-      "source_value_raw": "삼성반도체 공식 Locations 페이지의 국내 반도체 제조·R&D 거점 주소",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf",
-      "source_value_raw": "지속가능경영보고서의 DS 국내 생산사업장 환경성과 범위는 기흥·화성·평택·천안·온양 5개 사업장을 중심으로 제시되며, 수원 SAIT는 R&D/정책 적용 보조 범위로 구분한다.",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_value_raw": "금호석유화학 공식 글로벌네트워크의 국내 생산공장 10개 및 중앙연구소 명칭·주소",
       "verification_state": "VERIFIED"
     }
   ],
   "related_entity_exclusions": [
     {
-      "name": "삼성디스플레이",
-      "reason": "삼성전자 DS와 별도 법인",
-      "source_locator": "https://www.samsungdisplay.com/",
+      "name": "금호피앤비화학",
+      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
+      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "삼성SDI",
-      "reason": "삼성전자 DS와 별도 법인",
-      "source_locator": "https://www.samsungsdi.com/",
+      "name": "금호폴리켐",
+      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
+      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "name": "금호미쓰이화학",
+      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
+      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "name": "금호개발상사",
+      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
+      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "name": "금호티앤엘",
+      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
+      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "name": "금호리조트",
+      "reason": "금호석유화학 공식 사이트가 별도 패밀리사이트로 구분",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgGuidelines/",
       "verification_state": "VERIFIED"
     }
   ],
@@ -150,50 +207,32 @@
   "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
+    "requested_history_window": {
+      "start_year": 2020,
+      "end_year": 2026
+    },
     "sources": {
       "ENVINFO": {
-        "requested_window": {
-          "start_year": 2020,
-          "end_year": 2024
-        },
+        "requested_window": {"start_year": 2020, "end_year": 2024},
         "prefer_full_history": false,
         "max_details": 500
       },
       "PRTR": {
-        "requested_window": {
-          "start_year": 2020,
-          "end_year": 2024
-        },
+        "requested_window": {"start_year": 2020, "end_year": 2024},
         "prefer_full_history": false
       },
       "CHEM_STATS": {
-        "requested_survey_rounds": [
-          2020,
-          2022,
-          2024
-        ],
-        "available_survey_rounds": [
-          2020,
-          2022,
-          2024
-        ],
+        "requested_survey_rounds": [2020, 2022, 2024],
+        "available_survey_rounds": [2020, 2022, 2024],
         "prefer_full_history": true
       },
       "CLEANSYS_AIR": {
-        "requested_window": {
-          "start_year": 2020,
-          "end_year": 2025
-        },
+        "requested_window": {"start_year": 2020, "end_year": 2025},
         "prefer_full_history": false
       },
       "SOOSIRO_WATER": {
-        "requested_window": {
-          "start_year": 2020,
-          "end_year": 2025
-        },
-        "daily_available_years": [
-          2024
-        ],
+        "requested_window": {"start_year": 2020, "end_year": 2025},
+        "daily_available_years": [2024],
         "prefer_full_history": false
       }
     }
