@@ -7,12 +7,14 @@ on:
     paths:
       - 'collectors/corporate_docs_collect.py'
       - 'tests/test_corporate_docs_collect.py'
+      - 'tests/test_corporate_docs_slow_retry.py'
       - 'requests/document_evidence.schema.json'
       - '.github/workflows/corporate-docs-regression.yml'
   pull_request:
     paths:
       - 'collectors/corporate_docs_collect.py'
       - 'tests/test_corporate_docs_collect.py'
+      - 'tests/test_corporate_docs_slow_retry.py'
       - 'requests/document_evidence.schema.json'
   workflow_dispatch:
 
@@ -31,7 +33,11 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests
       - name: Run corporate document regressions
-        run: python -m unittest tests.test_corporate_docs_collect -v
+        run: >-
+          python -m unittest
+          tests.test_corporate_docs_collect
+          tests.test_corporate_docs_slow_retry
+          -v
       - name: Validate current document evidence schema
         run: |
           python -m pip install --disable-pip-version-check jsonschema
