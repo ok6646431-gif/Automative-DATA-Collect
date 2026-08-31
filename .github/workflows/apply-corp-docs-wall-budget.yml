@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python tools/patch_corp_docs_wall_budget.py
-      - run: python -m unittest tests.test_corporate_docs_collect -v
+      - run: python -m unittest discover -s tests -p 'test_corporate_docs_collect.py' -v
       - name: Commit generic wall-clock budget
         run: |
           git config user.name 'github-actions[bot]'
