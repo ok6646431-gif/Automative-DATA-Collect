@@ -1,0 +1,60 @@
+name: Verify Kumho failed documents matrix
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/verify_kumho_failed_docs_matrix.marker'
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        document_id:
+          - KUMHO_SUSTAINABILITY_2025
+          - KUMHO_SUSTAINABILITY_2024
+          - KUMHO_SUSTAINABILITY_2023
+          - KUMHO_SUSTAINABILITY_2022
+          - KUMHO_SUSTAINABILITY_2021
+          - NIER_ENERGY_KBREF_II_2022
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Bootstrap runtime company inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Filter one verified document
+        env:
+          DOC_ID: ${{ matrix.document_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          src=json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          wanted=os.environ['DOC_ID']
+          docs=[d for d in src.get('documents',[]) if d.get('document_id')==wanted]
+          if len(docs)!=1:
+              raise SystemExit(f'Expected exactly one document for {wanted}, got {len(docs)}')
+          src['documents']=docs
+          src['gaps']=[]
+          Path('requests/runtime/one_document.json').write_text(json.dumps(src,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Collect one document
+        continue-on-error: true
+        run: python collectors/corporate_docs_collect.py requests/runtime/one_document.json requests/runtime/company_profile.generated.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verify-${{ matrix.document_id }}
+          path: output/CORP_DOCS/
+          if-no-files-found: warn
+          retention-days: 2
