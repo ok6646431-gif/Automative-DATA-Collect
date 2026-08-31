@@ -17,6 +17,7 @@ jobs:
           - KUMHO_SUSTAINABILITY_2023
           - KUMHO_SUSTAINABILITY_2022
           - KUMHO_SUSTAINABILITY_2021
+          - KUMHO_SUSTAINABILITY_2020
           - NIER_ENERGY_KBREF_II_2022
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -51,6 +52,17 @@ jobs:
       - name: Collect one document
         continue-on-error: true
         run: python collectors/corporate_docs_collect.py requests/runtime/one_document.json requests/runtime/company_profile.generated.json
+      - name: Print collection diagnostics
+        if: always()
+        run: |
+          echo '=== status.json ==='
+          cat output/CORP_DOCS/status.json 2>/dev/null || true
+          echo
+          echo '=== download_attempts.csv ==='
+          cat output/CORP_DOCS/download_attempts.csv 2>/dev/null || true
+          echo
+          echo '=== document_index.csv ==='
+          cat output/CORP_DOCS/document_index.csv 2>/dev/null || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
