@@ -26,6 +26,15 @@ BASE_DOCUMENT_WALL_SECONDS = 120.0
 MAX_DOCUMENT_WALL_SECONDS = 360.0
 MIN_EXPECTED_TRANSFER_BPS = 128 * 1024
 LARGE_FILE_OVERHEAD_SECONDS = 30.0
+# Some verified official document servers are alive and return valid document
+# headers, but transfer much more slowly than ordinary static-file hosts. Only
+# after a retryable failure with credible response metadata or real byte progress
+# do we unlock this slower, still-bounded retry policy. Fast/dead sources keep the
+# ordinary limits above.
+SLOW_RETRY_READ_TIMEOUT_SECONDS = 600.0
+SLOW_MIN_EXPECTED_TRANSFER_BPS = 24 * 1024
+SLOW_DOCUMENT_OVERHEAD_SECONDS = 60.0
+MAX_SLOW_DOCUMENT_WALL_SECONDS = 1200.0
 PREFLIGHT_CACHE = {}
 FIELDS = [
     "document_id", "company_id", "canonical_site_id", "site_name_raw", "source_key", "document_type",
@@ -284,14 +293,21 @@ def wall_budget_for_length(length):
     return min(MAX_DOCUMENT_WALL_SECONDS, max(BASE_DOCUMENT_WALL_SECONDS, estimated))
 
 
+def slow_wall_budget_for_length(length):
+    if not length:
+        return max(MAX_DOCUMENT_WALL_SECONDS, min(MAX_SLOW_DOCUMENT_WALL_SECONDS, 600.0))
+    estimated = SLOW_DOCUMENT_OVERHEAD_SECONDS + (float(length) / float(SLOW_MIN_EXPECTED_TRANSFER_BPS))
+    return min(MAX_SLOW_DOCUMENT_WALL_SECONDS, max(MAX_DOCUMENT_WALL_SECONDS, estimated))
+
+
 def download_one(session, doc, target, total_bytes):
     """Download one verified document with bounded in-run byte-range resume.
 
-    Slow official servers often terminate an otherwise valid large transfer after
-    tens of megabytes. Preserve the partial file across retryable network errors
-    and request only the remaining bytes when the origin supports HTTP Range.
-    If Range is ignored, restart safely from byte zero. The same absolute wall,
-    per-file size, and aggregate size limits still apply.
+    Ordinary sources keep the short timeout policy. If a source has already
+    returned credible document metadata or actual document bytes and then suffers
+    a retryable timeout/network failure, later attempts receive a larger but still
+    absolute time allowance. Range-capable origins resume; origins that ignore
+    Range are restarted from byte zero and are never appended corruptly.
     """
     url = str(doc.get("source_url") or "")
     headers = preflight(session, doc, url)
@@ -300,14 +316,21 @@ def download_one(session, doc, target, total_bytes):
     deadline = started + BASE_DOCUMENT_WALL_SECONDS
     active_budget = BASE_DOCUMENT_WALL_SECONDS
     resume_offset = target.stat().st_size if target.exists() else 0
+    known_total = 0
+    credible_document_response = False
+    slow_mode = False
 
     for attempt in range(1, TRANSFER_ATTEMPTS + 1):
+        if slow_mode:
+            active_budget = max(active_budget, slow_wall_budget_for_length(known_total or resume_offset))
+            deadline = max(deadline, started + active_budget)
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             last_exc = TimeoutError(f"document wall-clock budget exceeded ({active_budget:.0f}s)")
             break
         connect_timeout = max(1.0, min(float(DOWNLOAD_TIMEOUT[0]), remaining))
-        read_timeout = max(1.0, min(float(DOWNLOAD_TIMEOUT[1]), remaining))
+        read_ceiling = SLOW_RETRY_READ_TIMEOUT_SECONDS if slow_mode else float(DOWNLOAD_TIMEOUT[1])
+        read_timeout = max(1.0, min(read_ceiling, remaining))
         request_headers = dict(headers)
         if resume_offset > 0:
             request_headers["Range"] = f"bytes={resume_offset}-"
@@ -342,9 +365,18 @@ def download_one(session, doc, target, total_bytes):
 
                 if expected_total and expected_total > MAX_FILE_BYTES:
                     raise ValueError(f"declared file size exceeds {MAX_FILE_BYTES} bytes")
+                known_total = max(known_total, expected_total)
                 budget_basis = expected_total or max(resume_offset + length, resume_offset)
                 active_budget = wall_budget_for_length(budget_basis)
+                if slow_mode:
+                    active_budget = max(active_budget, slow_wall_budget_for_length(known_total or budget_basis))
                 deadline = max(deadline, started + active_budget)
+
+                response_ctype = str(r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+                expected_ext = str(doc.get("expected_extension") or "").lower().lstrip(".")
+                not_html = response_ctype not in {"text/html", "application/xhtml+xml"}
+                if expected_total and not_html and (not expected_ext or expected_ext != "pdf" or "pdf" in response_ctype):
+                    credible_document_response = True
 
                 mode = "ab" if range_accepted else "wb"
                 count = resume_offset if range_accepted else 0
@@ -357,6 +389,8 @@ def download_one(session, doc, target, total_bytes):
                         count += len(chunk)
                         if not expected_total:
                             active_budget = wall_budget_for_length(count)
+                            if slow_mode:
+                                active_budget = max(active_budget, slow_wall_budget_for_length(count))
                             deadline = max(deadline, started + active_budget)
                         if count > MAX_FILE_BYTES or total_bytes + count > MAX_TOTAL_BYTES:
                             raise ValueError("document collection size safety limit exceeded")
@@ -378,6 +412,10 @@ def download_one(session, doc, target, total_bytes):
                 target.unlink(missing_ok=True)
                 break
             resume_offset = target.stat().st_size if target.exists() else 0
+            if resume_offset > 0 or credible_document_response:
+                slow_mode = True
+                active_budget = max(active_budget, slow_wall_budget_for_length(known_total or resume_offset))
+                deadline = max(deadline, started + active_budget)
             if attempt < TRANSFER_ATTEMPTS and time.monotonic() < deadline:
                 time.sleep(min(0.5 * attempt, max(0.0, deadline - time.monotonic())))
                 continue
