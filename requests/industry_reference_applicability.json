@@ -1,16 +1,13 @@
 {
   "schema_version": "1.2",
-  "request_id": "samsung-electronics-ds-env-20260830-v1",
+  "request_id": "kumho-petrochemical-env-20260831-v1",
   "references": [
     {
-      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
+      "document_id": "NIER_ENERGY_KBREF_II_2022",
       "applicability_state": "VERIFIED",
       "candidate_ids": [
-        "samsung-ds-giheung",
-        "samsung-ds-hwaseong",
-        "samsung-ds-pyeongtaek",
-        "samsung-ds-cheonan",
-        "samsung-ds-onyang"
+        "kkpc-yeosu-energy-1",
+        "kkpc-yeosu-energy-2"
       ],
       "reference_domains": [
         "AIR",
@@ -18,10 +15,10 @@
         "CHEMICALS",
         "GHG_ENERGY"
       ],
-      "basis": "국립환경과학원 통합환경허가시스템이 해당 문서를 반도체 제조업 K-BREF로 공식 공개하고 있고, 대상 5개 사업장은 삼성전자 1차 공식 사업장 자료로 반도체 DS 사업장임이 검증되어 있다. 이 매핑은 업종 기준서의 적용 가능 범위만 뜻하며 삼성전자의 개별 BAT 적용 또는 허가조건을 의미하지 않는다.",
-      "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1"
+      "basis": "금호석유화학 공식 글로벌네트워크는 여수제1에너지와 여수제2에너지의 기능을 증기·전기 생산으로 명시하고, 국립환경과학원 IEPS는 '전기 및 증기 생산시설의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서(Ⅱ)'를 공식 공개한다. 이는 업종·시설유형상 기술기준서의 참고 적용 가능성만 뜻하며 금호석유화학의 개별 BAT 적용 또는 허가조건을 의미하지 않는다.",
+      "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/"
     }
   ],
-  "current_reference_note": "반도체 제조업 K-BREF 2판은 2025년 발행 기록이 확인되지만 본 단계에서 원문 기술본문을 확보하지 못했으므로 2판의 개별 기술내용은 자동 근거로 사용하지 않는다.",
+  "current_reference_note": "합성고무·합성수지·정밀화학·CNT 등 다른 생산공장은 관련 K-BREF의 존재와 실제 통합허가 업종·시설범위를 1차 허가근거로 대조하기 전까지 자동 VERIFIED 처리하지 않는다.",
   "principle": "Industry-reference existence, verified site applicability, topic-specific technical semantics, and company application are separate claims."
 }
