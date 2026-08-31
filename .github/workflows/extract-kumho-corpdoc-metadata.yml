@@ -1,0 +1,31 @@
+name: Extract Kumho corpdoc metadata
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/extract_kumho_corpdoc_metadata.marker'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: stable-sources
+          path: stable
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 33376861240
+      - name: Keep only document metadata
+        run: |
+          mkdir -p meta
+          find stable -type f \( -name status.json -o -name document_index.csv -o -name download_attempts.csv -o -name discovery_gaps.json \) -path '*/CORP_DOCS/*' -exec cp {} meta/ \;
+          ls -lah meta
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kumho-corpdoc-metadata-run161
+          path: meta/
+          if-no-files-found: error
+          retention-days: 1
