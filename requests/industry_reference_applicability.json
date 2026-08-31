@@ -1,36 +1,27 @@
 {
-  "schema_version": "1.1",
-  "request_id": "kkpc-kr-archive-20260828-v1",
+  "schema_version": "1.2",
+  "request_id": "samsung-electronics-ds-env-20260830-v1",
   "references": [
     {
-      "document_id": "ENERGY_KBREF_II",
+      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
       "applicability_state": "VERIFIED",
       "candidate_ids": [
-        "kkpc-yeosu-energy-1",
-        "kkpc-yeosu-energy-2"
+        "samsung-ds-giheung",
+        "samsung-ds-hwaseong",
+        "samsung-ds-pyeongtaek",
+        "samsung-ds-cheonan",
+        "samsung-ds-onyang"
       ],
       "reference_domains": [
-        "CROSS_MEDIA"
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "GHG_ENERGY"
       ],
-      "basis": "금호석유화학 공식 생산공장 정보에서 여수제1에너지와 여수제2에너지의 사업영역이 증기·전기로 확인되고, 국립환경과학원 통합환경허가시스템의 기준서 제목·설명이 전기 및 증기 생산시설을 대상으로 명시한다. CROSS_MEDIA는 기준서가 해당 사업장 유형에 적용 가능한 업종 기준서라는 범위만 나타내며, 특정 대기·수질·화학물질 기술의 관련성은 본문 page-level evidence를 확보한 뒤 별도로 판단한다. 이 매핑은 회사의 개별 BAT 적용을 의미하지 않는다.",
-      "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/"
-    },
-    {
-      "document_id": "ORGANIC_CHEMICAL_KBREF_II_PART1_2",
-      "applicability_state": "REVIEW_REQUIRED",
-      "candidate_ids": [],
-      "reference_domains": [],
-      "basis": "유기화학산업 K-BREF 존재는 확인됐지만 금호석유화학 각 생산공장의 통합허가 업종·시설범위를 1차 허가 원문과 대조하기 전에는 특정 공장에 자동 적용하지 않는다.",
-      "source_locator": "https://dl.nanet.go.kr/detail/MONO12024000009984"
-    },
-    {
-      "document_id": "ORGANIC_CHEMICAL_KBREF_II_PART3_4",
-      "applicability_state": "REVIEW_REQUIRED",
-      "candidate_ids": [],
-      "reference_domains": [],
-      "basis": "유기화학산업 K-BREF 존재는 확인됐지만 금호석유화학 각 생산공장의 통합허가 업종·시설범위를 1차 허가 원문과 대조하기 전에는 특정 공장에 자동 적용하지 않는다.",
-      "source_locator": "https://dl.nanet.go.kr/detail/MONO12025000016569"
+      "basis": "국립환경과학원 통합환경허가시스템이 해당 문서를 반도체 제조업 K-BREF로 공식 공개하고 있고, 대상 5개 사업장은 삼성전자 1차 공식 사업장 자료로 반도체 DS 사업장임이 검증되어 있다. 이 매핑은 업종 기준서의 적용 가능 범위만 뜻하며 삼성전자의 개별 BAT 적용 또는 허가조건을 의미하지 않는다.",
+      "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1"
     }
   ],
-  "principle": "Industry reference existence, site applicability, topic-domain semantics, and company application are separate claims. VERIFIED site applicability may expose a reference at the declared reference-level domain scope; topic-specific technical readiness still requires page-level semantics, and company BAT application still requires company/site evidence."
+  "current_reference_note": "반도체 제조업 K-BREF 2판은 2025년 발행 기록이 확인되지만 본 단계에서 원문 기술본문을 확보하지 못했으므로 2판의 개별 기술내용은 자동 근거로 사용하지 않는다.",
+  "principle": "Industry-reference existence, verified site applicability, topic-specific technical semantics, and company application are separate claims."
 }

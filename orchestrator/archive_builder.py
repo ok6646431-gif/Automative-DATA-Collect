@@ -289,6 +289,8 @@ REVIEW_REPORT_FILES=[
     ('Environmental_Review_Evidence.xlsx', True),
     ('Environmental_Review_Brief.html', False),
     ('Environmental_Review_Summary.json', False),
+    ('Environmental_Learning_Cards.md', False),
+    ('Environmental_Learning_Cards.json', False),
 ]
 
 

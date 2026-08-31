@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "request_id": "samsung-electronics-ds-env-20260830-v1",
+  "as_of": "2026-08-31",
+  "references": [
+    {
+      "legal_id": "INTEGRATED_ENV_ART24",
+      "domain": "GHG_ENERGY",
+      "law": "환경오염시설의 통합관리에 관한 법률",
+      "article": "제24조",
+      "effective_date": "2026-07-07",
+      "title": "최적가용기법 및 K-BREF",
+      "statement": "제24조는 오염물질 배출을 효과적으로 줄이고 기술적·경제적으로 적용 가능한 설계·설치·운영·관리기법을 최적가용기법으로 정하며, 업종 현황·주요 배출·BAT·신기술·BAT 연계배출수준 등을 담은 기준서를 마련하도록 한다.",
+      "source_locator": "https://law.go.kr/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1022397263",
+      "applicability_boundary": "업종 K-BREF와 BAT의 법적 의미를 설명하는 근거다. 특정 삼성전자 사업장의 통합허가 조건 또는 특정 BAT 적용 여부는 별도 허가원문 확인이 필요하다."
+    },
+    {
+      "legal_id": "ETS_ART24",
+      "domain": "GHG_ENERGY",
+      "law": "온실가스 배출권의 할당 및 거래에 관한 법률",
+      "article": "제24조",
+      "effective_date": "2026-04-29",
+      "title": "배출량의 보고 및 검증",
+      "statement": "할당대상업체는 매 이행연도 종료일부터 3개월 이내에 모든 사업장에서 실제 배출된 온실가스 배출량에 대해 배출량 산정계획서를 기준으로 명세서를 작성하여 보고해야 한다.",
+      "source_locator": "https://www.law.go.kr/LSW/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1030666957",
+      "applicability_boundary": "할당대상업체에 적용되는 일반 법적 보고체계다. 이 카드만으로 특정 사업장 또는 조직단위의 할당대상 범위를 판정하지 않는다."
+    },
+    {
+      "legal_id": "ETS_DECREE_ART39",
+      "domain": "GHG_ENERGY",
+      "law": "온실가스 배출권의 할당 및 거래에 관한 법률 시행령",
+      "article": "제39조",
+      "effective_date": "2026-04-29",
+      "title": "명세서의 측정·보고·검증 정보",
+      "statement": "명세서에는 사업장별 배출시설 종류·규모·부하율, 배출량·에너지 사용량, 시설·활동별 산정방법과 근거, 산정방법 변동, 제품 생산량·공정별 배출효율, 온실가스 사용·감축 실적 등이 포함된다.",
+      "source_locator": "https://www.law.go.kr/lsLinkCommonInfo.do?lsJoLnkSeq=1033019545",
+      "applicability_boundary": "MRV에서 요구되는 정보 구조를 설명한다. 공개 ENV-INFO 값만으로 해당 명세서의 완전성이나 법적 준수 여부를 판단할 수 없다."
+    }
+  ]
+}

@@ -20,6 +20,18 @@ class TestPostprocessIdentity(unittest.TestCase):
             normalize_address("전라남도 여수시 여수산단3로 118",PROFILE),
         )
 
+    def test_parenthesized_road_address_after_lot_address_is_promoted(self):
+        self.assertEqual(
+            normalize_address("경기도 화성시 반월동 산 16(삼성전자로 1)",PROFILE),
+            normalize_address("경기도 화성시 삼성전자로 1",PROFILE),
+        )
+        # A different parenthesized road remains a different address; the rule must
+        # not silently equate two facilities merely because their site name matches.
+        self.assertNotEqual(
+            normalize_address("경기도 용인시 기흥구 농서동 산 24(삼성전자2로 95)",PROFILE),
+            normalize_address("경기도 용인시 기흥구 삼성로 1",PROFILE),
+        )
+
     def test_eup_myeon_is_not_removed_from_road_address(self):
         self.assertEqual(
             normalize_address("충청남도 예산군 고덕면 예덕로 1033-9",PROFILE),

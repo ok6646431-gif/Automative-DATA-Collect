@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "request_id": "samsung-electronics-ds-env-20260830-v1",
+  "facts": [
+    {
+      "fact_id": "EXT_KBREF_NF3_PROCESS_2019_SUMMARY",
+      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
+      "layer": "INDUSTRY_TECHNICAL",
+      "domain": "GHG_ENERGY",
+      "time_key": "2019",
+      "title": "2019 반도체 K-BREF의 NF3 공정 위치 — 2024 학술논문 요약",
+      "statement": "2024년 동료심사 학술논문은 2019 반도체 K-BREF를 인용하여 웨이퍼 가공의 박막 형성(증착) 과정에서 NF3가 사용되고 대기·수질오염물질 형태로 배출될 수 있다고 정리한다.",
+      "source_key": "JKSEE_KBREF_REVIEW",
+      "source_locator": "https://www.jksee.or.kr/upload/pdf/KSEE-2024-46-5-205.pdf",
+      "interpretation_boundary": "2019 K-BREF를 요약한 2차 학술근거다. 2025년 2판의 기술내용 또는 삼성전자의 실제 NF3 사용·배출을 직접 입증하지 않는다."
+    },
+    {
+      "fact_id": "EXT_KBREF_NF3_BURN_WET_2019_SUMMARY",
+      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
+      "layer": "INDUSTRY_TECHNICAL",
+      "domain": "GHG_ENERGY",
+      "time_key": "2019",
+      "title": "2019 반도체 K-BREF의 NF3 처리 — 2024 학술논문 요약",
+      "statement": "같은 논문은 K-BREF가 웨이퍼 가공에서 대기오염물질 형태로 배출되는 NF3의 처리기술로 직화식 스크러버(Burn-Wet Scrubber)를 제시한다고 정리한다.",
+      "source_key": "JKSEE_KBREF_REVIEW",
+      "source_locator": "https://www.jksee.or.kr/upload/pdf/KSEE-2024-46-5-205.pdf",
+      "interpretation_boundary": "업종 기술 예시이며 삼성전자 사업장의 설비구성이나 BAT 적용을 뜻하지 않는다."
+    },
+    {
+      "fact_id": "EXT_KBREF_NF3_SOURCE_REDUCTION_2019_SUMMARY",
+      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
+      "layer": "INDUSTRY_TECHNICAL",
+      "domain": "GHG_ENERGY",
+      "time_key": "2019",
+      "title": "2019 반도체 K-BREF의 NF3 원천저감 — 2024 학술논문 요약",
+      "statement": "같은 논문은 K-BREF가 웨이퍼 박막형성(증착) 공정 장비 개조를 통해 NF3 가스 사용량을 약 20% 절감할 수 있다고 정리한다.",
+      "source_key": "JKSEE_KBREF_REVIEW",
+      "source_locator": "https://www.jksee.or.kr/upload/pdf/KSEE-2024-46-5-205.pdf",
+      "interpretation_boundary": "2019 기준서에 대한 2차 요약 수치이며 현재 2판의 BAT 수준이나 개별 사업장 기대효과로 사용하지 않는다."
+    }
+  ],
+  "principle": "Secondary summaries are visibly labeled as secondary. They may explain an industry process/technique but never prove company application or causal effect."
+}

@@ -441,6 +441,18 @@
           "notes": "Samsung global Digital Library official UL Zero Waste to Landfill verification document."
         }
       ]
+    },
+    {
+      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
+      "document_type": "BAT_REFERENCE",
+      "title": "반도체 제조업의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서",
+      "report_year": 2019,
+      "source_url": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
+      "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "SUPPORTING",
+      "notes": "Official NIER/IEPS K-BREF catalog/index page. Reference existence and semiconductor-industry applicability only; this HTML index is not treated as technical full text."
     }
   ],
   "gaps": [

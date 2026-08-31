@@ -6,6 +6,7 @@ from requested_scope import apply_requested_scope
 from review_selection import run_review_selection
 from cross_layer_review import run_cross_layer_review
 from review_report import build_review_report
+from learning_cards import run_learning_cards
 from archive_builder import render_html_pdf
 
 BAD={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","CONFIG_ERROR"}
@@ -21,7 +22,9 @@ ROOT_ARTIFACTS=[
     "Review_Topic_Candidates.csv","Review_Source_Coverage.csv","Review_Selection_Summary.json",
     "Source_Availability.csv","Evidence_Layer_Registry.csv","Cross_Layer_Review_Candidates.csv","Study_Question_Queue.csv",
     "Cross_Layer_Review_Summary.json","Document_Semantic_Candidates.csv","Generated_Semantic_Evidence.json",
-    "Document_Semantics_Summary.json","Environmental_Review_Brief.html","Environmental_Review_Brief.pdf",
+    "Document_Semantics_Summary.json","Industry_Reference_Applicability.csv","Legal_Evidence.json",
+    "Environmental_Learning_Cards.json","Environmental_Learning_Cards.md",
+    "Environmental_Review_Brief.html","Environmental_Review_Brief.pdf",
     "Environmental_Review_Evidence.xlsx","Environmental_Review_Summary.json"
 ]
 
@@ -228,8 +231,8 @@ def build_human_review(out):
 
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument("--stable",default="collected/stable"); ap.add_argument("--icis",default="collected/icis"); ap.add_argument("--profile",default="requests/company_profile.json"); ap.add_argument("--events",default="requests/event_evidence.json"); ap.add_argument("--semantic",default="requests/semantic_evidence.json"); ap.add_argument("--out",default="assembled")
-    args=ap.parse_args(); stable=Path(args.stable); icis=Path(args.icis); profile=Path(args.profile); events=Path(args.events); semantic=Path(args.semantic); out=Path(args.out); output=out/"output"
+    ap=argparse.ArgumentParser(); ap.add_argument("--stable",default="collected/stable"); ap.add_argument("--icis",default="collected/icis"); ap.add_argument("--profile",default="requests/company_profile.json"); ap.add_argument("--events",default="requests/event_evidence.json"); ap.add_argument("--semantic",default="requests/semantic_evidence.json"); ap.add_argument("--legal",default="requests/legal_evidence.json"); ap.add_argument("--out",default="assembled")
+    args=ap.parse_args(); stable=Path(args.stable); icis=Path(args.icis); profile=Path(args.profile); events=Path(args.events); semantic=Path(args.semantic); legal=Path(args.legal); out=Path(args.out); output=out/"output"
     if out.exists(): shutil.rmtree(out)
     output.mkdir(parents=True,exist_ok=True)
     for s in ["ENVINFO","CLEANSYS_AIR","SOOSIRO_WATER","CORP_DOCS"]: copy_source(stable,output,s) or copy_source(stable/"output",output,s)
@@ -247,6 +250,7 @@ def main():
     (out/"REVIEW_REQUIRED.json").write_text(json.dumps(source_review,ensure_ascii=False,indent=2),encoding="utf-8")
     if profile.exists(): shutil.copy2(profile,out/"Company_Profile.json")
     if events.exists(): shutil.copy2(events,out/"Event_Evidence.json")
+    if legal.exists(): shutil.copy2(legal,out/"Legal_Evidence.json")
 
     with (out/"Coverage_Matrix.csv").open("w",newline="",encoding="utf-8-sig") as f:
         w=csv.DictWriter(f,fieldnames=["source","status","years","checks"]); w.writeheader()
@@ -266,6 +270,7 @@ def main():
     }
     integration["review_selection"]=run_review_selection(output,out)
     integration["cross_layer_review"]=run_cross_layer_review(out,semantic if semantic.exists() else None)
+    integration["learning_cards"]=run_learning_cards(out,out/'Legal_Evidence.json' if (out/'Legal_Evidence.json').exists() else None)
     integration["review_report"]=build_human_review(out)
     integration["icis_freshness"]={
         "selection_state":icis_selection_state,

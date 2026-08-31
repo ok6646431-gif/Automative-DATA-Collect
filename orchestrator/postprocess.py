@@ -75,6 +75,17 @@ def normalize_name(x, profile=None):
 def normalize_address(x, profile=None):
     s=str(x or "").strip()
     if not s: return ""
+    # Some public registers expose a legacy lot address first and the usable road
+    # address in parentheses, e.g. "... 반월동 산 16(삼성전자로 1)".  Promote the
+    # parenthesized road core while preserving only the outer administrative prefix.
+    # This is intentionally structural: a genuinely different road address remains
+    # different and is never auto-merged.
+    pm=re.search(r"\(([^)]*?(?:로|길)\s*\d+(?:-\d+)?)[^)]*\)",s)
+    if pm:
+        road=re.sub(r"\s+"," ",pm.group(1)).strip()
+        outer=s[:pm.start()].strip()
+        outer=re.sub(r"\s+[^\s]+(?:동|리|가)\s+(?:산\s*)?\d+(?:-\d+)?\s*$","",outer).strip()
+        s=(outer+' '+road).strip()
     for old,new in PROVINCE_MAP.items(): s=s.replace(old,new)
     # Public registers sometimes insert a legal-dong before the road name even when
     # the first-party road address omits it (e.g. "성암동 처용로", "평여동 여수산단3로").
