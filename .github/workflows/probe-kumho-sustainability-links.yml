@@ -17,20 +17,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Verify official legacy report endpoint
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Resolve official legacy report redirects
         run: |
           python - <<'PY'
           import requests, json
-          from bs4 import BeautifulSoup
           page='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 Chrome/151'
-          r=s.get(page,timeout=(15,40)); r.raise_for_status(); soup=BeautifulSoup(r.text,'html.parser')
-          survey=soup.find(id='survey6')
-          print('SURVEY6',survey.attrs if survey else None)
-          val=survey.get('value') if survey else '6'
+          r=s.get(page,timeout=(15,40)); r.raise_for_status()
           endpoint='https://www.kkpc.com/kor/invest/library/sustainabilitySurvey/'
           for label,seq in {'2023':'7019','2022':'6252','2021':'5173','2020':'4017'}.items():
-              x=s.get(endpoint,params={'ATTACH_FILE_SEQ':seq,'SURVEY':val},headers={'Referer':page},timeout=(15,60),allow_redirects=True)
-              print(json.dumps({'year':label,'seq':seq,'survey':val,'status':x.status_code,'url':x.url,'bytes':len(x.content),'ctype':x.headers.get('Content-Type'),'cd':x.headers.get('Content-Disposition'),'magic':x.content[:8].hex()},ensure_ascii=False))
+              x=s.get(endpoint,params={'ATTACH_FILE_SEQ':seq,'SURVEY':'기타'},headers={'Referer':page},timeout=(15,30),allow_redirects=False,stream=True)
+              print(json.dumps({'year':label,'seq':seq,'status':x.status_code,'location':x.headers.get('Location'),'ctype':x.headers.get('Content-Type'),'clen':x.headers.get('Content-Length'),'cd':x.headers.get('Content-Disposition')},ensure_ascii=False))
+              x.close()
           PY
