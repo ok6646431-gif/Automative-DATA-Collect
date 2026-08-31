@@ -15,7 +15,13 @@ jobs:
       - run: python tools/patch_cancelled_package_guard.py
       - name: Verify guard
         run: |
-          grep -F 'if: ${{ always() && !cancelled() }}' .github/workflows/collect.yml
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('.github/workflows/collect.yml').read_text(encoding='utf-8')
+          expected = 'if: $' + '{{ always() && !cancelled() }}'
+          if expected not in text:
+              raise SystemExit('Cancellation guard missing from collect.yml')
+          PY
       - name: Commit generic cancellation guard
         run: |
           git config user.name 'github-actions[bot]'
