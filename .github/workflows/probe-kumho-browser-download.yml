@@ -1,0 +1,91 @@
+name: Probe Kumho browser download
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/probe_kumho_browser_download.marker'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install browser automation
+        run: |
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Download Kumho 2022 report through Chromium
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
+          landing = 'https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
+          target = 'https://www.kkpc.com/download/?seq=6252'
+          out_dir = Path('output/BROWSER_PROBE')
+          out_dir.mkdir(parents=True, exist_ok=True)
+          out_file = out_dir / 'KUMHO_SUSTAINABILITY_2022_browser.pdf'
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              context = browser.new_context(
+                  accept_downloads=True,
+                  user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/151 Safari/537.36',
+              )
+              page = context.new_page()
+              print('Opening landing page:', landing)
+              page.goto(landing, wait_until='domcontentloaded', timeout=90_000)
+              print('Landing title:', page.title())
+              print('Starting browser-native download:', target)
+
+              try:
+                  with page.expect_download(timeout=480_000) as info:
+                      page.evaluate("url => { window.location.href = url; }", target)
+                  download = info.value
+                  print('Suggested filename:', download.suggested_filename)
+                  failure = download.failure()
+                  print('Browser download failure:', failure)
+                  if failure:
+                      raise RuntimeError(f'Chromium download failed: {failure}')
+                  download.save_as(out_file)
+              except PlaywrightTimeoutError as exc:
+                  raise RuntimeError('Chromium did not finish the download within 480 seconds') from exc
+              finally:
+                  browser.close()
+
+          size = out_file.stat().st_size
+          head = out_file.read_bytes()[:8]
+          digest = sha256(out_file.read_bytes()).hexdigest()
+          print('Saved:', out_file)
+          print('Bytes:', size)
+          print('First bytes:', repr(head))
+          print('SHA256:', digest)
+
+          expected = 15925144
+          if not head.startswith(b'%PDF-'):
+              raise RuntimeError('Downloaded payload is not a PDF')
+          if size != expected:
+              raise RuntimeError(f'Unexpected size: {size} != {expected}')
+          print('BROWSER_PROBE_RESULT=PASS')
+          PY
+
+      - name: Upload browser probe PDF
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-2022-browser-probe
+          path: output/BROWSER_PROBE/
+          if-no-files-found: warn
