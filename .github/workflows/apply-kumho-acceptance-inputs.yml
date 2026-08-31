@@ -1,0 +1,48 @@
+name: Apply Kumho acceptance inputs
+
+on:
+  push:
+    branches: ['run/control-plane']
+    paths:
+      - 'tools/prepare_kumho_acceptance_inputs.py'
+      - '.github/workflows/apply-kumho-acceptance-inputs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare Kumho acceptance inputs
+        run: python tools/prepare_kumho_acceptance_inputs.py
+      - name: Validate JSON schemas and bootstrap
+        run: |
+          python orchestrator/bootstrap_inputs.py --profile-out /tmp/company_profile.generated.json --request-out /tmp/current.generated.json --summary-out /tmp/discovery_summary.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
+          assert d['request_id']=='kumho-petrochemical-env-20260831-v1'
+          assert len(d['requested_scope']['candidate_ids'])==13
+          assert len(d['domestic_site_candidates'])==13
+          ids={x['candidate_id'] for x in d['domestic_site_candidates']}
+          assert set(d['requested_scope']['candidate_ids'])==ids
+          a=json.loads(Path('requests/industry_reference_applicability.json').read_text(encoding='utf-8'))
+          e=[x for x in a['references'] if x['document_id']=='NIER_ENERGY_KBREF_II_2022'][0]
+          assert set(e['candidate_ids'])=={'kkpc-yeosu-energy-1','kkpc-yeosu-energy-2','kkpc-yeosu-energy-3'}
+          print({'kumho_sites':len(ids),'energy_kbref_sites':len(e['candidate_ids'])})
+          PY
+      - name: Commit input switch only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add requests/company_discovery.json requests/industry_reference_applicability.json requests/event_evidence.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Switch acceptance input to Kumho Petrochemical"
+          git push
