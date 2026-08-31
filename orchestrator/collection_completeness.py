@@ -190,10 +190,25 @@ def audit_envinfo(output, cfg):
         rows.append(row(source, "ARTIFACT", "DETAILS", "ARTIFACT_INCOMPLETE", query_state="COMPLETE",
                         data=detail_ok > 0, evidence=f"discovery_rows={discovered}; detail_ok={detail_ok}; detail_fail={status.get('detail_fail',0)}",
                         note="검색된 사업장-연도 중 상세 원문이 전부 확보되지 않음"))
-    if cfg.get("collect_attachments", True) and int(status.get("attachment_fail") or 0) > 0:
-        rows.append(row(source, "ARTIFACT", "ATTACHMENTS", "ARTIFACT_INCOMPLETE", query_state="COMPLETE", data=True,
-                        evidence=f"discovered={status.get('attachments_discovered',0)}; downloaded={status.get('attachment_ok',0)}; failed={status.get('attachment_fail',0)}",
-                        note="발견한 첨부자료 중 다운로드 실패가 있음"))
+    if cfg.get("collect_attachments", True):
+        attachment_rows = read_csv(root/"attachment_index.csv")
+        unresolved = [
+            r for r in attachment_rows
+            if str(r.get("collection_status") or "").upper() not in {"", "DOWNLOADED"}
+        ]
+        if unresolved:
+            by_state = defaultdict(int)
+            for r in unresolved:
+                by_state[str(r.get("collection_status") or "UNKNOWN").upper()] += 1
+            rows.append(row(
+                source, "ARTIFACT", "ATTACHMENTS", "ARTIFACT_INCOMPLETE", query_state="COMPLETE", data=True,
+                evidence=(
+                    f"discovered={status.get('attachments_discovered',len(attachment_rows))}; "
+                    f"downloaded={sum(1 for r in attachment_rows if str(r.get('collection_status') or '').upper() == 'DOWNLOADED')}; "
+                    f"unresolved={len(unresolved)}; states={dict(sorted(by_state.items()))}"
+                ),
+                note="발견한 첨부자료 중 다운로드·복구가 완료되지 않은 항목이 있음",
+            ))
     return rows
 
 

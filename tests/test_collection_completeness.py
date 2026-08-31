@@ -41,6 +41,29 @@ class CollectionCompletenessTests(unittest.TestCase):
             })
             self.assertEqual(rows[0]["completeness_state"], "NO_DATA_CONFIRMED")
 
+    def test_envinfo_skipped_recovery_state_is_artifact_incomplete(self):
+        with tempfile.TemporaryDirectory() as td:
+            output=Path(td); root=output/"ENVINFO"; (root/"raw_search").mkdir(parents=True)
+            (root/"raw_search"/"2024_2024_기업_p1.json").write_text("{}", encoding="utf-8")
+            write_json(root/"status.json", {
+                "status":"DATA_FOUND","rows":1,"detail_ok":1,"detail_fail":0,
+                "attachments_discovered":2,"attachment_ok":1,"attachment_fail":0,
+                "attachment_skipped_recovery_time_budget":1,
+            })
+            write_csv(root/"discovery.csv", [{"year":2024,"compId":"C1"}])
+            write_csv(root/"attachment_index.csv", [
+                {"collection_status":"DOWNLOADED","compId":"C1"},
+                {"collection_status":"SKIPPED_RECOVERY_TIME_BUDGET","compId":"C1"},
+            ])
+            rows=audit_envinfo(output,{
+                "start_year":2024,"end_year":2024,"search_terms":["기업"],
+                "search_terms_by_year":{"2024":["기업"]},"collect_details":True,"collect_attachments":True,
+            })
+            artifact=[r for r in rows if r["period_kind"]=="ARTIFACT" and r["period"]=="ATTACHMENTS"]
+            self.assertEqual(len(artifact),1)
+            self.assertEqual(artifact[0]["completeness_state"],"ARTIFACT_INCOMPLETE")
+            self.assertIn("SKIPPED_RECOVERY_TIME_BUDGET",artifact[0]["evidence"])
+
     def test_selected_year_without_query_evidence_is_not_no_data(self):
         with tempfile.TemporaryDirectory() as td:
             output=Path(td); root=output/"ENVINFO"; (root/"raw_search").mkdir(parents=True)
