@@ -1,0 +1,21 @@
+from pathlib import Path
+
+p=Path('collectors/corporate_docs_collect.py')
+s=p.read_text(encoding='utf-8')
+s=s.replace('PREFLIGHT_TIMEOUT = (5, 10)\nDOWNLOAD_TIMEOUT = (8, 25)\n', 'PREFLIGHT_TIMEOUT = (5, 10)\nDOWNLOAD_TIMEOUT = (8, 25)\nATTACHMENT_DISCOVERY_TIMEOUT = (15, 30)\n')
+old='''    try:\n        with session.get(page_url, timeout=PREFLIGHT_TIMEOUT, allow_redirects=True) as r:\n            r.raise_for_status()\n            body = getattr(r, "text", None)\n            if body is None:\n                raw = getattr(r, "body", b"")\n                body = raw.decode("utf-8", errors="ignore") if isinstance(raw, (bytes, bytearray)) else str(raw or "")\n            resolved_page = str(getattr(r, "url", None) or page_url)\n            PREFLIGHT_CACHE[page_url] = {"Referer": resolved_page}\n    except Exception:\n        return []\n'''
+new='''    body = None; resolved_page = page_url\n    for attempt in range(DOWNLOAD_ATTEMPTS):\n        try:\n            with session.get(page_url, timeout=ATTACHMENT_DISCOVERY_TIMEOUT, allow_redirects=True) as r:\n                r.raise_for_status()\n                body = getattr(r, "text", None)\n                if body is None:\n                    raw = getattr(r, "body", b"")\n                    body = raw.decode("utf-8", errors="ignore") if isinstance(raw, (bytes, bytearray)) else str(raw or "")\n                resolved_page = str(getattr(r, "url", None) or page_url)\n                PREFLIGHT_CACHE[page_url] = {"Referer": resolved_page}\n                break\n        except Exception:\n            if attempt + 1 < DOWNLOAD_ATTEMPTS:\n                time.sleep(1.0)\n    if body is None:\n        return []\n'''
+if old not in s: raise SystemExit('discovery fetch block not found')
+s=s.replace(old,new,1)
+p.write_text(s,encoding='utf-8')
+
+t=Path('tests/test_corporate_docs_collect.py')
+x=t.read_text(encoding='utf-8')
+x=x.replace('from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, collect\n','from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, collect\n')
+x=x.replace('        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)\n','        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],15)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],30)\n')
+anchor='    def test_executable_extension_is_never_collected(self):\n'
+test='''    def test_attachment_landing_page_retries_once_after_transient_failure(self):\n        with tempfile.TemporaryDirectory() as td:\n            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"\n            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")\n            doc={"document_id":"BAT1","document_type":"BAT_REFERENCE","title":"반도체 최적가용기법 기준서","source_url":"https://official.example/board/664","source_locator":"https://official.example/board/664","expected_extension":"pdf","verification_status":"VERIFIED","attachment_discovery":{"match_terms":["반도체","기준서"]}}\n            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[doc]}),encoding="utf-8")\n            html='<html><a href="/download?id=1">반도체 최적가용기법 기준서.pdf</a></html>'\n            page=FakeResponse(body=html.encode("utf-8"),content_type="text/html",disposition="",url="https://official.example/board/664")\n            pdf=FakeResponse(body=b"%PDF-kbref",content_type="application/pdf",disposition='attachment; filename="kbref.pdf"',url="https://official.example/download?id=1")\n            session=unittest.mock.MagicMock(); session.get.side_effect=[RuntimeError("transient timeout"),page,pdf]\n            with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):\n                status=collect(evidence,profile,out)\n            self.assertEqual(status["downloaded"],1)\n            self.assertEqual(status["failed"],0)\n            self.assertEqual(session.get.call_count,3)\n\n'''
+if anchor not in x: raise SystemExit('test anchor missing')
+x=x.replace(anchor,test+anchor,1)
+t.write_text(x,encoding='utf-8')
+print('patched bounded attachment discovery retry')
