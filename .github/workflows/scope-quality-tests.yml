@@ -1,0 +1,51 @@
+name: Requested scope quality tests
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'orchestrator/scope_quality.py'
+      - 'orchestrator/archive_stage.py'
+      - 'orchestrator/requested_scope.py'
+      - 'tests/test_scope_quality.py'
+      - 'requests/company_discovery.json'
+      - '.github/workflows/scope-quality-tests.yml'
+  pull_request:
+    paths:
+      - 'orchestrator/scope_quality.py'
+      - 'orchestrator/archive_stage.py'
+      - 'orchestrator/requested_scope.py'
+      - 'tests/test_scope_quality.py'
+      - 'requests/company_discovery.json'
+      - '.github/workflows/scope-quality-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scope-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run scope quality regressions
+        run: python -m unittest tests.test_scope_quality -v
+      - name: Verify Samsung DS requested scope fixture
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
+          scope=d['requested_scope']
+          assert scope['candidate_ids']==[
+              'samsung-ds-giheung','samsung-ds-hwaseong','samsung-ds-pyeongtaek','samsung-ds-cheonan','samsung-ds-onyang'
+          ]
+          assert 'samsung-ds-suwon-sait' not in scope['candidate_ids']
+          assert any(x.get('candidate_id')=='samsung-ds-suwon-sait' for x in d['domestic_site_candidates'])
+          print(json.dumps(scope,ensure_ascii=False,indent=2))
+          PY
