@@ -1,0 +1,27 @@
+name: Apply corporate document wall budget
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/patch_corp_docs_wall_budget.py'
+      - '.github/workflows/apply-corp-docs-wall-budget.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/patch_corp_docs_wall_budget.py
+      - run: python -m unittest tests.test_corporate_docs_collect -v
+      - name: Commit generic wall-clock budget
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add collectors/corporate_docs_collect.py tests/test_corporate_docs_collect.py
+          git diff --cached --exit-code && exit 0
+          git commit -m 'Bound corporate document transfer time'
+          git push
