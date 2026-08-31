@@ -34,6 +34,7 @@ LARGE_FILE_OVERHEAD_SECONDS = 30.0
 SLOW_RETRY_READ_TIMEOUT_SECONDS = 600.0
 SLOW_MIN_EXPECTED_TRANSFER_BPS = 24 * 1024
 SLOW_DOCUMENT_OVERHEAD_SECONDS = 60.0
+SLOW_RETRY_MIN_DECLARED_BYTES = 8 * 1024 * 1024
 MAX_SLOW_DOCUMENT_WALL_SECONDS = 1200.0
 PREFLIGHT_CACHE = {}
 FIELDS = [
@@ -375,7 +376,7 @@ def download_one(session, doc, target, total_bytes):
                 response_ctype = str(r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
                 expected_ext = str(doc.get("expected_extension") or "").lower().lstrip(".")
                 not_html = response_ctype not in {"text/html", "application/xhtml+xml"}
-                if expected_total and not_html and (not expected_ext or expected_ext != "pdf" or "pdf" in response_ctype):
+                if expected_total >= SLOW_RETRY_MIN_DECLARED_BYTES and not_html and (not expected_ext or expected_ext != "pdf" or "pdf" in response_ctype):
                     credible_document_response = True
 
                 mode = "ab" if range_accepted else "wb"
