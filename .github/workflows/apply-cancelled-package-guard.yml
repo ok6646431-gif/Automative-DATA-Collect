@@ -14,7 +14,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: python tools/patch_cancelled_package_guard.py
       - name: Verify guard
-        run: grep -F 'if: ${{ always() && !cancelled() }}' .github/workflows/collect.yml
+        run: |
+          grep -F 'if: ${{ always() && !cancelled() }}' .github/workflows/collect.yml
       - name: Commit generic cancellation guard
         run: |
           git config user.name 'github-actions[bot]'
