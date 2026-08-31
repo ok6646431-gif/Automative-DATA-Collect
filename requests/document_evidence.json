@@ -25,7 +25,7 @@
       "ZERO_WASTE_TO_LANDFILL",
       "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA"
     ],
-    "scope_note": "삼성전자 Digital Library Planet 환경 정책·문서와 삼성반도체 DS 공식 환경/SHE 페이지·국내 DS 6개 사업장 적용 인증을 대상으로 한다. 제품별 LCA, 개별 국가 제품 규제 선언서, 비환경 People/Principle 문서는 본 환경관리 학습 수집 범위에서 제외한다.",
+    "scope_note": "삼성전자 Digital Library Planet 환경 정책·문서와 삼성반도체 DS 공식 환경/SHE 페이지 및 국내 핵심 생산사업장 5개(기흥·화성·평택·천안·온양)를 중심으로 한다. 수원 SAIT는 정책·연구거점 보조근거로만 보존한다. 제품별 LCA, 개별 국가 제품 규제 선언서, 비환경 People/Principle 문서는 본 환경관리 학습 수집 범위에서 제외한다.",
     "fallback_policy": "When a VERIFIED Samsung Korean route is blocked to GitHub Actions, use only independently verified Samsung-owned global, semiconductor, or images CDN equivalents. Fallback success does not change document identity."
   },
   "documents": [
@@ -449,10 +449,18 @@
       "report_year": 2019,
       "source_url": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
       "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
-      "expected_extension": "html",
+      "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING",
-      "notes": "Official NIER/IEPS K-BREF catalog/index page. Reference existence and semiconductor-industry applicability only; this HTML index is not treated as technical full text."
+      "notes": "Official NIER/IEPS K-BREF landing page. Collector must resolve and validate the same-host PDF attachment; landing-page HTML alone is not accepted as the technical full text.",
+      "attachment_discovery": {
+        "match_terms": [
+          "반도체",
+          "최적가용기법",
+          "기준서"
+        ],
+        "same_host_only": true
+      }
     }
   ],
   "gaps": [
@@ -466,7 +474,7 @@
       "gap_id": "SOURCE_NATIVE_SITE_VARIANTS_REQUIRE_POST_COLLECTION_MATCHING",
       "source_key": "PUBLIC_ENV_DATABASES",
       "severity": "MEDIUM",
-      "reason": "사업장명 표기가 소스별로 달라 6개 DS 사업장 Identity 기준으로 결과를 재필터링한다."
+      "reason": "사업장명 표기가 소스별로 달라 핵심 생산사업장 5개 Identity 기준으로 결과를 재필터링한다. 수원 SAIT는 보조 후보로만 보존한다."
     },
     {
       "gap_id": "NONPUBLIC_INTERNAL_SOP_OUT_OF_SCOPE",

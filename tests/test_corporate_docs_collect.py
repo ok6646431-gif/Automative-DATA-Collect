@@ -153,6 +153,32 @@ class CorporateDocsTests(unittest.TestCase):
             self.assertEqual(session.get.call_args_list[1].kwargs["headers"]["Referer"],"https://official.example/reports")
             self.assertEqual(session.get.call_args_list[2].kwargs["headers"]["Referer"],"https://official.example/reports")
 
+    def test_verified_landing_page_discovers_unique_same_host_pdf_attachment(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            doc={
+                "document_id":"BAT1","document_type":"BAT_REFERENCE","title":"반도체 최적가용기법 기준서",
+                "source_url":"https://official.example/board/664","source_locator":"https://official.example/board/664",
+                "expected_extension":"pdf","verification_status":"VERIFIED",
+                "attachment_discovery":{"match_terms":["반도체","최적가용기법","기준서"],"same_host_only":True}
+            }
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[doc]}),encoding="utf-8")
+            html='<html><a href="/jfile/readDownloadFile.do?fileId=16&fileSeq=2">반도체 제조업의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서.pdf</a></html>'
+            page=FakeResponse(body=html.encode("utf-8"),content_type="text/html",disposition="",url="https://official.example/board/664")
+            pdf=FakeResponse(body=b"%PDF-kbref",content_type="application/pdf",disposition='attachment; filename="kbref.pdf"',url="https://official.example/jfile/readDownloadFile.do?fileId=16&fileSeq=2")
+            session=unittest.mock.MagicMock(); session.get.side_effect=[page,pdf]
+            with patch("corporate_docs_collect.requests.Session",return_value=session):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],1)
+            self.assertEqual(status["failed"],0)
+            rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(rows[0]["collection_status"],"DOWNLOADED")
+            self.assertIn("readDownloadFile.do",rows[0]["source_url"])
+            self.assertIn("source_selection=DISCOVERED_ATTACHMENT",rows[0]["notes"])
+            attempts=list(csv.DictReader((out/"download_attempts.csv").open(encoding="utf-8-sig")))
+            self.assertEqual(attempts[0]["source_role"],"DISCOVERED_ATTACHMENT")
+
     def test_executable_extension_is_never_collected(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"

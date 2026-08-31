@@ -1,7 +1,8 @@
 import argparse, csv, hashlib, json, mimetypes, re, sys, time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urljoin
+from html.parser import HTMLParser
 
 import requests
 
@@ -129,6 +130,94 @@ def is_http_url(value):
         return urlparse(str(value or "")).scheme in {"http", "https"}
     except Exception:
         return False
+
+
+class _AttachmentLinkParser(HTMLParser):
+    def __init__(self):
+        super().__init__(); self.links=[]; self._href=None; self._parts=[]
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == "a":
+            self._href = dict(attrs).get("href"); self._parts=[]
+    def handle_data(self, data):
+        if self._href is not None:
+            self._parts.append(data)
+    def handle_endtag(self, tag):
+        if tag.lower() == "a" and self._href is not None:
+            self.links.append((self._href, " ".join(self._parts).strip()))
+            self._href=None; self._parts=[]
+
+
+def _norm_match_text(value):
+    return re.sub(r"\s+", "", str(value or "")).lower()
+
+
+def discover_attachment_candidates(session, doc):
+    """Discover one unambiguous official attachment from a verified landing page.
+
+    The feature is opt-in. By default the resolved attachment must remain on the
+    same host, match the declared extension, and uniquely win configured match
+    terms. Ambiguity fails closed instead of guessing which attachment to use.
+    """
+    cfg = doc.get("attachment_discovery")
+    if not cfg:
+        return []
+    if cfg is True:
+        cfg = {}
+    page_url = str(cfg.get("page_url") or doc.get("source_locator") or doc.get("source_url") or "")
+    if not is_http_url(page_url):
+        return []
+    expected = str(doc.get("expected_extension") or "").lower().lstrip(".")
+    match_terms = [_norm_match_text(x) for x in (cfg.get("match_terms") or []) if str(x or "").strip()]
+    same_host_only = bool(cfg.get("same_host_only", True))
+    try:
+        with session.get(page_url, timeout=PREFLIGHT_TIMEOUT, allow_redirects=True) as r:
+            r.raise_for_status()
+            body = getattr(r, "text", None)
+            if body is None:
+                raw = getattr(r, "body", b"")
+                body = raw.decode("utf-8", errors="ignore") if isinstance(raw, (bytes, bytearray)) else str(raw or "")
+            resolved_page = str(getattr(r, "url", None) or page_url)
+            PREFLIGHT_CACHE[page_url] = {"Referer": resolved_page}
+    except Exception:
+        return []
+    parser = _AttachmentLinkParser()
+    try:
+        parser.feed(body)
+    except Exception:
+        return []
+    page_host = urlparse(resolved_page).netloc.lower()
+    candidates=[]; seen=set()
+    for href, label in parser.links:
+        url = urljoin(resolved_page, str(href or "").strip())
+        if not is_http_url(url) or url in seen:
+            continue
+        seen.add(url)
+        if same_host_only and urlparse(url).netloc.lower() != page_host:
+            continue
+        combined = _norm_match_text(f"{label} {url}")
+        label_ext = Path(str(label or "").strip()).suffix.lower().lstrip(".")
+        url_ext = Path(unquote(urlparse(url).path)).suffix.lower().lstrip(".")
+        if expected and expected not in {label_ext, url_ext} and f".{expected}" not in combined:
+            continue
+        score = sum(1 for term in match_terms if term and term in combined)
+        if match_terms and score == 0:
+            continue
+        candidate = dict(doc)
+        candidate.update({
+            "source_url": url,
+            "source_locator": resolved_page,
+            "verification_status": str(doc.get("verification_status") or "UNVERIFIED"),
+            "_source_role": "DISCOVERED_ATTACHMENT",
+            "_source_order": -1,
+            "_source_note": f"official_landing_page_attachment; label={label}",
+        })
+        candidates.append((score, combined, candidate))
+    if not candidates:
+        return []
+    candidates.sort(key=lambda x: (-x[0], x[1]))
+    top_score = candidates[0][0]
+    winners = [x[2] for x in candidates if x[0] == top_score]
+    return winners if len(winners) == 1 else []
 
 
 def validate_payload(expected_ext, content_type, path):
@@ -288,7 +377,15 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
         provisional_target = target_dir / f"{safe(doc.get('document_id'))}_{safe(provisional_name)}"
         errors = []; blocked_only = True; success = False
 
-        for candidate in source_candidates(doc):
+        candidates = source_candidates(doc)
+        discovered = discover_attachment_candidates(session, doc)
+        if discovered:
+            candidates = discovered + [
+                c for c in candidates
+                if str(c.get("_source_role") or "").startswith("FALLBACK_")
+            ]
+
+        for candidate in candidates:
             role = str(candidate.get("_source_role") or "PRIMARY")
             candidate_verification = str(candidate.get("verification_status") or "UNVERIFIED")
             url = str(candidate.get("source_url") or "")
@@ -326,7 +423,7 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
                     "verification_status": candidate_verification
                 })
                 rows.append(row); attempts.append(attempt_row(doc, candidate, "DOWNLOADED", count=count, ctype=ctype))
-                downloaded += 1; fallback_downloaded += int(role != "PRIMARY"); success = True; break
+                downloaded += 1; fallback_downloaded += int(role.startswith("FALLBACK_")); success = True; break
             except Exception as exc:
                 provisional_target.unlink(missing_ok=True)
                 msg = f"{type(exc).__name__}: {exc}"
