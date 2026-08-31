@@ -16,33 +16,29 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests
-      - name: Probe static report candidates
+      - name: Probe report transport capabilities
         run: |
           python - <<'PY'
-          from urllib.parse import quote
           import requests
           landing='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
           s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0'})
           r=s.get(landing,timeout=(10,30)); r.raise_for_status()
-          names={
-              '2020-kor':'[금호석유화학] 2020지속가능경영보고서.pdf',
-              '2021-kor':'2021_KKPC_SR_KOR.pdf',
-              '2022-kor':'2022_SUSTAINABILITY_REPORT.pdf',
-              '2023-kor':'금호석유화학 지속가능경영보고서 2023.pdf',
+          urls={
+              '2020-kor-seq':'https://www.kkpc.com/download/?seq=4017',
+              '2021-kor-seq':'https://www.kkpc.com/download/?seq=5173',
+              '2022-kor-seq':'https://www.kkpc.com/download/?seq=6252',
+              '2023-kor-seq':'https://www.kkpc.com/download/?seq=7019',
+              '2023-eng-static':'https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf',
+              '2024-kor-static':'https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2024.pdf?v=20250822',
+              '2025-kor-static':'https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2025.pdf?v=20260724',
           }
-          urls={k:'https://www.kkpc.com/upload/download/'+quote(v,safe='()[]') for k,v in names.items()}
-          urls.update({
-              '2020-eng-seq':'https://www.kkpc.com/download/?seq=3778',
-              '2021-eng-seq':'https://www.kkpc.com/download/?seq=5174',
-              '2022-eng-seq':'https://www.kkpc.com/download/?seq=6416',
-          })
           headers={'Referer':r.url,'Range':'bytes=0-1023'}
           for name,url in urls.items():
               print('\nPROBE',name,url)
               try:
-                  with s.get(url,headers=headers,stream=True,allow_redirects=True,timeout=(10,25)) as q:
+                  with s.get(url,headers=headers,stream=True,allow_redirects=True,timeout=(10,30)) as q:
                       print('status',q.status_code,'final',q.url)
-                      for h in ['Content-Type','Content-Length','Content-Range','Accept-Ranges','Content-Disposition']:
+                      for h in ['Content-Type','Content-Length','Content-Range','Accept-Ranges','Content-Disposition','ETag','Last-Modified']:
                           print(h,repr(q.headers.get(h)))
                       first=next((c for c in q.iter_content(1024) if c),b'')
                       print('first_bytes',repr(first[:32]),'read',len(first))
