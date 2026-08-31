@@ -18,8 +18,11 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           text = Path('.github/workflows/collect.yml').read_text(encoding='utf-8')
-          expected = 'if: $' + '{{ always() && !cancelled() }}'
-          if expected not in text:
+          safe = (
+              'if: $' + '{{ always() && !cancelled() }}',
+              'if: $' + '{{ always() && cancelled() == false }}',
+          )
+          if not any(pattern in text for pattern in safe):
               raise SystemExit('Cancellation guard missing from collect.yml')
           PY
       - name: Commit generic cancellation guard
