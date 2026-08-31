@@ -7,7 +7,7 @@
   "properties": {
     "schema_version": {"const": "1.0"},
     "request_id": {"type": "string", "minLength": 1},
-    "discovery_status": {"enum": ["COMPLETE", "PARTIAL", "NOT_RUN"]},
+    "discovery_status": {"enum": ["COMPLETE", "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE", "PARTIAL", "NOT_RUN"]},
     "documents": {
       "type": "array",
       "items": {
