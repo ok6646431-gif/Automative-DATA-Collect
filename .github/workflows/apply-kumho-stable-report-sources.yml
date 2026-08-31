@@ -1,0 +1,49 @@
+name: Apply Kumho stable report sources
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/apply_kumho_stable_report_sources.marker'
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run routing tests before mutation
+        run: python -m unittest tests.test_kumho_report_source_routing -v
+      - name: Promote real-download-verified official routes
+        run: python tools/promote_kumho_stable_report_sources.py
+      - name: Validate resulting evidence routing
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected={
+            'KUMHO_SUSTAINABILITY_2020':'https://www.kkpc.com/download/?seq=3778',
+            'KUMHO_SUSTAINABILITY_2021':'https://www.kkpc.com/download/?seq=5174',
+            'KUMHO_SUSTAINABILITY_2022':'https://www.kkpc.com/download/?seq=6416',
+            'KUMHO_SUSTAINABILITY_2023':'https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf',
+          }
+          data=json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          by_id={d.get('document_id'):d for d in data.get('documents',[])}
+          for did,url in expected.items():
+              d=by_id[did]
+              assert d['source_url']==url, (did,d['source_url'])
+              assert d.get('verification_status')=='VERIFIED'
+              assert any(x.get('source_url') != url for x in d.get('fallback_sources',[])), did
+          print('KUMHO_ROUTING_VALID')
+          PY
+      - name: Commit evidence routing
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add requests/document_evidence.json
+          git diff --cached --exit-code && exit 0
+          git commit -m 'Prefer transport-verified Kumho report sources'
+          git push
