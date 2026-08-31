@@ -1,0 +1,31 @@
+name: Probe Kumho report links
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/probe_kumho_report_links.marker'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Inspect official report page source
+        run: |
+          python - <<'PY'
+          import re, requests
+          url='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
+          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=(15,60))
+          print('status',r.status_code,'bytes',len(r.content),'url',r.url)
+          text=r.text
+          for term in ['2021년','2022년','5173','6252','Popup_Survey','download','SUSTAINABILITY REPORT']:
+              print('\n###',term)
+              for m in list(re.finditer(re.escape(term),text,re.I))[:10]:
+                  s=max(0,m.start()-600); e=min(len(text),m.end()+900)
+                  print(text[s:e].replace('\n',' '))
+          PY
