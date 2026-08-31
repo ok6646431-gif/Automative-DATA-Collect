@@ -80,7 +80,7 @@ class CorporateDocsTests(unittest.TestCase):
             self.assertEqual(count,len(full))
             self.assertEqual(target.read_bytes(),full)
             self.assertEqual(ctype,"application/pdf")
-            self.assertEqual(session.get.call_args_list[1].kwargs["headers"]["Range"],f"bytes={cut}-")
+            self.assertEqual(session.get.call_args_list[1].kwargs["headers"]["Range"],f"bytes={cut}-{len(full)-1}")
 
     def test_range_ignored_restarts_without_corrupt_append(self):
         import requests

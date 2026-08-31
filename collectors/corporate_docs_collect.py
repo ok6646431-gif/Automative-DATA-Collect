@@ -16,6 +16,8 @@ MAX_TOTAL_BYTES = 500 * 1024 * 1024
 # fallback_sources; the collector tries them only after the primary source fails.
 DOWNLOAD_ATTEMPTS = 2
 TRANSFER_ATTEMPTS = 4
+RANGE_SEGMENT_BYTES = 1024 * 1024
+RANGE_SEGMENT_EXTENSIONS = {"pdf"}
 PREFLIGHT_TIMEOUT = (8, 15)
 DOWNLOAD_TIMEOUT = (15, 60)
 ATTACHMENT_DISCOVERY_TIMEOUT = (20, 60)
@@ -302,13 +304,13 @@ def slow_wall_budget_for_length(length):
 
 
 def download_one(session, doc, target, total_bytes):
-    """Download one verified document with bounded in-run byte-range resume.
+    """Download one verified document with bounded retries and safe Range resume.
 
-    Ordinary sources keep the short timeout policy. If a source has already
-    returned credible document metadata or actual document bytes and then suffers
-    a retryable timeout/network failure, later attempts receive a larger but still
-    absolute time allowance. Range-capable origins resume; origins that ignore
-    Range are restarted from byte zero and are never appended corruptly.
+    For PDF origins that honor HTTP Range, start with a bounded segment and keep
+    appending verified contiguous segments. This prevents one very slow connection
+    from having to carry an entire large document. Origins that ignore Range keep
+    the ordinary full-response path. A full 200 response is never appended to a
+    partial file.
     """
     url = str(doc.get("source_url") or "")
     headers = preflight(session, doc, url)
@@ -320,8 +322,11 @@ def download_one(session, doc, target, total_bytes):
     known_total = 0
     credible_document_response = False
     slow_mode = False
+    failures = 0
+    expected_ext = str(doc.get("expected_extension") or "").lower().lstrip(".")
+    segment_candidate = expected_ext in RANGE_SEGMENT_EXTENSIONS
 
-    for attempt in range(1, TRANSFER_ATTEMPTS + 1):
+    while True:
         if slow_mode:
             active_budget = max(active_budget, slow_wall_budget_for_length(known_total or resume_offset))
             deadline = max(deadline, started + active_budget)
@@ -333,8 +338,21 @@ def download_one(session, doc, target, total_bytes):
         read_ceiling = SLOW_RETRY_READ_TIMEOUT_SECONDS if slow_mode else float(DOWNLOAD_TIMEOUT[1])
         read_timeout = max(1.0, min(read_ceiling, remaining))
         request_headers = dict(headers)
-        if resume_offset > 0:
+
+        range_requested = False
+        range_start = resume_offset
+        range_end = None
+        if segment_candidate:
+            range_requested = True
+            if known_total:
+                range_end = min(known_total - 1, range_start + RANGE_SEGMENT_BYTES - 1)
+            else:
+                range_end = range_start + RANGE_SEGMENT_BYTES - 1
+            request_headers["Range"] = f"bytes={range_start}-{range_end}"
+        elif resume_offset > 0:
+            range_requested = True
             request_headers["Range"] = f"bytes={resume_offset}-"
+
         try:
             with session.get(
                 url, stream=True, timeout=(connect_timeout, read_timeout),
@@ -346,8 +364,8 @@ def download_one(session, doc, target, total_bytes):
                 content_range = str(r.headers.get("Content-Range") or "")
                 range_match = re.match(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", content_range, re.I)
                 range_accepted = bool(
-                    resume_offset > 0 and status_code == 206 and range_match
-                    and int(range_match.group(1)) == resume_offset
+                    range_requested and status_code == 206 and range_match
+                    and int(range_match.group(1)) == range_start
                 )
 
                 if resume_offset > 0 and not range_accepted:
@@ -374,7 +392,6 @@ def download_one(session, doc, target, total_bytes):
                 deadline = max(deadline, started + active_budget)
 
                 response_ctype = str(r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-                expected_ext = str(doc.get("expected_extension") or "").lower().lstrip(".")
                 not_html = response_ctype not in {"text/html", "application/xhtml+xml"}
                 if expected_total >= SLOW_RETRY_MIN_DECLARED_BYTES and not_html and (not expected_ext or expected_ext != "pdf" or "pdf" in response_ctype):
                     credible_document_response = True
@@ -399,6 +416,20 @@ def download_one(session, doc, target, total_bytes):
 
                 if count == 0:
                     raise ValueError("zero-byte document response")
+
+                if range_accepted and range_match:
+                    response_end = int(range_match.group(2)) + 1
+                    if count != response_end:
+                        raise requests.exceptions.ConnectionError(
+                            f"incomplete ranged response: received={count}; expected_end={response_end}"
+                        )
+                    if expected_total and count < expected_total:
+                        # Successful bounded segment. Continue from the exact next
+                        # byte without consuming a failure/retry allowance.
+                        resume_offset = count
+                        failures = 0
+                        continue
+
                 if expected_total and count != expected_total:
                     raise requests.exceptions.ConnectionError(
                         f"incomplete document response: received={count}; expected={expected_total}"
@@ -412,13 +443,14 @@ def download_one(session, doc, target, total_bytes):
             if not retryable:
                 target.unlink(missing_ok=True)
                 break
+            failures += 1
             resume_offset = target.stat().st_size if target.exists() else 0
             if resume_offset > 0 or credible_document_response:
                 slow_mode = True
                 active_budget = max(active_budget, slow_wall_budget_for_length(known_total or resume_offset))
                 deadline = max(deadline, started + active_budget)
-            if attempt < TRANSFER_ATTEMPTS and time.monotonic() < deadline:
-                time.sleep(min(0.5 * attempt, max(0.0, deadline - time.monotonic())))
+            if failures < TRANSFER_ATTEMPTS and time.monotonic() < deadline:
+                time.sleep(min(0.5 * failures, max(0.0, deadline - time.monotonic())))
                 continue
             break
     raise last_exc
