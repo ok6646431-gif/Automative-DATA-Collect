@@ -1,1 +1,1 @@
-samsung-electronics-ds-env-20260831-final-scope-consistency-v4
+samsung-electronics-ds-env-20260831-verified-identity-anchor-v5
