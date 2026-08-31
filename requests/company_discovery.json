@@ -7,14 +7,13 @@
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "삼성전자 DS 국내 사업장 6개(기흥·화성·평택·천안·온양·수원(SAIT))",
+    "label": "삼성전자 DS 국내 핵심 생산사업장 5개(기흥·화성·평택·천안·온양)",
     "candidate_ids": [
       "samsung-ds-giheung",
       "samsung-ds-hwaseong",
       "samsung-ds-pyeongtaek",
       "samsung-ds-cheonan",
-      "samsung-ds-onyang",
-      "samsung-ds-suwon-sait"
+      "samsung-ds-onyang"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -117,7 +116,7 @@
     },
     {
       "source_locator": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf",
-      "source_value_raw": "삼성전자 사업부문은 DX와 DS로 구분되며 DS는 Memory, Foundry, System LSI 사업으로 구성",
+      "source_value_raw": "지속가능경영보고서의 DS 국내 생산사업장 환경성과 범위는 기흥·화성·평택·천안·온양 5개 사업장을 중심으로 제시되며, 수원 SAIT는 R&D/정책 적용 보조 범위로 구분한다.",
       "verification_state": "VERIFIED"
     }
   ],
@@ -138,8 +137,13 @@
   "unresolved_items": [
     {
       "code": "SOURCE_NATIVE_SITE_NAME_VARIANTS_EXPECTED",
-      "subject": "삼성전자 DS 사업장",
+      "subject": "삼성전자 DS 핵심 생산사업장 5개",
       "detail": "공공 DB마다 사업장명이 '삼성전자 주식회사 기흥사업장', '삼성전자(주) 화성사업장' 등으로 다를 수 있어 주소·사업장명 조합으로 교차확인한다."
+    },
+    {
+      "code": "SAIT_SUPPORTING_SCOPE_ONLY",
+      "subject": "수원(SAIT) 사업장",
+      "detail": "수원 SAIT는 DS 정책·인증 또는 R&D 관련 보조 범위에는 포함될 수 있으나, 본 환경성과 핵심 생산사업장 5개 분석 범위에는 포함하지 않는다. Raw 검색자료는 회사 전체 보존 원칙에 따라 유지한다."
     }
   ],
   "event_evidence_references": [],
@@ -147,26 +151,48 @@
     "minimum_history_years": 5,
     "sources": {
       "ENVINFO": {
-        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2024
+        },
         "prefer_full_history": false,
         "max_details": 500
       },
       "PRTR": {
-        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2024
+        },
         "prefer_full_history": false
       },
       "CHEM_STATS": {
-        "requested_survey_rounds": [2020, 2022, 2024],
-        "available_survey_rounds": [2020, 2022, 2024],
+        "requested_survey_rounds": [
+          2020,
+          2022,
+          2024
+        ],
+        "available_survey_rounds": [
+          2020,
+          2022,
+          2024
+        ],
         "prefer_full_history": true
       },
       "CLEANSYS_AIR": {
-        "requested_window": {"start_year": 2020, "end_year": 2025},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2025
+        },
         "prefer_full_history": false
       },
       "SOOSIRO_WATER": {
-        "requested_window": {"start_year": 2020, "end_year": 2025},
-        "daily_available_years": [2024],
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2025
+        },
+        "daily_available_years": [
+          2024
+        ],
         "prefer_full_history": false
       }
     }
