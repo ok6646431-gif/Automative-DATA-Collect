@@ -3,8 +3,13 @@
   "request_id": "kumho-petrochemical-env-20260831-v1",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "discovery_scope": {
-    "history_window": {"start_year": 2020, "end_year": 2026},
-    "annual_series": ["SUSTAINABILITY_REPORT"],
+    "history_window": {
+      "start_year": 2020,
+      "end_year": 2026
+    },
+    "annual_series": [
+      "SUSTAINABILITY_REPORT"
+    ],
     "current_public_document_categories": [
       "SUSTAINABILITY_REPORT",
       "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
@@ -45,56 +50,84 @@
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2023",
       "report_year": 2023,
-      "source_url": "https://www.kkpc.com/download/?seq=7019",
+      "source_url": "https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf",
       "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
       "fallback_sources": [
         {
-          "source_url": "https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf",
+          "source_url": "https://www.kkpc.com/download/?seq=7019",
           "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
           "expected_extension": "pdf",
           "verification_status": "VERIFIED",
-          "notes": "Official English edition exposed as a direct static download on the same report page."
+          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
         }
-      ]
+      ],
+      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback."
     },
     {
       "document_id": "KUMHO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2022",
       "report_year": 2022,
-      "source_url": "https://www.kkpc.com/download/?seq=6252",
+      "source_url": "https://www.kkpc.com/download/?seq=6416",
       "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official report page resolves Popup_Survey file sequence 6252 to this company-owned download route."
+      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback.",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/download/?seq=6252",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
+        }
+      ]
     },
     {
       "document_id": "KUMHO_SUSTAINABILITY_2021",
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2021",
       "report_year": 2021,
-      "source_url": "https://www.kkpc.com/download/?seq=5173",
+      "source_url": "https://www.kkpc.com/download/?seq=5174",
       "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official report page resolves Popup_Survey file sequence 5173 to this company-owned download route."
+      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback.",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/download/?seq=5173",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
+        }
+      ]
     },
     {
       "document_id": "KUMHO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2020",
       "report_year": 2020,
-      "source_url": "https://www.kkpc.com/download/?seq=4017",
+      "source_url": "https://www.kkpc.com/download/?seq=3778",
       "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official report page resolves Popup_Survey file sequence 4017 to this company-owned download route."
+      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback.",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/download/?seq=4017",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
+        }
+      ]
     },
     {
       "document_id": "KUMHO_ESG_POLICY_GUIDELINE_CURRENT",
@@ -184,7 +217,13 @@
       "verification_status": "VERIFIED",
       "importance": "TECHNICAL_REFERENCE",
       "attachment_discovery": {
-        "match_terms": ["전기", "증기", "생산시설", "최적가용기법", "기준서"],
+        "match_terms": [
+          "전기",
+          "증기",
+          "생산시설",
+          "최적가용기법",
+          "기준서"
+        ],
         "same_host_only": true
       },
       "notes": "Official NIER/IEPS K-BREF landing page. Company application is not inferred from reference collection."
