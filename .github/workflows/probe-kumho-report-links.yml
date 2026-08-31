@@ -9,23 +9,49 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests
-      - name: Inspect official report page source
+      - name: Inspect official report page and download endpoints
         run: |
           python - <<'PY'
           import re, requests
-          url='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
-          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0'},timeout=(15,60))
-          print('status',r.status_code,'bytes',len(r.content),'url',r.url)
+          landing='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
+          s=requests.Session()
+          s.headers.update({'User-Agent':'Mozilla/5.0'})
+          r=s.get(landing,timeout=(10,30))
+          print('LANDING',r.status_code,'bytes',len(r.content),'url',r.url)
           text=r.text
-          for term in ['2021년','2022년','5173','6252','Popup_Survey','download','SUSTAINABILITY REPORT']:
-              print('\n###',term)
-              for m in list(re.finditer(re.escape(term),text,re.I))[:10]:
-                  s=max(0,m.start()-600); e=min(len(text),m.end()+900)
-                  print(text[s:e].replace('\n',' '))
+          for term in ['2020년','2021년','2022년','2023년','4017','5173','6252','7019','Popup_Survey']:
+              hits=list(re.finditer(re.escape(term),text,re.I))
+              print('TERM',term,'hits',len(hits))
+              for m in hits[:3]:
+                  print(text[max(0,m.start()-180):min(len(text),m.end()+260)].replace('\n',' '))
+          urls={
+              '2020-kor':'https://www.kkpc.com/download/?seq=4017',
+              '2021-kor':'https://www.kkpc.com/download/?seq=5173',
+              '2022-kor':'https://www.kkpc.com/download/?seq=6252',
+              '2023-kor':'https://www.kkpc.com/download/?seq=7019',
+              '2023-eng':'https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf',
+          }
+          headers={'Referer':r.url,'Range':'bytes=0-1023'}
+          for name,url in urls.items():
+              print('\nPROBE',name,url)
+              try:
+                  with s.get(url,headers=headers,stream=True,allow_redirects=True,timeout=(10,25)) as q:
+                      print('status',q.status_code,'final',q.url)
+                      for h in ['Content-Type','Content-Length','Content-Range','Accept-Ranges','Content-Disposition']:
+                          print(h,repr(q.headers.get(h)))
+                      first=b''
+                      for chunk in q.iter_content(1024):
+                          if chunk:
+                              first=chunk[:1024]
+                              break
+                      print('first_bytes',repr(first[:32]),'read',len(first))
+              except Exception as exc:
+                  print('ERROR',type(exc).__name__,repr(str(exc)))
           PY
