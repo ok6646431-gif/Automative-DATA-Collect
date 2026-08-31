@@ -1,486 +1,207 @@
 {
   "schema_version": "1.0",
-  "request_id": "samsung-electronics-ds-env-20260830-v1",
+  "request_id": "kumho-petrochemical-env-20260831-v1",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "discovery_scope": {
-    "history_window": {
-      "start_year": 2020,
-      "end_year": 2026
-    },
-    "annual_series": [
-      "SUSTAINABILITY_REPORT"
-    ],
+    "history_window": {"start_year": 2020, "end_year": 2026},
+    "annual_series": ["SUSTAINABILITY_REPORT"],
     "current_public_document_categories": [
-      "ENVIRONMENTAL_STRATEGY",
+      "SUSTAINABILITY_REPORT",
+      "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
+      "ESG_POLICY_GUIDELINE",
       "ENVIRONMENTAL_EHS_POLICY",
-      "PRODUCT_CHEMICAL_CONTROL",
-      "REGULATED_SUBSTANCES",
-      "GREEN_PROCUREMENT",
-      "CHEMICAL_MANAGEMENT",
-      "WATER_STEWARDSHIP",
-      "BIODIVERSITY",
-      "ENVIRONMENTAL_MANAGEMENT_CERTIFICATION",
-      "ENERGY_MANAGEMENT_CERTIFICATION",
-      "OHS_MANAGEMENT_CERTIFICATION",
-      "ZERO_WASTE_TO_LANDFILL",
-      "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA"
+      "ENVIRONMENTAL_MANAGEMENT",
+      "CLIMATE_RESPONSE",
+      "BAT_REFERENCE"
     ],
-    "scope_note": "삼성전자 Digital Library Planet 환경 정책·문서와 삼성반도체 DS 공식 환경/SHE 페이지 및 국내 핵심 생산사업장 5개(기흥·화성·평택·천안·온양)를 중심으로 한다. 수원 SAIT는 정책·연구거점 보조근거로만 보존한다. 제품별 LCA, 개별 국가 제품 규제 선언서, 비환경 People/Principle 문서는 본 환경관리 학습 수집 범위에서 제외한다.",
-    "fallback_policy": "When a VERIFIED Samsung Korean route is blocked to GitHub Actions, use only independently verified Samsung-owned global, semiconductor, or images CDN equivalents. Fallback success does not change document identity."
+    "scope_note": "금호석유화학 공식 홈페이지의 지속가능경영·안전환경보건·ESG 공개자료와 국립환경과학원 IEPS의 검증된 업종 기술기준을 대상으로 한다. 그룹 계열사의 별도 보고서·정책과 비공개 내부 SOP는 금호석유화학주식회사 공개자료 범위에서 제외한다.",
+    "fallback_policy": "Only independently verified official-company or official-government routes may be used as fallbacks. A failed download is never converted into a no-data claim."
   },
   "documents": [
     {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2026",
+      "document_id": "KUMHO_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2026",
-      "report_year": 2026,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2025",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2025",
+      "title": "금호석유화학 지속가능경영보고서 2025",
       "report_year": 2025,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2025_KOR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
+      "source_url": "https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2025.pdf?v=20260724",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2024",
+      "document_id": "KUMHO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2024",
+      "title": "금호석유화학 지속가능경영보고서 2024",
       "report_year": 2024,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2024_KOR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
+      "source_url": "https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2024.pdf?v=20250822",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2023",
+      "document_id": "KUMHO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2023",
+      "title": "금호석유화학 지속가능경영보고서 2023",
       "report_year": 2023,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Samsung_Electronics_Sustainability_Report_2023_KOR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
+      "source_url": "https://www.kkpc.com/download/?seq=7019",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "verification_status": "VERIFIED",
+          "notes": "Official English edition exposed as a direct static download on the same report page."
+        }
+      ]
     },
     {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2022",
+      "document_id": "KUMHO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2022",
+      "title": "금호석유화학 지속가능경영보고서 2022",
       "report_year": 2022,
-      "source_url": "https://images.samsung.com/kdp/aboutsamsung/sustainability/pdf/sustainability_report_kr_2022___01.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
+      "source_url": "https://www.kkpc.com/download/?seq=6252",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "notes": "Official report page resolves Popup_Survey file sequence 6252 to this company-owned download route."
     },
     {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2021",
+      "document_id": "KUMHO_SUSTAINABILITY_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2021",
+      "title": "금호석유화학 지속가능경영보고서 2021",
       "report_year": 2021,
-      "source_url": "https://images.samsung.com/kdp/ir/annual-reports/sustainability_report_2021_kr.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
+      "source_url": "https://www.kkpc.com/download/?seq=5173",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "notes": "Official report page resolves Popup_Survey file sequence 5173 to this company-owned download route."
     },
     {
-      "document_id": "SAMSUNG_SUSTAINABILITY_2020",
+      "document_id": "KUMHO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "삼성전자 지속가능경영보고서 2020",
+      "title": "금호석유화학 지속가능경영보고서 2020",
       "report_year": 2020,
-      "source_url": "https://images.samsung.com/is/content/samsung/p5/sec/ir/financialinfo/companyreports/sustainability_report_2020_kr_new.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_DS_PRODUCT_ENV_RULE",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "DS 부문 제품환경 관리물질 운영규칙 DS-ERU-026 Ver.3.0",
-      "report_year": 2025,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/DS-ERU-026_ver3.0_KR.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_SEC_PRODUCT_ENV_RULE_CURRENT",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "삼성전자 제품환경 관리물질 운영규칙 0QA-2049 Rev.29",
-      "report_year": 2025,
-      "publication_date": "2025-07-07",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYTGhbFKAfMAIyDc/Standards_for_Control_of_Substances_Used_in_Products_KR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
+      "source_url": "https://www.kkpc.com/download/?seq=4017",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AYVhebWqCXoAIx95/Standards_for_Control_of_Substances_Used_in_Products_EN.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library current Rev.29 English mirror; same current revision as Korean primary."
-        }
-      ]
+      "notes": "Official report page resolves Popup_Survey file sequence 4017 to this company-owned download route."
     },
     {
-      "document_id": "SAMSUNG_REGULATED_SUBSTANCES_CURRENT",
-      "document_type": "REGULATED_SUBSTANCES",
-      "title": "삼성전자 규제물질 목록",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYTGidUKAw8AIyDc/List%20of%20Regulated%20Substances_KR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AYVhU6GKB_YAIx95/List%20of%20Regulated%20Substances.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library official current regulated-substances document."
-        }
-      ]
-    },
-    {
-      "document_id": "SAMSUNG_PROCESS_RESTRICTED_SUBSTANCES",
-      "document_type": "PROCESS_RESTRICTED_SUBSTANCES",
-      "title": "삼성전자 공정 사용규제 물질",
-      "source_url": "https://images.samsung.com/kdp/aboutsamsung/overview/List_of_Regulated_Substances.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "DS 환경 규칙·지침 공식 다운로드 경로에서 제공되는 공정 사용규제 물질 목록"
-    },
-    {
-      "document_id": "SAMSUNG_DS_EHS_POLICY",
+      "document_id": "KUMHO_ESG_POLICY_GUIDELINE_CURRENT",
       "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "삼성전자 DS Environment Health and Safety Management Policy",
-      "report_year": 2025,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Environmental_Health_and_Safety_Management_Policy_KR.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_EHS_POLICY_CURRENT",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "삼성전자 환경안전보건 경영방침",
+      "title": "금호석유화학 ESG 정책 및 지침서",
       "report_year": 2026,
-      "publication_date": "2026-02-13",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYTGcsraAUQAIyDc/Environmental_Health_and_Safety_Management_Policy_KR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
+      "source_url": "https://www.kkpc.com/upload/download/금호석유화학 ESG 정책 및 지침서.pdf?v=20260616",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgGuidelines/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://download.semiconductor.samsung.com/resources/others/Environmental_Health_and_Safety_Management_Policy_KR.pdf",
-          "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/environmental-rules-and-guidelines/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung Semiconductor official Korean distribution of the current 2026-02-13 EHS policy."
-        },
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AYVheji6CZcAIx95/Environmental_Health_and_Safety_Management_Policy_EN.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library current English EHS policy."
-        }
-      ]
+      "importance": "CORE"
     },
     {
-      "document_id": "SAMSUNG_GREEN_PROCUREMENT_POLICY",
-      "document_type": "GREEN_PROCUREMENT_POLICY",
-      "title": "삼성전자 녹색조달 정책",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYTGcZ56AS8AIyDc/Green_Procurement_Policy_new.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-      "expected_extension": "pdf",
+      "document_id": "KUMHO_ESG_DATA_PACK_2025",
+      "document_type": "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
+      "title": "금호석유화학 2025 ESG Data Pack 국문",
+      "report_year": 2025,
+      "source_url": "https://www.kkpc.com/upload/download/2025 KKPC ESG Data Pack (KOR)_fin (upload).xlsx?v=20260813",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "expected_extension": "xlsx",
       "verification_status": "VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AYTGcZ56AS8AIyDc/Green_Procurement_Policy_new.pdf",
-          "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Same Samsung policy-file ID as Korean source; global route returns the verified 5-page Korean Green Procurement PDF when sec route is blocked to GitHub Actions."
-        },
-        {
-          "source_url": "https://images.samsung.com/kdp/aboutsamsung/overview/Green_Procurement_Policy_new.pdf",
-          "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Samsung official images CDN mirror; verified PDF payload is the Green Procurement Policy."
-        }
-      ]
+      "importance": "CORE"
     },
     {
-      "document_id": "SAMSUNG_BIODIVERSITY_POLICY",
-      "document_type": "BIODIVERSITY_POLICY",
-      "title": "삼성전자 생물다양성 보전 방침",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AZk835MqKSMALYM-/Samsung_Electronics_Approach_to_Biodiversity.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-      "expected_extension": "pdf",
+      "document_id": "KUMHO_SEH_OVERVIEW",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "금호석유화학 안전환경보건경영 개요",
+      "report_year": 2026,
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/intro/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/intro/",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AZk839F6KTAALYM-/Samsung_Electronics_Approach_to_Biodiversity.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library official biodiversity policy."
-        }
-      ]
+      "importance": "CORE"
     },
     {
-      "document_id": "SAMSUNG_ENV_STRATEGY_CURRENT",
+      "document_id": "KUMHO_SEH_POLICY",
+      "document_type": "ENVIRONMENTAL_POLICY",
+      "title": "금호석유화학 안전환경보건방침",
+      "report_year": 2026,
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/course/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/course/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "KUMHO_SEH_ACTIVITY",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "금호석유화학 안전환경보건경영활동",
+      "report_year": 2026,
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/activity/impact/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/activity/impact/",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "KUMHO_CLIMATE_RESPONSE",
       "document_type": "ENVIRONMENTAL_STRATEGY",
-      "title": "삼성전자 환경경영 전략 공식 페이지",
+      "title": "금호석유화학 기후변화 대응",
       "report_year": 2026,
-      "source_url": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
-      "source_locator": "https://www.samsung.com/sec/sustainability/planet/environmental-strategy/",
+      "source_url": "https://www.kkpc.com/kor/winwin/environment/climate/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/environment/climate/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/planet/environmental-strategy/",
-          "source_locator": "https://www.samsung.com/global/sustainability/planet/environmental-strategy/",
-          "expected_extension": "html",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global official current Environmental Strategy page equivalent to blocked Korean route."
-        }
-      ]
+      "importance": "CORE"
     },
     {
-      "document_id": "SAMSUNG_NEW_ENV_STRATEGY",
+      "document_id": "KUMHO_ESG_STRATEGY",
       "document_type": "ENVIRONMENTAL_STRATEGY",
-      "title": "삼성전자 신환경경영전략 공식 발표",
-      "report_year": 2022,
-      "source_url": "https://semiconductor.samsung.com/kr/news-events/news/samsung-electronics-announces-new-environmental-strategy/",
-      "source_locator": "https://semiconductor.samsung.com/kr/news-events/news/samsung-electronics-announces-new-environmental-strategy/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "SAMSUNG_SUSTAINABILITY_DATA_CURRENT",
-      "document_type": "ENVIRONMENTAL_PERFORMANCE_DATA",
-      "title": "삼성전자 지속가능경영 데이터 - 환경성과 및 DS 사업부문별 성과",
+      "title": "금호석유화학 ESG 경영 전략",
       "report_year": 2026,
-      "coverage_start": 2023,
-      "coverage_end": 2025,
-      "source_url": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/facts-figures/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/digital-library/facts-figures/",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/facts-figures/",
-          "expected_extension": "html",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global official current Facts & Figures page including environmental and DS performance data."
-        }
-      ]
-    },
-    {
-      "document_id": "SAMSUNG_DS_ENVIRONMENT_OVERVIEW",
-      "document_type": "ENVIRONMENTAL_DISCLOSURE",
-      "title": "삼성반도체 환경(Environment) 공식 페이지",
-      "report_year": 2026,
-      "source_url": "https://semiconductor.samsung.com/kr/sustainability/environment/",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/environment/",
+      "source_url": "https://www.kkpc.com/kor/winwin/esg/esgManagement/",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgManagement/",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "SAMSUNG_DS_CHEMICAL_MANAGEMENT",
-      "document_type": "CHEMICAL_MANAGEMENT_DISCLOSURE",
-      "title": "삼성반도체 화학물질 관리 공식 페이지",
-      "report_year": 2026,
-      "source_url": "https://semiconductor.samsung.com/kr/sustainability/sustainable-supply-chain/environmentally-responsible-supply-chain/we-value-transparency-in-chemical-management/",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/sustainable-supply-chain/environmentally-responsible-supply-chain/we-value-transparency-in-chemical-management/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_DS_AWS_CERTIFICATION",
-      "document_type": "WATER_STEWARDSHIP_DISCLOSURE",
-      "title": "삼성반도체 AWS 인증 및 수자원 관리 공식 페이지",
-      "report_year": 2024,
-      "source_url": "https://semiconductor.samsung.com/kr/sustainability/environment/preserving-nature/alliance-for-water-stewardship-certification/",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/environment/preserving-nature/alliance-for-water-stewardship-certification/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_AWS_COMMITMENT",
-      "document_type": "WATER_STEWARDSHIP_POLICY",
-      "title": "삼성전자 AWS 수자원 인증 선언서",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYifFN6KQCQALYNW/AWS_Commitment_KR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AZAqc8uqGOMALYNu/AWS_Commitment_EN.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library official AWS Commitment document."
-        }
-      ]
-    },
-    {
-      "document_id": "SAMSUNG_AWS_OUTCOMES",
-      "document_type": "WATER_STEWARDSHIP_CERTIFICATION",
-      "title": "삼성전자 수자원 실적 및 AWS 인증 심사",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYlzAYv6xTEALYNW/AWS_Outcomes_Announcement_KR.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AZsmf03KT5EALYMV/AWS_Outcomes_Announcement_EN.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library official AWS Outcomes & Announcement document."
-        }
-      ]
-    },
-    {
-      "document_id": "SAMSUNG_DS_ISO14001",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT_CERTIFICATION",
-      "title": "삼성전자 DS 국내 6개 사업장 ISO 14001 인증서",
-      "report_year": 2024,
-      "publication_date": "2024-12-13",
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/ISO_14001.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_DS_ISO45001",
-      "document_type": "OHS_MANAGEMENT_CERTIFICATION",
-      "title": "삼성전자 DS 국내 6개 사업장 ISO 45001 인증서",
-      "report_year": 2024,
-      "publication_date": "2024-12-13",
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/ISO_45001.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "SAMSUNG_DS_ISO50001",
-      "document_type": "ENERGY_MANAGEMENT_CERTIFICATION",
-      "title": "삼성전자 DS 국내 6개 사업장 ISO 50001 인증서",
-      "report_year": 2024,
-      "publication_date": "2024-12-13",
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/ISO_50001.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "SAMSUNG_DS_ISO22301",
-      "document_type": "BUSINESS_CONTINUITY_CERTIFICATION",
-      "title": "삼성전자 반도체 국내 사업장 ISO 22301 BCMS 인증서",
-      "report_year": 2025,
-      "source_url": "https://download.semiconductor.samsung.com/resources/others/Certificate_of_Registration_ISO22301_DS_2025.pdf",
-      "source_locator": "https://semiconductor.samsung.com/kr/sustainability/highlights/downloads/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "SAMSUNG_ZERO_WASTE_TO_LANDFILL",
-      "document_type": "ZERO_WASTE_TO_LANDFILL_CERTIFICATION",
-      "title": "삼성전자 UL 폐기물 매립 제로 검증",
-      "source_url": "https://www.samsung.com/sec/sustainability/policy-file/AYYbVar6esEAIx-_/Zero_Waste_to_Landifll_Platinum_Operation.pdf",
-      "source_locator": "https://www.samsung.com/sec/sustainability/digital-library/policy-document/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.samsung.com/global/sustainability/policy-file/AYVhTqy6B3wAIx95/Zero_Waste_to_Landifll_Platinum_Operation.pdf",
-          "source_locator": "https://www.samsung.com/global/sustainability/digital-library/policy-document/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Samsung global Digital Library official UL Zero Waste to Landfill verification document."
-        }
-      ]
-    },
-    {
-      "document_id": "NIER_SEMICONDUCTOR_KBREF_2019",
+      "document_id": "NIER_ENERGY_KBREF_II_2022",
       "document_type": "BAT_REFERENCE",
-      "title": "반도체 제조업의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서",
-      "report_year": 2019,
-      "source_url": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
-      "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
+      "title": "전기 및 증기 생산시설의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서(Ⅱ)",
+      "report_year": 2022,
+      "source_url": "https://ieps.nier.go.kr/web/board/5/1898/",
+      "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "SUPPORTING",
-      "notes": "Official NIER/IEPS K-BREF landing page. Collector must resolve and validate the same-host PDF attachment; landing-page HTML alone is not accepted as the technical full text.",
+      "importance": "TECHNICAL_REFERENCE",
       "attachment_discovery": {
-        "match_terms": [
-          "반도체",
-          "최적가용기법",
-          "기준서"
-        ],
+        "match_terms": ["전기", "증기", "생산시설", "최적가용기법", "기준서"],
         "same_host_only": true
-      }
+      },
+      "notes": "Official NIER/IEPS K-BREF landing page. Company application is not inferred from reference collection."
     }
   ],
   "gaps": [
     {
-      "gap_id": "PUBLIC_OPERATIONAL_2026_ANNUAL_NOT_EXPECTED_YET",
-      "source_key": "PUBLIC_ENV_DATABASES",
+      "gap_id": "KUMHO_SUSTAINABILITY_2026_NOT_PUBLISHED",
+      "source_key": "CORP_DOCS",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "year": 2026,
+      "verification_status": "VERIFIED",
+      "status": "NOT_PUBLISHED",
       "severity": "LOW",
-      "reason": "2026 연간 실적 공공 DB는 공시 주기상 아직 완결 연도가 아니므로 미수집을 누락으로 판정하지 않는다."
-    },
-    {
-      "gap_id": "SOURCE_NATIVE_SITE_VARIANTS_REQUIRE_POST_COLLECTION_MATCHING",
-      "source_key": "PUBLIC_ENV_DATABASES",
-      "severity": "MEDIUM",
-      "reason": "사업장명 표기가 소스별로 달라 핵심 생산사업장 5개 Identity 기준으로 결과를 재필터링한다. 수원 SAIT는 보조 후보로만 보존한다."
-    },
-    {
-      "gap_id": "NONPUBLIC_INTERNAL_SOP_OUT_OF_SCOPE",
-      "source_key": "SAMSUNG_INTERNAL",
-      "severity": "LOW",
-      "reason": "비공개 내부 SOP와 내부 인허가 문서는 공개자료 수집 범위 밖이다."
+      "blocking": false,
+      "reason": "2026-08-31 현재 금호석유화학 공식 지속가능경영보고서 페이지의 최신 보고서는 2025년이며 2026년 보고서는 공개 목록에 없다.",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/"
     }
   ]
 }
