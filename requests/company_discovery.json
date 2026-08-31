@@ -19,6 +19,18 @@
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
+  "scope_notes": [
+    {
+      "code": "SOURCE_NATIVE_SITE_NAME_VARIANTS_EXPECTED",
+      "subject": "삼성전자 DS 핵심 생산사업장 5개",
+      "detail": "공공 DB마다 사업장명이 '삼성전자 주식회사 기흥사업장', '삼성전자(주) 화성사업장' 등으로 다를 수 있어 주소·사업장명 조합으로 교차확인한다."
+    },
+    {
+      "code": "SAIT_SUPPORTING_SCOPE_ONLY",
+      "subject": "수원(SAIT) 사업장",
+      "detail": "수원 SAIT는 DS 정책·인증 또는 R&D 관련 보조 범위에는 포함될 수 있으나, 본 환경성과 핵심 생산사업장 5개 분석 범위에는 포함하지 않는다. Raw 검색자료는 회사 전체 보존 원칙에 따라 유지한다."
+    }
+  ],
   "company_aliases": [
     {
       "name": "삼성전자",
@@ -134,18 +146,7 @@
       "verification_state": "VERIFIED"
     }
   ],
-  "unresolved_items": [
-    {
-      "code": "SOURCE_NATIVE_SITE_NAME_VARIANTS_EXPECTED",
-      "subject": "삼성전자 DS 핵심 생산사업장 5개",
-      "detail": "공공 DB마다 사업장명이 '삼성전자 주식회사 기흥사업장', '삼성전자(주) 화성사업장' 등으로 다를 수 있어 주소·사업장명 조합으로 교차확인한다."
-    },
-    {
-      "code": "SAIT_SUPPORTING_SCOPE_ONLY",
-      "subject": "수원(SAIT) 사업장",
-      "detail": "수원 SAIT는 DS 정책·인증 또는 R&D 관련 보조 범위에는 포함될 수 있으나, 본 환경성과 핵심 생산사업장 5개 분석 범위에는 포함하지 않는다. Raw 검색자료는 회사 전체 보존 원칙에 따라 유지한다."
-    }
-  ],
+  "unresolved_items": [],
   "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
