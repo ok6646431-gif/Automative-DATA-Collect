@@ -2,52 +2,79 @@
   "schema_version": "1.0",
   "request_id": "kumho-petrochemical-env-20260831-v1",
   "requested_company_name": "금호석유화학",
-  "current_legal_name": "금호석유화학주식회사",
+  "current_legal_name": "금호석유화학",
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
-    "mode": "COMPANY",
-    "label": "금호석유화학주식회사 국내 법인 전체",
+    "mode": "SITE_SET",
+    "label": "금호석유화학 국내 생산공장 13개 전체",
+    "candidate_ids": [
+      "kkpc-ulsan-rubber",
+      "kkpc-ulsan-resin",
+      "kkpc-ulsan-latex-1",
+      "kkpc-ulsan-latex-2",
+      "kkpc-yeosu-rubber-1",
+      "kkpc-yeosu-rubber-2",
+      "kkpc-yeosu-fine-chemical",
+      "kkpc-yeosu-energy-1",
+      "kkpc-yeosu-energy-2",
+      "kkpc-yeosu-energy-3",
+      "kkpc-yesan-building-material",
+      "kkpc-hwaseong-insulation",
+      "kkpc-yulchon-cnt"
+    ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
-    "archive_policy": "COMPANY_WIDE",
-    "analysis_policy": "COMPANY_WIDE"
+    "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
+    "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
   "scope_notes": [
     {
-      "code": "COLOCATED_OFFICIAL_UNITS_EXPECTED",
-      "subject": "울산고무공장·울산 LATEX공장",
-      "detail": "금호석유화학 공식 글로벌네트워크에서 두 생산공장이 동일한 울산 남구 상개로 64 주소에 별도 명칭으로 공시된다. 주소만으로 자동 병합하지 않고 사업장명과 source-native ID를 함께 확인한다."
+      "code": "OFFICIAL_PRODUCTION_NETWORK_SCOPE",
+      "subject": "금호석유화학 국내 생산공장 13개",
+      "detail": "금호석유화학 공식 글로벌 네트워크 페이지가 생산공장으로 명시한 국내 13개 시설 전체를 환경자료 핵심 범위로 사용한다."
     },
     {
-      "code": "COMPANY_WIDE_ACCEPTANCE_TEST",
-      "subject": "금호석유화학주식회사",
-      "detail": "이번 실행은 특정 채용 사업장으로 좁히지 않고 국내 법인 전체 공개 환경자료 수집의 범용성을 검증한다."
+      "code": "COLOCATED_SITE_NAMES_REQUIRE_SOURCE_IDENTITY",
+      "subject": "울산 LATEX 1·2공장",
+      "detail": "LATEX 1은 울산고무공장과, LATEX 2는 울산수지공장과 공식 주소가 동일하므로 주소만으로 자동 병합하지 않고 사업장명·source ID를 함께 검증한다."
     }
   ],
   "company_aliases": [
     {
       "name": "금호석유화학",
-      "alias_type": "current_brand_name",
+      "alias_type": "current_brand_and_legal_name",
       "verification_state": "VERIFIED",
       "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
     },
     {
       "name": "금호석유화학(주)",
       "alias_type": "source_native_alias",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
+      "verification_state": "SOURCE_VERIFIED",
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
     },
     {
       "name": "금호석유화학㈜",
       "alias_type": "source_native_alias",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
+      "verification_state": "SOURCE_VERIFIED",
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
     },
     {
-      "name": "KUMHO PETROCHEMICAL CO., LTD.",
+      "name": "금호석유화학 주식회사",
+      "alias_type": "expanded_legal_alias",
+      "verification_state": "SOURCE_VERIFIED",
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
+    },
+    {
+      "name": "KUMHO PETROCHEMICAL",
       "alias_type": "english_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm"
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
+    },
+    {
+      "name": "Kumho Petrochemical Co., Ltd.",
+      "alias_type": "english_source_alias",
+      "verification_state": "SOURCE_VERIFIED",
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/"
     }
   ],
   "historical_legal_names": [],
@@ -57,7 +84,7 @@
       "candidate_id": "kkpc-ulsan-rubber",
       "site_name_raw": "울산고무공장",
       "address_raw": "울산광역시 남구 상개로 64(상개동)",
-      "business_unit_raw": "합성고무",
+      "business_unit_raw": "SBR, NBR, SB/NB-Latex 등 합성고무 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -66,16 +93,25 @@
       "candidate_id": "kkpc-ulsan-resin",
       "site_name_raw": "울산수지공장",
       "address_raw": "울산광역시 남구 처용로 260-257(성암동)",
-      "business_unit_raw": "합성수지",
+      "business_unit_raw": "PS, ABS, EPS, PPG, SAN 등 합성수지 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "kkpc-ulsan-latex",
-      "site_name_raw": "울산 LATEX공장",
+      "candidate_id": "kkpc-ulsan-latex-1",
+      "site_name_raw": "울산 LATEX 1공장",
       "address_raw": "울산광역시 남구 상개로 64(상개동)",
-      "business_unit_raw": "Latex",
+      "business_unit_raw": "PCL, MPL, NB-Latex 생산",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-ulsan-latex-2",
+      "site_name_raw": "울산 LATEX 2공장",
+      "address_raw": "울산광역시 남구 처용로 260-257(성암동)",
+      "business_unit_raw": "NB-Latex 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -84,7 +120,7 @@
       "candidate_id": "kkpc-yeosu-rubber-1",
       "site_name_raw": "여수고무제1공장",
       "address_raw": "전라남도 여수시 여수산단3로 118(평여동)",
-      "business_unit_raw": "합성고무",
+      "business_unit_raw": "BR, SSBR, NdBR, SBS 등 합성고무 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -93,7 +129,7 @@
       "candidate_id": "kkpc-yeosu-rubber-2",
       "site_name_raw": "여수고무제2공장",
       "address_raw": "전라남도 여수시 산단중앙로 331(평여동)",
-      "business_unit_raw": "합성고무",
+      "business_unit_raw": "BR, SSBR 등 합성고무 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -102,7 +138,7 @@
       "candidate_id": "kkpc-yeosu-fine-chemical",
       "site_name_raw": "여수정밀화학공장",
       "address_raw": "전라남도 여수시 여수산단2로 227(화치동)",
-      "business_unit_raw": "정밀화학",
+      "business_unit_raw": "노화방지제, 가황촉진제 등 정밀화학 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -111,7 +147,7 @@
       "candidate_id": "kkpc-yeosu-energy-1",
       "site_name_raw": "여수제1에너지",
       "address_raw": "전라남도 여수시 여수산단2로 46-51(월하동)",
-      "business_unit_raw": "증기·전기 생산",
+      "business_unit_raw": "증기, 전기 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -120,16 +156,34 @@
       "candidate_id": "kkpc-yeosu-energy-2",
       "site_name_raw": "여수제2에너지",
       "address_raw": "전라남도 여수시 여수산단2로 223-84(화치동)",
-      "business_unit_raw": "증기·전기 생산",
+      "business_unit_raw": "증기, 전기 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "kkpc-yesan-building-materials",
+      "candidate_id": "kkpc-yeosu-energy-3",
+      "site_name_raw": "여수제3에너지",
+      "address_raw": "전라남도 여수시 율촌면 여동리 율촌제1산단 2-5블록",
+      "business_unit_raw": "증기, 전기 생산",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-yesan-building-material",
       "site_name_raw": "예산건자재공장",
       "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9(호음리)",
-      "business_unit_raw": "건자재",
+      "business_unit_raw": "건자재 생산",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "VERIFIED",
+      "verification_state": "VERIFIED"
+    },
+    {
+      "candidate_id": "kkpc-hwaseong-insulation",
+      "site_name_raw": "화성단열재공장",
+      "address_raw": "경기도 화성시 정남면 발안로 1093(덕절리)",
+      "business_unit_raw": "단열재 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -138,16 +192,7 @@
       "candidate_id": "kkpc-yulchon-cnt",
       "site_name_raw": "율촌CNT공장",
       "address_raw": "전라남도 여수시 율촌면 율촌산단6로 115",
-      "business_unit_raw": "탄소나노튜브",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "VERIFIED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kkpc-daejeon-central-rd",
-      "site_name_raw": "중앙연구소",
-      "address_raw": "대전광역시 유성구 유성대로 1557(화암동)",
-      "business_unit_raw": "연구개발",
+      "business_unit_raw": "탄소나노튜브(CNT) 생산",
       "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "VERIFIED",
       "verification_state": "VERIFIED"
@@ -155,51 +200,39 @@
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://kind.krx.co.kr/external/2026/03/18/001806/20260318008265/11011.htm",
-      "source_value_raw": "법적·상업적 명칭: 금호석유화학주식회사 / KUMHO PETROCHEMICAL CO., LTD. (KKPC)",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_value_raw": "금호석유화학 공식 글로벌 네트워크의 국내 생산공장 명칭·주소·생산기능",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "source_value_raw": "금호석유화학 공식 글로벌네트워크의 국내 생산공장 10개 및 중앙연구소 명칭·주소",
+      "source_locator": "https://www.kkpc.com/kor/company/intro/intro/",
+      "source_value_raw": "회사명 금호석유화학, 사업: 합성고무·합성수지·정밀화학·나노탄소·에너지·건자재",
       "verification_state": "VERIFIED"
     }
   ],
   "related_entity_exclusions": [
     {
       "name": "금호피앤비화학",
-      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
-      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "reason": "금호석유화학과 별도 법인",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "verification_state": "VERIFIED"
     },
     {
       "name": "금호폴리켐",
-      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
-      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "reason": "금호석유화학과 별도 법인",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "verification_state": "VERIFIED"
     },
     {
       "name": "금호미쓰이화학",
-      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
-      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "금호개발상사",
-      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
-      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
+      "reason": "금호석유화학과 별도 법인",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "verification_state": "VERIFIED"
     },
     {
       "name": "금호티앤엘",
-      "reason": "금호석유화학 공식 계열사 페이지에서 별도 회사로 구분",
-      "source_locator": "https://www.kkpc.com/kor/company/affiliate/affiliate/",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "금호리조트",
-      "reason": "금호석유화학 공식 사이트가 별도 패밀리사이트로 구분",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgGuidelines/",
+      "reason": "금호석유화학과 별도 법인",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "verification_state": "VERIFIED"
     }
   ],
@@ -207,32 +240,50 @@
   "event_evidence_references": [],
   "collection_policy": {
     "minimum_history_years": 5,
-    "requested_history_window": {
-      "start_year": 2020,
-      "end_year": 2026
-    },
     "sources": {
       "ENVINFO": {
-        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2024
+        },
         "prefer_full_history": false,
         "max_details": 500
       },
       "PRTR": {
-        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2024
+        },
         "prefer_full_history": false
       },
       "CHEM_STATS": {
-        "requested_survey_rounds": [2020, 2022, 2024],
-        "available_survey_rounds": [2020, 2022, 2024],
+        "requested_survey_rounds": [
+          2020,
+          2022,
+          2024
+        ],
+        "available_survey_rounds": [
+          2020,
+          2022,
+          2024
+        ],
         "prefer_full_history": true
       },
       "CLEANSYS_AIR": {
-        "requested_window": {"start_year": 2020, "end_year": 2025},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2025
+        },
         "prefer_full_history": false
       },
       "SOOSIRO_WATER": {
-        "requested_window": {"start_year": 2020, "end_year": 2025},
-        "daily_available_years": [2024],
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2025
+        },
+        "daily_available_years": [
+          2024
+        ],
         "prefer_full_history": false
       }
     }

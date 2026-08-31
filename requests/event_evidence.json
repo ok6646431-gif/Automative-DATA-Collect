@@ -3,12 +3,5 @@
   "request_id": "kumho-petrochemical-env-20260831-v1",
   "discovery_status": "NOT_RUN",
   "events": [],
-  "gaps": [
-    {
-      "gap_id": "KUMHO_EVENT_DISCOVERY_NOT_PRESEEDED",
-      "source_key": "OFFICIAL_EVENT_DISCOVERY",
-      "severity": "LOW",
-      "reason": "이번 acceptance test는 법인·사업장 식별, 공공 환경자료, 공식 문서와 기술기준 수집의 범용성 검증이 우선이며 별도 환경 이벤트는 사전 주입하지 않는다."
-    }
-  ]
+  "gaps": []
 }

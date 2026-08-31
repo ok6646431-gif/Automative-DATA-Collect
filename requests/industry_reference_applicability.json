@@ -7,7 +7,8 @@
       "applicability_state": "VERIFIED",
       "candidate_ids": [
         "kkpc-yeosu-energy-1",
-        "kkpc-yeosu-energy-2"
+        "kkpc-yeosu-energy-2",
+        "kkpc-yeosu-energy-3"
       ],
       "reference_domains": [
         "AIR",
@@ -15,7 +16,7 @@
         "CHEMICALS",
         "GHG_ENERGY"
       ],
-      "basis": "금호석유화학 공식 글로벌네트워크는 여수제1에너지와 여수제2에너지의 기능을 증기·전기 생산으로 명시하고, 국립환경과학원 IEPS는 '전기 및 증기 생산시설의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서(Ⅱ)'를 공식 공개한다. 이는 업종·시설유형상 기술기준서의 참고 적용 가능성만 뜻하며 금호석유화학의 개별 BAT 적용 또는 허가조건을 의미하지 않는다.",
+      "basis": "금호석유화학 공식 글로벌네트워크는 여수제1·2·3에너지의 기능을 증기·전기 생산으로 명시하고, 국립환경과학원 IEPS는 '전기 및 증기 생산시설의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서(Ⅱ)'를 공식 공개한다. 이는 기술기준서의 참고 적용 가능성만 뜻하며 개별 사업장의 허가조건 또는 BAT 채택을 의미하지 않는다.",
       "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/"
     }
   ],
