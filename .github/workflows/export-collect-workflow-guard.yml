@@ -1,0 +1,21 @@
+name: Export patched collect workflow
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/export_collect_workflow_guard.py'
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python tools/export_collect_workflow_guard.py
+      - name: Upload patched workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-collect-workflow
+          path: .github/workflows/collect.yml
+          if-no-files-found: error
+          retention-days: 1
