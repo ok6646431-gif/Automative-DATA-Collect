@@ -1,0 +1,41 @@
+name: Apply verified identity anchor
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'tools/patch_verified_identity_anchor.py'
+      - '.github/workflows/apply-verified-identity-anchor.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-verified-identity-anchor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/patch_verified_identity_anchor.py
+      - name: Run identity regressions
+        run: python -m unittest tests.test_postprocess tests.test_scope_quality tests.test_scope_consistency_final -v
+      - name: Commit integrated fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add orchestrator/postprocess.py tests/test_postprocess.py
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Honor verified profile site identity anchors"
+          git push
