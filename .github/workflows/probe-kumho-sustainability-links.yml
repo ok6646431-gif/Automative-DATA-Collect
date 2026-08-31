@@ -18,29 +18,20 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect legacy official report sections
+      - name: Verify legacy official report download IDs
         run: |
           python - <<'PY'
-          import re, requests
-          from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
-          url='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
-          r=requests.get(url,headers={'User-Agent':'Mozilla/5.0 Chrome/151'},timeout=(15,40)); r.raise_for_status()
-          soup=BeautifulSoup(r.text,'html.parser')
-          for year in ('2022','2021','2020'):
-              print('\n=== YEAR',year,'===')
-              nodes=[x for x in soup.find_all(string=re.compile(year))]
-              print('NODES',len(nodes))
-              for node in nodes[:5]:
-                  tag=node.parent
-                  print('TAG',tag.name,repr(tag.get_text(' ',strip=True))[:500])
-                  # print nearest meaningful container, including all anchors and onclick values
-                  container=tag
-                  for _ in range(4):
-                      if container.parent: container=container.parent
-                  for a in container.find_all('a'):
-                      print('A',repr(a.get_text(' ',strip=True)),repr(a.get('href')),repr(a.get('onclick')))
-                  raw=str(container)
-                  for m in re.findall(r'[^\n]{0,180}(?:202[0-2]|download|Popup_Survey|\.pdf)[^\n]{0,260}',raw,re.I):
-                      print('RAW',m[:900])
+          import requests, json
+          ids={'2022_KOR':'6252','2021_KOR':'5173','2020_KOR':'4017','2023_KOR':'7019'}
+          s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 Chrome/151'
+          # establish official page session/referer first
+          page='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
+          r=s.get(page,timeout=(15,40)); r.raise_for_status()
+          for label,seq in ids.items():
+              url=f'https://www.kkpc.com/download/?seq={seq}'
+              try:
+                  x=s.get(url,headers={'Referer':page},timeout=(15,45),allow_redirects=True)
+                  print(json.dumps({'label':label,'seq':seq,'status':x.status_code,'url':x.url,'bytes':len(x.content),'ctype':x.headers.get('Content-Type'),'cd':x.headers.get('Content-Disposition'),'magic':x.content[:8].hex()},ensure_ascii=False))
+              except Exception as e:
+                  print(json.dumps({'label':label,'seq':seq,'error':type(e).__name__+': '+str(e)},ensure_ascii=False))
           PY
