@@ -6,7 +6,12 @@ from archive_builder import build_archive, archive_file_index, write_csv, sha256
 from archive_zip_dedup import run as deduplicate_archive_zip
 from requested_scope import source_id_scope as requested_source_id_scope
 from postprocess import stable_id
-from collection_completeness import audit as audit_collection_completeness
+from scope_quality import (
+    audit_collection_for_requested_scope,
+    classify_archive_summary,
+    document_gap_status,
+    scoped_envinfo_attachment_status,
+)
 
 VALIDATION_FIELDS=["validation_id","company_id","object_type","object_key","issue_type","severity","detected_by","evidence","recommended_action","status","resolved_by","resolved_at","notes"]
 
@@ -63,8 +68,17 @@ def copy_document_lane(package_root,stable,evidence):
 def document_reviews(package_root):
     root=Path(package_root); summary=read_json(root/"Integration_Summary.json",{}) or {}; company_id=str(summary.get("company_id") or "")
     vals=[]; env=read_json(root/"output"/"ENVINFO"/"status.json",{}) or {}; docs=read_json(root/"output"/"CORP_DOCS"/"status.json",{}) or {}
-    if int(env.get("attachment_fail") or 0)>0:
-        vals.append(make_validation(company_id,"ENVINFO_ATTACHMENT","ENVINFO","ENVINFO_ATTACHMENT_DOWNLOAD_INCOMPLETE","HIGH",f"discovered={env.get('attachments_discovered',0)}; downloaded={env.get('attachment_ok',0)}; failed={env.get('attachment_fail',0)}","Retry failed public attachments; retain successful raw files and attachment index."))
+    profile=read_json(root/"Company_Profile.json",{}) or {}
+    env_scope=scoped_envinfo_attachment_status(root,profile)
+    gap_state=document_gap_status(root)
+
+    if len(env_scope["scoped_failed"])>0:
+        vals.append(make_validation(
+            company_id,"ENVINFO_ATTACHMENT","ENVINFO","ENVINFO_ATTACHMENT_DOWNLOAD_INCOMPLETE","HIGH",
+            f"requested_scope_failed={len(env_scope['scoped_failed'])}; company_raw_failed={len(env_scope['raw_failed'])}; outside_scope_failed={len(env_scope['outside_scope_failed'])}",
+            "Retry failed ENV-INFO attachments inside the requested site scope. Preserve outside-scope raw failures as warnings only."
+        ))
+
     dstatus=str(docs.get("status") or "MISSING_STATUS")
     if dstatus in {"MISSING_STATUS","NOT_RUN"}:
         vals.append(make_validation(company_id,"DOCUMENT_DISCOVERY","CORP_DOCS","DOCUMENT_DISCOVERY_NOT_RUN","MEDIUM",f"status={dstatus}","Run official-source document discovery before declaring the human archive complete."))
@@ -72,13 +86,17 @@ def document_reviews(package_root):
         vals.append(make_validation(company_id,"DOCUMENT_DISCOVERY","CORP_DOCS","DOCUMENT_EVIDENCE_SCOPE_MISMATCH","HIGH",f"expected={docs.get('request_id','')}; supplied={docs.get('supplied_request_id','')}","Supply document evidence with the same request_id as the current company run; do not apply stale documents."))
     if int(docs.get("failed") or 0)>0:
         vals.append(make_validation(company_id,"DOCUMENT_DOWNLOAD","CORP_DOCS","DOCUMENT_DOWNLOAD_INCOMPLETE","HIGH",f"declared={docs.get('documents_declared',0)}; downloaded={docs.get('downloaded',0)}; failed={docs.get('failed',0)}","Retry failed official documents or retain the access gap explicitly."))
-    if int(docs.get("gaps") or 0)>0:
-        vals.append(make_validation(company_id,"DOCUMENT_DISCOVERY","CORP_DOCS","DOCUMENT_DISCOVERY_GAP","MEDIUM",f"gaps={docs.get('gaps',0)}","Review unresolved official-source document coverage; a search gap is not evidence of no document."))
+    if gap_state["blocking_count"]>0:
+        vals.append(make_validation(
+            company_id,"DOCUMENT_DISCOVERY","CORP_DOCS","DOCUMENT_DISCOVERY_GAP","MEDIUM",
+            f"blocking_gaps={gap_state['blocking_count']}; context_gaps={gap_state['context_count']}",
+            "Review unresolved blocking official-document gaps. Context notes and out-of-scope limitations do not block document completeness."
+        ))
     index=read_csv(root/"output"/"CORP_DOCS"/"document_index.csv")
     skipped=sum(1 for x in index if str(x.get("collection_status") or "").startswith("SKIPPED_"))
     if skipped:
         vals.append(make_validation(company_id,"DOCUMENT_EVIDENCE","CORP_DOCS","DOCUMENT_EVIDENCE_SKIPPED","MEDIUM",f"skipped_documents={skipped}","Verify or safely reclassify skipped document evidence; executable/script payloads remain prohibited."))
-    return vals,docs,env
+    return vals,docs,env,env_scope,gap_state
 
 
 def write_artifact_index(path,rows):
@@ -112,15 +130,32 @@ def add_archive_zip_to_artifact_index(package_root,zip_path):
     return len(rows)
 
 
-def refresh_manifest(package_root,docs,env,artifact_count):
+def refresh_manifest(package_root,docs,env,env_scope,gap_state,artifact_count):
     root=Path(package_root); manifest=read_json(root/"Master_Manifest.json",{}) or {}; review=read_json(root/"REVIEW_REQUIRED.json",[]) or []
-    # Preserve the schema version written by package_run.py. Archive stage only adds
-    # document_lane/envinfo_attachments/human_archive fields on top; it must never regress
-    # the package schema to an older version.
     manifest.setdefault("schema_version","1.6")
     manifest["review_count"]=len(review); manifest["validation"]="REVIEW_REQUIRED" if review else "PASS"; manifest["artifact_count"]=artifact_count
-    manifest["document_lane"]={"status":docs.get("status","NOT_RUN"),"documents_declared":docs.get("documents_declared",0),"downloaded":docs.get("downloaded",0),"failed":docs.get("failed",0),"skipped":docs.get("skipped",0),"gaps":docs.get("gaps",0)}
-    manifest["envinfo_attachments"]={"discovered":env.get("attachments_discovered",0),"downloaded":env.get("attachment_ok",0),"failed":env.get("attachment_fail",0),"bytes":env.get("attachment_bytes",0)}
+    manifest["document_lane"]={
+        "status":docs.get("status","NOT_RUN"),
+        "documents_declared":docs.get("documents_declared",0),
+        "downloaded":docs.get("downloaded",0),
+        "failed":docs.get("failed",0),
+        "skipped":docs.get("skipped",0),
+        "gaps_total":gap_state["total"],
+        "blocking_gaps":gap_state["blocking_count"],
+        "context_gaps":gap_state["context_count"],
+    }
+    manifest["envinfo_attachments"]={
+        "company_wide":{
+            "discovered":env.get("attachments_discovered",0),
+            "downloaded":env.get("attachment_ok",0),
+            "failed":env.get("attachment_fail",0),
+            "bytes":env.get("attachment_bytes",0),
+        },
+        "requested_scope":{
+            "failed":len(env_scope["scoped_failed"]),
+            "outside_scope_failed":len(env_scope["outside_scope_failed"]),
+        },
+    }
     manifest["human_archive"]={"status":"BUILDING","summary_file":"Archive_Summary.json","zip_file":"Human_Archive.zip"}
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     integ=read_json(root/"Integration_Summary.json",{}) or {}; integ["validation_queue"]=len(read_csv(root/"Validation_Queue.csv")); root.joinpath("Integration_Summary.json").write_text(json.dumps(integ,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -135,8 +170,6 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     archive=root/"Human_Archive"/archive_summary["archive_root"]; idx=archive/"00_자료목록"
     shutil.copy2(root/"Master_Manifest.json",idx/"Master_Manifest.json")
-    # build_archive() copied the pre-finalization BUILDING snapshot into the system raw
-    # control-plane folder. Keep both manifest copies inside the same final zip aligned.
     system_manifest=archive/"90_시스템원본"/"control_plane"/"Master_Manifest.json"
     if system_manifest.parent.exists():
         shutil.copy2(root/"Master_Manifest.json",system_manifest)
@@ -153,23 +186,18 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
 
 def run(package_root,stable,evidence=None):
     root=Path(package_root).resolve(); copy_document_lane(root,stable,evidence)
-    audit_collection_completeness(root, root/"Company_Profile.json", None, root/"Document_Evidence.json" if (root/"Document_Evidence.json").exists() else None)
-    vals,docs,env=document_reviews(root); merge_validations(root,vals)
-    count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,count)
-    # Archive v2 must use the exact same requested-scope resolver as Analysis.
-    # This only affects human-facing copies; the source package remains legal-entity-wide.
+    audit_collection_for_requested_scope(root, root/"Company_Profile.json", None, root/"Document_Evidence.json" if (root/"Document_Evidence.json").exists() else None)
+    vals,docs,env,env_scope,gap_state=document_reviews(root); merge_validations(root,vals)
+    count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,env_scope,gap_state,count)
     archive_builder.source_id_scope=requested_source_id_scope
-    summary=build_archive(root); final=finalize_archive_manifest(root,manifest,summary)
-    # Human Archive keeps user-facing files directly accessible, while identical binary
-    # copies under 90_시스템원본 are replaced by a SHA-256 reference table. The complete
-    # raw package remains in the enterprise-env-final/stable-source artifacts.
+    summary=build_archive(root)
+    summary=classify_archive_summary(root,summary)
+    final=finalize_archive_manifest(root,manifest,summary)
     deduplicate_archive_zip(root)
     final=read_json(root/"Archive_Summary.json",final) or final
     artifact_count=add_archive_zip_to_artifact_index(root,root/final["zip_path"])
     manifest=read_json(root/"Master_Manifest.json",{}) or {}; manifest["artifact_count"]=artifact_count
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
-    # Final GitHub artifact keeps the validated core package plus one compact Human_Archive.zip.
-    # The expanded human folder is intentionally removed to avoid duplicate delivery copies.
     shutil.rmtree(root/"Human_Archive",ignore_errors=True)
     print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals)},ensure_ascii=False))
     return final
