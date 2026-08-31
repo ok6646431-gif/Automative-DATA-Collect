@@ -196,6 +196,44 @@ class EnvInfoAttachmentRecoveryTests(unittest.TestCase):
             self.assertEqual(status["attachment_skipped_recovery_time_budget"], 1)
             self.assertEqual(status["errors"], 0)
 
+    def test_time_budget_deferred_row_is_resumable_on_next_pass(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); out = root / "output/ENVINFO"
+            rows = [row(file_id="F2", collection_status=recovery.TIME_BUDGET_STATUS, error="deferred")]
+            write_index(out / "attachment_index.csv", rows)
+            (out / "status.json").write_text(json.dumps({"attachment_ok": 0, "attachment_fail": 0, "errors": 0}), encoding="utf-8")
+            payload = b"resumed"
+            def fake_download(session, item, attachments_root, max_attempts=2, **kwargs):
+                target = Path(attachments_root) / "2024/C1/resumed.pdf"
+                target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(payload)
+                return target, len(payload), digest(payload), "application/pdf", 1
+            with patch.object(recovery, "download_without_total_cap", side_effect=fake_download):
+                summary = recovery.recover(out, root, total_limit=1000, max_seconds=5)
+            saved = recovery.read_rows(out / "attachment_index.csv")
+            self.assertEqual(summary["recovered"], 1)
+            self.assertEqual(saved[0]["collection_status"], "DOWNLOADED")
+
+    def test_old_total_budget_skip_is_retried_under_expanded_recovery_budget(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td); out = root / "output/ENVINFO"
+            rows = [row(file_id="F2", collection_status=recovery.TOTAL_BUDGET_STATUS, error="old 500MB budget")]
+            write_index(out / "attachment_index.csv", rows)
+            (out / "status.json").write_text(json.dumps({"attachment_ok": 0, "attachment_fail": 0, "errors": 0}), encoding="utf-8")
+            payload = b"expanded-budget"
+            def fake_download(session, item, attachments_root, max_attempts=2, **kwargs):
+                target = Path(attachments_root) / "2024/C1/expanded.pdf"
+                target.parent.mkdir(parents=True, exist_ok=True); target.write_bytes(payload)
+                return target, len(payload), digest(payload), "application/pdf", 1
+            with patch.object(recovery, "download_without_total_cap", side_effect=fake_download):
+                summary = recovery.recover(out, root, total_limit=1000, max_seconds=5)
+            saved = recovery.read_rows(out / "attachment_index.csv")
+            self.assertEqual(summary["recovered"], 1)
+            self.assertEqual(saved[0]["collection_status"], "DOWNLOADED")
+
+    def test_default_recovery_budget_exceeds_primary_budget(self):
+        self.assertGreater(recovery.DEFAULT_TOTAL_LIMIT_BYTES, recovery.base.MAX_ATTACHMENT_TOTAL_BYTES)
+        self.assertGreaterEqual(recovery.DEFAULT_MAX_PASSES, 2)
+
     def test_sustainability_report_is_recovered_before_supporting_evidence(self):
         report = row(section_id="inquiry26", importance="SUPPORTING")
         supporting = row(section_id="inquiry04", importance="SUPPORTING")

@@ -125,6 +125,8 @@ def download_attachment(session,row,root,total_bytes,max_attempts=2):
             r.raise_for_status()
             declared=int(r.headers.get("Content-Length") or 0)
             if declared and declared>MAX_ATTACHMENT_BYTES: raise ValueError("attachment exceeds per-file safety limit")
+            if declared and total_bytes+declared>MAX_ATTACHMENT_TOTAL_BYTES:
+                raise ValueError("attachment collection size safety limit exceeded")
             target=unique_target(root/str(row["year"])/safe(row["compId"]),row["original_filename"],row["file_id"],row["file_ext"])
             count=0
             with target.open("wb") as f:
@@ -145,6 +147,12 @@ def download_attachment(session,row,root,total_bytes,max_attempts=2):
             try:
                 if target and target.exists(): target.unlink()
             except Exception: pass
+            deterministic_limit = isinstance(exc, ValueError) and (
+                "attachment collection size safety limit exceeded" in str(exc)
+                or "attachment exceeds per-file safety limit" in str(exc)
+            )
+            if deterministic_limit:
+                break
             if attempt+1<max_attempts: time.sleep(0.5*(attempt+1))
     row.update({"collection_status":"DOWNLOAD_FAILED","error":f"{type(last_exc).__name__}: {last_exc}"})
     return False,total_bytes,attempts
@@ -165,7 +173,7 @@ def main(req_path):
     raw.mkdir(parents=True,exist_ok=True); details.mkdir(parents=True,exist_ok=True); attachments_root.mkdir(parents=True,exist_ok=True)
     s=requests.Session(); s.headers.update({"User-Agent":UA})
     status={"source_key":"ENVINFO","status":"RUNNING","year_start":y1,"year_end":y2,"terms":terms,"requests":0,"errors":0}
-    dedup={}; excluded_rows=[]; attachment_rows=[]; attachment_ok=attachment_fail=0; attachment_bytes=0
+    dedup={}; excluded_rows=[]; attachment_rows=[]; attachment_ok=attachment_fail=0; attachment_bytes=0; attachment_budget_exhausted=False
     try:
         p=s.get(SEARCH_PAGE,timeout=(5,12)); p.raise_for_status(); (out/"search_page_raw.html").write_text(p.text,encoding="utf-8")
         term_map=cfg.get("search_terms_by_year",{})
@@ -214,10 +222,21 @@ def main(req_path):
                     attachment_rows.extend(found)
                     if collect_attachments:
                         for att in found:
+                            if attachment_budget_exhausted:
+                                att.update({
+                                    "collection_status":"DOWNLOAD_FAILED",
+                                    "error":"ValueError: attachment collection size safety limit exceeded; deferred to recovery stage",
+                                })
+                                attachment_fail+=1; status["errors"]+=1
+                                continue
                             ok,attachment_bytes,attempts=download_attachment(s,att,attachments_root,attachment_bytes)
                             status["requests"]+=attempts
-                            if ok: attachment_ok+=1
-                            else: attachment_fail+=1; status["errors"]+=1
+                            if ok:
+                                attachment_ok+=1
+                            else:
+                                attachment_fail+=1; status["errors"]+=1
+                                if "attachment collection size safety limit exceeded" in str(att.get("error") or ""):
+                                    attachment_budget_exhausted=True
                             time.sleep(float(cfg.get("request_delay_ms",80))/1000)
                 except Exception as e:
                     detail_fail+=1; status["errors"]+=1

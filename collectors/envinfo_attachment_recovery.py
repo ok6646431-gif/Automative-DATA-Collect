@@ -29,7 +29,11 @@ RECOVERY_FIELDS = list(base.ATTACHMENT_FIELDS) + ["storage_state", "storage_refe
 TOTAL_BUDGET_ERROR = "attachment collection size safety limit exceeded"
 MISSING_FILE_ERROR = "stored attachment file missing before recovery"
 TIME_BUDGET_STATUS = "SKIPPED_RECOVERY_TIME_BUDGET"
+TOTAL_BUDGET_STATUS = "SKIPPED_TOTAL_BUDGET"
+RETRYABLE_RECOVERY_STATES = {TIME_BUDGET_STATUS, TOTAL_BUDGET_STATUS, "DISCOVERED"}
 DEFAULT_MAX_SECONDS = 360
+DEFAULT_MAX_PASSES = 3
+DEFAULT_TOTAL_LIMIT_BYTES = 2 * 1024 * 1024 * 1024
 
 
 class RecoveryTimeBudgetExceeded(RuntimeError):
@@ -266,7 +270,7 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
     if not rows:
         return {"recovered": 0, "deduplicated": 0, "skipped_budget": 0, "skipped_time_budget": 0, "remaining_failed": 0}
 
-    total_limit = int(total_limit or base.MAX_ATTACHMENT_TOTAL_BYTES)
+    total_limit = DEFAULT_TOTAL_LIMIT_BYTES if total_limit is None else int(total_limit)
 
     missing_files_requeued = requeue_missing_downloaded(rows, repo_root)
     if missing_files_requeued:
@@ -283,10 +287,15 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
 
     candidates = [
         r for r in rows
-        if r.get("collection_status") == "DOWNLOAD_FAILED"
-        and (
-            TOTAL_BUDGET_ERROR in str(r.get("error") or "")
-            or MISSING_FILE_ERROR in str(r.get("error") or "")
+        if (
+            r.get("collection_status") in RETRYABLE_RECOVERY_STATES
+            or (
+                r.get("collection_status") == "DOWNLOAD_FAILED"
+                and (
+                    TOTAL_BUDGET_ERROR in str(r.get("error") or "")
+                    or MISSING_FILE_ERROR in str(r.get("error") or "")
+                )
+            )
         )
     ]
     candidates.sort(key=recovery_priority)
@@ -330,7 +339,7 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
                 target.unlink(missing_ok=True)
                 row.update({
                     "stored_path": "", "bytes": str(count), "sha256": digest, "content_type": ctype,
-                    "collection_status": "SKIPPED_TOTAL_BUDGET",
+                    "collection_status": TOTAL_BUDGET_STATUS,
                     "error": f"unique attachment storage budget exhausted: limit={total_limit}; used={unique_bytes}; candidate={count}",
                     "storage_state": "BUDGET_SKIPPED", "storage_reference": "",
                 })
@@ -361,7 +370,7 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
     write_rows(out, rows)
     downloaded_rows = [r for r in rows if r.get("collection_status") == "DOWNLOADED"]
     remaining_failed = [r for r in rows if r.get("collection_status") == "DOWNLOAD_FAILED"]
-    budget_skipped = [r for r in rows if r.get("collection_status") == "SKIPPED_TOTAL_BUDGET"]
+    budget_skipped = [r for r in rows if r.get("collection_status") == TOTAL_BUDGET_STATUS]
     time_skipped = [r for r in rows if r.get("collection_status") == TIME_BUDGET_STATUS]
     logical_bytes = sum(int(r.get("bytes") or 0) for r in downloaded_rows)
     old_fail = int(status.get("attachment_fail") or 0)
@@ -401,15 +410,58 @@ def recover(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=N
     return summary
 
 
+def recover_until_settled(out_dir="output/ENVINFO", repo_root=".", total_limit=None, session=None,
+                          max_seconds=DEFAULT_MAX_SECONDS, max_passes=DEFAULT_MAX_PASSES, clock=time.monotonic):
+    """Resume bounded recovery passes until no time-budget deferrals remain.
+
+    Every pass checkpoints attachment_index before returning.  A pass is repeated only
+    when it stopped because of its wall-clock budget; aggregate-storage skips remain
+    explicit rather than causing an infinite retry loop.
+    """
+    summaries = []
+    for pass_no in range(1, max(1, int(max_passes)) + 1):
+        summary = recover(
+            out_dir, repo_root, total_limit=total_limit, session=session,
+            max_seconds=max_seconds, clock=clock,
+        )
+        summary = dict(summary)
+        summary["pass"] = pass_no
+        summaries.append(summary)
+        if int(summary.get("skipped_time_budget") or 0) == 0:
+            break
+
+    final = dict(summaries[-1]) if summaries else {}
+    final.update({
+        "passes": len(summaries),
+        "recovered_across_passes": sum(int(x.get("recovered") or 0) for x in summaries),
+        "pass_summaries": summaries,
+    })
+    _atomic_text(Path(out_dir) / "attachment_recovery_summary.json", json.dumps(final, ensure_ascii=False, indent=2))
+    print(json.dumps({
+        "recovery_passes": final.get("passes", 0),
+        "recovered_across_passes": final.get("recovered_across_passes", 0),
+        "final_attachment_ok": final.get("attachment_ok", 0),
+        "final_skipped_budget": final.get("skipped_budget", 0),
+        "final_skipped_time_budget": final.get("skipped_time_budget", 0),
+        "final_remaining_failed": final.get("remaining_failed", 0),
+    }, ensure_ascii=False))
+    return final
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="output/ENVINFO")
     ap.add_argument("--repo-root", default=".")
-    ap.add_argument("--total-limit", type=int, default=base.MAX_ATTACHMENT_TOTAL_BYTES)
+    ap.add_argument("--total-limit", type=int, default=DEFAULT_TOTAL_LIMIT_BYTES)
     ap.add_argument("--max-seconds", type=int, default=DEFAULT_MAX_SECONDS,
-                    help="Soft wall-clock budget for recovery retries; 0 disables the limit.")
+                    help="Wall-clock budget for one recovery pass; 0 disables the limit.")
+    ap.add_argument("--max-passes", type=int, default=DEFAULT_MAX_PASSES,
+                    help="Maximum checkpointed recovery passes when time-budget deferrals remain.")
     args = ap.parse_args()
-    recover(args.out, args.repo_root, args.total_limit, max_seconds=args.max_seconds)
+    recover_until_settled(
+        args.out, args.repo_root, args.total_limit,
+        max_seconds=args.max_seconds, max_passes=args.max_passes,
+    )
 
 
 if __name__ == "__main__":
