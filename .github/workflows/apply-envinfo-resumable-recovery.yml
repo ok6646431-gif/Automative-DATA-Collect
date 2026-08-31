@@ -1,0 +1,28 @@
+name: Apply ENVINFO resumable recovery
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/patch_envinfo_resumable_recovery.py'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - run: python tools/patch_envinfo_resumable_recovery.py
+      - run: python -m unittest discover -s tests -p 'test_envinfo_attachment_recovery.py' -v
+      - run: python -m unittest discover -s tests -p 'test_envinfo_attachments.py' -v
+      - name: Commit generic resumable recovery
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add collectors/envinfo_collect.py collectors/envinfo_attachment_recovery.py tests/test_envinfo_attachment_recovery.py .github/workflows/collect.yml
+          git diff --cached --exit-code && exit 0
+          git commit -m 'Make ENVINFO attachment recovery resumable'
+          git push
