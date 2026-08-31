@@ -16,28 +16,26 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests
-      - name: Inspect official report page and download endpoints
+      - name: Probe static report candidates
         run: |
           python - <<'PY'
-          import re, requests
+          from urllib.parse import quote
+          import requests
           landing='https://www.kkpc.com/kor/winwin/esg/sustainabilityList/'
-          s=requests.Session()
-          s.headers.update({'User-Agent':'Mozilla/5.0'})
-          r=s.get(landing,timeout=(10,30))
-          print('LANDING',r.status_code,'bytes',len(r.content),'url',r.url)
-          text=r.text
-          for term in ['2020년','2021년','2022년','2023년','4017','5173','6252','7019','Popup_Survey']:
-              hits=list(re.finditer(re.escape(term),text,re.I))
-              print('TERM',term,'hits',len(hits))
-              for m in hits[:3]:
-                  print(text[max(0,m.start()-180):min(len(text),m.end()+260)].replace('\n',' '))
-          urls={
-              '2020-kor':'https://www.kkpc.com/download/?seq=4017',
-              '2021-kor':'https://www.kkpc.com/download/?seq=5173',
-              '2022-kor':'https://www.kkpc.com/download/?seq=6252',
-              '2023-kor':'https://www.kkpc.com/download/?seq=7019',
-              '2023-eng':'https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf',
+          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0'})
+          r=s.get(landing,timeout=(10,30)); r.raise_for_status()
+          names={
+              '2020-kor':'[금호석유화학] 2020지속가능경영보고서.pdf',
+              '2021-kor':'2021_KKPC_SR_KOR.pdf',
+              '2022-kor':'2022_SUSTAINABILITY_REPORT.pdf',
+              '2023-kor':'금호석유화학 지속가능경영보고서 2023.pdf',
           }
+          urls={k:'https://www.kkpc.com/upload/download/'+quote(v,safe='()[]') for k,v in names.items()}
+          urls.update({
+              '2020-eng-seq':'https://www.kkpc.com/download/?seq=3778',
+              '2021-eng-seq':'https://www.kkpc.com/download/?seq=5174',
+              '2022-eng-seq':'https://www.kkpc.com/download/?seq=6416',
+          })
           headers={'Referer':r.url,'Range':'bytes=0-1023'}
           for name,url in urls.items():
               print('\nPROBE',name,url)
@@ -46,11 +44,7 @@ jobs:
                       print('status',q.status_code,'final',q.url)
                       for h in ['Content-Type','Content-Length','Content-Range','Accept-Ranges','Content-Disposition']:
                           print(h,repr(q.headers.get(h)))
-                      first=b''
-                      for chunk in q.iter_content(1024):
-                          if chunk:
-                              first=chunk[:1024]
-                              break
+                      first=next((c for c in q.iter_content(1024) if c),b'')
                       print('first_bytes',repr(first[:32]),'read',len(first))
               except Exception as exc:
                   print('ERROR',type(exc).__name__,repr(str(exc)))
