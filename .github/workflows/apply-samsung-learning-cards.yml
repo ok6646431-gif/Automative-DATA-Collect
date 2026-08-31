@@ -1,0 +1,49 @@
+name: Apply Samsung learning cards
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'tools/patch_samsung_learning_cards.py'
+      - '.github/workflows/apply-samsung-learning-cards.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-samsung-learning-cards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/patch_samsung_learning_cards.py
+      - name: Run targeted regressions
+        run: >-
+          python -m unittest
+          tests.test_learning_cards
+          tests.test_postprocess
+          tests.test_cross_layer_review
+          tests.test_document_semantics
+          tests.test_archive_builder
+          tests.test_scope_quality
+          tests.test_scope_consistency_final -v
+      - name: Commit integrated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add orchestrator/postprocess.py orchestrator/learning_cards.py orchestrator/package_run.py orchestrator/archive_builder.py tests/test_postprocess.py tests/test_learning_cards.py requests/industry_reference_applicability.json requests/document_evidence.json requests/semantic_evidence.json requests/legal_evidence.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Add evidence-gated environmental learning cards"
+          git push
