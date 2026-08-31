@@ -1,0 +1,41 @@
+name: Apply final scope consistency
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'tools/patch_final_scope_consistency.py'
+      - '.github/workflows/apply-final-scope-consistency.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-final-scope-consistency-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/patch_final_scope_consistency.py
+      - name: Run targeted regression tests
+        run: python -m unittest tests.test_scope_consistency_final tests.test_scope_quality tests.test_archive_zip_dedup tests.test_review_report -v
+      - name: Commit integrated fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add orchestrator/archive_zip_dedup.py orchestrator/review_report.py tests/test_scope_consistency_final.py
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "Keep requested-scope completeness through final archive"
+          git push
