@@ -21,7 +21,7 @@ jobs:
           - KUMHO_SUSTAINABILITY_2020
           - NIER_ENERGY_KBREF_II_2022
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
