@@ -4,6 +4,7 @@ on:
     branches: [run/control-plane]
     paths:
       - 'tools/patch_envinfo_resumable_recovery.py'
+      - '.github/workflows/apply-envinfo-resumable-recovery.yml'
 permissions:
   contents: write
 jobs:
