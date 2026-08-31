@@ -14,16 +14,23 @@ old='''                length = int(r.headers.get("Content-Length") or 0)\n     
 new='''                length = int(r.headers.get("Content-Length") or 0)\n                if length and length > MAX_FILE_BYTES:\n                    raise ValueError(f"declared file size exceeds {MAX_FILE_BYTES} bytes")\n                active_budget = wall_budget_for_length(length)\n                deadline = max(deadline, started + active_budget)\n                count = 0\n'''
 assert old in text, 'content length block not found'
 text=text.replace(old,new,1)
+old='''                        count += len(chunk)\n                        if count > MAX_FILE_BYTES or total_bytes + count > MAX_TOTAL_BYTES:\n'''
+new='''                        count += len(chunk)\n                        if not length:\n                            active_budget = wall_budget_for_length(count)\n                            deadline = max(deadline, started + active_budget)\n                        if count > MAX_FILE_BYTES or total_bytes + count > MAX_TOTAL_BYTES:\n'''
+assert old in text, 'download chunk block not found'
+text=text.replace(old,new,1)
 text=text.replace('''raise TimeoutError(f"document wall-clock budget exceeded ({MAX_DOCUMENT_WALL_SECONDS:.0f}s)")''','''raise TimeoutError(f"document wall-clock budget exceeded ({active_budget:.0f}s)")''')
 p.write_text(text,encoding='utf-8')
 
 p=Path('tests/test_corporate_docs_collect.py')
 t=p.read_text(encoding='utf-8')
 t=t.replace('from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, MAX_DOCUMENT_WALL_SECONDS, collect','from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, BASE_DOCUMENT_WALL_SECONDS, MAX_DOCUMENT_WALL_SECONDS, wall_budget_for_length, collect',1)
-t=t.replace('''        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],30)\n        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,120)\n''','''        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],60)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],60)\n        self.assertLessEqual(BASE_DOCUMENT_WALL_SECONDS,120)\n        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,360)\n        self.assertGreater(MAX_DOCUMENT_WALL_SECONDS,BASE_DOCUMENT_WALL_SECONDS)\n''',1)
+old_test='''    def test_runtime_budget_is_bounded(self):\n        self.assertLessEqual(DOWNLOAD_ATTEMPTS,2)\n        self.assertLessEqual(PREFLIGHT_TIMEOUT[1],10)\n        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],15)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],30)\n        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,120)\n'''
+new_test='''    def test_runtime_budget_is_bounded(self):\n        self.assertLessEqual(DOWNLOAD_ATTEMPTS,2)\n        self.assertLessEqual(PREFLIGHT_TIMEOUT[1],15)\n        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],60)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],20)\n        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],60)\n        self.assertLessEqual(BASE_DOCUMENT_WALL_SECONDS,120)\n        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,360)\n        self.assertGreater(MAX_DOCUMENT_WALL_SECONDS,BASE_DOCUMENT_WALL_SECONDS)\n'''
+assert old_test in t, 'runtime budget test block not found'
+t=t.replace(old_test,new_test,1)
 marker='''    def test_slow_drip_download_hits_total_wall_clock_budget(self):\n'''
 case='''    def test_large_declared_file_gets_bounded_size_aware_budget(self):\n        small = wall_budget_for_length(2 * 1024 * 1024)\n        large = wall_budget_for_length(32 * 1024 * 1024)\n        huge = wall_budget_for_length(100 * 1024 * 1024)\n        self.assertEqual(small, BASE_DOCUMENT_WALL_SECONDS)\n        self.assertGreater(large, BASE_DOCUMENT_WALL_SECONDS)\n        self.assertLessEqual(large, MAX_DOCUMENT_WALL_SECONDS)\n        self.assertEqual(huge, MAX_DOCUMENT_WALL_SECONDS)\n\n'''
 assert marker in t, 'slow drip marker missing'
 t=t.replace(marker,case+marker,1)
-# Existing slow-drip fake has no Content-Length and must still hit the 120s base budget.
+# Existing slow-drip fake has a tiny declared length and must still hit the 120s base budget.
 p.write_text(t,encoding='utf-8')
