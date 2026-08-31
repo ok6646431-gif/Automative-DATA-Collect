@@ -1,0 +1,102 @@
+name: Verify Kumho Range-capable reports
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/verify_kumho_range_docs.marker'
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        document_id:
+          - KUMHO_SUSTAINABILITY_2023
+          - KUMHO_SUSTAINABILITY_2024
+          - KUMHO_SUSTAINABILITY_2025
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Bootstrap runtime company inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Build isolated verified document request
+        env:
+          DOC_ID: ${{ matrix.document_id }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          src=json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          wanted=os.environ['DOC_ID']
+          docs=[dict(d) for d in src.get('documents',[]) if d.get('document_id')==wanted]
+          if len(docs)!=1:
+              raise SystemExit(f'Expected one document for {wanted}, got {len(docs)}')
+          doc=docs[0]
+          if wanted=='KUMHO_SUSTAINABILITY_2023':
+              fallbacks=list(doc.get('fallback_sources') or [])
+              if not fallbacks:
+                  raise SystemExit('2023 verified static fallback missing')
+              old_primary={
+                  'source_url':doc['source_url'],
+                  'source_locator':doc.get('source_locator'),
+                  'expected_extension':doc.get('expected_extension'),
+                  'verification_status':doc.get('verification_status'),
+                  'notes':'Verified Korean seq route retained as fallback during Range transport verification.'
+              }
+              preferred=fallbacks[0]
+              for key in ('source_url','source_locator','expected_extension','verification_status'):
+                  if key in preferred:
+                      doc[key]=preferred[key]
+              doc['fallback_sources']=[old_primary]
+          src['documents']=[doc]
+          src['gaps']=[]
+          Path('requests/runtime/one_document.json').write_text(json.dumps(src,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps({'document_id':wanted,'source_url':doc['source_url']},ensure_ascii=False))
+          PY
+      - name: Collect one document
+        continue-on-error: true
+        run: python collectors/corporate_docs_collect.py requests/runtime/one_document.json requests/runtime/company_profile.generated.json
+      - name: Print collection diagnostics
+        if: always()
+        run: |
+          cat output/CORP_DOCS/status.json 2>/dev/null || true
+          echo '--- attempts ---'
+          cat output/CORP_DOCS/download_attempts.csv 2>/dev/null || true
+          echo '--- index ---'
+          cat output/CORP_DOCS/document_index.csv 2>/dev/null || true
+          echo '--- files ---'
+          find output/CORP_DOCS/raw_documents -type f -printf '%s %p\n' 2>/dev/null || true
+      - name: Require real downloaded document
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          status=json.loads(Path('output/CORP_DOCS/status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader(Path('output/CORP_DOCS/document_index.csv').open(encoding='utf-8-sig')))
+          if status.get('downloaded') != 1 or len(rows)!=1 or rows[0].get('collection_status')!='DOWNLOADED':
+              raise SystemExit(f'Verification failed: status={status}; rows={rows}')
+          path=Path(rows[0]['stored_path'])
+          if not path.exists() or path.stat().st_size != int(rows[0]['bytes']):
+              raise SystemExit('Stored file/byte validation failed')
+          if path.read_bytes()[:5] != b'%PDF-':
+              raise SystemExit('Stored payload is not a PDF')
+          print('REAL_DOWNLOAD_PASS', rows[0]['document_id'], rows[0]['bytes'], rows[0]['sha256'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: range-${{ matrix.document_id }}
+          path: output/CORP_DOCS/
+          if-no-files-found: warn
+          retention-days: 2
