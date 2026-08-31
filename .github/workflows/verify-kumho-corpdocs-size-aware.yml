@@ -1,0 +1,36 @@
+name: Verify Kumho corpdocs size-aware
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/verify_kumho_corpdocs_size_aware.marker'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Bootstrap runtime company inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Run corporate document regression tests
+        run: python -m unittest discover -s tests -p 'test_corporate_docs_collect.py' -v
+      - name: Collect corporate documents
+        run: python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+      - name: Upload document verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-corpdocs-size-aware
+          path: output/CORP_DOCS/
+          if-no-files-found: warn
+          retention-days: 2
