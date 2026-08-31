@@ -15,12 +15,16 @@ MAX_TOTAL_BYTES = 500 * 1024 * 1024
 # Keep each source attempt bounded. A document may declare separately verified
 # fallback_sources; the collector tries them only after the primary source fails.
 DOWNLOAD_ATTEMPTS = 2
-PREFLIGHT_TIMEOUT = (5, 10)
-DOWNLOAD_TIMEOUT = (8, 25)
-ATTACHMENT_DISCOVERY_TIMEOUT = (15, 30)
-# requests' read timeout is an inactivity timeout, not a total transfer deadline.
-# Bound each source candidate so slow-drip servers cannot monopolize a workflow.
-MAX_DOCUMENT_WALL_SECONDS = 120.0
+PREFLIGHT_TIMEOUT = (8, 15)
+DOWNLOAD_TIMEOUT = (15, 60)
+ATTACHMENT_DISCOVERY_TIMEOUT = (20, 60)
+# requests' read timeout is only an inactivity timeout. Keep a short default
+# wall budget for ordinary files, but give legitimately large official files a
+# size-aware allowance while retaining an absolute upper bound.
+BASE_DOCUMENT_WALL_SECONDS = 120.0
+MAX_DOCUMENT_WALL_SECONDS = 360.0
+MIN_EXPECTED_TRANSFER_BPS = 128 * 1024
+LARGE_FILE_OVERHEAD_SECONDS = 30.0
 PREFLIGHT_CACHE = {}
 FIELDS = [
     "document_id", "company_id", "canonical_site_id", "site_name_raw", "source_key", "document_type",
@@ -272,11 +276,20 @@ def preflight(session, doc, source_url):
     return dict(headers)
 
 
+def wall_budget_for_length(length):
+    if not length:
+        return BASE_DOCUMENT_WALL_SECONDS
+    estimated = LARGE_FILE_OVERHEAD_SECONDS + (float(length) / float(MIN_EXPECTED_TRANSFER_BPS))
+    return min(MAX_DOCUMENT_WALL_SECONDS, max(BASE_DOCUMENT_WALL_SECONDS, estimated))
+
+
 def download_one(session, doc, target, total_bytes):
     url = str(doc.get("source_url") or "")
     headers = preflight(session, doc, url)
     last_exc = None
-    deadline = time.monotonic() + MAX_DOCUMENT_WALL_SECONDS
+    started = time.monotonic()
+    deadline = started + BASE_DOCUMENT_WALL_SECONDS
+    active_budget = BASE_DOCUMENT_WALL_SECONDS
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         remaining = deadline - time.monotonic()
         if remaining <= 0:
@@ -290,14 +303,19 @@ def download_one(session, doc, target, total_bytes):
                 length = int(r.headers.get("Content-Length") or 0)
                 if length and length > MAX_FILE_BYTES:
                     raise ValueError(f"declared file size exceeds {MAX_FILE_BYTES} bytes")
+                active_budget = wall_budget_for_length(length)
+                deadline = max(deadline, started + active_budget)
                 count = 0
                 with target.open("wb") as f:
                     for chunk in r.iter_content(1024 * 1024):
                         if time.monotonic() > deadline:
-                            raise TimeoutError(f"document wall-clock budget exceeded ({MAX_DOCUMENT_WALL_SECONDS:.0f}s)")
+                            raise TimeoutError(f"document wall-clock budget exceeded ({active_budget:.0f}s)")
                         if not chunk:
                             continue
                         count += len(chunk)
+                        if not length:
+                            active_budget = wall_budget_for_length(count)
+                            deadline = max(deadline, started + active_budget)
                         if count > MAX_FILE_BYTES or total_bytes + count > MAX_TOTAL_BYTES:
                             raise ValueError("document collection size safety limit exceeded")
                         f.write(chunk)

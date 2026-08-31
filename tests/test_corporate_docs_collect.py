@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"collectors"))
-from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, MAX_DOCUMENT_WALL_SECONDS, collect
+from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, BASE_DOCUMENT_WALL_SECONDS, MAX_DOCUMENT_WALL_SECONDS, wall_budget_for_length, collect
 
 
 class FakeResponse:
@@ -19,11 +19,22 @@ class FakeResponse:
 class CorporateDocsTests(unittest.TestCase):
     def test_runtime_budget_is_bounded(self):
         self.assertLessEqual(DOWNLOAD_ATTEMPTS,2)
-        self.assertLessEqual(PREFLIGHT_TIMEOUT[1],10)
-        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)
-        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],15)
-        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],30)
-        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,120)
+        self.assertLessEqual(PREFLIGHT_TIMEOUT[1],15)
+        self.assertLessEqual(DOWNLOAD_TIMEOUT[1],60)
+        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],20)
+        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],60)
+        self.assertLessEqual(BASE_DOCUMENT_WALL_SECONDS,120)
+        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,360)
+        self.assertGreater(MAX_DOCUMENT_WALL_SECONDS,BASE_DOCUMENT_WALL_SECONDS)
+
+    def test_large_declared_file_gets_bounded_size_aware_budget(self):
+        small = wall_budget_for_length(2 * 1024 * 1024)
+        large = wall_budget_for_length(32 * 1024 * 1024)
+        huge = wall_budget_for_length(100 * 1024 * 1024)
+        self.assertEqual(small, BASE_DOCUMENT_WALL_SECONDS)
+        self.assertGreater(large, BASE_DOCUMENT_WALL_SECONDS)
+        self.assertLessEqual(large, MAX_DOCUMENT_WALL_SECONDS)
+        self.assertEqual(huge, MAX_DOCUMENT_WALL_SECONDS)
 
     def test_slow_drip_download_hits_total_wall_clock_budget(self):
         with tempfile.TemporaryDirectory() as td:
