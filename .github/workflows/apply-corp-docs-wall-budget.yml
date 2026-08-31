@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
       - run: python tools/patch_corp_docs_wall_budget.py
       - run: python -m unittest discover -s tests -p 'test_corporate_docs_collect.py' -v
       - name: Commit generic wall-clock budget
