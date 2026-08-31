@@ -23,9 +23,45 @@ jobs:
           --request-out requests/current.generated.json
           --summary-out requests/runtime/Company_Discovery_Summary.json
       - name: Run corporate document regression tests
-        run: python -m unittest discover -s tests -p 'test_corporate_docs_collect.py' -v
+        run: >-
+          python -m unittest
+          tests.test_corporate_docs_collect
+          tests.test_corporate_docs_slow_retry
+          tests.test_corporate_docs_range_segments
+          tests.test_kumho_report_source_routing -v
       - name: Collect corporate documents
         run: python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+      - name: Print acceptance diagnostics
+        if: always()
+        run: |
+          cat output/CORP_DOCS/status.json 2>/dev/null || true
+          echo '--- attempts ---'
+          cat output/CORP_DOCS/download_attempts.csv 2>/dev/null || true
+          echo '--- index ---'
+          cat output/CORP_DOCS/document_index.csv 2>/dev/null || true
+      - name: Require complete declared document collection
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          status=json.loads(Path('output/CORP_DOCS/status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader(Path('output/CORP_DOCS/document_index.csv').open(encoding='utf-8-sig')))
+          declared=int(status.get('documents_declared') or 0)
+          downloaded=int(status.get('downloaded') or 0)
+          failed=int(status.get('failed') or 0)
+          skipped=int(status.get('skipped') or 0)
+          if status.get('status') != 'DATA_FOUND' or failed != 0 or skipped != 0 or downloaded != declared:
+              bad=[(r.get('document_id'),r.get('collection_status'),r.get('notes')) for r in rows if r.get('collection_status')!='DOWNLOADED']
+              raise SystemExit(f'Kumho corpdocs acceptance failed: status={status}; bad_rows={bad}')
+          missing=[]
+          for row in rows:
+              p=Path(row['stored_path'])
+              if not p.exists() or p.stat().st_size != int(row['bytes']):
+                  missing.append((row['document_id'],row['stored_path'],row['bytes']))
+          if missing:
+              raise SystemExit(f'Stored-file verification failed: {missing}')
+          print('KUMHO_CORPDOC_ACCEPTANCE_PASS', json.dumps(status, ensure_ascii=False))
+          PY
       - name: Upload document verification
         if: always()
         uses: actions/upload-artifact@v4
