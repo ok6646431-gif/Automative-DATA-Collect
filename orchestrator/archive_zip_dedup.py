@@ -93,8 +93,21 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
     checks['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
     checks['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
     summary['acceptance_checks']=checks
+    blocking=dict(summary.get('blocking_acceptance_checks') or {})
+    if blocking:
+        blocking['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
+        blocking['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
+    else:
+        # Legacy summaries may not yet expose an explicit blocking set. Study-only
+        # enrichment checks (BAT/guideline references) must never downgrade company/public
+        # source collection completeness.
+        blocking={
+            k:bool(v) for k,v in checks.items()
+            if k not in {'guideline_reference_present'}
+        }
+    summary['blocking_acceptance_checks']=blocking
     summary['sustainability_coverage']=coverage
-    summary['archive_completeness']='COMPLETE' if checks and all(bool(v) for v in checks.values()) else 'INCOMPLETE'
+    summary['archive_completeness']='COMPLETE' if blocking and all(bool(v) for v in blocking.values()) else 'INCOMPLETE'
     return summary
 
 

@@ -132,8 +132,11 @@ def build_review_report(package_root, render_pdf=True):
     actions=read_csv(root/'Management_Action_Ledger.csv'); chems=read_csv(root/'Chemical_Review_Candidates.csv'); topics=read_csv(root/'Review_Topic_Candidates.csv')
     layers=read_csv(root/'Evidence_Layer_Registry.csv'); cross=read_csv(root/'Cross_Layer_Review_Candidates.csv'); questions=read_csv(root/'Study_Question_Queue.csv'); availability=read_csv(root/'Source_Availability.csv')
     review_summary=read_json(root/'Review_Selection_Summary.json',{}) or {}; cross_summary=read_json(root/'Cross_Layer_Review_Summary.json',{}) or {}
-    target_ids=set(scope.get('target_canonical_site_ids') or []); sites=[]; site_master={r.get('canonical_site_id'):r for r in read_csv(root/'Site_Master.csv')}
+    target_ids=set(scope.get('target_canonical_site_ids') or []); requested_candidate_ids=set(scope.get('target_candidate_ids') or [])
+    sites=[]; site_master={r.get('canonical_site_id'):r for r in read_csv(root/'Site_Master.csv')}
     for s in profile.get('site_candidates',[]) or []:
+        if requested_candidate_ids and str(s.get('candidate_id') or '') not in requested_candidate_ids:
+            continue
         name=s.get('site_name_raw'); addr=s.get('address_raw'); cid=''
         for tid in target_ids:
             m=site_master.get(tid,{})
