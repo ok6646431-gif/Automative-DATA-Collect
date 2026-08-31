@@ -33,7 +33,7 @@ concurrency:
 jobs:
   stable_sources:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -65,7 +65,7 @@ jobs:
         continue-on-error: true
         run: python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
       - name: Upload stable sources
-        if: always()
+        if: ${{ always() && cancelled() == false }}
         uses: actions/upload-artifact@v4
         with:
           name: stable-sources
@@ -281,7 +281,9 @@ jobs:
 
   package_and_validate:
     needs: [stable_sources, icis_attempt_1, icis_attempt_2, icis_attempt_3, icis_replay]
-    if: always()
+    # A superseded request is intentionally cancelled by the concurrency group.
+    # Do not turn that cancellation into a large partial archive build.
+    if: ${{ always() && cancelled() == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
