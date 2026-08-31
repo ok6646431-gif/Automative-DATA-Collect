@@ -17,6 +17,7 @@ MAX_TOTAL_BYTES = 500 * 1024 * 1024
 DOWNLOAD_ATTEMPTS = 2
 PREFLIGHT_TIMEOUT = (5, 10)
 DOWNLOAD_TIMEOUT = (8, 25)
+ATTACHMENT_DISCOVERY_TIMEOUT = (15, 30)
 PREFLIGHT_CACHE = {}
 FIELDS = [
     "document_id", "company_id", "canonical_site_id", "site_name_raw", "source_key", "document_type",
@@ -169,16 +170,22 @@ def discover_attachment_candidates(session, doc):
     expected = str(doc.get("expected_extension") or "").lower().lstrip(".")
     match_terms = [_norm_match_text(x) for x in (cfg.get("match_terms") or []) if str(x or "").strip()]
     same_host_only = bool(cfg.get("same_host_only", True))
-    try:
-        with session.get(page_url, timeout=PREFLIGHT_TIMEOUT, allow_redirects=True) as r:
-            r.raise_for_status()
-            body = getattr(r, "text", None)
-            if body is None:
-                raw = getattr(r, "body", b"")
-                body = raw.decode("utf-8", errors="ignore") if isinstance(raw, (bytes, bytearray)) else str(raw or "")
-            resolved_page = str(getattr(r, "url", None) or page_url)
-            PREFLIGHT_CACHE[page_url] = {"Referer": resolved_page}
-    except Exception:
+    body = None; resolved_page = page_url
+    for attempt in range(DOWNLOAD_ATTEMPTS):
+        try:
+            with session.get(page_url, timeout=ATTACHMENT_DISCOVERY_TIMEOUT, allow_redirects=True) as r:
+                r.raise_for_status()
+                body = getattr(r, "text", None)
+                if body is None:
+                    raw = getattr(r, "body", b"")
+                    body = raw.decode("utf-8", errors="ignore") if isinstance(raw, (bytes, bytearray)) else str(raw or "")
+                resolved_page = str(getattr(r, "url", None) or page_url)
+                PREFLIGHT_CACHE[page_url] = {"Referer": resolved_page}
+                break
+        except Exception:
+            if attempt + 1 < DOWNLOAD_ATTEMPTS:
+                time.sleep(1.0)
+    if body is None:
         return []
     parser = _AttachmentLinkParser()
     try:

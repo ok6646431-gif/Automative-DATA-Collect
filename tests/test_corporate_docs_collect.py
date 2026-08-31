@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"collectors"))
-from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, collect
+from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, collect
 
 
 class FakeResponse:
@@ -21,6 +21,8 @@ class CorporateDocsTests(unittest.TestCase):
         self.assertLessEqual(DOWNLOAD_ATTEMPTS,2)
         self.assertLessEqual(PREFLIGHT_TIMEOUT[1],10)
         self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)
+        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],15)
+        self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],30)
 
     def test_request_scope_mismatch_fails_closed_without_network(self):
         with tempfile.TemporaryDirectory() as td:
@@ -178,6 +180,22 @@ class CorporateDocsTests(unittest.TestCase):
             self.assertIn("source_selection=DISCOVERED_ATTACHMENT",rows[0]["notes"])
             attempts=list(csv.DictReader((out/"download_attempts.csv").open(encoding="utf-8-sig")))
             self.assertEqual(attempts[0]["source_role"],"DISCOVERED_ATTACHMENT")
+
+    def test_attachment_landing_page_retries_once_after_transient_failure(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            doc={"document_id":"BAT1","document_type":"BAT_REFERENCE","title":"반도체 최적가용기법 기준서","source_url":"https://official.example/board/664","source_locator":"https://official.example/board/664","expected_extension":"pdf","verification_status":"VERIFIED","attachment_discovery":{"match_terms":["반도체","기준서"]}}
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[doc]}),encoding="utf-8")
+            html='<html><a href="/download?id=1">반도체 최적가용기법 기준서.pdf</a></html>'
+            page=FakeResponse(body=html.encode("utf-8"),content_type="text/html",disposition="",url="https://official.example/board/664")
+            pdf=FakeResponse(body=b"%PDF-kbref",content_type="application/pdf",disposition='attachment; filename="kbref.pdf"',url="https://official.example/download?id=1")
+            session=unittest.mock.MagicMock(); session.get.side_effect=[RuntimeError("transient timeout"),page,pdf]
+            with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],1)
+            self.assertEqual(status["failed"],0)
+            self.assertEqual(session.get.call_count,3)
 
     def test_executable_extension_is_never_collected(self):
         with tempfile.TemporaryDirectory() as td:
