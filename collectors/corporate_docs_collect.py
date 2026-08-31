@@ -18,6 +18,9 @@ DOWNLOAD_ATTEMPTS = 2
 PREFLIGHT_TIMEOUT = (5, 10)
 DOWNLOAD_TIMEOUT = (8, 25)
 ATTACHMENT_DISCOVERY_TIMEOUT = (15, 30)
+# requests' read timeout is an inactivity timeout, not a total transfer deadline.
+# Bound each source candidate so slow-drip servers cannot monopolize a workflow.
+MAX_DOCUMENT_WALL_SECONDS = 120.0
 PREFLIGHT_CACHE = {}
 FIELDS = [
     "document_id", "company_id", "canonical_site_id", "site_name_raw", "source_key", "document_type",
@@ -273,9 +276,16 @@ def download_one(session, doc, target, total_bytes):
     url = str(doc.get("source_url") or "")
     headers = preflight(session, doc, url)
     last_exc = None
+    deadline = time.monotonic() + MAX_DOCUMENT_WALL_SECONDS
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            last_exc = TimeoutError(f"document wall-clock budget exceeded ({MAX_DOCUMENT_WALL_SECONDS:.0f}s)")
+            break
+        connect_timeout = max(1.0, min(float(DOWNLOAD_TIMEOUT[0]), remaining))
+        read_timeout = max(1.0, min(float(DOWNLOAD_TIMEOUT[1]), remaining))
         try:
-            with session.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT, allow_redirects=True, headers=headers) as r:
+            with session.get(url, stream=True, timeout=(connect_timeout, read_timeout), allow_redirects=True, headers=headers) as r:
                 r.raise_for_status()
                 length = int(r.headers.get("Content-Length") or 0)
                 if length and length > MAX_FILE_BYTES:
@@ -283,6 +293,8 @@ def download_one(session, doc, target, total_bytes):
                 count = 0
                 with target.open("wb") as f:
                     for chunk in r.iter_content(1024 * 1024):
+                        if time.monotonic() > deadline:
+                            raise TimeoutError(f"document wall-clock budget exceeded ({MAX_DOCUMENT_WALL_SECONDS:.0f}s)")
                         if not chunk:
                             continue
                         count += len(chunk)
@@ -297,8 +309,8 @@ def download_one(session, doc, target, total_bytes):
         except Exception as exc:
             last_exc = exc
             target.unlink(missing_ok=True)
-            if attempt < DOWNLOAD_ATTEMPTS:
-                time.sleep(0.5 * attempt)
+            if attempt < DOWNLOAD_ATTEMPTS and time.monotonic() < deadline:
+                time.sleep(min(0.5 * attempt, max(0.0, deadline - time.monotonic())))
     raise last_exc
 
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"collectors"))
-from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, collect
+from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, MAX_DOCUMENT_WALL_SECONDS, collect
 
 
 class FakeResponse:
@@ -23,6 +23,21 @@ class CorporateDocsTests(unittest.TestCase):
         self.assertLessEqual(DOWNLOAD_TIMEOUT[1],25)
         self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],15)
         self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[1],30)
+        self.assertLessEqual(MAX_DOCUMENT_WALL_SECONDS,120)
+
+    def test_slow_drip_download_hits_total_wall_clock_budget(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); evidence=root/"docs.json"; profile=root/"profile.json"; out=root/"out"
+            profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
+            evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[{"document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Slow report","source_url":"https://official.example/slow.pdf","expected_extension":"pdf","verification_status":"VERIFIED"}]}),encoding="utf-8")
+            session=unittest.mock.MagicMock(); session.get.return_value=FakeResponse(body=b"%PDF-slow")
+            ticks=iter([0.0, 0.0, 121.0, 121.0, 121.0])
+            with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.monotonic",side_effect=lambda: next(ticks)), patch("corporate_docs_collect.time.sleep"):
+                status=collect(evidence,profile,out)
+            self.assertEqual(status["downloaded"],0)
+            self.assertEqual(status["failed"],1)
+            rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
+            self.assertIn("wall-clock budget exceeded",rows[0]["notes"])
 
     def test_request_scope_mismatch_fails_closed_without_network(self):
         with tempfile.TemporaryDirectory() as td:
