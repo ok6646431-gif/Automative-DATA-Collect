@@ -220,7 +220,11 @@ def resolve_identity(candidates,profile):
     for site in profile.get("site_candidates",[]) or []:
         if not isinstance(site,dict): continue
         if site.get("verification_state") not in {"VERIFIED","SOURCE_VERIFIED"}: continue
-        if site.get("identity_status") != "CONFIRMED": continue
+        # Discovery/profile schemas historically used VERIFIED for a site whose
+        # identity had already been source-verified, while this resolver originally
+        # accepted only CONFIRMED. Treat both as strong identity states only when the
+        # independent verification_state above is also strong.
+        if site.get("identity_status") not in {"CONFIRMED","VERIFIED","SOURCE_VERIFIED"}: continue
         addr=normalize_address(site.get("address_raw"),profile)
         if addr: official_by_addr[addr].append(site)
     official_unique={addr:items[0] for addr,items in official_by_addr.items() if len(items)==1}

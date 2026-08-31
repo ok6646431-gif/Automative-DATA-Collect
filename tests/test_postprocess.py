@@ -63,6 +63,23 @@ class TestPostprocessIdentity(unittest.TestCase):
         self.assertEqual(ids[0]["match_basis"],"OFFICIAL_SITE_EXACT_ADDRESS")
         self.assertEqual(vals,[])
 
+    def test_verified_identity_status_profile_address_confirms_single_source(self):
+        profile={**PROFILE,"site_candidates":[{
+            "candidate_id":"test-daesan",
+            "site_name_raw":"대산공장",
+            "address_raw":"충청남도 서산시 대산읍 독곶1로 54",
+            "identity_status":"VERIFIED",
+            "verification_state":"VERIFIED",
+        }]}
+        cs=[
+          {"source_key":"CHEM_STATS","source_site_id":"A","source_site_name_raw":"테스트화학","source_address_raw":"충남 서산시 대산읍 독곶1로 54","years":[2024]},
+        ]
+        _,sites,ids,vals=resolve_identity(cs,profile)
+        self.assertEqual(sum(x["identity_status"]=="CONFIRMED" for x in sites),1)
+        self.assertEqual(ids[0]["match_status"],"CONFIRMED")
+        self.assertEqual(ids[0]["match_basis"],"OFFICIAL_SITE_EXACT_ADDRESS")
+        self.assertEqual(vals,[])
+
     def test_ambiguous_verified_profile_address_does_not_auto_confirm(self):
         profile={**PROFILE,"site_candidates":[
             {"candidate_id":"unit-a","site_name_raw":"A공장","address_raw":"전북 익산시 석암로 99","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
