@@ -1,0 +1,28 @@
+name: Apply ENVINFO skip completeness
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/patch_envinfo_skip_completeness.py'
+      - '.github/workflows/apply-envinfo-skip-completeness.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python tools/patch_envinfo_skip_completeness.py
+      - run: python -m unittest discover -s tests -p 'test_collection_completeness.py' -v
+      - run: python -m unittest discover -s tests -p 'test_scope_quality.py' -v
+      - name: Commit completeness guard
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/collection_completeness.py tests/test_collection_completeness.py
+          git diff --cached --exit-code && exit 0
+          git commit -m 'Treat deferred ENVINFO attachments as incomplete'
+          git push
