@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"collectors"))
-from corporate_docs_collect import DOWNLOAD_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, BASE_DOCUMENT_WALL_SECONDS, MAX_DOCUMENT_WALL_SECONDS, wall_budget_for_length, collect
+from corporate_docs_collect import DOWNLOAD_ATTEMPTS, TRANSFER_ATTEMPTS, DOWNLOAD_TIMEOUT, PREFLIGHT_TIMEOUT, ATTACHMENT_DISCOVERY_TIMEOUT, BASE_DOCUMENT_WALL_SECONDS, MAX_DOCUMENT_WALL_SECONDS, wall_budget_for_length, download_one, collect
 
 
 class FakeResponse:
@@ -19,6 +19,7 @@ class FakeResponse:
 class CorporateDocsTests(unittest.TestCase):
     def test_runtime_budget_is_bounded(self):
         self.assertLessEqual(DOWNLOAD_ATTEMPTS,2)
+        self.assertLessEqual(TRANSFER_ATTEMPTS,4)
         self.assertLessEqual(PREFLIGHT_TIMEOUT[1],15)
         self.assertLessEqual(DOWNLOAD_TIMEOUT[1],60)
         self.assertLessEqual(ATTACHMENT_DISCOVERY_TIMEOUT[0],20)
@@ -49,6 +50,62 @@ class CorporateDocsTests(unittest.TestCase):
             self.assertEqual(status["failed"],1)
             rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
             self.assertIn("wall-clock budget exceeded",rows[0]["notes"])
+
+    def test_interrupted_transfer_resumes_with_http_range(self):
+        import requests
+        with tempfile.TemporaryDirectory() as td:
+            target=Path(td)/"resume.pdf"
+            full=b"%PDF-abcdefghijklmno"
+            cut=8
+
+            class Interrupted(FakeResponse):
+                status_code=200
+                def __init__(self):
+                    super().__init__(body=full, url="https://official.example/report.pdf")
+                    self.headers["Content-Length"]=str(len(full))
+                def iter_content(self,size):
+                    yield full[:cut]
+                    raise requests.exceptions.ConnectionError("stream interrupted")
+
+            class Resumed(FakeResponse):
+                status_code=206
+                def __init__(self):
+                    super().__init__(body=full[cut:], url="https://official.example/report.pdf")
+                    self.headers["Content-Length"]=str(len(full)-cut)
+                    self.headers["Content-Range"]=f"bytes {cut}-{len(full)-1}/{len(full)}"
+
+            session=unittest.mock.MagicMock(); session.get.side_effect=[Interrupted(),Resumed()]
+            with patch("corporate_docs_collect.time.sleep"):
+                _,count,ctype=download_one(session,{"source_url":"https://official.example/report.pdf","expected_extension":"pdf"},target,0)
+            self.assertEqual(count,len(full))
+            self.assertEqual(target.read_bytes(),full)
+            self.assertEqual(ctype,"application/pdf")
+            self.assertEqual(session.get.call_args_list[1].kwargs["headers"]["Range"],f"bytes={cut}-")
+
+    def test_range_ignored_restarts_without_corrupt_append(self):
+        import requests
+        with tempfile.TemporaryDirectory() as td:
+            target=Path(td)/"restart.pdf"
+            full=b"%PDF-restart-complete"
+            cut=7
+
+            class Interrupted(FakeResponse):
+                status_code=200
+                def __init__(self):
+                    super().__init__(body=full, url="https://official.example/report.pdf")
+                    self.headers["Content-Length"]=str(len(full))
+                def iter_content(self,size):
+                    yield full[:cut]
+                    raise requests.exceptions.ConnectionError("stream interrupted")
+
+            second=FakeResponse(body=full,url="https://official.example/report.pdf")
+            second.status_code=200
+            session=unittest.mock.MagicMock(); session.get.side_effect=[Interrupted(),second]
+            with patch("corporate_docs_collect.time.sleep"):
+                _,count,_=download_one(session,{"source_url":"https://official.example/report.pdf","expected_extension":"pdf"},target,0)
+            self.assertEqual(count,len(full))
+            self.assertEqual(target.read_bytes(),full)
+            self.assertIn("Range",session.get.call_args_list[1].kwargs["headers"])
 
     def test_request_scope_mismatch_fails_closed_without_network(self):
         with tempfile.TemporaryDirectory() as td:
@@ -89,7 +146,7 @@ class CorporateDocsTests(unittest.TestCase):
                 status=collect(evidence,profile,out)
             self.assertEqual(status["downloaded"],0)
             self.assertEqual(status["failed"],1)
-            self.assertEqual(session.get.call_count,DOWNLOAD_ATTEMPTS)
+            self.assertEqual(session.get.call_count,1)
             rows=list(csv.DictReader((out/"document_index.csv").open(encoding="utf-8-sig")))
             self.assertEqual(rows[0]["collection_status"],"DOWNLOAD_FAILED")
             self.assertIn("expected PDF payload",rows[0]["notes"])
@@ -111,7 +168,7 @@ class CorporateDocsTests(unittest.TestCase):
             blocked=FakeResponse(body=b"<html>temporary error</html>",content_type="text/html",disposition="",url="https://company.example/report.pdf")
             fallback=FakeResponse(body=b"%PDF-fallback",content_type="application/pdf",disposition='attachment; filename="fallback.pdf"',url="https://exchange.example/report.pdf")
             source_page=FakeResponse(body=b"<html>disclosure</html>",content_type="text/html",disposition="",url="https://exchange.example/disclosure")
-            session=unittest.mock.MagicMock(); session.get.side_effect=[blocked,blocked,source_page,fallback]
+            session=unittest.mock.MagicMock(); session.get.side_effect=[blocked,source_page,fallback]
             with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):
                 status=collect(evidence,profile,out)
             self.assertEqual(status["downloaded"],1)
@@ -136,13 +193,13 @@ class CorporateDocsTests(unittest.TestCase):
             }
             evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"PARTIAL","documents":[doc]}),encoding="utf-8")
             blocked=FakeResponse(body=b"<html>error</html>",content_type="text/html",disposition="",url="https://company.example/report.pdf")
-            session=unittest.mock.MagicMock(); session.get.side_effect=[blocked,blocked]
+            session=unittest.mock.MagicMock(); session.get.side_effect=[blocked]
             with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.sleep"):
                 status=collect(evidence,profile,out)
             self.assertEqual(status["downloaded"],0)
             self.assertEqual(status["fallback_downloaded"],0)
             self.assertEqual(status["failed"],1)
-            self.assertEqual(session.get.call_count,DOWNLOAD_ATTEMPTS)
+            self.assertEqual(session.get.call_count,1)
             attempts=list(csv.DictReader((out/"download_attempts.csv").open(encoding="utf-8-sig")))
             self.assertEqual(attempts[-1]["attempt_status"],"SKIPPED_UNVERIFIED_SOURCE")
 
