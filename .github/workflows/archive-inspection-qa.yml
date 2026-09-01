@@ -40,7 +40,7 @@ jobs:
       - name: Inspect Human Archive ZIP
         run: |
           python - <<'PY'
-          import csv, json, re, zipfile
+          import csv, hashlib, json, re, zipfile
           from collections import Counter, defaultdict
           from pathlib import Path, PurePosixPath
 
@@ -50,45 +50,64 @@ jobs:
 
           with zipfile.ZipFile(archive_path) as z:
               infos=z.infolist()
+              file_infos=[i for i in infos if not i.is_dir()]
+              names=[i.filename for i in file_infos]
+              roots=sorted({PurePosixPath(n).parts[0] for n in names if PurePosixPath(n).parts})
+              top_counts=Counter()
+              ext_counts=Counter()
+              zero_files=[]
+              rows=[]
+              samples=defaultdict(list)
 
-          file_infos=[i for i in infos if not i.is_dir()]
-          names=[i.filename for i in file_infos]
-          roots=sorted({PurePosixPath(n).parts[0] for n in names if PurePosixPath(n).parts})
-          top_counts=Counter()
-          ext_counts=Counter()
-          zero_files=[]
-          rows=[]
-          samples=defaultdict(list)
+              for info in file_infos:
+                  p=PurePosixPath(info.filename)
+                  parts=p.parts
+                  top=parts[1] if len(parts) > 1 else '(root-file)'
+                  top_counts[top]+=1
+                  ext=(p.suffix.lower() or '(none)')
+                  ext_counts[ext]+=1
+                  if info.file_size == 0:
+                      zero_files.append(info.filename)
+                  if len(samples[top]) < 12:
+                      samples[top].append(info.filename)
+                  rows.append({
+                      'path':info.filename,
+                      'bytes':info.file_size,
+                      'compressed_bytes':info.compress_size,
+                      'extension':ext,
+                      'top_folder':top,
+                  })
 
-          for info in file_infos:
-              p=PurePosixPath(info.filename)
-              parts=p.parts
-              top=parts[1] if len(parts) > 1 else '(root-file)'
-              top_counts[top]+=1
-              ext=(p.suffix.lower() or '(none)')
-              ext_counts[ext]+=1
-              if info.file_size == 0:
-                  zero_files.append(info.filename)
-              if len(samples[top]) < 12:
-                  samples[top].append(info.filename)
-              rows.append({
-                  'path':info.filename,
-                  'bytes':info.file_size,
-                  'compressed_bytes':info.compress_size,
-                  'extension':ext,
-                  'top_folder':top,
-              })
+              duplicate_paths=len(names)-len(set(names))
+              sustainability=[]
+              for n in names:
+                  low=n.lower()
+                  if ('지속가능' in n or 'sustainability' in low) and low.endswith('.pdf'):
+                      sustainability.append(n)
+              years=sorted({int(y) for n in sustainability for y in re.findall(r'20(?:20|21|22|23|24|25)', n)})
+              bat=[n for n in names if ('k-bref' in n.lower() or '최적가용기법' in n or 'bat_reference' in n.lower())]
+              policy=[n for n in names if ('정책' in n or 'policy' in n.lower() or '방침' in n) and not n.endswith('/')]
+              xlsx=[n for n in names if n.lower().endswith('.xlsx')]
 
-          duplicate_paths=len(names)-len(set(names))
-          sustainability=[]
-          for n in names:
-              low=n.lower()
-              if ('지속가능' in n or 'sustainability' in low) and low.endswith('.pdf'):
-                  sustainability.append(n)
-          years=sorted({int(y) for n in sustainability for y in re.findall(r'20(?:20|21|22|23|24|25)', n)})
-          bat=[n for n in names if ('k-bref' in n.lower() or '최적가용기법' in n or 'bat_reference' in n.lower())]
-          policy=[n for n in names if ('정책' in n or 'policy' in n.lower() or '방침' in n) and not n.endswith('/')]
-          xlsx=[n for n in names if n.lower().endswith('.xlsx')]
+              user_sustainability=[
+                  n for n in names
+                  if '/01_사용자자료/04_지속가능경영보고서/' in n and n.lower().endswith('.pdf')
+              ]
+              hash_rows=[]
+              by_hash=defaultdict(list)
+              for n in user_sustainability:
+                  h=hashlib.sha256()
+                  with z.open(n) as f:
+                      for chunk in iter(lambda:f.read(1024*1024),b''):
+                          h.update(chunk)
+                  digest=h.hexdigest()
+                  info=z.getinfo(n)
+                  hash_rows.append({'path':n,'bytes':info.file_size,'sha256':digest})
+                  by_hash[digest].append(n)
+              duplicate_sha256_groups=[
+                  {'sha256':digest,'count':len(paths),'paths':paths}
+                  for digest,paths in sorted(by_hash.items()) if len(paths)>1
+              ]
 
           result={
               'inspection_status':'PASS',
@@ -104,6 +123,9 @@ jobs:
               'sustainability_pdf_count':len(sustainability),
               'sustainability_years':years,
               'sustainability_files':sustainability,
+              'user_sustainability_file_count':len(user_sustainability),
+              'user_sustainability_hashes':hash_rows,
+              'user_sustainability_exact_duplicate_groups':duplicate_sha256_groups,
               'bat_reference_count':len(bat),
               'bat_reference_files':bat[:50],
               'policy_file_count':len(policy),
@@ -130,6 +152,9 @@ jobs:
           with open('inspection-output/Archive_File_List.csv','w',newline='',encoding='utf-8-sig') as f:
               w=csv.DictWriter(f,fieldnames=['top_folder','path','bytes','compressed_bytes','extension'])
               w.writeheader(); w.writerows(rows)
+          with open('inspection-output/Sustainability_Hashes.csv','w',newline='',encoding='utf-8-sig') as f:
+              w=csv.DictWriter(f,fieldnames=['path','bytes','sha256'])
+              w.writeheader(); w.writerows(hash_rows)
           with open('inspection-output/Archive_Tree.txt','w',encoding='utf-8') as f:
               f.write('ROOTS\n')
               for r in roots: f.write(f'- {r}\n')
@@ -139,7 +164,15 @@ jobs:
               for k,vals in sorted(samples.items()):
                   f.write(f'\n[{k}]\n')
                   for n in vals: f.write(f'- {n}\n')
-          print(json.dumps(result,ensure_ascii=False))
+          print(json.dumps({
+              'inspection_status':'PASS',
+              'file_count':len(file_infos),
+              'duplicate_path_count':duplicate_paths,
+              'sustainability_years':years,
+              'user_sustainability_file_count':len(user_sustainability),
+              'exact_duplicate_groups':duplicate_sha256_groups,
+              'bat_reference_count':len(bat),
+          },ensure_ascii=False))
           PY
       - name: Upload inspection report
         uses: actions/upload-artifact@v4
