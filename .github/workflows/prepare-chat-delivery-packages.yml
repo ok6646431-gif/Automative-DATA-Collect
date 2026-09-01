@@ -1,0 +1,114 @@
+name: Prepare direct chat delivery packages
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/chat_delivery_token.txt
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download POSCO support zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: posco-application-environment-materials
+          path: source/posco
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33506073108
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Kumho core zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kumho-application-core
+          path: source/kumho_core
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33506544947
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Kumho ENVINFO 1 zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kumho-application-envinfo-1
+          path: source/kumho_env1
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33506544947
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Kumho ENVINFO 2 zip artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kumho-application-envinfo-2
+          path: source/kumho_env2
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33506544947
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Expand verified inner zips
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p delivery/posco delivery/kumho_core delivery/kumho_env1 delivery/kumho_env2
+          POSCO="$(find source/posco -type f -name '*.zip' -print -quit)"
+          CORE="$(find source/kumho_core -type f -name '*.zip' -print -quit)"
+          ENV1="$(find source/kumho_env1 -type f -name '*.zip' -print -quit)"
+          ENV2="$(find source/kumho_env2 -type f -name '*.zip' -print -quit)"
+          for f in "$POSCO" "$CORE" "$ENV1" "$ENV2"; do
+            test -n "$f"
+            unzip -t "$f" >/dev/null
+          done
+          unzip -q "$POSCO" -d delivery/posco
+          unzip -q "$CORE" -d delivery/kumho_core
+          unzip -q "$ENV1" -d delivery/kumho_env1
+          unzip -q "$ENV2" -d delivery/kumho_env2
+          echo '--- POSCO ---'; find delivery/posco -type f | wc -l; du -sh delivery/posco
+          echo '--- KUMHO CORE ---'; find delivery/kumho_core -type f | wc -l; du -sh delivery/kumho_core
+          echo '--- KUMHO ENV1 ---'; find delivery/kumho_env1 -type f | wc -l; du -sh delivery/kumho_env1
+          echo '--- KUMHO ENV2 ---'; find delivery/kumho_env2 -type f | wc -l; du -sh delivery/kumho_env2
+          if find delivery -type d -name '90_시스템원본' | grep -q .; then
+            echo 'System-original folder leaked into delivery package' >&2
+            exit 1
+          fi
+
+      - name: Upload POSCO direct delivery
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-posco-application-materials
+          path: delivery/posco/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Kumho core direct delivery
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-kumho-core
+          path: delivery/kumho_core/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Kumho ENVINFO 1 direct delivery
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-kumho-envinfo-1
+          path: delivery/kumho_env1/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Kumho ENVINFO 2 direct delivery
+        uses: actions/upload-artifact@v4
+        with:
+          name: chat-kumho-envinfo-2
+          path: delivery/kumho_env2/
+          if-no-files-found: error
+          retention-days: 14
