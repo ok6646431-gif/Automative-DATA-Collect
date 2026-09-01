@@ -47,9 +47,9 @@ def _user_retention_rank(path):
     """Prefer canonical/user-friendly names when exact copies coexist in one folder.
 
     ENV-INFO promoted copies intentionally carry an ``ENVINFO공개연도_`` provenance
-    prefix.  When the exact same bytes are also present under a canonical corporate
+    prefix. When the exact same bytes are also present under a canonical corporate
     document filename in the same user folder, keep the canonical filename and record
-    the removed promoted copy.  Other ties are deterministic only; content identity is
+    the removed promoted copy. Other ties are deterministic only; content identity is
     always established by SHA-256 before anything is removed.
     """
     p=Path(path)
@@ -139,6 +139,59 @@ def deduplicate_tree(archive_root):
     }
 
 
+def _user_inventory_rows(archive_root):
+    archive_root=Path(archive_root); user=archive_root/'01_사용자자료'; rows=[]
+    if not user.exists(): return rows
+    for p in sorted(user.rglob('*')):
+        if not p.is_file(): continue
+        rel=p.relative_to(archive_root)
+        rows.append({
+            '구분': rel.parts[1] if len(rel.parts)>1 else '',
+            '파일명': p.name,
+            '상대경로': str(rel),
+            '용량_MB': round(p.stat().st_size/1024/1024,3),
+        })
+    return rows
+
+
+def _write_user_inventory_xlsx(path,rows):
+    try:
+        import xlsxwriter
+    except Exception as exc:
+        raise RuntimeError('xlsxwriter is required to refresh user archive indexes after deduplication') from exc
+    path=Path(path); path.parent.mkdir(parents=True,exist_ok=True)
+    wb=xlsxwriter.Workbook(str(path),{'constant_memory':True})
+    ws=wb.add_worksheet('사용자자료')
+    header=wb.add_format({'bold':True,'bg_color':'#E7E6E6','border':1,'align':'center','valign':'vcenter'})
+    textfmt=wb.add_format({'valign':'top'}); wrap=wb.add_format({'valign':'top','text_wrap':True})
+    fields=['구분','파일명','상대경로','용량_MB']
+    for c,k in enumerate(fields): ws.write(0,c,k,header)
+    for r_idx,row in enumerate(rows,1):
+        for c,k in enumerate(fields):
+            value=row.get(k,'')
+            ws.write(r_idx,c,value,wrap if isinstance(value,str) and len(value)>50 else textfmt)
+    ws.freeze_panes(1,0)
+    ws.autofilter(0,0,max(1,len(rows)),len(fields)-1)
+    widths={'구분':24,'파일명':45,'상대경로':80,'용량_MB':14}
+    for c,k in enumerate(fields): ws.set_column(c,c,widths[k])
+    wb.close()
+
+
+def refresh_user_indexes(archive_root):
+    """Rebuild user-facing inventory files after post-build duplicate removal.
+
+    Deduplication happens after the initial archive indexes are generated. Without this
+    refresh, ``전체자료목록.xlsx`` and ``사용자자료_목록.csv`` can refer to files that
+    were correctly removed as exact duplicates. Rebuilding from the actual remaining
+    tree keeps the delivered inventory aligned with the ZIP contents.
+    """
+    archive_root=Path(archive_root); idx=archive_root/'00_자료목록'; idx.mkdir(parents=True,exist_ok=True)
+    rows=_user_inventory_rows(archive_root)
+    write_csv(idx/'사용자자료_목록.csv',rows,['구분','파일명','상대경로','용량_MB'])
+    _write_user_inventory_xlsx(idx/'전체자료목록.xlsx',rows)
+    return len(rows)
+
+
 def _apply_sustainability_coverage(package_root,archive_root,summary):
     package_root=Path(package_root); archive_root=Path(archive_root)
     profile=read_json(package_root/'Company_Profile.json',{}) or {}
@@ -147,8 +200,6 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
     paths=[p for p in sorted(folder.rglob('*')) if p.is_file()] if folder.exists() else []
     coverage=evaluate_sustainability_coverage(profile,docs,paths)
     checks=dict(summary.get('acceptance_checks') or {})
-    # Keep the old key for downstream compatibility, but its meaning is now explicit
-    # year/file coverage rather than a raw distinct-file count.
     checks['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
     checks['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
     summary['acceptance_checks']=checks
@@ -157,13 +208,7 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
         blocking['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
         blocking['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
     else:
-        # Legacy summaries may not yet expose an explicit blocking set. Study-only
-        # enrichment checks (BAT/guideline references) must never downgrade company/public
-        # source collection completeness.
-        blocking={
-            k:bool(v) for k,v in checks.items()
-            if k not in {'guideline_reference_present'}
-        }
+        blocking={k:bool(v) for k,v in checks.items() if k not in {'guideline_reference_present'}}
     summary['blocking_acceptance_checks']=blocking
     summary['sustainability_coverage']=coverage
     summary['archive_completeness']='COMPLETE' if blocking and all(bool(v) for v in blocking.values()) else 'INCOMPLETE'
@@ -172,16 +217,21 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
 
 def _sync_metadata(package_root,archive_root,stats):
     package_root=Path(package_root); archive_root=Path(archive_root)
+    actual_user_files=refresh_user_indexes(archive_root)
+    actual_system_files=sum(1 for p in (archive_root/'90_시스템원본').rglob('*') if p.is_file())
+
     summary=read_json(package_root/'Archive_Summary.json',{}) or {}
     summary.update(stats)
-    summary['system_files']=sum(1 for p in (archive_root/'90_시스템원본').rglob('*') if p.is_file())
+    summary['user_files']=actual_user_files
+    summary['system_files']=actual_system_files
     summary=_apply_sustainability_coverage(package_root,archive_root,summary)
     package_root.joinpath('Archive_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
 
     manifest=read_json(package_root/'Master_Manifest.json',{}) or {}
     human=manifest.setdefault('human_archive',{})
     human.update(stats)
-    human['system_files']=summary['system_files']
+    human['user_files']=actual_user_files
+    human['system_files']=actual_system_files
     human['archive_completeness']=summary.get('archive_completeness')
     human['acceptance_checks']=summary.get('acceptance_checks') or {}
     human['sustainability_coverage']=summary.get('sustainability_coverage') or {}
@@ -190,7 +240,8 @@ def _sync_metadata(package_root,archive_root,stats):
     idx=archive_root/'00_자료목록'; idx.mkdir(parents=True,exist_ok=True)
     archive_manifest=read_json(idx/'Archive_Manifest.json',{}) or {}
     archive_manifest.update(stats)
-    archive_manifest['system_files']=summary['system_files']
+    archive_manifest['user_files']=actual_user_files
+    archive_manifest['system_files']=actual_system_files
     archive_manifest['archive_completeness']=summary.get('archive_completeness')
     archive_manifest['acceptance_checks']=summary.get('acceptance_checks') or {}
     archive_manifest['sustainability_coverage']=summary.get('sustainability_coverage') or {}
