@@ -31,6 +31,17 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        while True:
+            chunk = handle.read(8 * 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def find_relative_member(name: str) -> str | None:
     parts = PurePosixPath(name).parts
     for marker in ("00_자료목록", "01_사용자자료"):
@@ -124,21 +135,22 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             copied_files += 1
             copied_bytes += len(data)
 
-        readme = f"""{company} 지원용 환경자료 패키지\n\n"
-        "이 패키지는 검증 완료된 Human_Archive에서 시스템 원본(90_시스템원본)을 제외하고,\n"
-        "지원서·면접·직무공부에 바로 사용할 자료만 재분류한 것입니다.\n\n"
-        f"원본 workflow run: {source_run}\n"
-        "검증 범위:\n"
-        "- 실제 파일 다운로드 및 0바이트/형식/해시 검증\n"
-        "- 사업장·연도·수집상태(DATA_FOUND/NO_MATCH/NOT_PUBLISHED 등) 검증\n"
-        "- 보고서/정책/상세자료의 자동 본문 파싱 및 의미 추출\n"
-        "- 완전 동일 파일 SHA-256 중복 제거\n\n"
-        "주의:\n"
-        "- 수백 개 PDF를 사람이 전 페이지 수동 정독한 것은 아닙니다.\n"
-        "- 지원서에 사용할 핵심 내용의 선별·해석은 이 패키지를 기반으로 별도 수행합니다.\n"
-        "- 공식 NOT_PUBLISHED로 확인된 연도는 파일을 가짜로 만들지 않고 미발간 상태로 기록합니다.\n"
-        "- 00_자료목록/원본검증목록은 원래 검증 패키지의 목록이며, 새 경로 기준 목록은 지원용_전체자료목록.csv입니다.\n"
-        """
+        readme = (
+            f"{company} 지원용 환경자료 패키지\n\n"
+            "이 패키지는 검증 완료된 Human_Archive에서 시스템 원본(90_시스템원본)을 제외하고,\n"
+            "지원서·면접·직무공부에 바로 사용할 자료만 재분류한 것입니다.\n\n"
+            f"원본 workflow run: {source_run}\n\n"
+            "검증 범위:\n"
+            "- 실제 파일 다운로드 및 0바이트/형식/해시 검증\n"
+            "- 사업장·연도·수집상태(DATA_FOUND/NO_MATCH/NOT_PUBLISHED 등) 검증\n"
+            "- 보고서/정책/상세자료의 자동 본문 파싱 및 의미 추출\n"
+            "- 완전 동일 파일 SHA-256 중복 제거\n\n"
+            "주의:\n"
+            "- 수백 개 PDF를 사람이 전 페이지 수동 정독한 것은 아닙니다.\n"
+            "- 지원서에 사용할 핵심 내용의 선별·해석은 이 패키지를 기반으로 별도 수행합니다.\n"
+            "- 공식 NOT_PUBLISHED로 확인된 연도는 파일을 가짜로 만들지 않고 미발간 상태로 기록합니다.\n"
+            "- 00_자료목록/원본검증목록은 원래 검증 패키지의 목록이며, 새 경로 기준 목록은 지원용_전체자료목록.csv입니다.\n"
+        )
         out.writestr(f"{root_name}/README_먼저보기.txt", readme.encode("utf-8"))
 
         inventory_bytes = write_csv(
@@ -177,9 +189,11 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             raise RuntimeError("System-original folder leaked into support package")
         if not any(name.endswith("README_먼저보기.txt") for name in names):
             raise RuntimeError("README missing from support package")
+        if not any("지원용_전체자료목록.csv" in name for name in names):
+            raise RuntimeError("Support-package inventory missing")
 
     summary["output_zip"] = output_zip
-    summary["zip_sha256"] = hashlib.sha256(open(output_zip, "rb").read()).hexdigest()
+    summary["zip_sha256"] = sha256_file(output_zip)
     return summary
 
 
