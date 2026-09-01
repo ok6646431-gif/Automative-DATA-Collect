@@ -33,5 +33,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check xlsxwriter
       - name: Run sustainability coverage regressions
         run: python -m unittest tests.test_sustainability_coverage tests.test_bootstrap_inputs tests.test_archive_zip_dedup -v
