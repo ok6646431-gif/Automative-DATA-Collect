@@ -95,14 +95,25 @@ jobs:
                       parts=n.split('/')
                       key=parts[1] if len(parts)>1 else parts[0]
                       top[key]=top.get(key,0)+1
-                  print(json.dumps({
+                  summary_name=next(n for n in names if n.endswith('/00_자료목록/지원용_패키지_요약.json'))
+                  summary=json.loads(z.read(summary_name).decode('utf-8'))
+                  result={
                       'file': path,
                       'bytes': os.path.getsize(path),
                       'files': len(names),
                       'top_level_counts': top,
                       'testzip': z.testzip(),
                       'system_original_leak': any('90_시스템원본' in n for n in names),
-                  }, ensure_ascii=False))
+                      'envinfo_disclosure_records': summary['envinfo_disclosure_records'],
+                      'envinfo_attachment_references': summary['envinfo_attachment_references'],
+                      'envinfo_unique_attachments': summary['envinfo_unique_attachments'],
+                      'envinfo_duplicate_attachment_references': summary['envinfo_duplicate_attachment_references'],
+                      'envinfo_physical_files': summary['envinfo_physical_files'],
+                      'envinfo_site_count': summary['envinfo_site_count'],
+                  }
+                  if result['top_level_counts'].get('02_환경인허가_ENVINFO',0) != result['envinfo_physical_files']:
+                      raise RuntimeError(f'ENVINFO physical count mismatch: {result}')
+                  print(json.dumps(result, ensure_ascii=False))
           PY
 
       - name: Upload Kumho support package

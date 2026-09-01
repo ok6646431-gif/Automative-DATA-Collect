@@ -67,6 +67,10 @@ jobs:
               --target "$GITHUB_SHA" \
               --title "$RELEASE_TITLE" \
               --notes-file release_notes.md
+          else
+            gh release edit "$RELEASE_TAG" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release_notes.md
           fi
           mapfile -d '' ASSETS < <(find release-assets -maxdepth 1 -type f -print0 | sort -z)
           test "${#ASSETS[@]}" -gt 0
