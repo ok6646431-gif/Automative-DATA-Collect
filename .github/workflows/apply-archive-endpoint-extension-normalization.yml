@@ -1,0 +1,53 @@
+name: Apply archive endpoint extension normalization
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/archive_endpoint_extension_normalization.marker
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply patch
+        run: python tools/patch_archive_endpoint_extensions.py
+      - name: Compile archive builder
+        run: python -m py_compile orchestrator/archive_builder.py
+      - name: Verify user-facing endpoint normalization
+        run: |
+          PYTHONPATH=orchestrator python - <<'PY'
+          import tempfile
+          from pathlib import Path
+          import archive_builder
+
+          with tempfile.TemporaryDirectory() as td:
+              root=Path(td)
+              src=root/'source.do'; src.write_text('<!doctype html><html><body>ok</body></html>',encoding='utf-8')
+              out=archive_builder.unique_copy(src,root/'out','policy.do')
+              assert out.name=='policy.html', out
+              pdf=root/'report.do'; pdf.write_bytes(b'%PDF-1.4\n%%EOF')
+              out2=archive_builder.unique_copy(pdf,root/'out','report.do')
+              assert out2.name=='report.pdf', out2
+          print('endpoint extension normalization PASS')
+          PY
+      - name: Commit normalized archive builder
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/archive_builder.py
+          if git diff --cached --quiet; then
+            echo 'No patch changes required'
+            exit 0
+          fi
+          git commit -m 'Normalize web endpoint extensions in human archive'
+          git push origin HEAD:run/control-plane
