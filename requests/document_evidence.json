@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "kumho-petrochemical-env-20260831-v1",
+  "request_id": "posco-env-20260901-v1",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "discovery_scope": {
     "history_window": {
@@ -13,225 +13,132 @@
     "current_public_document_categories": [
       "SUSTAINABILITY_REPORT",
       "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
-      "ESG_POLICY_GUIDELINE",
-      "ENVIRONMENTAL_EHS_POLICY",
       "ENVIRONMENTAL_MANAGEMENT",
-      "CLIMATE_RESPONSE",
       "BAT_REFERENCE"
     ],
-    "scope_note": "금호석유화학 공식 홈페이지의 지속가능경영·안전환경보건·ESG 공개자료와 국립환경과학원 IEPS의 검증된 업종 기술기준을 대상으로 한다. 그룹 계열사의 별도 보고서·정책과 비공개 내부 SOP는 금호석유화학주식회사 공개자료 범위에서 제외한다.",
+    "scope_note": "포스코 지속가능경영 공식 사이트에서 철강 사업회사 주식회사 포스코에 귀속되는 공개자료를 대상으로 한다. 포스코홀딩스 및 그룹 계열사의 별도 보고서는 제외한다. 2020~2021 보고서는 2022년 3월 물적분할 이전 철강사업의 역사적 연속자료로 경계 표시하여 보존한다. 2025 보고서는 공식 디지털 보고서 형식을 그대로 수집한다.",
     "fallback_policy": "Only independently verified official-company or official-government routes may be used as fallbacks. A failed download is never converted into a no-data claim."
   },
   "documents": [
     {
-      "document_id": "KUMHO_SUSTAINABILITY_2025",
+      "document_id": "POSCO_SUSTAINABILITY_2025_DIGITAL",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "금호석유화학 지속가능경영보고서 2025",
+      "title": "포스코 2025 지속가능경영보고서 (디지털 보고서)",
       "report_year": 2025,
-      "source_url": "https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2025.pdf?v=20260724",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
-      "expected_extension": "pdf",
+      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645916083001125",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "notes": "2025 보고서는 포스코가 공식 디지털 형식으로 발간한 보고서이며 인쇄본/PDF 존재를 임의로 가정하지 않는다."
     },
     {
-      "document_id": "KUMHO_SUSTAINABILITY_2024",
+      "document_id": "POSCO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "금호석유화학 지속가능경영보고서 2024",
+      "title": "POSCO Sustainability Report 2024 국문",
       "report_year": 2024,
-      "source_url": "https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2024.pdf?v=20250822",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2024_kor.pdf",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "KUMHO_SUSTAINABILITY_2023",
+      "document_id": "POSCO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "금호석유화학 지속가능경영보고서 2023",
+      "title": "POSCO Sustainability Report 2023 국문",
       "report_year": 2023,
-      "source_url": "https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2023_kor.pdf",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.kkpc.com/download/?seq=7019",
-          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
-        }
-      ],
-      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback."
+      "importance": "CORE"
     },
     {
-      "document_id": "KUMHO_SUSTAINABILITY_2022",
+      "document_id": "POSCO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "금호석유화학 지속가능경영보고서 2022",
+      "title": "POSCO Sustainability Report 2022",
       "report_year": 2022,
-      "source_url": "https://www.kkpc.com/download/?seq=6416",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2022_eng.pdf",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback.",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.kkpc.com/download/?seq=6252",
-          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
-        }
-      ]
+      "notes": "현행 철강 사업회사 출범 첫 해의 공식 보고서."
     },
     {
-      "document_id": "KUMHO_SUSTAINABILITY_2021",
+      "document_id": "POSCO_SUSTAINABILITY_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "금호석유화학 지속가능경영보고서 2021",
+      "title": "POSCO Sustainability Report 2021",
       "report_year": 2021,
-      "source_url": "https://www.kkpc.com/download/?seq=5174",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2021_eng.pdf",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback.",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.kkpc.com/download/?seq=5173",
-          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
-        }
-      ]
+      "notes": "2022년 3월 물적분할 이전 철강사업 활동을 다루는 역사적 연속자료로 사용한다."
     },
     {
-      "document_id": "KUMHO_SUSTAINABILITY_2020",
+      "document_id": "POSCO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "금호석유화학 지속가능경영보고서 2020",
+      "title": "POSCO Corporate Citizenship Report 2020 국문",
       "report_year": 2020,
-      "source_url": "https://www.kkpc.com/download/?seq=3778",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://posco.co.kr/homepage/servlet/FileDown?file=%2Fhfiles%2Fboard%2F2b96d13e187c11eb685e861c8173b413.pdf&filename=posco_report_2020_kr.pdf",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Primary source selected from an independently verified official edition that passed real-file transport validation; Korean official route retained as fallback.",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.kkpc.com/download/?seq=4017",
-          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
-          "expected_extension": "pdf",
-          "verification_status": "VERIFIED",
-          "notes": "Official Korean edition retained as a verified fallback after transport acceptance testing."
-        }
-      ]
+      "notes": "2022년 3월 물적분할 이전 철강사업 활동을 다루는 역사적 연속자료로 사용한다."
     },
     {
-      "document_id": "KUMHO_ESG_POLICY_GUIDELINE_CURRENT",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "금호석유화학 ESG 정책 및 지침서",
-      "report_year": 2026,
-      "source_url": "https://www.kkpc.com/upload/download/금호석유화학 ESG 정책 및 지침서.pdf?v=20260616",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgGuidelines/",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "KUMHO_ESG_DATA_PACK_2025",
+      "document_id": "POSCO_ESG_FACTBOOK_2024",
       "document_type": "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
-      "title": "금호석유화학 2025 ESG Data Pack 국문",
-      "report_year": 2025,
-      "source_url": "https://www.kkpc.com/upload/download/2025 KKPC ESG Data Pack (KOR)_fin (upload).xlsx?v=20260813",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
-      "expected_extension": "xlsx",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "KUMHO_SEH_OVERVIEW",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "금호석유화학 안전환경보건경영 개요",
-      "report_year": 2026,
-      "source_url": "https://www.kkpc.com/kor/winwin/environment/intro/",
-      "source_locator": "https://www.kkpc.com/kor/winwin/environment/intro/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "KUMHO_SEH_POLICY",
-      "document_type": "ENVIRONMENTAL_POLICY",
-      "title": "금호석유화학 안전환경보건방침",
-      "report_year": 2026,
-      "source_url": "https://www.kkpc.com/kor/winwin/environment/course/",
-      "source_locator": "https://www.kkpc.com/kor/winwin/environment/course/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "KUMHO_SEH_ACTIVITY",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "금호석유화학 안전환경보건경영활동",
-      "report_year": 2026,
-      "source_url": "https://www.kkpc.com/kor/winwin/environment/activity/impact/",
-      "source_locator": "https://www.kkpc.com/kor/winwin/environment/activity/impact/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "KUMHO_CLIMATE_RESPONSE",
-      "document_type": "ENVIRONMENTAL_STRATEGY",
-      "title": "금호석유화학 기후변화 대응",
-      "report_year": 2026,
-      "source_url": "https://www.kkpc.com/kor/winwin/environment/climate/",
-      "source_locator": "https://www.kkpc.com/kor/winwin/environment/climate/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "KUMHO_ESG_STRATEGY",
-      "document_type": "ENVIRONMENTAL_STRATEGY",
-      "title": "금호석유화학 ESG 경영 전략",
-      "report_year": 2026,
-      "source_url": "https://www.kkpc.com/kor/winwin/esg/esgManagement/",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/esgManagement/",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "NIER_ENERGY_KBREF_II_2022",
-      "document_type": "BAT_REFERENCE",
-      "title": "전기 및 증기 생산시설의 환경오염방지 및 통합관리를 위한 최적가용기법 기준서(Ⅱ)",
-      "report_year": 2022,
-      "source_url": "https://ieps.nier.go.kr/web/board/5/1898/",
-      "source_locator": "https://ieps.nier.go.kr/web/board/5/1898/",
+      "title": "2024 POSCO ESG Factbook",
+      "report_year": 2024,
+      "source_url": "https://sustainability.posco.com/assets/file/2024_POSCO_ESG_Factbook.pdf",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
       "expected_extension": "pdf",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "POSCO_ENVIRONMENTAL_MANAGEMENT_CURRENT",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "포스코 환경경영",
+      "report_year": 2026,
+      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=1745995729003197",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=1745995729003197",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "POSCO_ENVIRONMENTAL_IMPACT_CURRENT",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "포스코 환경영향 및 환경법규 대응 공개자료",
+      "report_year": 2026,
+      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "CORE"
+    },
+    {
+      "document_id": "NIER_STEEL_KBREF_REVISION_2023",
+      "document_type": "BAT_REFERENCE",
+      "title": "철강제조업 최적가용기법 기준서 개정판 공식 공개 근거",
+      "report_year": 2023,
+      "source_url": "https://www.mcee.go.kr/home/web/board/read.do?boardId=1646865&boardMasterId=939&maxIndexPages=10&maxPageItems=10&menuId=10598&pagerOffset=2270",
+      "source_locator": "https://ieps.nier.go.kr/brefos",
+      "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "TECHNICAL_REFERENCE",
-      "attachment_discovery": {
-        "match_terms": [
-          "전기",
-          "증기",
-          "생산시설",
-          "최적가용기법",
-          "기준서"
-        ],
-        "same_host_only": true
-      },
-      "notes": "Official NIER/IEPS K-BREF landing page. Company application is not inferred from reference collection."
+      "notes": "환경부·국립환경과학원의 2023 철강제조업 BAT 기준서 개정 공개 근거를 보존한다. 실제 철강 K-BREF 원문 파일은 공식 IEPS 첨부 경로를 별도 확인하기 전까지 존재를 추정하지 않는다."
     }
   ],
   "gaps": [
     {
-      "gap_id": "KUMHO_SUSTAINABILITY_2026_NOT_PUBLISHED",
+      "gap_id": "POSCO_SUSTAINABILITY_2026_NOT_PUBLISHED",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
       "year": 2026,
@@ -239,8 +146,20 @@
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "2026-08-31 현재 금호석유화학 공식 지속가능경영보고서 페이지의 최신 보고서는 2025년이며 2026년 보고서는 공개 목록에 없다.",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/"
+      "reason": "2026-09-01 현재 포스코 공식 지속가능경영보고서 목록의 최신 연차 보고서는 2025년 디지털 보고서이며 2026년 보고서는 공개되지 않았다.",
+      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do"
+    },
+    {
+      "gap_id": "POSCO_STEEL_KBREF_DIRECT_FILE_PENDING",
+      "source_key": "CORP_DOCS",
+      "document_type": "BAT_REFERENCE",
+      "year": 2023,
+      "verification_status": "VERIFIED",
+      "status": "DIRECT_FILE_NOT_YET_DECLARED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "철강제조업 BAT 기준서 2023 개정 공개 사실과 공식 IEPS 위치는 확인했으나 이번 최초 운용 입력에서는 실제 기준서 첨부 PDF의 검증된 직접 경로를 아직 선언하지 않았다. 공식 공개 근거 HTML을 우선 보존한다.",
+      "source_locator": "https://ieps.nier.go.kr/brefos"
     }
   ]
 }
