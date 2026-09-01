@@ -89,24 +89,38 @@ jobs:
               policy=[n for n in names if ('정책' in n or 'policy' in n.lower() or '방침' in n) and not n.endswith('/')]
               xlsx=[n for n in names if n.lower().endswith('.xlsx')]
 
-              user_sustainability=[
-                  n for n in names
-                  if '/01_사용자자료/04_지속가능경영보고서/' in n and n.lower().endswith('.pdf')
-              ]
-              hash_rows=[]
-              by_hash=defaultdict(list)
-              for n in user_sustainability:
+              user_files=[n for n in names if '/01_사용자자료/' in n]
+              user_folder_hashes=defaultdict(lambda:defaultdict(list))
+              user_hash_rows=[]
+              for n in user_files:
                   h=hashlib.sha256()
                   with z.open(n) as f:
                       for chunk in iter(lambda:f.read(1024*1024),b''):
                           h.update(chunk)
                   digest=h.hexdigest()
+                  folder=str(PurePosixPath(n).parent)
                   info=z.getinfo(n)
-                  hash_rows.append({'path':n,'bytes':info.file_size,'sha256':digest})
-                  by_hash[digest].append(n)
+                  user_hash_rows.append({'folder':folder,'path':n,'bytes':info.file_size,'sha256':digest})
+                  user_folder_hashes[folder][digest].append(n)
+              user_same_folder_duplicate_groups=[]
+              for folder,by_hash in sorted(user_folder_hashes.items()):
+                  for digest,paths in sorted(by_hash.items()):
+                      if len(paths)>1:
+                          user_same_folder_duplicate_groups.append({
+                              'folder':folder,'sha256':digest,'count':len(paths),'paths':paths
+                          })
+
+              user_sustainability=[
+                  n for n in names
+                  if '/01_사용자자료/04_지속가능경영보고서/' in n and n.lower().endswith('.pdf')
+              ]
+              sustainability_hash_rows=[r for r in user_hash_rows if r['path'] in set(user_sustainability)]
+              sustainability_by_hash=defaultdict(list)
+              for r in sustainability_hash_rows:
+                  sustainability_by_hash[r['sha256']].append(r['path'])
               duplicate_sha256_groups=[
                   {'sha256':digest,'count':len(paths),'paths':paths}
-                  for digest,paths in sorted(by_hash.items()) if len(paths)>1
+                  for digest,paths in sorted(sustainability_by_hash.items()) if len(paths)>1
               ]
 
           result={
@@ -123,8 +137,11 @@ jobs:
               'sustainability_pdf_count':len(sustainability),
               'sustainability_years':years,
               'sustainability_files':sustainability,
+              'user_file_count':len(user_files),
+              'user_same_folder_exact_duplicate_count':len(user_same_folder_duplicate_groups),
+              'user_same_folder_exact_duplicate_groups':user_same_folder_duplicate_groups,
               'user_sustainability_file_count':len(user_sustainability),
-              'user_sustainability_hashes':hash_rows,
+              'user_sustainability_hashes':sustainability_hash_rows,
               'user_sustainability_exact_duplicate_groups':duplicate_sha256_groups,
               'bat_reference_count':len(bat),
               'bat_reference_files':bat[:50],
@@ -139,6 +156,8 @@ jobs:
               raise SystemExit(f'Unexpected archive root(s): {roots}')
           if duplicate_paths:
               raise SystemExit(f'Duplicate ZIP paths found: {duplicate_paths}')
+          if user_same_folder_duplicate_groups:
+              raise SystemExit(f'Exact duplicate files remain inside user folders: {len(user_same_folder_duplicate_groups)} groups')
           if set(range(2020,2026)) - set(years):
               raise SystemExit(f'Missing sustainability years: {sorted(set(range(2020,2026))-set(years))}')
           if not bat:
@@ -152,9 +171,12 @@ jobs:
           with open('inspection-output/Archive_File_List.csv','w',newline='',encoding='utf-8-sig') as f:
               w=csv.DictWriter(f,fieldnames=['top_folder','path','bytes','compressed_bytes','extension'])
               w.writeheader(); w.writerows(rows)
+          with open('inspection-output/User_File_Hashes.csv','w',newline='',encoding='utf-8-sig') as f:
+              w=csv.DictWriter(f,fieldnames=['folder','path','bytes','sha256'])
+              w.writeheader(); w.writerows(user_hash_rows)
           with open('inspection-output/Sustainability_Hashes.csv','w',newline='',encoding='utf-8-sig') as f:
-              w=csv.DictWriter(f,fieldnames=['path','bytes','sha256'])
-              w.writeheader(); w.writerows(hash_rows)
+              w=csv.DictWriter(f,fieldnames=['folder','path','bytes','sha256'])
+              w.writeheader(); w.writerows(sustainability_hash_rows)
           with open('inspection-output/Archive_Tree.txt','w',encoding='utf-8') as f:
               f.write('ROOTS\n')
               for r in roots: f.write(f'- {r}\n')
@@ -168,9 +190,11 @@ jobs:
               'inspection_status':'PASS',
               'file_count':len(file_infos),
               'duplicate_path_count':duplicate_paths,
+              'user_file_count':len(user_files),
+              'user_same_folder_exact_duplicate_count':len(user_same_folder_duplicate_groups),
               'sustainability_years':years,
               'user_sustainability_file_count':len(user_sustainability),
-              'exact_duplicate_groups':duplicate_sha256_groups,
+              'sustainability_exact_duplicate_groups':duplicate_sha256_groups,
               'bat_reference_count':len(bat),
           },ensure_ascii=False))
           PY
