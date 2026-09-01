@@ -67,12 +67,12 @@ jobs:
         with:
           name: stable-public-sources
           path: output/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
 
   corporate_documents:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -95,7 +95,7 @@ jobs:
         with:
           name: stable-corporate-documents
           path: output/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 7
 
   icis_attempt_1:
@@ -308,7 +308,7 @@ jobs:
     needs: [stable_sources, corporate_documents, icis_attempt_1, icis_attempt_2, icis_attempt_3, icis_replay]
     # A superseded request is intentionally cancelled by the concurrency group.
     # Do not turn that cancellation into a large partial archive build.
-    if: ${{ always() && cancelled() == false }}
+    if: ${{ always() && cancelled() == false && needs.stable_sources.result == 'success' && needs.corporate_documents.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -338,6 +338,18 @@ jobs:
           pattern: stable-*
           path: collected/stable
           merge-multiple: true
+      - name: Require stable source artifacts
+        run: |
+          for required in \
+            collected/stable/ENVINFO/status.json \
+            collected/stable/SOOSIRO_WATER/status.json \
+            collected/stable/CLEANSYS_AIR/status.json \
+            collected/stable/CORP_DOCS/status.json; do
+            if [ ! -s "$required" ]; then
+              echo "Missing required stable source artifact: $required" >&2
+              exit 1
+            fi
+          done
       - name: Download ICIS attempts
         continue-on-error: true
         uses: actions/download-artifact@v4
