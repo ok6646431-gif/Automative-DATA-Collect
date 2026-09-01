@@ -4,6 +4,6 @@
   "icis_run_id": 33483075983,
   "document_run_id": 33468795117,
   "document_artifact_name": "kumho-corpdocs-size-aware",
-  "purpose": "Validate package, human archive and folder delivery using the current Kumho public/ICIS artifacts plus the same-day strict 14-of-14 verified corporate-document artifact while the live corporate download E2E continues independently.",
-  "replay_token": "kkpc-split-artifact-replay-20260901-v1"
+  "purpose": "Validate package, human archive and folder delivery after exact SHA-256 deduplication inside each user-facing folder, using current Kumho public/ICIS artifacts plus the strict 14-of-14 verified corporate-document artifact.",
+  "replay_token": "kkpc-split-artifact-replay-20260901-v2-user-sha-dedup"
 }
