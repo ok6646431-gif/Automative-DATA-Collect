@@ -19,7 +19,7 @@ concurrency:
 jobs:
   replay_archive:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,14 +32,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fonts-noto-cjk fonts-nanum
           sudo fc-cache -f
-      - name: Read source runs
+      - name: Read source artifacts
         id: cfg
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
           cfg=json.load(open('requests/archive_replay_qa.json',encoding='utf-8'))
-          print('run_id='+str(cfg['source_run_id']))
-          print('document_run_id='+str(cfg.get('document_run_id') or 0))
+          source_run_id=str(cfg['source_run_id'])
+          print('source_run_id='+source_run_id)
+          print('public_artifact_name='+str(cfg.get('public_artifact_name') or 'stable-public-sources'))
+          print('document_run_id='+str(cfg.get('document_run_id') or source_run_id))
+          print('document_artifact_name='+str(cfg.get('document_artifact_name') or 'stable-corporate-documents'))
+          print('icis_run_id='+str(cfg.get('icis_run_id') or source_run_id))
           PY
       - name: Bootstrap current discovery inputs
         run: >-
@@ -47,32 +51,40 @@ jobs:
           --profile-out requests/runtime/company_profile.generated.json
           --request-out requests/current.generated.json
           --summary-out requests/runtime/Company_Discovery_Summary.json
-      - name: Download prior stable sources
+      - name: Download public-source artifact
         uses: actions/download-artifact@v4
         with:
-          name: stable-sources
+          name: ${{ steps.cfg.outputs.public_artifact_name }}
           path: collected/stable
-          run-id: ${{ steps.cfg.outputs.run_id }}
+          run-id: ${{ steps.cfg.outputs.source_run_id }}
           github-token: ${{ github.token }}
-      - name: Clear prior corporate-document lane
-        if: steps.cfg.outputs.document_run_id != '0'
-        run: rm -rf collected/stable/CORP_DOCS && mkdir -p collected/stable/CORP_DOCS
-      - name: Overlay current corporate-document lane
-        if: steps.cfg.outputs.document_run_id != '0'
+      - name: Download verified corporate-document artifact
         uses: actions/download-artifact@v4
         with:
-          name: corporate-docs-current-qa
+          name: ${{ steps.cfg.outputs.document_artifact_name }}
           path: collected/stable/CORP_DOCS
           run-id: ${{ steps.cfg.outputs.document_run_id }}
           github-token: ${{ github.token }}
-      - name: Download prior ICIS attempts
+      - name: Download ICIS attempts
         uses: actions/download-artifact@v4
         with:
           pattern: icis-attempt-*
           path: collected/icis
           merge-multiple: false
-          run-id: ${{ steps.cfg.outputs.run_id }}
+          run-id: ${{ steps.cfg.outputs.icis_run_id }}
           github-token: ${{ github.token }}
+      - name: Require replay inputs
+        run: |
+          for required in \
+            collected/stable/ENVINFO/status.json \
+            collected/stable/SOOSIRO_WATER/status.json \
+            collected/stable/CLEANSYS_AIR/status.json \
+            collected/stable/CORP_DOCS/status.json; do
+            if [ ! -s "$required" ]; then
+              echo "Missing replay input: $required" >&2
+              exit 1
+            fi
+          done
       - name: Rebuild package with current code
         run: >-
           python orchestrator/package_run.py
@@ -88,6 +100,37 @@ jobs:
           --package assembled
           --stable collected/stable
           --documents requests/document_evidence.json
+      - name: Validate corporate documents in archive
+        run: |
+          python - <<'PY'
+          import json, zipfile
+          from pathlib import Path
+          payload=json.loads(Path('assembled/Archive_Summary.json').read_text(encoding='utf-8'))
+          archive=payload.get('archive', payload)
+          checks=archive.get('acceptance_checks', {})
+          downloaded=int(archive.get('downloaded_documents') or 0)
+          if downloaded < 14:
+              raise SystemExit(f'Expected >=14 downloaded documents, got {downloaded}')
+          if not checks.get('sustainability_minimum_5'):
+              raise SystemExit('Sustainability minimum-history check failed')
+          if not checks.get('public_policy_present'):
+              raise SystemExit('Public policy document check failed')
+          if not archive.get('study_enrichment_checks', {}).get('guideline_reference_present'):
+              raise SystemExit('Guideline/BAT reference check failed')
+          z=zipfile.ZipFile('assembled/Human_Archive.zip')
+          names=z.namelist()
+          if len(names) < 100:
+              raise SystemExit(f'Archive unexpectedly small: {len(names)} entries')
+          print(json.dumps({
+              'REPLAY_ARCHIVE_ACCEPTANCE':'PASS',
+              'downloaded_documents':downloaded,
+              'zip_entries':len(names),
+              'zip_bytes':archive.get('zip_bytes'),
+              'archive_completeness':archive.get('archive_completeness'),
+              'acceptance_checks':checks,
+              'study_enrichment_checks':archive.get('study_enrichment_checks', {}),
+          }, ensure_ascii=False))
+          PY
       - name: Show archive summary
         run: cat assembled/Archive_Summary.json
       - name: Upload archive replay result
