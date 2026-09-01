@@ -5,5 +5,5 @@
   "document_run_id": 33483075983,
   "document_artifact_name": "stable-corporate-documents",
   "purpose": "Final bounded acceptance replay: rebuild the Kumho package and human archive with current code from the exact fresh public, ICIS and 14-of-14 corporate-document artifacts produced by the successful from-scratch E2E run, including exact user-folder SHA-256 deduplication and refreshed user inventory indexes.",
-  "replay_token": "kkpc-final-current-code-fresh-artifacts-20260901-v3"
+  "replay_token": "kkpc-final-current-code-fresh-artifacts-20260901-v4-path-fix"
 }
