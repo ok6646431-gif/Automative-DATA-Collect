@@ -11,6 +11,7 @@ from pathlib import Path
 
 TAG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 ARTIFACT_PATTERN_RE = re.compile(r"^[A-Za-z0-9*?][A-Za-z0-9._*?-]{0,127}$")
+RELEASE_ASSET_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}\.zip$")
 
 
 def load_config(path: Path) -> dict[str, object]:
@@ -37,15 +38,25 @@ def load_config(path: Path) -> dict[str, object]:
     assets = data.get("expected_assets")
     if not isinstance(assets, list) or not 1 <= len(assets) <= 20:
         raise ValueError("expected_assets must contain between 1 and 20 filenames")
-    normalized_assets: list[str] = []
+    normalized_assets: list[dict[str, str]] = []
     for asset in assets:
-        if not isinstance(asset, str) or not asset.strip():
-            raise ValueError("every expected asset must be a non-empty filename")
-        if Path(asset).name != asset or not asset.lower().endswith(".zip"):
-            raise ValueError(f"expected asset must be a ZIP basename: {asset!r}")
-        normalized_assets.append(asset)
-    if len(normalized_assets) != len(set(normalized_assets)):
-        raise ValueError("expected_assets contains duplicates")
+        if not isinstance(asset, dict):
+            raise ValueError("every expected asset must map source_name to release_name")
+        source_name = asset.get("source_name")
+        release_name = asset.get("release_name")
+        if (
+            not isinstance(source_name, str)
+            or Path(source_name).name != source_name
+            or not source_name.lower().endswith(".zip")
+        ):
+            raise ValueError(f"source_name must be a ZIP basename: {source_name!r}")
+        if not isinstance(release_name, str) or not RELEASE_ASSET_RE.fullmatch(release_name):
+            raise ValueError(f"release_name must be an ASCII ZIP basename: {release_name!r}")
+        normalized_assets.append({"source_name": source_name, "release_name": release_name})
+    source_names = [item["source_name"] for item in normalized_assets]
+    release_names = [item["release_name"] for item in normalized_assets]
+    if len(source_names) != len(set(source_names)) or len(release_names) != len(set(release_names)):
+        raise ValueError("expected_assets contains duplicate source or release filenames")
 
     data["expected_assets"] = normalized_assets
     return data
@@ -72,7 +83,10 @@ def prepare(config_path: Path, github_output: Path, notes_out: Path) -> None:
     write_output(github_output, "artifact_pattern", config["artifact_pattern"])
 
     custom_notes = str(config.get("release_notes", "")).strip()
-    assets = "\n".join(f"- `{name}`" for name in config["expected_assets"])
+    assets = "\n".join(
+        f"- `{item['release_name']}`"
+        for item in config["expected_assets"]
+    )
     notes = (
         f"{custom_notes}\n\n" if custom_notes else ""
     ) + (
@@ -92,18 +106,20 @@ def stage(config_path: Path, source_dir: Path, asset_dir: Path) -> None:
     asset_dir.mkdir(parents=True)
 
     checksum_rows: list[str] = []
-    for filename in config["expected_assets"]:
-        matches = [path for path in source_dir.rglob(filename) if path.is_file()]
+    for item in config["expected_assets"]:
+        source_name = item["source_name"]
+        release_name = item["release_name"]
+        matches = [path for path in source_dir.rglob(source_name) if path.is_file()]
         if len(matches) != 1:
-            raise RuntimeError(f"expected exactly one {filename!r}, found {len(matches)}")
+            raise RuntimeError(f"expected exactly one {source_name!r}, found {len(matches)}")
         source = matches[0]
         with zipfile.ZipFile(source, "r") as archive:
             bad_member = archive.testzip()
             if bad_member:
-                raise RuntimeError(f"ZIP integrity failure in {filename}: {bad_member}")
-        target = asset_dir / filename
+                raise RuntimeError(f"ZIP integrity failure in {source_name}: {bad_member}")
+        target = asset_dir / release_name
         shutil.copy2(source, target)
-        checksum_rows.append(f"{sha256_file(target)}  {filename}")
+        checksum_rows.append(f"{sha256_file(target)}  {release_name}")
 
     (asset_dir / "SHA256SUMS.txt").write_text("\n".join(checksum_rows) + "\n", encoding="utf-8")
     print(json.dumps({

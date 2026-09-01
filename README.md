@@ -144,7 +144,9 @@ split at meaningful archive-folder boundaries.
 stage. A push that changes the request validates the source Actions run, downloads the
 declared application-package artifacts, verifies ZIP integrity, generates SHA-256
 checksums and creates or updates the requested GitHub Release. Re-running the same tag is
-idempotent: matching asset names are replaced rather than duplicated.
+idempotent: matching asset names are replaced rather than duplicated. The request maps
+each source package name to an ASCII release-asset name; the archive's internal Korean
+folder names remain unchanged while uploads avoid non-ASCII endpoint incompatibilities.
 
 ### Event evidence
 

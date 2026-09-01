@@ -6,7 +6,13 @@
   "release_notes": "금호석유화학과 포스코의 지원서·면접·직무공부용 환경자료 최종 전달본입니다.",
   "artifact_pattern": "*-application-environment-materials",
   "expected_assets": [
-    "금호석유화학_지원용_환경자료.zip",
-    "포스코_지원용_환경자료.zip"
+    {
+      "source_name": "금호석유화학_지원용_환경자료.zip",
+      "release_name": "Kumho_Petrochemical_environment_materials.zip"
+    },
+    {
+      "source_name": "포스코_지원용_환경자료.zip",
+      "release_name": "POSCO_environment_materials.zip"
+    }
   ]
 }
