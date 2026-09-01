@@ -1,0 +1,150 @@
+name: Human archive content inspection QA
+
+on:
+  push:
+    branches:
+      - 'run/control-plane'
+    paths:
+      - 'requests/archive_inspection_qa.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect_archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read inspection target
+        id: cfg
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          cfg=json.load(open('requests/archive_inspection_qa.json',encoding='utf-8'))
+          print('run_id='+str(cfg['run_id']))
+          print('artifact_name='+str(cfg['artifact_name']))
+          PY
+      - name: Download archive artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.cfg.outputs.artifact_name }}
+          path: inspection-input
+          run-id: ${{ steps.cfg.outputs.run_id }}
+          github-token: ${{ github.token }}
+      - name: Inspect Human Archive ZIP
+        run: |
+          python - <<'PY'
+          import csv, json, re, zipfile
+          from collections import Counter, defaultdict
+          from pathlib import Path, PurePosixPath
+
+          archive_path=Path('inspection-input/Human_Archive.zip')
+          if not archive_path.exists():
+              raise SystemExit('Human_Archive.zip not found in downloaded artifact')
+
+          with zipfile.ZipFile(archive_path) as z:
+              infos=z.infolist()
+
+          file_infos=[i for i in infos if not i.is_dir()]
+          names=[i.filename for i in file_infos]
+          roots=sorted({PurePosixPath(n).parts[0] for n in names if PurePosixPath(n).parts})
+          top_counts=Counter()
+          ext_counts=Counter()
+          zero_files=[]
+          rows=[]
+          samples=defaultdict(list)
+
+          for info in file_infos:
+              p=PurePosixPath(info.filename)
+              parts=p.parts
+              top=parts[1] if len(parts) > 1 else '(root-file)'
+              top_counts[top]+=1
+              ext=(p.suffix.lower() or '(none)')
+              ext_counts[ext]+=1
+              if info.file_size == 0:
+                  zero_files.append(info.filename)
+              if len(samples[top]) < 12:
+                  samples[top].append(info.filename)
+              rows.append({
+                  'path':info.filename,
+                  'bytes':info.file_size,
+                  'compressed_bytes':info.compress_size,
+                  'extension':ext,
+                  'top_folder':top,
+              })
+
+          duplicate_paths=len(names)-len(set(names))
+          sustainability=[]
+          for n in names:
+              low=n.lower()
+              if ('지속가능' in n or 'sustainability' in low) and low.endswith('.pdf'):
+                  sustainability.append(n)
+          years=sorted({int(y) for n in sustainability for y in re.findall(r'20(?:20|21|22|23|24|25)', n)})
+          bat=[n for n in names if ('k-bref' in n.lower() or '최적가용기법' in n or 'bat_reference' in n.lower())]
+          policy=[n for n in names if ('정책' in n or 'policy' in n.lower() or '방침' in n) and not n.endswith('/')]
+          xlsx=[n for n in names if n.lower().endswith('.xlsx')]
+
+          result={
+              'inspection_status':'PASS',
+              'archive_path':str(archive_path),
+              'entry_count_total':len(infos),
+              'file_count':len(file_infos),
+              'roots':roots,
+              'top_folder_counts':dict(sorted(top_counts.items())),
+              'extension_counts':dict(sorted(ext_counts.items())),
+              'duplicate_path_count':duplicate_paths,
+              'zero_byte_file_count':len(zero_files),
+              'zero_byte_files':zero_files[:100],
+              'sustainability_pdf_count':len(sustainability),
+              'sustainability_years':years,
+              'sustainability_files':sustainability,
+              'bat_reference_count':len(bat),
+              'bat_reference_files':bat[:50],
+              'policy_file_count':len(policy),
+              'policy_files':policy[:100],
+              'xlsx_count':len(xlsx),
+              'xlsx_files':xlsx[:100],
+              'samples_by_top_folder':dict(sorted(samples.items())),
+          }
+
+          if roots != ['금호석유화학_환경자료']:
+              raise SystemExit(f'Unexpected archive root(s): {roots}')
+          if duplicate_paths:
+              raise SystemExit(f'Duplicate ZIP paths found: {duplicate_paths}')
+          if set(range(2020,2026)) - set(years):
+              raise SystemExit(f'Missing sustainability years: {sorted(set(range(2020,2026))-set(years))}')
+          if not bat:
+              raise SystemExit('No BAT/K-BREF reference found')
+          if len(file_infos) < 500:
+              raise SystemExit(f'Archive file count unexpectedly small: {len(file_infos)}')
+
+          Path('inspection-output').mkdir(exist_ok=True)
+          Path('inspection-output/Archive_Inspection.json').write_text(
+              json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          with open('inspection-output/Archive_File_List.csv','w',newline='',encoding='utf-8-sig') as f:
+              w=csv.DictWriter(f,fieldnames=['top_folder','path','bytes','compressed_bytes','extension'])
+              w.writeheader(); w.writerows(rows)
+          with open('inspection-output/Archive_Tree.txt','w',encoding='utf-8') as f:
+              f.write('ROOTS\n')
+              for r in roots: f.write(f'- {r}\n')
+              f.write('\nTOP FOLDERS\n')
+              for k,v in sorted(top_counts.items()): f.write(f'- {k}: {v} files\n')
+              f.write('\nSAMPLES\n')
+              for k,vals in sorted(samples.items()):
+                  f.write(f'\n[{k}]\n')
+                  for n in vals: f.write(f'- {n}\n')
+          print(json.dumps(result,ensure_ascii=False))
+          PY
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: human-archive-inspection-qa
+          path: inspection-output/
+          if-no-files-found: error
+          retention-days: 7
