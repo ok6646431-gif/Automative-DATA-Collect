@@ -10,6 +10,7 @@ on:
       - 'orchestrator/archive_zip_dedup.py'
       - 'orchestrator/bootstrap_inputs.py'
       - 'tests/test_sustainability_coverage.py'
+      - 'tests/test_archive_zip_dedup.py'
       - '.github/workflows/sustainability-coverage-tests.yml'
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - 'orchestrator/archive_zip_dedup.py'
       - 'orchestrator/bootstrap_inputs.py'
       - 'tests/test_sustainability_coverage.py'
+      - 'tests/test_archive_zip_dedup.py'
       - '.github/workflows/sustainability-coverage-tests.yml'
   workflow_dispatch:
 
