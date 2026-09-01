@@ -1,0 +1,68 @@
+name: Split POSCO application material package
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/run_posco_split_token.txt
+
+jobs:
+  split:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile splitter
+        run: python -m py_compile tools/split_application_material_package.py
+      - name: Download POSCO support package
+        uses: actions/download-artifact@v4
+        with:
+          name: posco-application-environment-materials
+          path: source
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: '33506073108'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Locate package
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC="$(find source -type f -name '포스코_지원용_환경자료.zip' -print -quit)"
+          test -n "$SRC"
+          echo "SRC=$SRC" >> "$GITHUB_ENV"
+          ls -lh "$SRC"
+      - name: Split and verify
+        run: |
+          mkdir -p delivery
+          python tools/split_application_material_package.py \
+            --input "$SRC" \
+            --out-dir delivery \
+            --prefix '포스코_지원용'
+          ls -lh delivery/*.zip
+      - name: Upload core package
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-application-core
+          path: delivery/포스코_지원용_핵심자료.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload ENVINFO part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-application-envinfo-1
+          path: delivery/포스코_지원용_ENVINFO_자료_1.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+      - name: Upload ENVINFO part 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-application-envinfo-2
+          path: delivery/포스코_지원용_ENVINFO_자료_2.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
