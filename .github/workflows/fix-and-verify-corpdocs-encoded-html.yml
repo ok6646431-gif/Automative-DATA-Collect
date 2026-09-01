@@ -1,0 +1,83 @@
+name: Fix and verify corporate-doc encoded HTML
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/fix_corpdocs_encoded_html.marker'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Apply generic content-encoding patch
+        run: python tools/patch_corporate_docs_content_encoding.py
+      - name: Run collector regression tests
+        run: >-
+          python -m unittest
+          tests.test_corporate_docs_collect
+          tests.test_corporate_docs_slow_retry
+          tests.test_corporate_docs_range_segments
+          tests.test_corporate_docs_content_encoding
+          tests.test_kumho_report_source_routing -v
+      - name: Bootstrap runtime company inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Build isolated HTML evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          source=json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          wanted={
+              'KUMHO_SEH_OVERVIEW','KUMHO_SEH_POLICY','KUMHO_SEH_ACTIVITY',
+              'KUMHO_CLIMATE_RESPONSE','KUMHO_ESG_STRATEGY'
+          }
+          source['documents']=[d for d in source.get('documents',[]) if d.get('document_id') in wanted]
+          source['gaps']=[]
+          if len(source['documents']) != 5:
+              raise SystemExit(f'Expected 5 HTML documents, got {len(source["documents"])}')
+          Path('requests/runtime/kumho_html_only.json').write_text(json.dumps(source,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Verify five official HTML pages
+        run: python collectors/corporate_docs_collect.py requests/runtime/kumho_html_only.json requests/runtime/company_profile.generated.json
+      - name: Require five real HTML downloads
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+          status=json.loads(Path('output/CORP_DOCS/status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader(Path('output/CORP_DOCS/document_index.csv').open(encoding='utf-8-sig')))
+          if status.get('status')!='DATA_FOUND' or status.get('downloaded')!=5 or status.get('failed')!=0 or status.get('skipped')!=0:
+              raise SystemExit(f'HTML verification failed: {status}; rows={[(r.get("document_id"),r.get("collection_status"),r.get("notes")) for r in rows]}')
+          for row in rows:
+              p=Path(row['stored_path'])
+              if not p.exists() or p.stat().st_size != int(row['bytes']):
+                  raise SystemExit(f'Bad stored HTML file: {row}')
+              head=p.read_bytes()[:4096].lower()
+              if b'<html' not in head and b'<!doctype html' not in head:
+                  raise SystemExit(f'Payload is not HTML: {row["document_id"]}')
+          print('KUMHO_HTML_ACCEPTANCE_PASS', json.dumps(status,ensure_ascii=False))
+          PY
+      - name: Commit collector repair
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add collectors/corporate_docs_collect.py
+          if git diff --cached --quiet; then
+            echo 'Collector already patched.'
+          else
+            git commit -m 'Handle encoded corporate HTML downloads safely'
+            git push origin HEAD:run/control-plane
+          fi
