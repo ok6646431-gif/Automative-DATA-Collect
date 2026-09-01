@@ -43,11 +43,67 @@ def _find_archive_root(extract_root):
     return dirs[0]
 
 
+def _user_retention_rank(path):
+    """Prefer canonical/user-friendly names when exact copies coexist in one folder.
+
+    ENV-INFO promoted copies intentionally carry an ``ENVINFO공개연도_`` provenance
+    prefix.  When the exact same bytes are also present under a canonical corporate
+    document filename in the same user folder, keep the canonical filename and record
+    the removed promoted copy.  Other ties are deterministic only; content identity is
+    always established by SHA-256 before anything is removed.
+    """
+    p=Path(path)
+    promoted=1 if p.name.startswith('ENVINFO공개연도_') else 0
+    return (promoted, len(p.name), p.name)
+
+
+def deduplicate_user_folders(archive_root):
+    archive_root=Path(archive_root)
+    user=archive_root/'01_사용자자료'
+    if not user.exists():
+        return {'user_deduplicated_files':0,'user_deduplicated_bytes':0,'user_reference_file':''}
+
+    refs=[]
+    for folder in sorted([p for p in user.rglob('*') if p.is_dir()] + [user]):
+        files=[p for p in sorted(folder.iterdir()) if p.is_file()]
+        if len(files)<2: continue
+        by_hash={}
+        for p in files:
+            by_hash.setdefault(sha256(p),[]).append(p)
+        for digest,group in sorted(by_hash.items()):
+            if len(group)<2: continue
+            retained=sorted(group,key=_user_retention_rank)[0]
+            for p in sorted(group,key=_user_retention_rank)[1:]:
+                refs.append({
+                    'removed_user_path':str(p.relative_to(archive_root)),
+                    'retained_user_path':str(retained.relative_to(archive_root)),
+                    'bytes':p.stat().st_size,
+                    'sha256':digest,
+                    'resolution':'IDENTICAL_SHA256_SAME_USER_FOLDER'
+                })
+                p.unlink()
+
+    ref_path=archive_root/'00_자료목록'/'Deduplicated_User_File_References.csv'
+    if refs:
+        write_csv(ref_path,refs,['removed_user_path','retained_user_path','bytes','sha256','resolution'])
+    return {
+        'user_deduplicated_files':len(refs),
+        'user_deduplicated_bytes':sum(int(r['bytes']) for r in refs),
+        'user_reference_file':str(ref_path.relative_to(archive_root)) if refs else ''
+    }
+
+
 def deduplicate_tree(archive_root):
     archive_root=Path(archive_root)
     user=archive_root/'01_사용자자료'; system=archive_root/'90_시스템원본'
+    user_stats=deduplicate_user_folders(archive_root)
     if not user.exists() or not system.exists():
-        return {'deduplicated_files':0,'deduplicated_bytes':0,'reference_file':''}
+        return {
+            'deduplicated_files':user_stats['user_deduplicated_files'],
+            'deduplicated_bytes':user_stats['user_deduplicated_bytes'],
+            'reference_file':'',
+            **user_stats,
+        }
     user_by_hash={}
     for p in sorted(user.rglob('*')):
         if not p.is_file(): continue
@@ -73,10 +129,13 @@ def deduplicate_tree(archive_root):
         except OSError: pass
     if refs:
         write_csv(ref_path,refs,['removed_system_path','retained_user_path','bytes','sha256','resolution'])
+    system_files=len(refs)
+    system_bytes=sum(int(r['bytes']) for r in refs)
     return {
-        'deduplicated_files':len(refs),
-        'deduplicated_bytes':sum(int(r['bytes']) for r in refs),
-        'reference_file':str(ref_path.relative_to(archive_root)) if refs else ''
+        'deduplicated_files':system_files+user_stats['user_deduplicated_files'],
+        'deduplicated_bytes':system_bytes+user_stats['user_deduplicated_bytes'],
+        'reference_file':str(ref_path.relative_to(archive_root)) if refs else '',
+        **user_stats,
     }
 
 
