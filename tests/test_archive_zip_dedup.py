@@ -1,7 +1,7 @@
 import csv, json, tempfile, unittest, zipfile
 from pathlib import Path
 
-from orchestrator.archive_zip_dedup import run, sha256
+from orchestrator.archive_zip_dedup import _apply_sustainability_coverage, run, sha256
 
 
 class ArchiveZipDedupTests(unittest.TestCase):
@@ -93,6 +93,46 @@ class ArchiveZipDedupTests(unittest.TestCase):
             self.assertEqual(summary['user_files'],2)
             manifest=json.loads((package/'Master_Manifest.json').read_text(encoding='utf-8'))
             self.assertEqual(manifest['human_archive']['user_files'],2)
+
+    def test_verified_not_published_year_resolves_coverage_without_fake_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); package=root/'assembled'; archive=root/'기업_환경자료'
+            docs=package/'output'/'CORP_DOCS'; reports=archive/'01_사용자자료'/'04_지속가능경영보고서'
+            docs.mkdir(parents=True); reports.mkdir(parents=True)
+            (package/'Company_Profile.json').write_text(json.dumps({
+                'minimum_history_years':5,
+                'current_legal_name_active_period':{'start_year':2022},
+                'requested_history_window':{'start_year':2020,'end_year':2026},
+            }),encoding='utf-8')
+            rows=[]
+            for year in [2022,2023,2024,2025]:
+                (reports/f'기업_지속가능경영보고서_{year}.pdf').write_bytes(b'%PDF-test')
+                rows.append({
+                    'document_type':'SUSTAINABILITY_REPORT','title':f'report {year}','report_year':str(year),
+                    'verification_status':'VERIFIED','collection_status':'DOWNLOADED',
+                })
+            with (docs/'document_index.csv').open('w',encoding='utf-8-sig',newline='') as f:
+                w=csv.DictWriter(f,fieldnames=['document_type','title','report_year','verification_status','collection_status'])
+                w.writeheader(); w.writerows(rows)
+            (docs/'discovery_gaps.json').write_text(json.dumps([{
+                'document_type':'SUSTAINABILITY_REPORT','report_year':2026,
+                'verification_status':'VERIFIED','status':'NOT_PUBLISHED','blocking':False,
+            }]),encoding='utf-8')
+            summary={'acceptance_checks':{
+                'user_excel_exports':True,'envinfo_pdf_complete':True,'sustainability_minimum_5':False,
+                'public_policy_present':True,'guideline_reference_present':True,'review_report_present':True,
+                'collection_completeness_complete':True,
+            },'blocking_acceptance_checks':{
+                'user_excel_exports':True,'envinfo_pdf_complete':True,'sustainability_minimum_5':False,
+                'public_policy_present':True,'review_report_present':True,'collection_completeness_complete':True,
+            }}
+            result=_apply_sustainability_coverage(package,archive,summary)
+            coverage=result['sustainability_coverage']
+            self.assertEqual(coverage['delivered_report_years'],[2022,2023,2024,2025])
+            self.assertEqual(coverage['resolved_without_file_years'],[2026])
+            self.assertEqual(coverage['missing_target_years'],[])
+            self.assertTrue(coverage['coverage_sufficient'])
+            self.assertEqual(result['archive_completeness'],'COMPLETE')
 
 
 if __name__=='__main__': unittest.main()
