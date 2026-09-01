@@ -1,0 +1,6 @@
+{
+  "run_id": 33486389806,
+  "artifact_name": "human-archive-replay-qa",
+  "purpose": "Inspect the completed Kumho Petrochemical Human_Archive.zip for actual folder structure, file names, extensions, duplicate paths, zero-byte files, sustainability years, policy files and BAT/K-BREF references.",
+  "inspection_token": "kkpc-human-archive-inspection-20260901-v1"
+}
