@@ -1,7 +1,12 @@
-import argparse, csv, hashlib, json, shutil, tempfile, zipfile
+import argparse, csv, hashlib, json, re, shutil, tempfile, zipfile
 from pathlib import Path
 
 from sustainability_coverage import evaluate as evaluate_sustainability_coverage
+
+
+STRONG_VERIFICATION = {'VERIFIED', 'SOURCE_VERIFIED'}
+RESOLVED_SUSTAINABILITY_GAP_STATES = {'NOT_PUBLISHED', 'NO_PUBLIC_DOCUMENT', 'NO_DATA_CONFIRMED'}
+YEAR_RE = re.compile(r'(?<!\d)((?:19|20)\d{2})(?!\d)')
 
 
 def sha256(path):
@@ -192,6 +197,33 @@ def refresh_user_indexes(archive_root):
     return len(rows)
 
 
+def _gap_year(value):
+    if value in (None,''): return None
+    match=YEAR_RE.search(str(value))
+    return int(match.group(1)) if match else None
+
+
+def _resolved_sustainability_gap_years(package_root):
+    """Return annual report years explicitly resolved without a downloadable file.
+
+    A current-year report that an official source verifies as not yet published is a
+    resolved coverage state, not a collection failure. It remains distinct from a
+    delivered file and only strong, non-blocking sustainability-report gaps qualify.
+    """
+    gaps=read_json(Path(package_root)/'output'/'CORP_DOCS'/'discovery_gaps.json',[]) or []
+    years=set()
+    for gap in gaps:
+        if not isinstance(gap,dict): continue
+        if str(gap.get('document_type') or '').upper()!='SUSTAINABILITY_REPORT': continue
+        if str(gap.get('verification_status') or '').upper() not in STRONG_VERIFICATION: continue
+        if gap.get('blocking') is True: continue
+        state=str(gap.get('status') or gap.get('gap_status') or gap.get('resolution') or '').upper()
+        if state not in RESOLVED_SUSTAINABILITY_GAP_STATES: continue
+        year=_gap_year(gap.get('report_year') or gap.get('year') or gap.get('period'))
+        if year is not None: years.add(year)
+    return sorted(years)
+
+
 def _apply_sustainability_coverage(package_root,archive_root,summary):
     package_root=Path(package_root); archive_root=Path(archive_root)
     profile=read_json(package_root/'Company_Profile.json',{}) or {}
@@ -199,6 +231,23 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
     folder=archive_root/'01_사용자자료'/'04_지속가능경영보고서'
     paths=[p for p in sorted(folder.rglob('*')) if p.is_file()] if folder.exists() else []
     coverage=evaluate_sustainability_coverage(profile,docs,paths)
+
+    resolved=set(_resolved_sustainability_gap_years(package_root))
+    target=set(coverage.get('target_report_years') or [])
+    delivered=set(coverage.get('delivered_report_years') or [])
+    resolved_in_target=sorted(target & resolved)
+    missing=sorted(target - delivered - set(resolved_in_target))
+    coverage['resolved_without_file_years']=resolved_in_target
+    coverage['missing_target_years']=missing
+    if coverage.get('state') in {'FILE_COVERAGE_COMPLETE','FILE_COVERAGE_PARTIAL'}:
+        coverage['coverage_sufficient']=not missing
+        coverage['state']='FILE_COVERAGE_COMPLETE' if not missing else 'FILE_COVERAGE_PARTIAL'
+    coverage['principle']=(
+        'Every year in the verified/requested annual series must be delivered or explicitly resolved; '
+        'verified non-blocking NOT_PUBLISHED/NO_PUBLIC_DOCUMENT/NO_DATA_CONFIRMED years are resolved '
+        'without being represented as delivered files.'
+    )
+
     checks=dict(summary.get('acceptance_checks') or {})
     checks['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
     checks['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
