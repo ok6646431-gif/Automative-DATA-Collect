@@ -1,4 +1,4 @@
-import csv, hashlib, json, re, shutil, subprocess
+import csv, hashlib, io, json, re, shutil, subprocess, zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,6 +18,7 @@ ROOT_INDEX_FILES = [
 ]
 USER_ROOT = "01_사용자자료"
 SYSTEM_ROOT = "90_시스템원본"
+WEB_ENDPOINT_EXTENSIONS = {'.do', '.jsp', '.action', '.cgi', '.php', '.aspx'}
 
 
 def safe(value):
@@ -68,9 +69,40 @@ def copy_file(src,dst):
     src=Path(src); dst=Path(dst); dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst); return dst
 
 
+def detect_payload_extension(path):
+    p=Path(path)
+    try:
+        with p.open('rb') as f: data=f.read(8192)
+    except OSError: return None
+    stripped=data.lstrip(); lower=stripped.lower()
+    if data.startswith(b'%PDF-'): return '.pdf'
+    if data.startswith(b'\x89PNG\r\n\x1a\n'): return '.png'
+    if data.startswith(b'\xff\xd8\xff'): return '.jpg'
+    if data.startswith((b'GIF87a',b'GIF89a')): return '.gif'
+    if lower.startswith(b'<!doctype html') or lower.startswith(b'<html') or b'<html' in lower[:2048]: return '.html'
+    if data.startswith(b'PK\x03\x04'):
+        try:
+            with zipfile.ZipFile(p,'r') as z:
+                names=set(z.namelist())
+                if '[Content_Types].xml' in names:
+                    if any(x.startswith('xl/') for x in names): return '.xlsx'
+                    if any(x.startswith('word/') for x in names): return '.docx'
+                    if any(x.startswith('ppt/') for x in names): return '.pptx'
+                return '.zip'
+        except zipfile.BadZipFile: return None
+    return None
+
+
+def normalize_user_filename(src,name):
+    raw=safe(name or Path(src).name); p=Path(raw)
+    if p.suffix.lower() not in WEB_ENDPOINT_EXTENSIONS: return raw
+    detected=detect_payload_extension(src)
+    return safe(p.stem+detected) if detected else raw
+
+
 def unique_copy(src,directory,name=None):
     directory=Path(directory); directory.mkdir(parents=True,exist_ok=True); src=Path(src)
-    target=directory/safe(name or src.name)
+    target=directory/normalize_user_filename(src,name)
     if not target.exists(): return copy_file(src,target)
     if sha256(src)==sha256(target): return target
     suffix=target.suffix; stem=target.stem; n=2
