@@ -1,0 +1,12 @@
+{
+  "schema_version": "release-delivery-1.0",
+  "source_run_id": 33514068054,
+  "release_tag": "environment-materials-2026-09-01",
+  "release_title": "기업 지원용 환경자료 패키지 - 2026-09-01",
+  "release_notes": "금호석유화학과 포스코의 지원서·면접·직무공부용 환경자료 최종 전달본입니다.",
+  "artifact_pattern": "*-application-environment-materials",
+  "expected_assets": [
+    "금호석유화학_지원용_환경자료.zip",
+    "포스코_지원용_환경자료.zip"
+  ]
+}

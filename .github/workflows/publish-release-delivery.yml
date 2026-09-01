@@ -1,0 +1,74 @@
+name: Publish final packages to GitHub Release
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/release_delivery.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-delivery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate delivery request
+        id: config
+        run: |
+          python -m py_compile tools/release_delivery.py
+          python tools/release_delivery.py prepare \
+            --config requests/release_delivery.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --notes-out release_notes.md
+
+      - name: Download final package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ steps.config.outputs.artifact_pattern }}
+          path: downloaded
+          merge-multiple: true
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: ${{ steps.config.outputs.source_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify and stage release assets
+        run: |
+          python tools/release_delivery.py stage \
+            --config requests/release_delivery.json \
+            --source-dir downloaded \
+            --asset-dir release-assets
+          find release-assets -maxdepth 1 -type f -printf '%f %s bytes\n'
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.config.outputs.release_tag }}
+          RELEASE_TITLE: ${{ steps.config.outputs.release_title }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_TITLE" \
+              --notes-file release_notes.md
+          fi
+          mapfile -d '' ASSETS < <(find release-assets -maxdepth 1 -type f -print0 | sort -z)
+          test "${#ASSETS[@]}" -gt 0
+          gh release upload "$RELEASE_TAG" "${ASSETS[@]}" --clobber
+          gh release view "$RELEASE_TAG" --json url,tagName,name,assets

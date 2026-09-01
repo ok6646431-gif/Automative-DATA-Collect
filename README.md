@@ -132,6 +132,20 @@ The final GitHub artifact contains the validated core package plus a single comp
 SHA-256. Missing, blocked, unverified or ambiguous document coverage is recorded as a
 review/gap state; it is never silently interpreted as evidence that no document exists.
 
+### Final user delivery
+
+GitHub Actions artifacts remain the internal, expiring handoff between collection and
+packaging jobs. Final user-facing packages are published as GitHub Release assets instead
+of being split into chat-sized chunks. One company normally produces one
+`{회사명}_지원용_환경자료.zip`; only a package that exceeds GitHub's per-asset limit is
+split at meaningful archive-folder boundaries.
+
+`requests/release_delivery.json` is the control-plane request for this final delivery
+stage. A push that changes the request validates the source Actions run, downloads the
+declared application-package artifacts, verifies ZIP integrity, generates SHA-256
+checksums and creates or updates the requested GitHub Release. Re-running the same tag is
+idempotent: matching asset names are replaced rather than duplicated.
+
 ### Event evidence
 
 Optional Event evidence contract: `requests/event_evidence.json`.
