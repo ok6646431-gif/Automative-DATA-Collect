@@ -1,0 +1,128 @@
+name: Prepare sub-100MB chat delivery
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/chat_small_delivery_token.txt
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile chat chunker
+        run: python -m py_compile tools/chunk_support_package_for_chat.py
+      - name: Download latest fixed Kumho support package
+        uses: actions/download-artifact@v4
+        with:
+          name: kumho-application-environment-materials
+          path: source/kumho
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33514068054
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download latest fixed POSCO support package
+        uses: actions/download-artifact@v4
+        with:
+          name: posco-application-environment-materials
+          path: source/posco
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33514068054
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Chunk fixed support packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          KUMHO="$(find source/kumho -type f -name '금호석유화학_지원용_환경자료.zip' -print -quit)"
+          POSCO="$(find source/posco -type f -name '포스코_지원용_환경자료.zip' -print -quit)"
+          test -n "$KUMHO"; test -n "$POSCO"
+          python tools/chunk_support_package_for_chat.py --input "$KUMHO" --out-dir delivery/kumho --prefix '금호석유화학_지원용_part'
+          python tools/chunk_support_package_for_chat.py --input "$POSCO" --out-dir delivery/posco --prefix '포스코_지원용_part'
+          echo 'KUMHO PARTS'; cat delivery/kumho/chunk_manifest.json
+          echo 'POSCO PARTS'; cat delivery/posco/chunk_manifest.json
+          find delivery -type f -name '*.do' -o -name '*.jsp' -o -name '*.action' | tee /tmp/bad-endpoint-names.txt
+          test ! -s /tmp/bad-endpoint-names.txt
+          python - <<'PY'
+          from pathlib import Path
+          limit=96*1024*1024
+          for part in [p for p in Path('delivery').glob('*/*') if p.is_dir()]:
+              total=sum(f.stat().st_size for f in part.rglob('*') if f.is_file())
+              print(part, total)
+              if total>limit: raise SystemExit(f'part exceeds raw 96MiB safety limit: {part} {total}')
+          PY
+
+      - name: Upload Kumho part 01
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-01, path: delivery/kumho/금호석유화학_지원용_part_01/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 02
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-02, path: delivery/kumho/금호석유화학_지원용_part_02/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 03
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-03, path: delivery/kumho/금호석유화학_지원용_part_03/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 04
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-04, path: delivery/kumho/금호석유화학_지원용_part_04/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 05
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-05, path: delivery/kumho/금호석유화학_지원용_part_05/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 06
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-06, path: delivery/kumho/금호석유화학_지원용_part_06/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 07
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-07, path: delivery/kumho/금호석유화학_지원용_part_07/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 08
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-08, path: delivery/kumho/금호석유화학_지원용_part_08/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 09
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-09, path: delivery/kumho/금호석유화학_지원용_part_09/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 10
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-10, path: delivery/kumho/금호석유화학_지원용_part_10/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 11
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-11, path: delivery/kumho/금호석유화학_지원용_part_11/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 12
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-12, path: delivery/kumho/금호석유화학_지원용_part_12/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 13
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-13, path: delivery/kumho/금호석유화학_지원용_part_13/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 14
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-14, path: delivery/kumho/금호석유화학_지원용_part_14/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 15
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-15, path: delivery/kumho/금호석유화학_지원용_part_15/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload Kumho part 16
+        uses: actions/upload-artifact@v4
+        with: {name: chat-kumho-16, path: delivery/kumho/금호석유화학_지원용_part_16/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload POSCO part 01
+        uses: actions/upload-artifact@v4
+        with: {name: chat-posco-01, path: delivery/posco/포스코_지원용_part_01/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload POSCO part 02
+        uses: actions/upload-artifact@v4
+        with: {name: chat-posco-02, path: delivery/posco/포스코_지원용_part_02/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload POSCO part 03
+        uses: actions/upload-artifact@v4
+        with: {name: chat-posco-03, path: delivery/posco/포스코_지원용_part_03/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload POSCO part 04
+        uses: actions/upload-artifact@v4
+        with: {name: chat-posco-04, path: delivery/posco/포스코_지원용_part_04/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload POSCO part 05
+        uses: actions/upload-artifact@v4
+        with: {name: chat-posco-05, path: delivery/posco/포스코_지원용_part_05/, if-no-files-found: ignore, retention-days: 14}
+      - name: Upload POSCO part 06
+        uses: actions/upload-artifact@v4
+        with: {name: chat-posco-06, path: delivery/posco/포스코_지원용_part_06/, if-no-files-found: ignore, retention-days: 14}
