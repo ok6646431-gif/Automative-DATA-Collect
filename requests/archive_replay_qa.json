@@ -2,8 +2,8 @@
   "source_run_id": 33483075983,
   "public_artifact_name": "stable-public-sources",
   "icis_run_id": 33483075983,
-  "document_run_id": 33468795117,
-  "document_artifact_name": "kumho-corpdocs-size-aware",
-  "purpose": "Validate package, human archive and folder delivery after exact SHA-256 deduplication inside each user-facing folder, using current Kumho public/ICIS artifacts plus the strict 14-of-14 verified corporate-document artifact.",
-  "replay_token": "kkpc-split-artifact-replay-20260901-v2-user-sha-dedup"
+  "document_run_id": 33483075983,
+  "document_artifact_name": "stable-corporate-documents",
+  "purpose": "Final bounded acceptance replay: rebuild the Kumho package and human archive with current code from the exact fresh public, ICIS and 14-of-14 corporate-document artifacts produced by the successful from-scratch E2E run, including exact user-folder SHA-256 deduplication and refreshed user inventory indexes.",
+  "replay_token": "kkpc-final-current-code-fresh-artifacts-20260901-v3"
 }
