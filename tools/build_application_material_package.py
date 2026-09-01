@@ -13,6 +13,7 @@ from typing import Iterable
 
 USER_PREFIX = "01_사용자자료/"
 INDEX_PREFIX = "00_자료목록/"
+WEB_ENDPOINT_EXTENSIONS = {".do", ".jsp", ".action", ".cgi", ".php", ".aspx"}
 
 MAPPINGS = [
     ("01_사용자자료/00_환경관리검토/", "09_지원서공부용/00_환경관리검토/"),
@@ -62,6 +63,60 @@ def map_relative_path(relative: str) -> str | None:
     return None
 
 
+def detect_payload_extension(data: bytes) -> str | None:
+    """Return a user-facing extension only when the payload is confidently identifiable."""
+    head = data[:8192]
+    stripped = head.lstrip()
+    lower = stripped.lower()
+
+    if head.startswith(b"%PDF-"):
+        return ".pdf"
+    if head.startswith((b"\x89PNG\r\n\x1a\n",)):
+        return ".png"
+    if head.startswith((b"\xff\xd8\xff",)):
+        return ".jpg"
+    if head.startswith((b"GIF87a", b"GIF89a")):
+        return ".gif"
+    if lower.startswith(b"<!doctype html") or lower.startswith(b"<html") or b"<html" in lower[:2048]:
+        return ".html"
+    if stripped.startswith((b"{", b"[")):
+        try:
+            json.loads(data.decode("utf-8-sig"))
+            return ".json"
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            pass
+    if head.startswith(b"PK\x03\x04"):
+        try:
+            with zipfile.ZipFile(io.BytesIO(data), "r") as z:
+                names = set(z.namelist())
+                if "[Content_Types].xml" in names:
+                    if any(name.startswith("xl/") for name in names):
+                        return ".xlsx"
+                    if any(name.startswith("word/") for name in names):
+                        return ".docx"
+                    if any(name.startswith("ppt/") for name in names):
+                        return ".pptx"
+                return ".zip"
+        except zipfile.BadZipFile:
+            pass
+    if head.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
+        # Legacy OLE compound files cannot be distinguished reliably without extra parsing.
+        return None
+    return None
+
+
+def normalize_user_extension(path: str, data: bytes) -> tuple[str, str]:
+    """Replace servlet/web endpoint suffixes with the actual payload extension when certain."""
+    stem, ext = posixpath.splitext(path)
+    ext_lower = ext.lower()
+    if ext_lower not in WEB_ENDPOINT_EXTENSIONS:
+        return path, "UNCHANGED"
+    detected = detect_payload_extension(data)
+    if not detected:
+        return path, "UNRESOLVED_WEB_ENDPOINT_EXTENSION"
+    return stem + detected, f"RENAMED_{ext_lower}_TO_{detected}"
+
+
 def safe_collision_path(path: str, taken: dict[str, str], digest: str) -> tuple[str, str]:
     if path not in taken:
         return path, "COPIED"
@@ -93,6 +148,8 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
     copied_files = 0
     copied_bytes = 0
     skipped = 0
+    extension_renamed = 0
+    extension_unresolved = 0
 
     with zipfile.ZipFile(input_zip, "r") as src, zipfile.ZipFile(
         output_zip, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True
@@ -107,6 +164,11 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             if not mapped:
                 continue
             data = src.read(info)
+            mapped, extension_action = normalize_user_extension(mapped, data)
+            if extension_action.startswith("RENAMED_"):
+                extension_renamed += 1
+            elif extension_action == "UNRESOLVED_WEB_ENDPOINT_EXTENSION":
+                extension_unresolved += 1
             digest = sha256_bytes(data)
             final_rel, action = safe_collision_path(mapped, taken, digest)
             transform_log.append(
@@ -115,6 +177,7 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                     "mapped_path": final_rel,
                     "sha256": digest,
                     "bytes": len(data),
+                    "extension_action": extension_action,
                     "action": action,
                 }
             )
@@ -144,7 +207,8 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             "- 실제 파일 다운로드 및 0바이트/형식/해시 검증\n"
             "- 사업장·연도·수집상태(DATA_FOUND/NO_MATCH/NOT_PUBLISHED 등) 검증\n"
             "- 보고서/정책/상세자료의 자동 본문 파싱 및 의미 추출\n"
-            "- 완전 동일 파일 SHA-256 중복 제거\n\n"
+            "- 완전 동일 파일 SHA-256 중복 제거\n"
+            "- .do/.jsp/.action 등 웹 엔드포인트형 파일명은 실제 파일 시그니처를 확인해 확장자 교정\n\n"
             "주의:\n"
             "- 수백 개 PDF를 사람이 전 페이지 수동 정독한 것은 아닙니다.\n"
             "- 지원서에 사용할 핵심 내용의 선별·해석은 이 패키지를 기반으로 별도 수행합니다.\n"
@@ -159,12 +223,12 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
         out.writestr(f"{root_name}/00_자료목록/지원용_전체자료목록.csv", inventory_bytes)
 
         transform_bytes = write_csv(
-            transform_log, ["original_path", "mapped_path", "sha256", "bytes", "action"]
+            transform_log, ["original_path", "mapped_path", "sha256", "bytes", "extension_action", "action"]
         )
         out.writestr(f"{root_name}/00_자료목록/지원용_패키지_변환기록.csv", transform_bytes)
 
         summary = {
-            "schema_version": "application-material-package-1.0",
+            "schema_version": "application-material-package-1.1",
             "company": company,
             "source_workflow_run": source_run,
             "source_human_archive": input_zip,
@@ -172,6 +236,8 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             "copied_files": copied_files,
             "copied_bytes": copied_bytes,
             "skipped_identical_path_collisions": skipped,
+            "web_endpoint_extensions_renamed": extension_renamed,
+            "web_endpoint_extensions_unresolved": extension_unresolved,
             "system_originals_included": False,
             "folder_policy": "SUPPORT_STUDY_FACING_ONLY",
         }
