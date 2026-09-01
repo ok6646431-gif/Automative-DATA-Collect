@@ -1,0 +1,52 @@
+name: Verify Kumho policy isolated
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'tools/verify_kumho_policy_isolated.marker'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Bootstrap runtime company inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Build isolated policy request
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          src=json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          src['documents']=[d for d in src.get('documents',[]) if d.get('document_id')=='KUMHO_ESG_POLICY_GUIDELINE_CURRENT']
+          src['gaps']=[]
+          if len(src['documents']) != 1:
+              raise SystemExit(f"Expected one policy document, got {len(src['documents'])}")
+          Path('requests/runtime/kumho_policy_only.json').write_text(json.dumps(src,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Collect policy only
+        run: python collectors/corporate_docs_collect.py requests/runtime/kumho_policy_only.json requests/runtime/company_profile.generated.json
+      - name: Require real policy download
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          status=json.loads(Path('output/CORP_DOCS/status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader(Path('output/CORP_DOCS/document_index.csv').open(encoding='utf-8-sig')))
+          if status.get('downloaded')!=1 or status.get('failed')!=0 or len(rows)!=1 or rows[0].get('collection_status')!='DOWNLOADED':
+              raise SystemExit(f'POLICY_ISOLATED_FAIL status={status}; rows={rows}')
+          p=Path(rows[0]['stored_path'])
+          if not p.exists() or p.stat().st_size != int(rows[0]['bytes']) or p.read_bytes()[:5]!=b'%PDF-':
+              raise SystemExit('Policy stored-file validation failed')
+          print('POLICY_ISOLATED_PASS', rows[0]['bytes'], rows[0]['sha256'])
+          PY
