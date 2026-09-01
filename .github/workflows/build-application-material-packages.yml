@@ -1,0 +1,124 @@
+name: Build application material packages
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/application_package_token.txt
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile package builder
+        run: python -m py_compile tools/build_application_material_package.py
+
+      - name: Download Kumho verified Human Archive
+        uses: actions/download-artifact@v4
+        with:
+          name: human-archive-replay-qa
+          path: sources/kumho
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33491330885
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download POSCO verified Human Archive
+        uses: actions/download-artifact@v4
+        with:
+          name: enterprise-env-human-archive
+          path: sources/posco
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 33498708794
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Locate source archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          KUMHO_ZIP="$(find sources/kumho -type f -name 'Human_Archive.zip' -print -quit)"
+          POSCO_ZIP="$(find sources/posco -type f -name 'Human_Archive.zip' -print -quit)"
+          if [ -z "$KUMHO_ZIP" ]; then
+            echo 'Kumho Human_Archive.zip not found' >&2
+            find sources/kumho -maxdepth 4 -type f -printf '%p\n' | head -100 >&2
+            exit 1
+          fi
+          if [ -z "$POSCO_ZIP" ]; then
+            echo 'POSCO Human_Archive.zip not found' >&2
+            find sources/posco -maxdepth 4 -type f -printf '%p\n' | head -100 >&2
+            exit 1
+          fi
+          echo "KUMHO_ZIP=$KUMHO_ZIP" >> "$GITHUB_ENV"
+          echo "POSCO_ZIP=$POSCO_ZIP" >> "$GITHUB_ENV"
+          ls -lh "$KUMHO_ZIP" "$POSCO_ZIP"
+
+      - name: Build Kumho application package
+        run: |
+          mkdir -p delivery
+          python tools/build_application_material_package.py \
+            --input "$KUMHO_ZIP" \
+            --output 'delivery/금호석유화학_지원용_환경자료.zip' \
+            --root '금호석유화학_지원용_환경자료' \
+            --company '금호석유화학' \
+            --source-run '33491330885'
+
+      - name: Build POSCO application package
+        run: |
+          python tools/build_application_material_package.py \
+            --input "$POSCO_ZIP" \
+            --output 'delivery/포스코_지원용_환경자료.zip' \
+            --root '포스코_지원용_환경자료' \
+            --company '주식회사 포스코' \
+            --source-run '33498708794'
+
+      - name: Inspect support packages
+        run: |
+          python - <<'PY'
+          import json, os, zipfile
+          for path in ['delivery/금호석유화학_지원용_환경자료.zip', 'delivery/포스코_지원용_환경자료.zip']:
+              with zipfile.ZipFile(path) as z:
+                  names=[n for n in z.namelist() if not n.endswith('/')]
+                  top={}
+                  for n in names:
+                      parts=n.split('/')
+                      key=parts[1] if len(parts)>1 else parts[0]
+                      top[key]=top.get(key,0)+1
+                  print(json.dumps({
+                      'file': path,
+                      'bytes': os.path.getsize(path),
+                      'files': len(names),
+                      'top_level_counts': top,
+                      'testzip': z.testzip(),
+                      'system_original_leak': any('90_시스템원본' in n for n in names),
+                  }, ensure_ascii=False))
+          PY
+
+      - name: Upload Kumho support package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-application-environment-materials
+          path: delivery/금호석유화학_지원용_환경자료.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload POSCO support package
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-application-environment-materials
+          path: delivery/포스코_지원용_환경자료.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
