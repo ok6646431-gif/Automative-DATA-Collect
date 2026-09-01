@@ -323,6 +323,11 @@ def download_one(session, doc, target, total_bytes):
     credible_document_response = False
     slow_mode = False
     failures = 0
+    # HTTP Range offsets are only safe when the bytes written locally represent
+    # the same transfer representation addressed by the origin. requests
+    # transparently decodes gzip/br responses, so an interrupted encoded response
+    # must restart from zero instead of resuming from the decoded byte count.
+    resume_representation_safe = True
     expected_ext = str(doc.get("expected_extension") or "").lower().lstrip(".")
     segment_candidate = expected_ext in RANGE_SEGMENT_EXTENSIONS
 
@@ -338,6 +343,13 @@ def download_one(session, doc, target, total_bytes):
         read_ceiling = SLOW_RETRY_READ_TIMEOUT_SECONDS if slow_mode else float(DOWNLOAD_TIMEOUT[1])
         read_timeout = max(1.0, min(read_ceiling, remaining))
         request_headers = dict(headers)
+        # Exact artifact collection does not benefit from transparent HTTP
+        # compression. Asking for identity also keeps Content-Length and Range
+        # coordinates aligned with the bytes persisted to disk.
+        request_headers.setdefault("Accept-Encoding", "identity")
+        if resume_offset > 0 and not resume_representation_safe:
+            resume_offset = 0
+            target.unlink(missing_ok=True)
 
         range_requested = False
         range_start = resume_offset
@@ -361,12 +373,21 @@ def download_one(session, doc, target, total_bytes):
                 r.raise_for_status()
                 status_code = int(getattr(r, "status_code", 200) or 200)
                 length = int(r.headers.get("Content-Length") or 0)
+                content_encoding = str(r.headers.get("Content-Encoding") or "").strip().lower()
+                encoded_response = content_encoding not in {"", "identity"}
                 content_range = str(r.headers.get("Content-Range") or "")
                 range_match = re.match(r"bytes\s+(\d+)-(\d+)/(\d+|\*)", content_range, re.I)
                 range_accepted = bool(
                     range_requested and status_code == 206 and range_match
                     and int(range_match.group(1)) == range_start
                 )
+
+                if encoded_response and not range_accepted:
+                    # requests.iter_content() yields decoded bytes. Content-Length
+                    # on an encoded response describes the wire representation, not
+                    # the decoded bytes saved to target, so neither exact-size
+                    # validation nor decoded-offset Range resume is safe.
+                    resume_representation_safe = False
 
                 if resume_offset > 0 and not range_accepted:
                     # Origin ignored or inconsistently answered Range. Never append
@@ -377,7 +398,7 @@ def download_one(session, doc, target, total_bytes):
                 expected_total = 0
                 if range_accepted and range_match and range_match.group(3) != "*":
                     expected_total = int(range_match.group(3))
-                elif length and not range_accepted:
+                elif length and not range_accepted and not encoded_response:
                     expected_total = length
                 elif length and range_accepted:
                     expected_total = resume_offset + length
