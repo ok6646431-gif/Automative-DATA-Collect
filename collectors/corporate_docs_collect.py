@@ -414,7 +414,14 @@ def download_one(session, doc, target, total_bytes):
 
                 response_ctype = str(r.headers.get("Content-Type") or "").split(";")[0].strip().lower()
                 not_html = response_ctype not in {"text/html", "application/xhtml+xml"}
-                if expected_total >= SLOW_RETRY_MIN_DECLARED_BYTES and not_html and (not expected_ext or expected_ext != "pdf" or "pdf" in response_ctype):
+                expected_type_ok = (not expected_ext or expected_ext != "pdf" or "pdf" in response_ctype)
+                small_verified_document = bool(
+                    expected_total
+                    and expected_ext in {"pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx"}
+                )
+                if not_html and expected_type_ok and (
+                    expected_total >= SLOW_RETRY_MIN_DECLARED_BYTES or small_verified_document
+                ):
                     credible_document_response = True
 
                 mode = "ab" if range_accepted else "wb"

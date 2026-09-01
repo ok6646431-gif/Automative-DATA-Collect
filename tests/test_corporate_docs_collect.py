@@ -43,7 +43,7 @@ class CorporateDocsTests(unittest.TestCase):
             profile.write_text(json.dumps({"request_id":"REQ-A","company_id":"COMP1"}),encoding="utf-8")
             evidence.write_text(json.dumps({"schema_version":"1.0","request_id":"REQ-A","discovery_status":"COMPLETE","documents":[{"document_id":"D1","document_type":"SUSTAINABILITY_REPORT","title":"Slow report","source_url":"https://official.example/slow.pdf","expected_extension":"pdf","verification_status":"VERIFIED"}]}),encoding="utf-8")
             session=unittest.mock.MagicMock(); session.get.return_value=FakeResponse(body=b"%PDF-slow")
-            ticks=iter([0.0, 0.0, 121.0, 121.0, 121.0])
+            ticks=iter([0.0, 0.0, 361.0, 361.0, 361.0, 361.0, 361.0])
             with patch("corporate_docs_collect.requests.Session",return_value=session), patch("corporate_docs_collect.time.monotonic",side_effect=lambda: next(ticks)), patch("corporate_docs_collect.time.sleep"):
                 status=collect(evidence,profile,out)
             self.assertEqual(status["downloaded"],0)
