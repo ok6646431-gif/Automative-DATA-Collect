@@ -42,15 +42,19 @@ class ArchiveZipDedupTests(unittest.TestCase):
                 self.assertNotIn(f'{tree.name}/90_시스템원본/ENVINFO/raw_attachments/same.pdf',names)
                 self.assertIn(f'{tree.name}/01_사용자자료/04_지속가능경영보고서/report.pdf',names)
                 self.assertIn(f'{tree.name}/90_시스템원본/Deduplicated_File_References.csv',names)
+                self.assertIn(f'{tree.name}/00_자료목록/사용자자료_목록.csv',names)
+                self.assertIn(f'{tree.name}/00_자료목록/전체자료목록.xlsx',names)
                 ref=z.read(f'{tree.name}/90_시스템원본/Deduplicated_File_References.csv').decode('utf-8-sig')
                 self.assertIn('same.pdf',ref); self.assertIn('report.pdf',ref)
             summary=json.loads((package/'Archive_Summary.json').read_text(encoding='utf-8'))
             self.assertEqual(summary['deduplicated_files'],1)
-            rows=list(csv.DictReader((package/'Artifact_Index.csv').open(encoding='utf-8-sig')))
+            self.assertEqual(summary['user_files'],1)
+            with (package/'Artifact_Index.csv').open(encoding='utf-8-sig') as f:
+                rows=list(csv.DictReader(f))
             human=[r for r in rows if r['path']=='Human_Archive.zip'][0]
             self.assertEqual(human['sha256'],sha256(zip_path))
 
-    def test_exact_user_duplicates_in_same_folder_keep_canonical_name(self):
+    def test_exact_user_duplicates_in_same_folder_keep_canonical_name_and_refresh_inventory(self):
         with tempfile.TemporaryDirectory() as td:
             root,package,tree=self._base_package(td)
             user=tree/'01_사용자자료'/'04_지속가능경영보고서'; system=tree/'90_시스템원본'
@@ -78,6 +82,17 @@ class ArchiveZipDedupTests(unittest.TestCase):
                 self.assertIn(promoted1.name,ref)
                 self.assertIn(promoted2.name,ref)
                 self.assertIn(canonical.name,ref)
+                inv_name=f'{tree.name}/00_자료목록/사용자자료_목록.csv'
+                inventory=list(csv.DictReader(z.read(inv_name).decode('utf-8-sig').splitlines()))
+                paths={r['상대경로'] for r in inventory}
+                self.assertIn(f'01_사용자자료/04_지속가능경영보고서/{canonical.name}',paths)
+                self.assertIn(f'01_사용자자료/04_지속가능경영보고서/{different.name}',paths)
+                self.assertNotIn(f'01_사용자자료/04_지속가능경영보고서/{promoted1.name}',paths)
+                self.assertNotIn(f'01_사용자자료/04_지속가능경영보고서/{promoted2.name}',paths)
+            summary=json.loads((package/'Archive_Summary.json').read_text(encoding='utf-8'))
+            self.assertEqual(summary['user_files'],2)
+            manifest=json.loads((package/'Master_Manifest.json').read_text(encoding='utf-8'))
+            self.assertEqual(manifest['human_archive']['user_files'],2)
 
 
 if __name__=='__main__': unittest.main()
