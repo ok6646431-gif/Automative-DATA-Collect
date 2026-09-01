@@ -1,5 +1,9 @@
 {
-  "source_run_id": 33156250457,
-  "purpose": "Rebuild the validated Kumho Petrochemical human archive from run 113 raw artifacts with current archive deduplication and sustainability-coverage rules.",
-  "replay_token": "kkpc-human-archive-coverage-v2"
+  "source_run_id": 33483075983,
+  "public_artifact_name": "stable-public-sources",
+  "icis_run_id": 33483075983,
+  "document_run_id": 33468795117,
+  "document_artifact_name": "kumho-corpdocs-size-aware",
+  "purpose": "Validate package, human archive and folder delivery using the current Kumho public/ICIS artifacts plus the same-day strict 14-of-14 verified corporate-document artifact while the live corporate download E2E continues independently.",
+  "replay_token": "kkpc-split-artifact-replay-20260901-v1"
 }
