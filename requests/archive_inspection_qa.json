@@ -1,6 +1,6 @@
 {
-  "run_id": 33486389806,
+  "run_id": 33489125078,
   "artifact_name": "human-archive-replay-qa",
-  "purpose": "Inspect the completed Kumho Petrochemical Human_Archive.zip and cryptographically verify exact duplicate files inside the user-facing sustainability-report folder.",
-  "inspection_token": "kkpc-human-archive-inspection-20260901-v2-sha256"
+  "purpose": "Inspect the deduplicated Kumho Petrochemical Human_Archive.zip and verify that no exact SHA-256 duplicate files remain inside the same user-facing folder while sustainability, BAT and archive structure remain intact.",
+  "inspection_token": "kkpc-human-archive-inspection-20260901-v3-user-folder-sha256-zero"
 }
