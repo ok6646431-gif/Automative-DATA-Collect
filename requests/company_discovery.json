@@ -1,84 +1,44 @@
 {
   "schema_version": "1.0",
-  "request_id": "hd-hyundai-samho-env-20260902-v1",
+  "request_id": "hd-0b0f7339-env-g0-20260902",
   "requested_company_name": "HD현대삼호",
   "current_legal_name": "에이치디현대삼호 주식회사",
   "current_legal_name_active_period": {
-    "start_year": 1998
+    "start_year": 2024
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "에이치디현대삼호 주식회사 영암 조선소",
+    "label": "HD현대삼호 주요 사업장",
     "candidate_ids": [
-      "hd-hyundai-samho-yeongam-shipyard"
+      "hd-93-820eb739"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
     "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
   },
-  "scope_notes": [
-    {
-      "code": "CORE_SHIPYARD_SCOPE",
-      "subject": "영암 조선소",
-      "detail": "에이치디현대삼호 주식회사의 핵심 국내 생산사업장인 전남 영암군 삼호읍 대불로 93 사업장을 환경자료 핵심 범위로 사용한다. HD한국조선해양·HD현대중공업·HD현대미포 등 별도 법인 자료는 수집 결과에서 구분·제외한다."
-    },
-    {
-      "code": "LEGAL_NAME_CHANGE_BOUNDARY_2024",
-      "subject": "2024년 3월 25일 사명 변경 전후",
-      "detail": "동일 법인이 2024년 3월 25일 현대삼호중공업에서 HD현대삼호로 상호를 변경했다. 2020~2023 및 일부 2024 공개자료의 현대삼호중공업 명칭은 동일 법인의 역사적 연속자료로 보존한다."
-    }
-  ],
   "company_aliases": [
     {
       "name": "HD현대삼호",
-      "alias_type": "current_brand_name",
-      "active_period": {
-        "start_year": 2024
-      },
+      "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/"
-    },
-    {
-      "name": "에이치디현대삼호(주)",
-      "alias_type": "source_native_alias",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
       "active_period": {
         "start_year": 2024
-      },
-      "verification_state": "SOURCE_VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468"
+      }
     },
     {
       "name": "HD HYUNDAI SAMHO CO., LTD.",
       "alias_type": "english_legal_name",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
       "active_period": {
         "start_year": 2024
-      },
-      "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468"
-    },
-    {
-      "name": "HSHI",
-      "alias_type": "abbreviation",
-      "active_period": {
-        "start_year": 2024
-      },
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
+      }
     }
   ],
   "historical_legal_names": [
-    {
-      "name": "현대삼호중공업 주식회사",
-      "alias_type": "former_legal_name",
-      "active_period": {
-        "start_year": 2020,
-        "end_year": 2024
-      },
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
-    },
     {
       "name": "현대삼호중공업",
       "alias_type": "former_legal_name",
@@ -87,105 +47,59 @@
         "end_year": 2024
       },
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
-    },
-    {
-      "name": "현대삼호중공업(주)",
-      "alias_type": "source_native_alias",
-      "active_period": {
-        "start_year": 2020,
-        "end_year": 2024
-      },
-      "verification_state": "SOURCE_VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
-    },
-    {
-      "name": "HYUNDAI SAMHO HEAVY INDUSTRIES CO., LTD.",
-      "alias_type": "former_legal_name",
-      "active_period": {
-        "start_year": 2020,
-        "end_year": 2024
-      },
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471&seek=%ED%9A%8C%EC%82%AC%EB%AA%85&selKeyword=subject&pg=1"
     }
   ],
   "corporate_restructuring_evidence": [
     {
-      "event_type": "LEGAL_NAME_CHANGE",
+      "event_type": "rename",
+      "effective_period": {
+        "start_year": 2024,
+        "end_year": 2024
+      },
       "effective_date": "2024-03-25",
-      "predecessor": "현대삼호중공업 주식회사",
+      "predecessor": "현대삼호중공업",
       "successor": "에이치디현대삼호 주식회사",
-      "scope": "동일 법인의 상호 변경",
+      "scope": "same legal entity name change",
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471&seek=%ED%9A%8C%EC%82%AC%EB%AA%85&selKeyword=subject&pg=1"
     }
   ],
   "domestic_site_candidates": [
     {
-      "candidate_id": "hd-hyundai-samho-yeongam-shipyard",
-      "site_name_raw": "HD현대삼호 영암 조선소",
-      "address_raw": "전남 영암군 삼호읍 대불로 93",
-      "business_unit_raw": "선박 건조 및 산업설비 생산사업장",
-      "source_locator": "https://recruit.hd.com/kr/mainLayout/domestic",
+      "candidate_id": "hd-93-820eb739",
+      "site_name_raw": "HD현대삼호 주요 사업장",
+      "address_raw": "전남광주통합특별시 영암군 삼호읍 대불로 93",
+      "business_unit_raw": "official-profile primary operational location",
+      "source_locator": "https://www.hd-samho.com/PageLink.do?link=about/status",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "official_profile_pages": [
+          "https://www.hd-samho.com/PageLink.do?link=about/status",
+          "https://www.hd-samho.com/PageLink.do?link=about/intro",
+          "https://www.hd-samho.com/PageLink.do?link=about/founder2",
+          "https://www.hd-samho.com/PageLink.do?link=about/founder"
+        ],
+        "operational_terms": [
+          "생산야드",
+          "산단",
+          "공장",
+          "조선소"
+        ],
+        "evidence_score": 68
+      }
     }
   ],
   "identity_evidence": [
     {
       "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
-      "source_value_raw": "에이치디현대삼호 주식회사 / HD HYUNDAI SAMHO CO., LTD. / 설립일 1998-11-04 / 업종 선박 및 수상 부유 구조물 건조업",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471",
-      "source_value_raw": "2024년 3월 25일 현대삼호중공업에서 HD현대삼호로 상호 변경",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "source_locator": "https://recruit.hd.com/kr/mainLayout/domestic",
-      "source_value_raw": "영암 사업장: 전남 영암군 대불로 93",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "source_value_raw": "HD현대삼호 공식 보고서·정책 페이지에 2020~2025 조선부문 지속가능경영/통합보고서 연차자료 공개",
-      "verification_state": "VERIFIED"
+      "source_value_raw": "에이치디현대삼호 주식회사 / HD HYUNDAI SAMHO CO., LTD. / establishment 1998-11-04 / website www.hshi.co.kr",
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH"
     }
   ],
-  "related_entity_exclusions": [
-    {
-      "name": "HD현대중공업",
-      "reason": "에이치디현대삼호와 별도 법인인 조선 계열사",
-      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "HD현대미포",
-      "reason": "에이치디현대삼호와 별도 법인인 조선 계열사",
-      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "HD한국조선해양",
-      "reason": "에이치디현대삼호의 모회사이자 별도 법인",
-      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "HD현대마린엔진",
-      "reason": "에이치디현대삼호와 별도 법인인 조선해양 계열사",
-      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "HD현대",
-      "reason": "에이치디현대삼호와 별도 법인인 그룹 지주회사",
-      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
-      "verification_state": "VERIFIED"
-    }
-  ],
+  "related_entity_exclusions": [],
   "unresolved_items": [],
   "event_evidence_references": [],
   "collection_policy": {

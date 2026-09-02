@@ -1,7 +1,138 @@
 {
   "schema_version": "1.0",
-  "request_id": "hd-hyundai-samho-env-20260902-v1",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+  "documents": [
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2020",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2020년 현대중공업그룹 통합보고서",
+      "report_year": 2020,
+      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1606291030474.pdf&dn=2020_KSOE_IR_KR.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2021",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2021년 현대삼호중공업 ESG HIGHLIGHTS",
+      "report_year": 2021,
+      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1664354654193.PDF&dn=2021+%ED%98%84%EB%8C%80%EC%82%BC%ED%98%B8%EC%A4%91%EA%B3%B5%EC%97%85+ESG+HIGHLIGHTS.PDF",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2022",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2022년 현대삼호중공업 ESG HIGHLIGHTS (영문)",
+      "report_year": 2022,
+      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1696557258303.PDF&dn=2022+%ED%98%84%EB%8C%80%EC%82%BC%ED%98%B8%EC%A4%91%EA%B3%B5%EC%97%85+ESG+HIGHLIGHTS+%28%EC%98%81%EB%AC%B8%29+.PDF",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2023",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2023년 HD한국조선해양 통합보고서(국문)",
+      "report_year": 2023,
+      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1724201862844.pdf&dn=%28KOR%29+2023+HDKSOE_Integrated_Report.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2024",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2024년 HD한국조선해양 지속가능경영보고서_국문",
+      "report_year": 2024,
+      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1757374873802.pdf&dn=HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91_SR+2024-%EA%B5%AD%EB%AC%B8+%EC%B5%9C%EC%A2%85_0826+v1.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2025",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2025년 HD한국조선해양 지속가능경영보고서_국문",
+      "report_year": 2025,
+      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1787209376756.pdf&dn=2025+HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91+%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C+%28KOR%29.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_09b55bd663",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "HD현대삼호",
+      "report_year": 2026,
+      "source_url": "https://www.hd-samho.com/",
+      "source_locator": "https://www.hd-samho.com/",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_88a556317e",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "HD현대삼호",
+      "report_year": 2026,
+      "source_url": "https://www.hd-samho.com/bbs/report_policy2/list.do",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy2/list.do",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_3e435d125f",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "HD현대삼호",
+      "report_year": 2026,
+      "source_url": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_6c8969ec4c",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "HD현대삼호",
+      "report_year": 2026,
+      "source_url": "https://www.hd-samho.com/bbs/report_policy3/list.do",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy3/list.do",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
+      "source_key": "CORP_DOCS",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "year": 2026,
+      "verification_status": "SOURCE_VERIFIED",
+      "status": "NOT_PUBLISHED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "As of 2026-09-02, verified official report index pages list reports through 2025, not 2026.",
+      "source_locator": "https://www.hd-samho.com/"
+    }
+  ],
   "discovery_scope": {
     "history_window": {
       "start_year": 2020,
@@ -14,135 +145,7 @@
       "SUSTAINABILITY_REPORT",
       "ENVIRONMENTAL_MANAGEMENT"
     ],
-    "scope_note": "HD현대삼호 공식 보고서·정책 페이지와 HD한국조선해양 공식 보고서를 사용한다. 조선부문 통합/지속가능경영보고서는 각 연도 보고범위에 현대삼호중공업 또는 HD현대삼호가 포함된 경우에만 회사 자료로 보존하며, 다른 계열사의 독립 보고서로 대체하지 않는다. 2024년 3월 사명 변경 전 자료는 동일 법인의 역사적 연속자료로 취급한다.",
-    "fallback_policy": "Only independently verified official-company or official-government routes may be used as fallbacks. A failed download is never converted into a no-data claim."
+    "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page."
   },
-  "documents": [
-    {
-      "document_id": "HSHI_SUSTAINABILITY_2025",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 HD한국조선해양 지속가능경영보고서 - HD현대삼호 포함",
-      "report_year": 2025,
-      "source_url": "https://www.hd-samho.com/download.do?dn=2025+HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91+%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C+%28KOR%29.pdf&path=%2FAttachUP%2FREPORT&rn=1787209376756.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "HD현대삼호 공식 보고서·정책 페이지의 2025년 국문 보고서 링크가 가리키는 실제 PDF download endpoint를 사용한다. 목록 HTML이 아니라 보고서 파일 자체를 수집한다."
-    },
-    {
-      "document_id": "HSHI_SUSTAINABILITY_2024",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 HD한국조선해양 지속가능경영보고서 - HD현대삼호 포함",
-      "report_year": 2024,
-      "source_url": "https://www.hd-ksoe.com/upload/files/2025/08/f000e662-811d-4082-844d-1fb368a1810b.pdf",
-      "source_locator": "https://www.hd-ksoe.com/en/sustainability/esg-library/report/list",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_INTEGRATED_2023",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 HD한국조선해양 통합보고서 - HD현대삼호 포함",
-      "report_year": 2023,
-      "source_url": "https://www.hshi.co.kr/download.do?dn=%28KOR%29+2023+HDKSOE_Integrated_Report.pdf&path=%2FAttachUP%2FREPORT&rn=1724201862844.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_INTEGRATED_2022",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 HD한국조선해양 통합보고서 - 현대삼호중공업 포함",
-      "report_year": 2022,
-      "source_url": "https://www.hshi.co.kr/download.do?dn=%28KOR%29+2022+HDKSOE_Integrated_Report.pdf&path=%2FAttachUP%2FREPORT&rn=1724202031709.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_ESG_HIGHLIGHTS_2021",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 현대삼호중공업 ESG HIGHLIGHTS",
-      "report_year": 2021,
-      "source_url": "https://www.hshi.co.kr/download.do?dn=2021+%ED%98%84%EB%8C%80%EC%82%BC%ED%98%B8%EC%A4%91%EA%B3%B5%EC%97%85+ESG+HIGHLIGHTS.PDF&path=%2FAttachUP%2FREPORT&rn=1664354654193.PDF",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "HD현대삼호 공식 보고서 목록에서 공개되는 현대삼호중공업 자체 2021 ESG 자료를 사용한다. 기존 그룹 통합보고서 직접 URL은 자동수집에서 HTTP 403을 반환해 더 직접적인 회사 자체 자료로 교체했다."
-    },
-    {
-      "document_id": "HSHI_INTEGRATED_2020",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2020 한국조선해양 통합보고서 - 현대삼호중공업 포함",
-      "report_year": 2020,
-      "source_url": "https://hd-hhi.com/upload/esgArchivesTotal/87_2_12c7d028-a9e8-4343-8257-ff38f1534f5b.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_HSE_POLICY_CURRENT",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호 HSE 경영방침",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety",
-      "source_locator": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_ENVIRONMENT_MANAGEMENT_CURRENT",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호 안전·보건·환경 - 환경관리 공개내용",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety2",
-      "source_locator": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety2",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_ENVIRONMENT_DECLARATION_CURRENT",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호 환경경영선언",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety4",
-      "source_locator": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety4",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "CORE"
-    },
-    {
-      "document_id": "HSHI_ISO_ENVIRONMENT_CURRENT",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호 ISO 14001 환경경영시스템 인증 공개페이지",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/bbs/safety3/list.do",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy3/list.do",
-      "expected_extension": "html",
-      "verification_status": "VERIFIED",
-      "importance": "SUPPORTING"
-    }
-  ],
-  "gaps": [
-    {
-      "gap_id": "HSHI_SUSTAINABILITY_2026_NOT_PUBLISHED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2026,
-      "verification_status": "VERIFIED",
-      "status": "NOT_PUBLISHED",
-      "severity": "LOW",
-      "blocking": false,
-      "reason": "2026-09-02 현재 HD현대삼호 공식 보고서·정책 페이지와 HD한국조선해양 공식 보고서 목록의 최신 보고대상연도는 2025년이며 2026년 지속가능경영보고서는 공개되지 않았다.",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do"
-    }
-  ]
+  "request_id": "hd-0b0f7339-env-g0-20260902"
 }
