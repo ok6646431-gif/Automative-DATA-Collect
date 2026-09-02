@@ -50,7 +50,10 @@ def evaluate(profile, document_rows, sustainability_paths):
     except (TypeError, ValueError):
         minimum = 5
 
-    active = profile.get("current_legal_name_active_period") or {}
+    # ``current_legal_name_active_period`` describes a spelling/name boundary.  A
+    # rename does not create a new corporation, so report coverage must use explicit
+    # legal-entity continuity when available. Older profiles retain the old fallback.
+    active = profile.get("legal_entity_active_period") or profile.get("current_legal_name_active_period") or {}
     legal_start = _year(active.get("start_year"))
     requested = profile.get("requested_history_window") or {}
     requested_years = _range_years(requested.get("start_year"), requested.get("end_year"))
