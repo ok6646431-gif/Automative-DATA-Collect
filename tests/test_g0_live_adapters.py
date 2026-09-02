@@ -8,6 +8,11 @@ from orchestrator.g0_live_adapters import (
     _search_form_payload,
     discover_site_candidates,
 )
+from orchestrator.g0_official_site_recovery import (
+    _corporate_self_identifies,
+    _origin_variants,
+    _search_result_links,
+)
 from orchestrator.zero_touch_discovery import Page
 
 
@@ -72,6 +77,52 @@ class TestG0LiveAdapters(unittest.TestCase):
         )
         links = _candidate_view_links("https://official.example/bbs/news/list.do", html)
         self.assertEqual(links, ["https://official.example/bbs/news/view.do?n=471"])
+
+    def test_stale_dart_url_generates_transport_and_www_variants(self):
+        variants = _origin_variants("https://www.old-company.example")
+        self.assertIn("https://old-company.example/", variants)
+        self.assertIn("http://www.old-company.example/", variants)
+        self.assertIn("http://old-company.example/", variants)
+
+    def test_search_results_are_locator_only_and_public_platforms_are_filtered(self):
+        html = (
+            '<a href="/url?q=https%3A%2F%2Fofficial.example%2Fabout">공식</a>'
+            '<a href="https://www.linkedin.com/company/example">링크드인</a>'
+            '<a href="https://official.example/news">공식뉴스</a>'
+        )
+        links = _search_result_links("https://www.google.com/search?q=x", html)
+        self.assertEqual(links, ["https://official.example/about", "https://official.example/news"])
+
+    def test_recovered_host_requires_self_identifying_corporate_structure(self):
+        pages = [
+            Page(
+                "https://official.example/",
+                "예시회사 회사소개 사업분야 지속가능경영 투자자정보 인재채용 "
+                "copyright 예시회사 all rights reserved",
+                "", 200,
+            ),
+            Page(
+                "https://official.example/about",
+                "예시회사 회사명 예시회사 대표이사 회사소개 business sustainability investor",
+                "", 200,
+            ),
+        ]
+        links = [
+            ("https://official.example/", "회사소개", "https://official.example/about"),
+            ("https://official.example/", "사업", "https://official.example/business"),
+            ("https://official.example/", "지속가능", "https://official.example/sustainability"),
+            ("https://official.example/", "IR", "https://official.example/ir"),
+            ("https://official.example/", "채용", "https://official.example/career"),
+        ]
+        verified, evidence = _corporate_self_identifies("예시회사", pages, links)
+        self.assertTrue(verified)
+        self.assertGreaterEqual(evidence["company_pages"], 2)
+        self.assertGreaterEqual(evidence["internal_link_count"], 5)
+
+    def test_single_article_cannot_be_promoted_as_official_site(self):
+        pages = [Page("https://news.example/article", "예시회사 관련 기사 회사소개", "", 200)]
+        verified, _ = _corporate_self_identifies("예시회사", pages, [])
+        self.assertFalse(verified)
 
 
 if __name__ == "__main__":
