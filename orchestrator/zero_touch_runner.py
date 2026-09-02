@@ -17,6 +17,8 @@ from orchestrator import dart_public_resolver
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
+from orchestrator import g0_public_disclosure_enrichment
+from orchestrator import g0_report_enrichment
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
@@ -30,6 +32,18 @@ _base_discover = zero_touch_discovery.discover
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
     discovery, documents, audit = g0_evidence_enrichment.enrich_discovery_from_audit(discovery, documents, audit)
+
+    # DART's public former-name popup can legitimately return an empty table.  When an
+    # official company history page indicates a rename but does not state predecessor
+    # and exact date, use search engines only to locate KRX/DART public disclosures and
+    # promote the rename only after the official disclosure states OLD, NEW and date.
+    discovery = g0_public_disclosure_enrichment.enrich(discovery, audit)
+
+    # Annual-report coverage is stricter than broad document discovery.  Brochures and
+    # generic downloadable PDFs cannot satisfy an annual series; a directly linked
+    # same-organization ESG/report host may be crawled only for document evidence.
+    documents = g0_report_enrichment.enrich(discovery, documents, audit)
+    g0_report_enrichment.refresh_document_unresolved(discovery, documents, audit)
 
     # Make stale-DART-website recovery explicit in the audit. Search engines, when
     # used, were candidate locators only; the accepted host was re-verified from its
@@ -75,6 +89,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
                 }:
                     alias["active_period"] = {"start_year": int(rename_year)}
 
+    audit["gate_status"] = "PASS" if not discovery.get("unresolved_items") else "REVIEW_REQUIRED"
     return discovery, documents, audit
 
 
