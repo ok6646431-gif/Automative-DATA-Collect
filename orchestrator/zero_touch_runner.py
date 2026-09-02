@@ -16,9 +16,11 @@ if str(ROOT) not in sys.path:
 from orchestrator import dart_public_resolver
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_live_adapters
+from orchestrator import g0_official_site_recovery
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
+zero_touch_discovery.crawl_official = g0_official_site_recovery.crawl_official
 zero_touch_discovery.discover_site_candidates = g0_live_adapters.discover_site_candidates
 zero_touch_discovery._extract_rename_date_and_names = g0_live_adapters.extract_rename_date_and_names
 
@@ -28,6 +30,16 @@ _base_discover = zero_touch_discovery.discover
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
     discovery, documents, audit = g0_evidence_enrichment.enrich_discovery_from_audit(discovery, documents, audit)
+
+    # Make stale-DART-website recovery explicit in the audit. Search engines, when
+    # used, were candidate locators only; the accepted host was re-verified from its
+    # own fetched corporate pages by g0_official_site_recovery.
+    official_stage = (audit.get("stages") or {}).get("official_site")
+    if isinstance(official_stage, dict):
+        recovery = dict(g0_official_site_recovery.last_recovery or {})
+        official_stage["recovery"] = recovery
+        if recovery.get("resolved_url"):
+            official_stage["resolved_official_root"] = recovery["resolved_url"]
 
     # DART establishment date describes legal-entity continuity. A later rename only
     # bounds the spelling of the current legal name; it never creates a new company.
