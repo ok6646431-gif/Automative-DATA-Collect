@@ -6,6 +6,11 @@ on:
       - run/control-plane
     paths:
       - requests/application_package_token.txt
+      - tools/build_application_material_package.py
+      - tools/validate_application_material_package.py
+      - tests/test_application_material_package.py
+      - tests/test_application_material_package_validation.py
+      - .github/workflows/build-application-material-packages.yml
   workflow_dispatch:
 
 permissions:
@@ -23,8 +28,14 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Compile package builder
-        run: python -m py_compile tools/build_application_material_package.py
+      - name: Compile and test package tools
+        run: |
+          python -m py_compile \
+            tools/build_application_material_package.py \
+            tools/validate_application_material_package.py
+          python -m unittest -v \
+            tests/test_application_material_package.py \
+            tests/test_application_material_package_validation.py
 
       - name: Download Kumho verified Human Archive
         uses: actions/download-artifact@v4
@@ -82,6 +93,15 @@ jobs:
             --root '포스코_지원용_환경자료' \
             --company '주식회사 포스코' \
             --source-run '33498708794'
+
+      - name: Validate support packages against requested scope
+        run: |
+          python tools/validate_application_material_package.py \
+            --input 'delivery/금호석유화학_지원용_환경자료.zip' \
+            --company '금호석유화학'
+          python tools/validate_application_material_package.py \
+            --input 'delivery/포스코_지원용_환경자료.zip' \
+            --company '주식회사 포스코'
 
       - name: Inspect support packages
         run: |
