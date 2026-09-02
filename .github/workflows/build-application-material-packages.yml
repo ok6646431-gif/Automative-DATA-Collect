@@ -1,17 +1,27 @@
-name: Build application material packages
+name: Build application material package
 
 on:
   push:
     branches:
       - run/control-plane
     paths:
-      - requests/application_package_token.txt
-      - tools/build_application_material_package.py
-      - tools/validate_application_material_package.py
-      - tests/test_application_material_package.py
-      - tests/test_application_material_package_validation.py
-      - .github/workflows/build-application-material-packages.yml
+      - requests/application_package_request.json
   workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Workflow run ID that contains a verified Human Archive
+        required: true
+        type: string
+      source_artifact_name:
+        description: Artifact containing Human_Archive.zip
+        required: true
+        default: enterprise-env-human-archive
+        type: string
+      package_label:
+        description: Optional user-facing company label for the output filename
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -28,128 +38,126 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Compile and test package tools
+      - name: Compile and test generic application package tools
         run: |
           python -m py_compile \
             tools/build_application_material_package.py \
-            tools/validate_application_material_package.py
+            tools/validate_application_material_package.py \
+            tools/build_application_material_from_archive.py
           python -m unittest -v \
             tests/test_application_material_package.py \
-            tests/test_application_material_package_validation.py
+            tests/test_application_material_package_validation.py \
+            tests/test_application_material_from_archive.py
 
-      - name: Download Kumho verified Human Archive
+      - name: Resolve package request
+        id: request
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          INPUT_SOURCE_ARTIFACT_NAME: ${{ inputs.source_artifact_name }}
+          INPUT_PACKAGE_LABEL: ${{ inputs.package_label }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          if os.environ.get('EVENT_NAME') == 'workflow_dispatch':
+              request = {
+                  'source_run_id': os.environ.get('INPUT_SOURCE_RUN_ID', ''),
+                  'source_artifact_name': os.environ.get('INPUT_SOURCE_ARTIFACT_NAME', ''),
+                  'package_label': os.environ.get('INPUT_PACKAGE_LABEL', ''),
+              }
+          else:
+              request = json.loads(
+                  Path('requests/application_package_request.json').read_text(encoding='utf-8')
+              )
+
+          run_id = str(request.get('source_run_id') or '').strip()
+          artifact_name = str(
+              request.get('source_artifact_name') or 'enterprise-env-human-archive'
+          ).strip()
+          package_label = str(request.get('package_label') or '').strip()
+
+          if not run_id.isdigit() or int(run_id) <= 0:
+              raise RuntimeError(f'invalid source_run_id: {run_id!r}')
+          if not artifact_name:
+              raise RuntimeError('source_artifact_name is required')
+          if '\n' in artifact_name or '\r' in artifact_name:
+              raise RuntimeError('source_artifact_name contains a newline')
+          if '\n' in package_label or '\r' in package_label:
+              raise RuntimeError('package_label contains a newline')
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write(f'source_run_id={run_id}\n')
+              f.write(f'source_artifact_name={artifact_name}\n')
+              f.write(f'package_label={package_label}\n')
+          print(json.dumps({
+              'source_run_id': run_id,
+              'source_artifact_name': artifact_name,
+              'package_label': package_label,
+          }, ensure_ascii=False))
+          PY
+
+      - name: Download verified Human Archive
         uses: actions/download-artifact@v4
         with:
-          name: human-archive-replay-qa
-          path: sources/kumho
-          repository: ok6646431-gif/Automative-DATA-Collect
-          run-id: 33491330885
+          name: ${{ steps.request.outputs.source_artifact_name }}
+          path: source
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.request.outputs.source_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download POSCO verified Human Archive
-        uses: actions/download-artifact@v4
-        with:
-          name: enterprise-env-human-archive
-          path: sources/posco
-          repository: ok6646431-gif/Automative-DATA-Collect
-          run-id: 33498708794
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Locate source archives
+      - name: Locate Human Archive
         shell: bash
         run: |
           set -euo pipefail
-          KUMHO_ZIP="$(find sources/kumho -type f -name 'Human_Archive.zip' -print -quit)"
-          POSCO_ZIP="$(find sources/posco -type f -name 'Human_Archive.zip' -print -quit)"
-          if [ -z "$KUMHO_ZIP" ]; then
-            echo 'Kumho Human_Archive.zip not found' >&2
-            find sources/kumho -maxdepth 4 -type f -printf '%p\n' | head -100 >&2
+          HUMAN_ZIP="$(find source -type f -name 'Human_Archive.zip' -print -quit)"
+          if [ -z "$HUMAN_ZIP" ]; then
+            echo 'Human_Archive.zip not found in requested artifact' >&2
+            find source -maxdepth 5 -type f -printf '%p\n' | head -100 >&2
             exit 1
           fi
-          if [ -z "$POSCO_ZIP" ]; then
-            echo 'POSCO Human_Archive.zip not found' >&2
-            find sources/posco -maxdepth 4 -type f -printf '%p\n' | head -100 >&2
-            exit 1
+          echo "HUMAN_ZIP=$HUMAN_ZIP" >> "$GITHUB_ENV"
+          ls -lh "$HUMAN_ZIP"
+
+      - name: Build and validate application package
+        env:
+          SOURCE_RUN_ID: ${{ steps.request.outputs.source_run_id }}
+          PACKAGE_LABEL: ${{ steps.request.outputs.package_label }}
+        run: |
+          set -euo pipefail
+          args=(
+            --input "$HUMAN_ZIP"
+            --output-dir delivery
+            --source-run "$SOURCE_RUN_ID"
+            --summary-out delivery/application_package_result.json
+          )
+          if [ -n "$PACKAGE_LABEL" ]; then
+            args+=(--package-label "$PACKAGE_LABEL")
           fi
-          echo "KUMHO_ZIP=$KUMHO_ZIP" >> "$GITHUB_ENV"
-          echo "POSCO_ZIP=$POSCO_ZIP" >> "$GITHUB_ENV"
-          ls -lh "$KUMHO_ZIP" "$POSCO_ZIP"
+          python tools/build_application_material_from_archive.py "${args[@]}"
 
-      - name: Build Kumho application package
-        run: |
-          mkdir -p delivery
-          python tools/build_application_material_package.py \
-            --input "$KUMHO_ZIP" \
-            --output 'delivery/금호석유화학_지원용_환경자료.zip' \
-            --root '금호석유화학_지원용_환경자료' \
-            --company '금호석유화학' \
-            --source-run '33491330885'
-
-      - name: Build POSCO application package
-        run: |
-          python tools/build_application_material_package.py \
-            --input "$POSCO_ZIP" \
-            --output 'delivery/포스코_지원용_환경자료.zip' \
-            --root '포스코_지원용_환경자료' \
-            --company '주식회사 포스코' \
-            --source-run '33498708794'
-
-      - name: Validate support packages against requested scope
-        run: |
-          python tools/validate_application_material_package.py \
-            --input 'delivery/금호석유화학_지원용_환경자료.zip' \
-            --company '금호석유화학'
-          python tools/validate_application_material_package.py \
-            --input 'delivery/포스코_지원용_환경자료.zip' \
-            --company '주식회사 포스코'
-
-      - name: Inspect support packages
+      - name: Inspect generated delivery
         run: |
           python - <<'PY'
-          import json, os, zipfile
-          for path in ['delivery/금호석유화학_지원용_환경자료.zip', 'delivery/포스코_지원용_환경자료.zip']:
-              with zipfile.ZipFile(path) as z:
-                  names=[n for n in z.namelist() if not n.endswith('/')]
-                  top={}
-                  for n in names:
-                      parts=n.split('/')
-                      key=parts[1] if len(parts)>1 else parts[0]
-                      top[key]=top.get(key,0)+1
-                  summary_name=next(n for n in names if n.endswith('/00_자료목록/지원용_패키지_요약.json'))
-                  summary=json.loads(z.read(summary_name).decode('utf-8'))
-                  result={
-                      'file': path,
-                      'bytes': os.path.getsize(path),
-                      'files': len(names),
-                      'top_level_counts': top,
-                      'testzip': z.testzip(),
-                      'system_original_leak': any('90_시스템원본' in n for n in names),
-                      'envinfo_disclosure_records': summary['envinfo_disclosure_records'],
-                      'envinfo_attachment_references': summary['envinfo_attachment_references'],
-                      'envinfo_unique_attachments': summary['envinfo_unique_attachments'],
-                      'envinfo_duplicate_attachment_references': summary['envinfo_duplicate_attachment_references'],
-                      'envinfo_physical_files': summary['envinfo_physical_files'],
-                      'envinfo_site_count': summary['envinfo_site_count'],
-                  }
-                  if result['top_level_counts'].get('02_환경인허가_ENVINFO',0) != result['envinfo_physical_files']:
-                      raise RuntimeError(f'ENVINFO physical count mismatch: {result}')
-                  print(json.dumps(result, ensure_ascii=False))
+          import json, zipfile
+          from pathlib import Path
+
+          result = json.loads(Path('delivery/application_package_result.json').read_text(encoding='utf-8'))
+          package = Path(result['output_zip'])
+          if not package.is_file():
+              raise RuntimeError(f"output package missing: {package}")
+          with zipfile.ZipFile(package) as z:
+              if z.testzip() is not None:
+                  raise RuntimeError('generated package ZIP integrity failure')
+          print(json.dumps(result, ensure_ascii=False, indent=2))
           PY
 
-      - name: Upload Kumho support package
+      - name: Upload application material package
         uses: actions/upload-artifact@v4
         with:
-          name: kumho-application-environment-materials
-          path: delivery/금호석유화학_지원용_환경자료.zip
-          if-no-files-found: error
-          retention-days: 14
-          compression-level: 0
-
-      - name: Upload POSCO support package
-        uses: actions/upload-artifact@v4
-        with:
-          name: posco-application-environment-materials
-          path: delivery/포스코_지원용_환경자료.zip
+          name: application-environment-materials
+          path: delivery/
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
