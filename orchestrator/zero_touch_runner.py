@@ -14,23 +14,12 @@ if str(ROOT) not in sys.path:
 
 from orchestrator import dart_public_resolver
 from orchestrator import g0_evidence_enrichment
+from orchestrator import g0_live_adapters
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
-
-
-def _confirmed_site_discovery(company, pages, dart):
-    sites, scope, unresolved = g0_evidence_enrichment.discover_site_candidates(company, pages, dart)
-    # ``CONFIRMED`` is the cross-layer identity state consumed by request_builder and
-    # scope-quality gates. ``verification_state`` separately records evidence quality.
-    for site in sites:
-        if site.get("verification_state") in {"VERIFIED", "SOURCE_VERIFIED"}:
-            site["identity_status"] = "CONFIRMED"
-    return sites, scope, unresolved
-
-
-zero_touch_discovery.discover_site_candidates = _confirmed_site_discovery
-zero_touch_discovery._extract_rename_date_and_names = g0_evidence_enrichment.extract_rename_date_and_names
+zero_touch_discovery.discover_site_candidates = g0_live_adapters.discover_site_candidates
+zero_touch_discovery._extract_rename_date_and_names = g0_live_adapters.extract_rename_date_and_names
 
 _base_discover = zero_touch_discovery.discover
 
