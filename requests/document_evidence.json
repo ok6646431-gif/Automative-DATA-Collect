@@ -23,12 +23,12 @@
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "2025 HD한국조선해양 지속가능경영보고서 - HD현대삼호 포함",
       "report_year": 2025,
-      "source_url": "https://www.hd-ksoe.com/kr/sustainability/esg-library/report/list",
+      "source_url": "https://www.hd-samho.com/download.do?dn=2025+HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91+%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C+%28KOR%29.pdf&path=%2FAttachUP%2FREPORT&rn=1787209376756.pdf",
       "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "html",
+      "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "2025 보고서는 HD한국조선해양, HD현대중공업, HD현대삼호, HD현대마린엔진을 보고경계로 하며 공식 보고서 목록에서 공개가 확인되었다. 검증된 직접 PDF 경로를 임의 추정하지 않고 공식 보고서 목록 HTML을 보존한다."
+      "notes": "HD현대삼호 공식 보고서·정책 페이지의 2025년 국문 보고서 링크가 가리키는 실제 PDF download endpoint를 사용한다. 목록 HTML이 아니라 보고서 파일 자체를 수집한다."
     },
     {
       "document_id": "HSHI_SUSTAINABILITY_2024",
