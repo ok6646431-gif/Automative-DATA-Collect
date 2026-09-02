@@ -11,7 +11,16 @@ from tools.validate_application_material_package import validate_package
 
 
 class ApplicationMaterialPackageValidationTests(unittest.TestCase):
-    def make_package(self, path: Path, *, site="A공장", excluded_payload="", count_delta=0):
+    def make_package(
+        self,
+        path: Path,
+        *,
+        site="A공장",
+        target_site_token="A공장",
+        analysis_site_name="A공장",
+        excluded_payload="",
+        count_delta=0,
+    ):
         root = "테스트기업_지원용_환경자료"
         record_path = f"02_환경인허가_ENVINFO/{site}/환경정보공개_{site}_2024.pdf"
         attachment_path = f"02_환경인허가_ENVINFO/{site}/첨부자료/2024_자료.pdf"
@@ -34,7 +43,7 @@ class ApplicationMaterialPackageValidationTests(unittest.TestCase):
         }
         scope = {
             "schema_version": "1.1",
-            "label": "A공장",
+            "label": target_site_token,
             "target_source_ids": {"ENVINFO": ["TARGET-ENVINFO"]},
             "excluded_source_ids": [
                 {
@@ -54,7 +63,8 @@ class ApplicationMaterialPackageValidationTests(unittest.TestCase):
         archive_manifest = {
             "schema_version": "2.0",
             "company_display_name": "테스트기업",
-            "target_site_tokens": ["A공장"],
+            "target_site_tokens": [target_site_token],
+            "target_source_ids": {"ENVINFO": ["TARGET-ENVINFO"]},
         }
         counts = [
             {"항목": "환경정보_공개레코드", "값": 1 + count_delta, "설명": ""},
@@ -97,6 +107,21 @@ class ApplicationMaterialPackageValidationTests(unittest.TestCase):
             }
         )
 
+        analysis_io = io.StringIO(newline="")
+        writer = csv.DictWriter(
+            analysis_io,
+            fieldnames=["scope_label", "source_key", "source_site_id", "source_site_name_raw"],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "scope_label": target_site_token,
+                "source_key": "ENVINFO",
+                "source_site_id": "TARGET-ENVINFO",
+                "source_site_name_raw": analysis_site_name,
+            }
+        )
+
         with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as z:
             z.writestr(f"{root}/{record_path}", b"%PDF-test-record")
             z.writestr(f"{root}/{attachment_path}", attachment)
@@ -111,6 +136,10 @@ class ApplicationMaterialPackageValidationTests(unittest.TestCase):
             z.writestr(
                 f"{root}/00_자료목록/원본검증목록/Archive_Manifest.json",
                 json.dumps(archive_manifest, ensure_ascii=False),
+            )
+            z.writestr(
+                f"{root}/00_자료목록/원본검증목록/Analysis_Scope.csv",
+                analysis_io.getvalue().encode("utf-8-sig"),
             )
             z.writestr(
                 f"{root}/00_자료목록/ENVINFO_자료수_설명.csv",
@@ -137,6 +166,19 @@ class ApplicationMaterialPackageValidationTests(unittest.TestCase):
             self.assertEqual(result["status"], "PASS")
             self.assertIn("VERIFIED_EXCLUSION_RECHECK", result["checks"])
 
+    def test_source_native_envinfo_name_can_differ_from_descriptive_target_token(self):
+        with tempfile.TemporaryDirectory() as td:
+            package = Path(td) / "source-native-name.zip"
+            self.make_package(
+                package,
+                site="에이치디현대삼호",
+                target_site_token="HD현대삼호 영암 조선소",
+                analysis_site_name="에이치디현대삼호",
+            )
+            result = validate_package(str(package), "테스트기업")
+            self.assertEqual(result["status"], "PASS")
+            self.assertIn("ENVINFO_SITE_SCOPE", result["checks"])
+
     def test_count_identity_mismatch_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             package = Path(td) / "bad-count.zip"
@@ -147,8 +189,8 @@ class ApplicationMaterialPackageValidationTests(unittest.TestCase):
     def test_out_of_scope_envinfo_site_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             package = Path(td) / "bad-site.zip"
-            self.make_package(package, site="B공장")
-            with self.assertRaisesRegex(RuntimeError, "outside requested target_site_tokens"):
+            self.make_package(package, site="B공장", analysis_site_name="A공장")
+            with self.assertRaisesRegex(RuntimeError, "outside requested source-ID scope"):
                 validate_package(str(package), "테스트기업")
 
     def test_verified_excluded_entity_name_fails_closed(self):
