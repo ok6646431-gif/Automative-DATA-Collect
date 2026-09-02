@@ -14,6 +14,10 @@ PROVINCE_MAP={
 }
 LEGAL_PATTERNS=[r"\(주\)",r"㈜",r"주식회사",r"유한회사",r"\(유\)"]
 FACILITY_WORDS=["사업장","공장","캠퍼스","연구원","기술연구원"]
+TOP_LEVEL_REGION_RE=re.compile(
+    r"^(?:(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s+"
+    r"|[가-힣]{2,24}(?:특별자치도|특별자치시|광역시|특별시|도)\s+)"
+)
 
 
 def read_json(p, default=None):
@@ -104,6 +108,21 @@ def normalize_address(x, profile=None):
     s=re.sub(r"\s+(?:본사|[0-9A-Za-z가-힣&·._-]+(?:공장|사업장|캠퍼스|연구원))\s*$","",s)
     s=re.sub(r"[\s,._·ㆍ()\[\]{}\-_/\\]","",s).lower()
     return s
+
+
+def normalize_address_locality(x, profile=None):
+    """Normalize the stable road-address portion below the top-level region.
+
+    This key is deliberately weaker than ``normalize_address`` and is never sufficient
+    by itself for identity resolution.  It exists to bridge verified physical sites
+    across top-level administrative reorganizations while preserving the raw address.
+    Downstream resolution may use it only when the official-site locality is unique and
+    at least two independent public sources corroborate the same locality key.
+    """
+    s=re.sub(r"\s+"," ",str(x or "")).strip()
+    if not s: return ""
+    s=TOP_LEVEL_REGION_RE.sub("",s,count=1)
+    return normalize_address(s,profile)
 
 
 def embedded_facility_name_key(value, profile=None):
@@ -227,7 +246,7 @@ def resolve_identity(candidates,profile):
     # source row with that exact address may be linked without requiring a second
     # public database to spell the site label the same way.  Duplicate official
     # addresses remain ambiguous and never auto-confirm.
-    official_by_addr=defaultdict(list)
+    official_by_addr=defaultdict(list); official_by_locality=defaultdict(list); official_locality_by_addr={}
     for site in profile.get("site_candidates",[]) or []:
         if not isinstance(site,dict): continue
         if site.get("verification_state") not in {"VERIFIED","SOURCE_VERIFIED"}: continue
@@ -236,30 +255,52 @@ def resolve_identity(candidates,profile):
         # accepted only CONFIRMED. Treat both as strong identity states only when the
         # independent verification_state above is also strong.
         if site.get("identity_status") not in {"CONFIRMED","VERIFIED","SOURCE_VERIFIED"}: continue
-        addr=normalize_address(site.get("address_raw"),profile)
+        raw_address=site.get("address_raw")
+        addr=normalize_address(raw_address,profile)
+        locality=normalize_address_locality(raw_address,profile)
         if addr: official_by_addr[addr].append(site)
+        if locality:
+            official_by_locality[locality].append(site)
+            if addr: official_locality_by_addr[addr]=locality
     official_unique={addr:items[0] for addr,items in official_by_addr.items() if len(items)==1}
+    official_locality_unique={key:items[0] for key,items in official_by_locality.items() if len(items)==1}
 
     # Cross-source confirmation remains available for sites that do not have a
-    # unique verified Discovery address anchor.
-    by_pair=defaultdict(list); by_addr=defaultdict(list)
+    # unique verified Discovery address anchor.  The locality key intentionally
+    # ignores only the top-level region, so it can bridge administrative reorganizations
+    # without silently equating weak single-source addresses.
+    by_pair=defaultdict(list); by_addr=defaultdict(list); by_locality=defaultdict(list)
     for c in candidates:
         c["address_key"]=normalize_address(c.get("source_address_raw"),profile)
+        c["address_locality_key"]=normalize_address_locality(c.get("source_address_raw"),profile)
         c["name_key"]=normalize_name(c.get("source_site_name_raw"),profile)
         if c["address_key"]:
             by_addr[c["address_key"]].append(c)
             by_pair[(c["address_key"],c["name_key"])].append(c)
+        if c["address_locality_key"]:
+            by_locality[c["address_locality_key"]].append(c)
     strong={k:cs for k,cs in by_pair.items() if len({x["source_key"] for x in cs})>=2}
+    strong_locality={k:cs for k,cs in by_locality.items() if len({x["source_key"] for x in cs})>=2}
 
-    site_rows=[]; site_by_pair={}; official_sid_by_addr={}; confirmed_name_to_sites=defaultdict(set)
+    site_rows=[]; site_by_pair={}; official_sid_by_addr={}; official_sid_by_locality={}; confirmed_name_to_sites=defaultdict(set)
     for addr,site in sorted(official_unique.items()):
         name=str(site.get("site_name_raw") or site.get("candidate_id") or "official site")
         namekey=normalize_name(name,profile)
         sid=stable_id("SITE_",company_id,addr,namekey or site.get("candidate_id") or "official")
-        source_years=[y for c in by_addr.get(addr,[]) for y in c.get("years",[])]
+        locality=official_locality_by_addr.get(addr,"")
+        locality_bridge=bool(locality and locality in official_locality_unique and locality in strong_locality)
+        source_rows=list(by_addr.get(addr,[]))
+        if locality_bridge:
+            for candidate in strong_locality[locality]:
+                if candidate not in source_rows: source_rows.append(candidate)
+        source_years=[y for c in source_rows for y in c.get("years",[])]
         yrs=years_span(source_years)
-        site_rows.append({"company_id":company_id,"canonical_site_id":sid,"canonical_site_name":name,"site_type":"UNKNOWN","country":"KR","region":"UNKNOWN","canonical_address_key":addr,"identity_status":"CONFIRMED","first_seen_year":min(yrs) if yrs else "UNKNOWN","last_seen_year":max(yrs) if yrs else "UNKNOWN","active_status":"UNKNOWN","notes":"AUTO_CONFIRMED: unique verified official Discovery address anchor"})
+        notes="AUTO_CONFIRMED: unique verified official Discovery address anchor"
+        if locality_bridge:
+            notes += "; admin-region continuity corroborated by >=2 independent public sources"
+        site_rows.append({"company_id":company_id,"canonical_site_id":sid,"canonical_site_name":name,"site_type":"UNKNOWN","country":"KR","region":"UNKNOWN","canonical_address_key":addr,"identity_status":"CONFIRMED","first_seen_year":min(yrs) if yrs else "UNKNOWN","last_seen_year":max(yrs) if yrs else "UNKNOWN","active_status":"UNKNOWN","notes":notes})
         official_sid_by_addr[addr]=sid
+        if locality_bridge: official_sid_by_locality[locality]=sid
         if namekey: confirmed_name_to_sites[namekey].add(sid)
 
     # A source row already anchored by exact official address may also carry a
@@ -267,6 +308,7 @@ def resolve_identity(candidates,profile):
     # text).  Preserve that label only as a bridge for later addressless sources.
     for c in candidates:
         sid=official_sid_by_addr.get(c.get("address_key"))
+        if not sid: sid=official_sid_by_locality.get(c.get("address_locality_key"))
         if not sid: continue
         aliases={c.get("name_key") or '', embedded_facility_name_key(c.get("source_address_raw"),profile)}
         for alias in aliases:
@@ -275,6 +317,12 @@ def resolve_identity(candidates,profile):
     for (addr,namekey),cs in sorted(strong.items()):
         if addr in official_sid_by_addr:
             sid=official_sid_by_addr[addr]
+            site_by_pair[(addr,namekey)]=sid
+            if namekey: confirmed_name_to_sites[namekey].add(sid)
+            continue
+        locality=cs[0].get("address_locality_key","") if cs else ""
+        if locality in official_sid_by_locality:
+            sid=official_sid_by_locality[locality]
             site_by_pair[(addr,namekey)]=sid
             if namekey: confirmed_name_to_sites[namekey].add(sid)
             continue
@@ -292,6 +340,11 @@ def resolve_identity(candidates,profile):
         if addr in official_sid_by_addr:
             site_by_pair[(addr,namekey)]=official_sid_by_addr[addr]
             if namekey: confirmed_name_to_sites[namekey].add(official_sid_by_addr[addr])
+            continue
+        locality=cs[0].get("address_locality_key","") if cs else ""
+        if locality in official_sid_by_locality:
+            site_by_pair[(addr,namekey)]=official_sid_by_locality[locality]
+            if namekey: confirmed_name_to_sites[namekey].add(official_sid_by_locality[locality])
             continue
         preferred=next((x for x in cs if x["source_key"]=="ENVINFO"),cs[0])
         sid=stable_id("CAND_",company_id,addr,namekey)
@@ -332,6 +385,8 @@ def resolve_identity(candidates,profile):
             match_status="REJECTED"; basis="RELATED_ENTITY_EXCLUSION"; review=False; note=(note+"; " if note else "")+f"excluded entity: {ex}"
         elif c["address_key"] in official_sid_by_addr:
             sid=official_sid_by_addr[c["address_key"]]; match_status="CONFIRMED"; basis="OFFICIAL_SITE_EXACT_ADDRESS"; review=False
+        elif c.get("address_locality_key") in official_sid_by_locality:
+            sid=official_sid_by_locality[c["address_locality_key"]]; match_status="CONFIRMED"; basis="OFFICIAL_SITE_ADMIN_REGION_TRANSITION_ADDRESS"; review=False; note=(note+"; " if note else "")+"top-level administrative region changed; lower road-address locality independently corroborated"
         elif pair in strong:
             sid=site_by_pair[pair]; match_status="CONFIRMED"; basis="CROSS_SOURCE_EXACT_ADDRESS_NAME"; review=False
         elif c["address_key"]:
