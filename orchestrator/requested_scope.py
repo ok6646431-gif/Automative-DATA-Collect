@@ -12,6 +12,8 @@ import re
 from pathlib import Path
 
 CORE_SOURCES = ("ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER")
+STRONG_VERIFICATION = {"VERIFIED", "SOURCE_VERIFIED"}
+SAME_ENTITY_HISTORICAL_TYPES = {"former_legal_name", "historical_legal_name"}
 
 
 def read_json(path, default=None):
@@ -73,6 +75,24 @@ def normalize_address(value):
     return _plain(text)
 
 
+def _common_address_suffix(left, right):
+    """Return a conservative road-address suffix shared across admin-name changes."""
+    a = normalize_address(left)
+    b = normalize_address(right)
+    if not a or not b:
+        return ""
+    i = 1
+    limit = min(len(a), len(b))
+    while i <= limit and a[-i] == b[-i]:
+        i += 1
+    suffix = a[-(i - 1):] if i > 1 else ""
+    # Require enough locality+road material. This avoids equating two sites merely
+    # because they share a short road name/number after a province/city reorganization.
+    if len(suffix) < 12 or not re.search(r"(?:대로|로|길)\d", suffix):
+        return ""
+    return suffix
+
+
 def company_terms(profile):
     values = [profile.get("company_display_name"), profile.get("requested_company_name")]
     for alias in profile.get("aliases", []) or []:
@@ -91,16 +111,24 @@ def company_terms(profile):
 
 
 def _company_entity_terms(profile):
+    """Names proven to denote the same legal entity across current and rename history."""
     values = [profile.get("company_display_name"), profile.get("requested_company_name")]
     for alias in profile.get("aliases", []) or []:
-        if isinstance(alias, dict):
-            if alias.get("scope") in {"historical", "predecessor"}:
-                continue
-            if alias.get("search_enabled") is False:
-                continue
-            values.append(alias.get("term") or alias.get("name"))
-        else:
+        if not isinstance(alias, dict):
             values.append(alias)
+            continue
+        if alias.get("search_enabled") is False:
+            continue
+        scope = alias.get("scope")
+        alias_type = alias.get("alias_type")
+        if scope == "predecessor":
+            continue
+        if scope == "historical":
+            if alias_type not in SAME_ENTITY_HISTORICAL_TYPES:
+                continue
+            if str(alias.get("verification_state") or "").upper() not in STRONG_VERIFICATION:
+                continue
+        values.append(alias.get("term") or alias.get("name"))
     out = []
     for value in values:
         token = _entity_plain(value)
@@ -158,7 +186,8 @@ def _source_entity_compatible(value, profile, candidates):
     Broad company-name queries intentionally preserve candidates such as subsidiaries.
     Address equality is therefore not sufficient to put a source ID into a requested
     site set. Accept an ID only when its source-native name identifies the current
-    company or one of the requested site labels.
+    legal entity, a strongly verified former legal name from a rename, or one of the
+    requested site labels. Merger/spin-off predecessors are never treated as aliases.
     """
     raw = _entity_plain(value)
     if not raw:
@@ -178,7 +207,7 @@ def _source_entity_compatible(value, profile, candidates):
 
     terms = _company_entity_terms(profile)
     if raw in terms:
-        return True, "CURRENT_COMPANY_EXACT"
+        return True, "SAME_LEGAL_ENTITY_EXACT"
 
     normalized_site = _site_core(value, profile)
     if any(_core_match(normalized_site, site) for site in site_cores):
@@ -189,22 +218,33 @@ def _source_entity_compatible(value, profile, candidates):
             continue
         remainder = raw[len(term):]
         if not remainder:
-            return True, "CURRENT_COMPANY_EXACT"
+            return True, "SAME_LEGAL_ENTITY_EXACT"
         remainder_core = _site_core(remainder, {})
         if any(_core_match(remainder_core, site) for site in site_cores):
-            return True, "CURRENT_COMPANY_REQUESTED_SITE"
+            return True, "SAME_ENTITY_REQUESTED_SITE"
         if any(_subunit_core_match(remainder_core, site) for site in site_cores):
-            return True, "CURRENT_COMPANY_REQUESTED_SUBUNIT"
+            return True, "SAME_ENTITY_REQUESTED_SUBUNIT"
         if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):
-            return True, "CURRENT_COMPANY_FACILITY_LABEL"
-        # A longer corporate-looking name after the current-company token is not
-        # evidence of current-company identity (e.g. COMPANY + FUTUREM/CHEMICAL).
+            return True, "SAME_ENTITY_FACILITY_LABEL"
+        # A longer corporate-looking name after a same-entity token is not evidence
+        # of the requested legal entity (e.g. COMPANY + FUTUREM/CHEMICAL).
         return False, "SOURCE_ENTITY_NAME_EXTENDS_CURRENT_COMPANY"
 
     return False, "SOURCE_ENTITY_NAME_NOT_CURRENT_COMPANY"
 
 
 def _current_entity_active_period(profile):
+    explicit_entity = profile.get("legal_entity_active_period")
+    if isinstance(explicit_entity, dict) and (explicit_entity.get("start_year") is not None or explicit_entity.get("end_year") is not None):
+        return {"start_year": explicit_entity.get("start_year"), "end_year": explicit_entity.get("end_year")}
+
+    # A verified rename is a name boundary, not a corporate-birth boundary. For old
+    # profiles lacking explicit entity continuity, fail open on time rather than
+    # incorrectly deleting valid pre-rename evidence from the same corporation.
+    if any(isinstance(x, dict) and x.get("event_type") == "rename"
+           for x in profile.get("corporate_restructuring_evidence", []) or []):
+        return {}
+
     explicit = profile.get("current_legal_name_active_period")
     if isinstance(explicit, dict) and (explicit.get("start_year") is not None or explicit.get("end_year") is not None):
         return {"start_year": explicit.get("start_year"), "end_year": explicit.get("end_year")}
@@ -246,7 +286,9 @@ def _address_match(left, right):
     b = normalize_address(right)
     if not a or not b:
         return False
-    return a == b or (len(a) >= 12 and a in b) or (len(b) >= 12 and b in a)
+    if a == b or (len(a) >= 12 and a in b) or (len(b) >= 12 and b in a):
+        return True
+    return bool(_common_address_suffix(left, right))
 
 
 def _site_name_match(left, right, profile):
