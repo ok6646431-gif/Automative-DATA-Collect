@@ -28,7 +28,7 @@
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "2025 보고서는 HD한국조선해양, HD현대중공업, HD현대삼호, HD현대마린엔진을 보고경계로 하며 2026-06-30 공개가 확인되었다. 검증된 직접 PDF 경로를 임의 추정하지 않고 공식 보고서 목록 HTML을 보존한다."
+      "notes": "2025 보고서는 HD한국조선해양, HD현대중공업, HD현대삼호, HD현대마린엔진을 보고경계로 하며 공식 보고서 목록에서 공개가 확인되었다. 검증된 직접 PDF 경로를 임의 추정하지 않고 공식 보고서 목록 HTML을 보존한다."
     },
     {
       "document_id": "HSHI_SUSTAINABILITY_2024",
@@ -64,15 +64,16 @@
       "importance": "CORE"
     },
     {
-      "document_id": "HSHI_INTEGRATED_2021",
+      "document_id": "HSHI_ESG_HIGHLIGHTS_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 한국조선해양 통합보고서 - 현대삼호중공업 포함",
+      "title": "2021 현대삼호중공업 ESG HIGHLIGHTS",
       "report_year": 2021,
-      "source_url": "https://hd.com/common/kr/docs/%5B2021%5D%20HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91%20%ED%86%B5%ED%95%A9%EB%B3%B4%EA%B3%A0%EC%84%9C%20-%202022%EB%85%84%20%EB%B0%9C%EA%B0%84.pdf",
+      "source_url": "https://www.hshi.co.kr/download.do?dn=2021+%ED%98%84%EB%8C%80%EC%82%BC%ED%98%B8%EC%A4%91%EA%B3%B5%EC%97%85+ESG+HIGHLIGHTS.PDF&path=%2FAttachUP%2FREPORT&rn=1664354654193.PDF",
       "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE"
+      "importance": "CORE",
+      "notes": "HD현대삼호 공식 보고서 목록에서 공개되는 현대삼호중공업 자체 2021 ESG 자료를 사용한다. 기존 그룹 통합보고서 직접 URL은 자동수집에서 HTTP 403을 반환해 더 직접적인 회사 자체 자료로 교체했다."
     },
     {
       "document_id": "HSHI_INTEGRATED_2020",
