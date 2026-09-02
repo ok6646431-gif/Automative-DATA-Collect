@@ -4,7 +4,6 @@ on:
     branches: [run/control-plane]
     paths:
       - 'tools/patch_cancelled_package_guard.py'
-      - 'tools/patch_generic_application_auto_package.py'
       - '.github/workflows/apply-cancelled-package-guard.yml'
 permissions:
   contents: write
@@ -13,11 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply control-plane guards and delivery integration
-        run: |
-          python tools/patch_cancelled_package_guard.py
-          python tools/patch_generic_application_auto_package.py
-      - name: Verify guards and application delivery
+      - run: python tools/patch_cancelled_package_guard.py
+      - name: Verify guard
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -28,31 +24,12 @@ jobs:
           )
           if not any(pattern in text for pattern in safe):
               raise SystemExit('Cancellation guard missing from collect.yml')
-          required = (
-              'name: Build and validate application materials',
-              'name: enterprise-env-application-materials',
-              'APPLICATION_ARTIFACT_ID:',
-              'tools/build_application_material_from_archive.py',
-          )
-          missing = [value for value in required if value not in text]
-          if missing:
-              raise SystemExit(f'Application material integration missing: {missing}')
           PY
-      - name: Run application package tests
-        run: |
-          python -m py_compile \
-            tools/build_application_material_package.py \
-            tools/validate_application_material_package.py \
-            tools/build_application_material_from_archive.py
-          python -m unittest -v \
-            tests/test_application_material_package.py \
-            tests/test_application_material_package_validation.py \
-            tests/test_application_material_from_archive.py
-      - name: Commit control-plane updates
+      - name: Commit generic cancellation guard
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .github/workflows/collect.yml
           git diff --cached --exit-code && exit 0
-          git commit -m 'Build application materials in control-plane'
+          git commit -m 'Skip packaging for cancelled collection runs'
           git push
