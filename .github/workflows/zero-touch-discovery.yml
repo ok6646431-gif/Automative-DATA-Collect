@@ -51,7 +51,7 @@ jobs:
           python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_evidence_enrichment -v
           python -m unittest tests.test_g0_live_adapters -v
-          python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs -v
+          python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs tests.test_request_builder tests.test_rename_continuity_contract -v
 
       - name: Determine whether live Discovery was requested
         id: request
@@ -171,13 +171,25 @@ jobs:
         env:
           COMPANY_NAME: ${{ steps.request.outputs.company_name }}
         run: |
-          cp generated-discovery/company_discovery.json requests/company_discovery.json
-          cp generated-discovery/document_evidence.json requests/document_evidence.json
-          cp generated-discovery/event_evidence.json requests/event_evidence.json
+          promo_dir="$(mktemp -d)"
+          cp generated-discovery/company_discovery.json "$promo_dir/company_discovery.json"
+          cp generated-discovery/document_evidence.json "$promo_dir/document_evidence.json"
+          cp generated-discovery/event_evidence.json "$promo_dir/event_evidence.json"
+
+          # The live crawl can take several minutes. Unrelated commits may advance the
+          # control-plane branch during that time. Re-anchor to the latest remote tip,
+          # then apply only the verified generated inputs, so promotion never fails
+          # merely because the checkout became stale.
+          git fetch origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          mkdir -p requests
+          cp "$promo_dir/company_discovery.json" requests/company_discovery.json
+          cp "$promo_dir/document_evidence.json" requests/document_evidence.json
+          cp "$promo_dir/event_evidence.json" requests/event_evidence.json
           python - <<'PY'
           import datetime, json
           from pathlib import Path
-          d=json.loads(Path('generated-discovery/company_discovery.json').read_text(encoding='utf-8'))
+          d=json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
           Path('requests/run_token.txt').write_text('zero-touch:' + d['request_id'] + ':' + datetime.datetime.now(datetime.timezone.utc).isoformat() + '\n',encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
