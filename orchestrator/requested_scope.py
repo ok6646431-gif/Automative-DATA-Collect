@@ -86,9 +86,13 @@ def _common_address_suffix(left, right):
     while i <= limit and a[-i] == b[-i]:
         i += 1
     suffix = a[-(i - 1):] if i > 1 else ""
-    # Require enough locality+road material. This avoids equating two sites merely
-    # because they share a short road name/number after a province/city reorganization.
-    if len(suffix) < 12 or not re.search(r"(?:대로|로|길)\d", suffix):
+    # Administrative reorganizations can replace the province/metropolitan prefix
+    # while county/district + town + road + lot stay unchanged. Require that richer
+    # lower-level structure rather than a raw character-count match. This admits a
+    # compact 11-character suffix such as 영암군삼호읍대불로93, while still rejecting
+    # unrelated sites that merely share a short road name and building number.
+    has_local_admin = bool(re.search(r"(?:시|군|구).*(?:대로|로|길)\d", suffix))
+    if len(suffix) < 10 or not has_local_admin:
         return ""
     return suffix
 
