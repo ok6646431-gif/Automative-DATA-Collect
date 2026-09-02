@@ -15,10 +15,12 @@ on:
       - 'orchestrator/zero_touch_discovery.py'
       - 'orchestrator/dart_public_resolver.py'
       - 'orchestrator/g0_evidence_enrichment.py'
+      - 'orchestrator/g0_live_adapters.py'
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_zero_touch_discovery.py'
       - 'tests/test_dart_public_resolver.py'
       - 'tests/test_g0_evidence_enrichment.py'
+      - 'tests/test_g0_live_adapters.py'
       - '.github/workflows/zero-touch-discovery.yml'
 
 permissions:
@@ -44,10 +46,11 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/zero_touch_runner.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_live_adapters.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_zero_touch_discovery -v
-          if [ -f tests/test_dart_public_resolver.py ]; then python -m unittest tests.test_dart_public_resolver -v; fi
+          python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_evidence_enrichment -v
+          python -m unittest tests.test_g0_live_adapters -v
           python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs -v
 
       - name: Determine whether live Discovery was requested
@@ -121,9 +124,15 @@ jobs:
                   from orchestrator.request_builder import build
                   d=json.loads(required[0].read_text(encoding='utf-8'))
                   profile, summary=compile_discovery(d)
-                  build(profile)
+                  request=build(profile)
                   if summary.get('review_required_count'):
                       gate='REVIEW_REQUIRED'
+                  else:
+                      print(json.dumps({
+                          'request_id': request.get('request_id'),
+                          'envinfo_terms_by_year': request.get('sources',{}).get('ENVINFO',{}).get('search_terms_by_year'),
+                          'site_addresses': request.get('sources',{}).get('CLEANSYS_AIR',{}).get('site_addresses'),
+                      },ensure_ascii=False))
           with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:
               f.write(f'gate={gate}\n')
           print(json.dumps({'gate':gate},ensure_ascii=False))
