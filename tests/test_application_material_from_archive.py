@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import tempfile
 import unittest
@@ -22,6 +24,7 @@ class ApplicationMaterialFromArchiveTests(unittest.TestCase):
                 "collection_completeness_complete": True,
             },
             "target_site_tokens": ["A공장"],
+            "target_source_ids": {"ENVINFO": ["ENV-A"]},
         }
         scope = {
             "schema_version": "1.1",
@@ -36,6 +39,20 @@ class ApplicationMaterialFromArchiveTests(unittest.TestCase):
             },
             "excluded_source_ids": [],
         }
+        analysis_io = io.StringIO(newline="")
+        writer = csv.DictWriter(
+            analysis_io,
+            fieldnames=["scope_label", "source_key", "source_site_id", "source_site_name_raw"],
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "scope_label": "테스트기업 A공장",
+                "source_key": "ENVINFO",
+                "source_site_id": "ENV-A",
+                "source_site_name_raw": "A공장",
+            }
+        )
         with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as z:
             z.writestr(
                 f"{root}/00_자료목록/Archive_Manifest.json",
@@ -44,6 +61,10 @@ class ApplicationMaterialFromArchiveTests(unittest.TestCase):
             z.writestr(
                 f"{root}/00_자료목록/Requested_Scope.json",
                 json.dumps(scope, ensure_ascii=False),
+            )
+            z.writestr(
+                f"{root}/00_자료목록/Analysis_Scope.csv",
+                analysis_io.getvalue().encode("utf-8-sig"),
             )
             z.writestr(
                 f"{root}/01_사용자자료/03_환경정보공개시스템/A공장/환경정보공개_A공장_2024.pdf",
