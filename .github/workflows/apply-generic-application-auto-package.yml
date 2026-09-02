@@ -1,0 +1,146 @@
+name: Apply generic application auto package
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/generic_application_auto_package.marker
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Patch master orchestrator
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/collect.yml')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              "  package_and_validate:\n    needs: [stable_sources, corporate_documents, icis_attempt_1, icis_attempt_2, icis_attempt_3, icis_replay]\n    # A superseded request is intentionally cancelled by the concurrency group.\n    # Do not turn that cancellation into a large partial archive build.\n    if: ${{ always() && cancelled() == false && needs.stable_sources.result == 'success' && needs.corporate_documents.result == 'success' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n",
+              "  package_and_validate:\n    needs: [stable_sources, corporate_documents, icis_attempt_1, icis_attempt_2, icis_attempt_3, icis_replay]\n    # A superseded request is intentionally cancelled by the concurrency group.\n    # Do not turn that cancellation into a large partial archive build.\n    if: ${{ always() && cancelled() == false && needs.stable_sources.result == 'success' && needs.corporate_documents.result == 'success' }}\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n",
+              1,
+          )
+
+          anchor = """      - name: Upload human-facing archive
+        id: human_archive_upload
+        if: ${{ always() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-human-archive
+          path: assembled/Human_Archive.zip
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Prepare lightweight metadata delivery
+"""
+          replacement = """      - name: Upload human-facing archive
+        id: human_archive_upload
+        if: ${{ always() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-human-archive
+          path: assembled/Human_Archive.zip
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Build and validate application materials
+        if: ${{ hashFiles('assembled/Human_Archive.zip') != '' }}
+        run: >-
+          python tools/build_application_material_from_archive.py
+          --input assembled/Human_Archive.zip
+          --output-dir application-delivery
+          --source-run ${{ github.run_id }}
+          --summary-out application-delivery/application_package_result.json
+      - name: Upload application materials
+        id: application_upload
+        if: ${{ always() && hashFiles('application-delivery/*.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-application-materials
+          path: application-delivery/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Prepare lightweight metadata delivery
+"""
+          if anchor not in text:
+              raise RuntimeError('human archive upload anchor not found')
+          text = text.replace(anchor, replacement, 1)
+
+          env_anchor = """          HUMAN_ARTIFACT_ID: ${{ steps.human_archive_upload.outputs.artifact-id }}
+          METADATA_ARTIFACT_ID: ${{ steps.metadata_upload.outputs.artifact-id }}
+"""
+          env_replacement = """          HUMAN_ARTIFACT_ID: ${{ steps.human_archive_upload.outputs.artifact-id }}
+          APPLICATION_ARTIFACT_ID: ${{ steps.application_upload.outputs.artifact-id }}
+          METADATA_ARTIFACT_ID: ${{ steps.metadata_upload.outputs.artifact-id }}
+"""
+          if env_anchor not in text:
+              raise RuntimeError('receipt env anchor not found')
+          text = text.replace(env_anchor, env_replacement, 1)
+
+          receipt_anchor = """          human_id=os.environ.get(\"HUMAN_ARTIFACT_ID\",\"\")
+          metadata_id=os.environ.get(\"METADATA_ARTIFACT_ID\",\"\")
+          description=f\"run #{run_number} {state}\"
+          if artifact_id:
+              description += f\"; final {artifact_id}\"
+          if human_id:
+              description += f\"; human {human_id}\"
+          if metadata_id:
+              description += f\"; meta {metadata_id}\"
+"""
+          receipt_replacement = """          human_id=os.environ.get(\"HUMAN_ARTIFACT_ID\",\"\")
+          application_id=os.environ.get(\"APPLICATION_ARTIFACT_ID\",\"\")
+          metadata_id=os.environ.get(\"METADATA_ARTIFACT_ID\",\"\")
+          description=f\"run #{run_number} {state}\"
+          if artifact_id:
+              description += f\"; final {artifact_id}\"
+          if human_id:
+              description += f\"; human {human_id}\"
+          if application_id:
+              description += f\"; app {application_id}\"
+          if metadata_id:
+              description += f\"; meta {metadata_id}\"
+"""
+          if receipt_anchor not in text:
+              raise RuntimeError('receipt body anchor not found')
+          text = text.replace(receipt_anchor, receipt_replacement, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Compile package tools and run tests
+        run: |
+          python -m py_compile \
+            tools/build_application_material_package.py \
+            tools/validate_application_material_package.py \
+            tools/build_application_material_from_archive.py
+          python -m unittest -v \
+            tests/test_application_material_package.py \
+            tests/test_application_material_package_validation.py \
+            tests/test_application_material_from_archive.py
+
+      - name: Commit patch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/collect.yml
+          if git diff --cached --quiet; then
+            echo 'No changes to commit'
+            exit 0
+          fi
+          git commit -m 'Build application materials in control-plane'
+          git push origin HEAD:run/control-plane
