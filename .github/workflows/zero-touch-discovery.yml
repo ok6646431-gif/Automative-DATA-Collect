@@ -1,0 +1,190 @@
+name: Zero-touch company Discovery G0
+
+on:
+  workflow_dispatch:
+    inputs:
+      company_name:
+        description: 'Company name only; optional when requests/zero_touch_request.json exists'
+        required: false
+        type: string
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - 'requests/zero_touch_request.json'
+      - 'orchestrator/zero_touch_discovery.py'
+      - 'tests/test_zero_touch_discovery.py'
+      - '.github/workflows/zero-touch-discovery.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: zero-touch-discovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Discovery dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 jsonschema
+
+      - name: Run G0 unit and contract regressions
+        run: |
+          python -m py_compile orchestrator/zero_touch_discovery.py
+          python -m unittest tests.test_zero_touch_discovery -v
+          python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs -v
+
+      - name: Determine whether live Discovery was requested
+        id: request
+        env:
+          DISPATCH_COMPANY: ${{ inputs.company_name }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          name=(os.environ.get('DISPATCH_COMPANY') or '').strip()
+          if not name and Path('requests/zero_touch_request.json').exists():
+              try:
+                  name=str(json.loads(Path('requests/zero_touch_request.json').read_text(encoding='utf-8')).get('company_name') or '').strip()
+              except Exception:
+                  name=''
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:
+              f.write('run_live=' + ('true' if name else 'false') + '\n')
+              f.write('company_name=' + name.replace('\n',' ') + '\n')
+          print(json.dumps({'run_live': bool(name), 'company_name': name}, ensure_ascii=False))
+          PY
+
+      - name: Run fail-closed live Discovery
+        id: live
+        if: steps.request.outputs.run_live == 'true'
+        continue-on-error: true
+        env:
+          COMPANY_NAME: ${{ steps.request.outputs.company_name }}
+        run: >-
+          python orchestrator/zero_touch_discovery.py
+          --company-name "$COMPANY_NAME"
+          --out-dir generated-discovery
+          --start-year 2020
+          --max-pages 90
+
+      - name: Normalize generated event evidence contract
+        if: steps.request.outputs.run_live == 'true' && always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('generated-discovery/event_evidence.json')
+          if p.exists():
+              x=json.loads(p.read_text(encoding='utf-8'))
+              x.setdefault('gaps',[])
+              p.write_text(json.dumps(x,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+      - name: Inspect gate and validate generated contracts
+        id: gate
+        if: steps.request.outputs.run_live == 'true' && always()
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          required=[
+              Path('generated-discovery/company_discovery.json'),
+              Path('generated-discovery/document_evidence.json'),
+              Path('generated-discovery/event_evidence.json'),
+              Path('generated-discovery/Discovery_Audit.json'),
+          ]
+          missing=[str(p) for p in required if not p.exists()]
+          if missing:
+              print('missing generated files:',missing,file=sys.stderr)
+              gate='ERROR'
+          else:
+              audit=json.loads(required[-1].read_text(encoding='utf-8'))
+              gate=str(audit.get('gate_status') or 'ERROR')
+              # Compile through the exact existing control-plane contract. This is a
+              # promotion prerequisite, not a synthetic schema-only check.
+              if gate=='PASS':
+                  from orchestrator.company_profile_builder import compile_discovery
+                  from orchestrator.request_builder import build
+                  d=json.loads(required[0].read_text(encoding='utf-8'))
+                  profile, summary=compile_discovery(d)
+                  build(profile)
+                  if summary.get('review_required_count'):
+                      gate='REVIEW_REQUIRED'
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:
+              f.write(f'gate={gate}\n')
+          print(json.dumps({'gate':gate},ensure_ascii=False))
+          PY
+
+      - name: Validate JSON schemas before promotion
+        if: steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate == 'PASS'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import jsonschema
+          pairs=[
+            ('requests/company_discovery.schema.json','generated-discovery/company_discovery.json'),
+            ('requests/document_evidence.schema.json','generated-discovery/document_evidence.json'),
+            ('requests/event_evidence.schema.json','generated-discovery/event_evidence.json'),
+          ]
+          for schema_path,data_path in pairs:
+              schema=json.loads(Path(schema_path).read_text(encoding='utf-8'))
+              data=json.loads(Path(data_path).read_text(encoding='utf-8'))
+              jsonschema.Draft202012Validator(schema).validate(data)
+              print('PASS',data_path)
+          PY
+
+      - name: Upload Discovery audit and candidate outputs
+        if: steps.request.outputs.run_live == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-touch-discovery-${{ github.run_id }}
+          path: generated-discovery/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Promote verified Discovery to current control-plane inputs
+        if: steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate == 'PASS'
+        env:
+          COMPANY_NAME: ${{ steps.request.outputs.company_name }}
+        run: |
+          cp generated-discovery/company_discovery.json requests/company_discovery.json
+          cp generated-discovery/document_evidence.json requests/document_evidence.json
+          cp generated-discovery/event_evidence.json requests/event_evidence.json
+          python - <<'PY'
+          import datetime, json
+          from pathlib import Path
+          d=json.loads(Path('generated-discovery/company_discovery.json').read_text(encoding='utf-8'))
+          Path('requests/run_token.txt').write_text('zero-touch:' + d['request_id'] + ':' + datetime.datetime.now(datetime.timezone.utc).isoformat() + '\n',encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add requests/company_discovery.json requests/document_evidence.json requests/event_evidence.json requests/run_token.txt
+          if git diff --cached --quiet; then
+            echo 'No current-input changes to commit.'
+          else
+            git commit -m "Promote zero-touch Discovery for ${COMPANY_NAME}"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
+
+      - name: Dispatch existing master collection after promotion
+        if: steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate == 'PASS'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run collect.yml --ref "${GITHUB_REF_NAME}"
+
+      - name: Stop on unresolved Discovery
+        if: steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate != 'PASS'
+        run: |
+          echo "Zero-touch Discovery was not promoted: gate=${{ steps.gate.outputs.gate }}" >&2
+          echo 'Review the zero-touch-discovery artifact. No current control-plane inputs were overwritten.' >&2
+          exit 2
