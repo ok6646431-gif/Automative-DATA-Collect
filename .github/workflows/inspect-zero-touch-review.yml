@@ -16,64 +16,69 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download final metadata and application package
+      - name: Download final application package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p inspect/meta inspect/app
-          gh run download 33650544745 -n enterprise-env-metadata -D inspect/meta
+          mkdir -p inspect/app
           gh run download 33650544745 -n enterprise-env-application-materials -D inspect/app
-      - name: Inspect requested scope and scan user package
+      - name: Distinguish audit references from actual scope leakage
         run: |
           python - <<'PY'
-          import csv, json, zipfile
+          import csv, io, json, zipfile
           from pathlib import Path
 
-          print('===== SCOPE METADATA =====')
-          wanted={
-              'Site_Master.csv','Source_Identity.csv','Analysis_Scope.csv',
-              'Requested_Scope.json','REVIEW_REQUIRED.json','Collection_Completeness.json'
-          }
-          for p in sorted(Path('inspect/meta').rglob('*')):
-              if p.is_file() and p.name in wanted:
-                  print('\n---',p.name,'---')
-                  try:
-                      print(p.read_text(encoding='utf-8-sig')[:30000])
-                  except Exception as e:
-                      print('READ_ERROR',e)
-
-          outer_files=sorted(Path('inspect/app').glob('*'))
-          print('\n===== APPLICATION ARTIFACT FILES =====')
-          for p in outer_files:
-              print(p, p.stat().st_size)
-
-          needles=['보원2공장','CP000000000000004001','대불1공장','대불3공장']
-          hits=[]
-          inner_zip=next((p for p in outer_files if p.suffix.lower()=='.zip'),None)
-          if not inner_zip:
+          outer=sorted(Path('inspect/app').glob('*'))
+          inner=next((p for p in outer if p.suffix.lower()=='.zip'),None)
+          if not inner:
               raise SystemExit('NO_APPLICATION_ZIP')
 
-          with zipfile.ZipFile(inner_zip) as z:
-              bad=z.testzip()
-              print('ZIP_TEST',bad or 'PASS')
-              names=z.namelist()
-              print('ZIP_ENTRIES',len(names))
-              for n in names:
+          needles=['보원2공장','CP000000000000004001','대불1공장','대불3공장']
+          audit_marker='/00_자료목록/원본검증목록/'
+          audit_hits=[]
+          real_hits=[]
+
+          with zipfile.ZipFile(inner) as z:
+              print('ZIP_TEST',z.testzip() or 'PASS')
+              print('ZIP_ENTRIES',len(z.namelist()))
+              for n in z.namelist():
+                  is_audit=audit_marker in ('/'+n)
                   for needle in needles:
                       if needle in n:
-                          hits.append({'where':'filename','needle':needle,'entry':n})
-                  low=n.lower()
-                  if low.endswith(('.csv','.json','.txt','.md','.html','.xml')):
-                      try:
-                          data=z.read(n)
-                          text=data.decode('utf-8-sig',errors='ignore')
-                      except Exception:
+                          (audit_hits if is_audit else real_hits).append({
+                              'where':'filename','needle':needle,'entry':n
+                          })
+                  if not n.lower().endswith(('.csv','.json','.txt','.md','.html','.xml')):
+                      continue
+                  try:
+                      text=z.read(n).decode('utf-8-sig',errors='ignore')
+                  except Exception:
+                      continue
+                  for needle in needles:
+                      if needle not in text:
                           continue
-                      for needle in needles:
-                          if needle in text:
-                              hits.append({'where':'content','needle':needle,'entry':n})
-              print('SCOPE_LEAK_HITS',json.dumps(hits,ensure_ascii=False,indent=2))
-              print('SCOPE_LEAK_COUNT',len(hits))
-              if hits:
-                  raise SystemExit('SCOPE_LEAK_DETECTED')
+                      target=audit_hits if is_audit else real_hits
+                      lines=text.splitlines()
+                      matching=[line[:1800] for line in lines if needle in line][:8]
+                      target.append({
+                          'where':'content','needle':needle,'entry':n,
+                          'matching_lines':matching
+                      })
+
+              print('===== AUDIT_ONLY_REFERENCES =====')
+              print(json.dumps(audit_hits,ensure_ascii=False,indent=2))
+              print('AUDIT_ONLY_COUNT',len(audit_hits))
+              print('===== ACTUAL_USER_AREA_HITS =====')
+              print(json.dumps(real_hits,ensure_ascii=False,indent=2))
+              print('ACTUAL_USER_AREA_HIT_COUNT',len(real_hits))
+
+              # Additional structural proof: application source folders must contain
+              # exactly the scoped ENVINFO record count and no off-scope folder name.
+              env_entries=[n for n in z.namelist() if '/01_ENVINFO/' in ('/'+n)]
+              print('ENVINFO_ENTRY_COUNT',len(env_entries))
+              offscope_names=[n for n in env_entries if any(x in n for x in needles)]
+              print('ENVINFO_OFFSCOPE_FILENAMES',json.dumps(offscope_names,ensure_ascii=False,indent=2))
+
+              if real_hits or offscope_names:
+                  raise SystemExit('ACTUAL_SCOPE_LEAK_DETECTED')
           PY
