@@ -173,6 +173,42 @@ def _source_exclusions(scope: dict) -> dict[str, list[dict[str, str]]]:
     return grouped
 
 
+def _authorized_envinfo_site_names(z: zipfile.ZipFile, scope: dict) -> list[str]:
+    target_ids = {
+        str(value)
+        for value in (scope.get("target_source_ids") or {}).get("ENVINFO") or []
+        if str(value)
+    }
+    if not target_ids:
+        return []
+
+    analysis_rows = _read_csv(z, "/00_자료목록/원본검증목록/Analysis_Scope.csv")
+    mapped_ids: set[str] = set()
+    authorized_names: list[str] = []
+    for row in analysis_rows:
+        if str(row.get("source_key") or "") != "ENVINFO":
+            continue
+        source_id = str(row.get("source_site_id") or "")
+        if source_id not in target_ids:
+            continue
+        mapped_ids.add(source_id)
+        source_name = str(row.get("source_site_name_raw") or "")
+        if source_name:
+            authorized_names.append(source_name)
+
+    missing_ids = sorted(target_ids - mapped_ids)
+    if missing_ids:
+        raise RuntimeError(
+            "ENVINFO target source IDs missing Analysis_Scope mapping: "
+            f"{missing_ids}"
+        )
+    if not authorized_names:
+        raise RuntimeError(
+            "ENVINFO target source IDs exist but Analysis_Scope has no authorized source names"
+        )
+    return authorized_names
+
+
 def validate_package(path: str, expected_company: str | None = None) -> dict[str, object]:
     checks: list[str] = []
     with zipfile.ZipFile(path, "r") as z:
@@ -309,14 +345,29 @@ def validate_package(path: str, expected_company: str | None = None) -> dict[str
         sites = sorted({PurePosixPath(p).parts[1] for p in envinfo_members if len(PurePosixPath(p).parts) > 1})
         if len(sites) != site_count:
             raise RuntimeError(f"ENVINFO site count mismatch: archive={len(sites)} summary={site_count}")
-        target_site_tokens = [str(x) for x in archive_manifest.get("target_site_tokens") or [] if str(x)]
-        if target_site_tokens:
-            outside = [site for site in sites if not _site_matches_target(site, target_site_tokens)]
+
+        target_ids = scope.get("target_source_ids") or {}
+        envinfo_target_ids = [str(x) for x in target_ids.get("ENVINFO") or [] if str(x)]
+        if envinfo_target_ids:
+            authorized_names = _authorized_envinfo_site_names(z, scope)
+            outside = [site for site in sites if not _site_matches_target(site, authorized_names)]
             if outside:
                 raise RuntimeError(
-                    "ENVINFO site outside requested target_site_tokens: "
-                    f"outside={outside} targets={target_site_tokens}"
+                    "ENVINFO site outside requested source-ID scope: "
+                    f"outside={outside} authorized_source_names={authorized_names} "
+                    f"target_source_ids={envinfo_target_ids}"
                 )
+        else:
+            target_site_tokens = [
+                str(x) for x in archive_manifest.get("target_site_tokens") or [] if str(x)
+            ]
+            if target_site_tokens:
+                outside = [site for site in sites if not _site_matches_target(site, target_site_tokens)]
+                if outside:
+                    raise RuntimeError(
+                        "ENVINFO site outside requested target_site_tokens: "
+                        f"outside={outside} targets={target_site_tokens}"
+                    )
         checks.append("ENVINFO_SITE_SCOPE")
 
         exclusions = _source_exclusions(scope)
@@ -358,7 +409,6 @@ def validate_package(path: str, expected_company: str | None = None) -> dict[str
             )
         checks.append("VERIFIED_EXCLUSION_RECHECK")
 
-        target_ids = scope.get("target_source_ids") or {}
         declared_sources = sorted(k for k, v in target_ids.items() if isinstance(v, list))
         checks.append("REQUESTED_SCOPE_METADATA_PRESENT")
 
