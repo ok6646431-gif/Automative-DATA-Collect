@@ -1,4 +1,4 @@
-name: Inspect Hanwha Ocean official page shapes
+name: Inspect DART former-name endpoint
 
 on:
   push:
@@ -19,27 +19,49 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect first-party history and sustainability links
+      - name: Probe DART former-name request contract
         run: |
           python - <<'PY'
           import re, requests
           from bs4 import BeautifulSoup
-          from urllib.parse import urljoin, urlparse
-          s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 Chrome/151 Safari/537.36'
-          for url in ['https://www.hanwhaocean.com/whoweare/history/','https://www.hanwhaocean.com/sustainability/ov/']:
+          from urllib.parse import urljoin
+          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Referer':'https://dart.fss.or.kr/'})
+          key='00111704'
+          urls=[
+            'https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey='+key,
+            'https://dart.fss.or.kr/dsae001/main.do?selectKey='+key,
+          ]
+          for url in urls:
               r=s.get(url,timeout=(8,25),allow_redirects=True)
-              print('\n===== PAGE',url,'status',r.status_code,'final',r.url,'=====')
-              soup=BeautifulSoup(r.text,'html.parser')
-              text=' '.join(soup.stripped_strings)
-              for term in ['대우조선','한화오션','2023','2022','2021','2020','지속가능','통합보고','보고서','브로슈어']:
-                  pos=text.find(term)
-                  if pos>=0:
-                      print('CONTEXT',term, text[max(0,pos-500):pos+1200])
-              print('--- RELEVANT LINKS ---')
+              print('\n===== BASE',url,'status',r.status_code,'final',r.url,'=====')
+              text=r.text
+              for pat in ['historyFmlNm','fmlNm','former','과거','상호','회사명']:
+                  for m in re.finditer(pat,text,re.I):
+                      print('RAW_CONTEXT',pat,re.sub(r'\s+',' ',text[max(0,m.start()-500):m.start()+1000])[:1500])
+                      break
+              soup=BeautifulSoup(text,'html.parser')
               for a in soup.find_all('a',href=True):
-                  label=' '.join(a.stripped_strings).strip()
-                  target=urljoin(r.url,a['href'])
-                  marker=(label+' '+target).casefold()
-                  if any(x in marker for x in ['보고','report','sustain','esg','통합','broc','pdf','대우']):
-                      print(repr(label),target)
+                  payload=' '.join(a.stripped_strings)+' '+a['href']+' '+str(a.get('onclick') or '')
+                  if re.search(r'history|fml|former|상호|과거',payload,re.I):
+                      print('LINK',repr(' '.join(a.stripped_strings)),urljoin(r.url,a['href']),a.get('onclick'))
+              for form in soup.find_all('form'):
+                  payload=' '.join(str(x) for x in [form.get('action'),form.get('method'),form.get('id'),form.get('name')])
+                  if re.search(r'history|fml|corp',payload,re.I):
+                      print('FORM',payload)
+                      for node in form.find_all(['input','select','textarea']):
+                          if node.get('name'):
+                              print(' FIELD',node.get('name'),node.get('value'))
+          endpoint='https://dart.fss.or.kr/corp/historyFmlNm.ax'
+          variants=[
+            {'selectKey':key}, {'textCrpCik':key}, {'crpCik':key}, {'corpCik':key},
+            {'corpCode':key}, {'crpCd':key}, {'selectKey':key,'textCrpCik':key},
+          ]
+          for payload in variants:
+              for method in ['GET','POST']:
+                  try:
+                      r=s.get(endpoint,params=payload,timeout=(8,25)) if method=='GET' else s.post(endpoint,data=payload,timeout=(8,25))
+                      txt=' '.join(BeautifulSoup(r.text,'html.parser').stripped_strings)
+                      print('\nPROBE',method,payload,'status',r.status_code,'bytes',len(r.content),'text',txt[:1200])
+                  except Exception as e:
+                      print('ERR',method,payload,type(e).__name__,e)
           PY
