@@ -17,7 +17,19 @@ from orchestrator import g0_evidence_enrichment
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
-zero_touch_discovery.discover_site_candidates = g0_evidence_enrichment.discover_site_candidates
+
+
+def _confirmed_site_discovery(company, pages, dart):
+    sites, scope, unresolved = g0_evidence_enrichment.discover_site_candidates(company, pages, dart)
+    # ``CONFIRMED`` is the cross-layer identity state consumed by request_builder and
+    # scope-quality gates. ``verification_state`` separately records evidence quality.
+    for site in sites:
+        if site.get("verification_state") in {"VERIFIED", "SOURCE_VERIFIED"}:
+            site["identity_status"] = "CONFIRMED"
+    return sites, scope, unresolved
+
+
+zero_touch_discovery.discover_site_candidates = _confirmed_site_discovery
 zero_touch_discovery._extract_rename_date_and_names = g0_evidence_enrichment.extract_rename_date_and_names
 
 _base_discover = zero_touch_discovery.discover
@@ -25,7 +37,12 @@ _base_discover = zero_touch_discovery.discover
 
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
-    return g0_evidence_enrichment.enrich_discovery_from_audit(discovery, documents, audit)
+    discovery, documents, audit = g0_evidence_enrichment.enrich_discovery_from_audit(discovery, documents, audit)
+    # Defensive normalization for outputs produced by older adapters during replay.
+    for site in discovery.get("domestic_site_candidates", []) or []:
+        if site.get("verification_state") in {"VERIFIED", "SOURCE_VERIFIED"}:
+            site["identity_status"] = "CONFIRMED"
+    return discovery, documents, audit
 
 
 zero_touch_discovery.discover = _enriched_discover
