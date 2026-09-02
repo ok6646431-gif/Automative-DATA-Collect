@@ -2,5 +2,6 @@
   "schema_version": "application-package-request-1.0",
   "source_run_id": 33584621639,
   "source_artifact_name": "enterprise-env-human-archive",
-  "package_label": "HD현대삼호"
+  "package_label": "HD현대삼호",
+  "replay_revision": "source-id-scope-v2"
 }
