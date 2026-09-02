@@ -1,4 +1,4 @@
-name: Inspect zero-touch final scope
+name: Inspect Hanwha Ocean zero-touch G0
 
 on:
   push:
@@ -16,69 +16,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download final application package
+      - name: Download Hanwha Ocean G0 artifact
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p inspect/app
-          gh run download 33650544745 -n enterprise-env-application-materials -D inspect/app
-      - name: Distinguish audit references from actual scope leakage
+          mkdir -p inspect/g0
+          gh run download 33652842761 -n zero-touch-discovery-33652842761 -D inspect/g0
+      - name: Print unresolved, site, rename and document coverage
         run: |
           python - <<'PY'
-          import csv, io, json, zipfile
+          import json
           from pathlib import Path
-
-          outer=sorted(Path('inspect/app').glob('*'))
-          inner=next((p for p in outer if p.suffix.lower()=='.zip'),None)
-          if not inner:
-              raise SystemExit('NO_APPLICATION_ZIP')
-
-          needles=['보원2공장','CP000000000000004001','대불1공장','대불3공장']
-          audit_marker='/00_자료목록/원본검증목록/'
-          audit_hits=[]
-          real_hits=[]
-
-          with zipfile.ZipFile(inner) as z:
-              print('ZIP_TEST',z.testzip() or 'PASS')
-              print('ZIP_ENTRIES',len(z.namelist()))
-              for n in z.namelist():
-                  is_audit=audit_marker in ('/'+n)
-                  for needle in needles:
-                      if needle in n:
-                          (audit_hits if is_audit else real_hits).append({
-                              'where':'filename','needle':needle,'entry':n
-                          })
-                  if not n.lower().endswith(('.csv','.json','.txt','.md','.html','.xml')):
-                      continue
-                  try:
-                      text=z.read(n).decode('utf-8-sig',errors='ignore')
-                  except Exception:
-                      continue
-                  for needle in needles:
-                      if needle not in text:
-                          continue
-                      target=audit_hits if is_audit else real_hits
-                      lines=text.splitlines()
-                      matching=[line[:1800] for line in lines if needle in line][:8]
-                      target.append({
-                          'where':'content','needle':needle,'entry':n,
-                          'matching_lines':matching
-                      })
-
-              print('===== AUDIT_ONLY_REFERENCES =====')
-              print(json.dumps(audit_hits,ensure_ascii=False,indent=2))
-              print('AUDIT_ONLY_COUNT',len(audit_hits))
-              print('===== ACTUAL_USER_AREA_HITS =====')
-              print(json.dumps(real_hits,ensure_ascii=False,indent=2))
-              print('ACTUAL_USER_AREA_HIT_COUNT',len(real_hits))
-
-              # Additional structural proof: application source folders must contain
-              # exactly the scoped ENVINFO record count and no off-scope folder name.
-              env_entries=[n for n in z.namelist() if '/01_ENVINFO/' in ('/'+n)]
-              print('ENVINFO_ENTRY_COUNT',len(env_entries))
-              offscope_names=[n for n in env_entries if any(x in n for x in needles)]
-              print('ENVINFO_OFFSCOPE_FILENAMES',json.dumps(offscope_names,ensure_ascii=False,indent=2))
-
-              if real_hits or offscope_names:
-                  raise SystemExit('ACTUAL_SCOPE_LEAK_DETECTED')
+          root=Path('inspect/g0')
+          audit=json.loads((root/'Discovery_Audit.json').read_text(encoding='utf-8'))
+          discovery=json.loads((root/'company_discovery.json').read_text(encoding='utf-8'))
+          docs=json.loads((root/'document_evidence.json').read_text(encoding='utf-8'))
+          print('===== GATE / UNRESOLVED =====')
+          print('gate_status=',audit.get('gate_status'))
+          print(json.dumps(audit.get('unresolved') or [],ensure_ascii=False,indent=2))
+          print('===== LEGAL IDENTITY =====')
+          print(json.dumps(((audit.get('stages') or {}).get('legal_identity') or {}),ensure_ascii=False,indent=2))
+          print('===== OFFICIAL SITE =====')
+          print(json.dumps(((audit.get('stages') or {}).get('official_site') or {}),ensure_ascii=False,indent=2))
+          print('===== SITE SCOPE =====')
+          print(json.dumps(((audit.get('stages') or {}).get('site_scope') or {}),ensure_ascii=False,indent=2))
+          print('===== RENAME =====')
+          print(json.dumps(((audit.get('stages') or {}).get('name_history') or {}),ensure_ascii=False,indent=2))
+          print('company_aliases=',json.dumps(discovery.get('company_aliases') or [],ensure_ascii=False,indent=2))
+          print('restructuring=',json.dumps(discovery.get('corporate_restructuring_evidence') or [],ensure_ascii=False,indent=2))
+          print('legal_entity_active_period=',json.dumps(discovery.get('legal_entity_active_period'),ensure_ascii=False))
+          print('===== DOCUMENTS =====')
+          for d in docs.get('documents',[]):
+              print(json.dumps({k:d.get(k) for k in ('document_id','document_type','title','report_year','source_url','source_locator','expected_extension','verification_status','importance')},ensure_ascii=False))
+          print('===== DOCUMENT GAPS =====')
+          print(json.dumps(docs.get('gaps') or [],ensure_ascii=False,indent=2))
+          print('discovery_status=',docs.get('discovery_status'))
           PY
