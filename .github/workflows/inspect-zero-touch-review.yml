@@ -1,4 +1,4 @@
-name: Inspect blocked zero-touch Discovery audit
+name: Inspect zero-touch and source scope
 
 on:
   push:
@@ -16,16 +16,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download blocked Discovery artifact
+      - name: Download successful Discovery and stable source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p inspect
-          gh run download 33648022068 -n zero-touch-discovery-33648022068 -D inspect
-      - name: Print audit and generated contracts
+          mkdir -p inspect/g0 inspect/stable
+          gh run download 33649961042 -n zero-touch-discovery-33649961042 -D inspect/g0
+          gh run download 33650544745 -n stable-public-sources -D inspect/stable
+      - name: Print recovery and ENVINFO identities
         run: |
-          for f in inspect/Discovery_Audit.json inspect/company_discovery.json inspect/document_evidence.json inspect/event_evidence.json; do
-            echo "===== $f ====="
-            cat "$f"
-            echo
-          done
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+
+          audit=json.loads(Path('inspect/g0/Discovery_Audit.json').read_text(encoding='utf-8'))
+          print('===== OFFICIAL SITE RECOVERY =====')
+          print(json.dumps(((audit.get('stages') or {}).get('official_site') or {}),ensure_ascii=False,indent=2))
+          print('===== SITE SCOPE =====')
+          print(json.dumps(((audit.get('stages') or {}).get('site_scope') or {}),ensure_ascii=False,indent=2))
+
+          print('===== ENVINFO FILES =====')
+          files=sorted(Path('inspect/stable').rglob('*.csv'))
+          for p in files:
+              if 'ENVINFO' in str(p).upper():
+                  print(p)
+
+          print('===== ENVINFO ROW IDENTITIES =====')
+          seen=set()
+          for p in files:
+              if 'ENVINFO' not in str(p).upper():
+                  continue
+              try:
+                  with p.open(encoding='utf-8-sig',newline='') as f:
+                      rows=list(csv.DictReader(f))
+              except Exception:
+                  continue
+              if not rows:
+                  continue
+              headers=set(rows[0])
+              idkeys=[x for x in headers if x.casefold() in {'comp_id','compid','source_id','site_id'}]
+              namekeys=[x for x in headers if any(t in x.casefold() for t in ('name','nm','site','company','entrps'))]
+              addresskeys=[x for x in headers if 'addr' in x.casefold() or '주소' in x]
+              yearkeys=[x for x in headers if 'year' in x.casefold() or '연도' in x]
+              for r in rows:
+                  vals=tuple(str(r.get(k,'')).strip() for k in idkeys+namekeys+addresskeys+yearkeys)
+                  if not any(vals) or vals in seen:
+                      continue
+                  seen.add(vals)
+                  print(json.dumps({
+                      'file':str(p),
+                      'ids':{k:r.get(k) for k in idkeys},
+                      'names':{k:r.get(k) for k in namekeys},
+                      'addresses':{k:r.get(k) for k in addresskeys},
+                      'years':{k:r.get(k) for k in yearkeys},
+                  },ensure_ascii=False))
+          PY
