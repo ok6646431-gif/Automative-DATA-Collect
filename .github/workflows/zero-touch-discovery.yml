@@ -14,9 +14,11 @@ on:
       - 'requests/zero_touch_request.json'
       - 'orchestrator/zero_touch_discovery.py'
       - 'orchestrator/dart_public_resolver.py'
+      - 'orchestrator/g0_evidence_enrichment.py'
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_zero_touch_discovery.py'
       - 'tests/test_dart_public_resolver.py'
+      - 'tests/test_g0_evidence_enrichment.py'
       - '.github/workflows/zero-touch-discovery.yml'
 
 permissions:
@@ -42,9 +44,10 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/zero_touch_runner.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_zero_touch_discovery -v
           if [ -f tests/test_dart_public_resolver.py ]; then python -m unittest tests.test_dart_public_resolver -v; fi
+          python -m unittest tests.test_g0_evidence_enrichment -v
           python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs -v
 
       - name: Determine whether live Discovery was requested
