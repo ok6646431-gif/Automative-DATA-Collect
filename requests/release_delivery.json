@@ -1,18 +1,14 @@
 {
   "schema_version": "release-delivery-1.0",
-  "source_run_id": 33521813810,
-  "release_tag": "environment-materials-2026-09-01",
-  "release_title": "기업 지원용 환경자료 패키지 - 2026-09-01",
-  "release_notes": "ENVINFO 자료 수 표기와 중복 저장을 바로잡은 정정본입니다. 공개 레코드·첨부 관계·고유 첨부파일을 구분하고, 동일 첨부는 한 번만 저장하되 사업장·연도 관계는 참조목록으로 보존했습니다. 금호석유화학은 공개 레코드 48건, 첨부 관계 376건, 고유 첨부 284개, 실제 ENVINFO 파일 332개이며 자회사 자료는 포함되지 않았습니다.",
-  "artifact_pattern": "*-application-environment-materials",
+  "source_run_id": 33585880094,
+  "release_tag": "hd-hyundai-samho-environment-materials-2026-09-02",
+  "release_title": "HD현대삼호 지원용 환경자료 패키지 - 2026-09-02",
+  "release_notes": "HD현대삼호 제3기업 cross-company 검증 완료본입니다. 2020~2025 지속가능경영/통합보고서 연차자료를 포함하며, 2025년 자료는 공식 HD현대삼호 보고서 페이지의 실제 국문 PDF 다운로드 endpoint로 교체·검증했습니다. ENVINFO는 공개레코드 5건, 첨부관계 35건, 고유첨부 27개, 실제 물리파일 32개이며 영암 조선소 canonical identity는 공식 주소와 검증된 source ID를 기준으로 ENVINFO·PRTR·화학물질통계에 연결됩니다.",
+  "artifact_pattern": "enterprise-env-application-materials",
   "expected_assets": [
     {
-      "source_name": "금호석유화학_지원용_환경자료.zip",
-      "release_name": "Kumho_Petrochemical_environment_materials.zip"
-    },
-    {
-      "source_name": "포스코_지원용_환경자료.zip",
-      "release_name": "POSCO_environment_materials.zip"
+      "source_name": "에이치디현대삼호_지원용_환경자료.zip",
+      "release_name": "HD_Hyundai_Samho_environment_materials.zip"
     }
   ]
 }
