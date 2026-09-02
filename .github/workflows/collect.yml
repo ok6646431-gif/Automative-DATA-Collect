@@ -310,7 +310,7 @@ jobs:
     # Do not turn that cancellation into a large partial archive build.
     if: ${{ always() && cancelled() == false && needs.stable_sources.result == 'success' && needs.corporate_documents.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -386,6 +386,24 @@ jobs:
           path: assembled/Human_Archive.zip
           if-no-files-found: warn
           retention-days: 14
+      - name: Build and validate application materials
+        if: ${{ hashFiles('assembled/Human_Archive.zip') != '' }}
+        run: >-
+          python tools/build_application_material_from_archive.py
+          --input assembled/Human_Archive.zip
+          --output-dir application-delivery
+          --source-run ${{ github.run_id }}
+          --summary-out application-delivery/application_package_result.json
+      - name: Upload application materials
+        id: application_upload
+        if: ${{ always() && hashFiles('application-delivery/*.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-application-materials
+          path: application-delivery/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
       - name: Prepare lightweight metadata delivery
         if: always()
         run: |
@@ -433,6 +451,7 @@ jobs:
           SERVER_URL: ${{ github.server_url }}
           ARTIFACT_ID: ${{ steps.final_upload.outputs.artifact-id }}
           HUMAN_ARTIFACT_ID: ${{ steps.human_archive_upload.outputs.artifact-id }}
+          APPLICATION_ARTIFACT_ID: ${{ steps.application_upload.outputs.artifact-id }}
           METADATA_ARTIFACT_ID: ${{ steps.metadata_upload.outputs.artifact-id }}
         run: |
           python - <<'PY'
@@ -447,12 +466,15 @@ jobs:
           run_number=os.environ["RUN_NUMBER"]
           artifact_id=os.environ.get("ARTIFACT_ID","")
           human_id=os.environ.get("HUMAN_ARTIFACT_ID","")
+          application_id=os.environ.get("APPLICATION_ARTIFACT_ID","")
           metadata_id=os.environ.get("METADATA_ARTIFACT_ID","")
           description=f"run #{run_number} {state}"
           if artifact_id:
               description += f"; final {artifact_id}"
           if human_id:
               description += f"; human {human_id}"
+          if application_id:
+              description += f"; app {application_id}"
           if metadata_id:
               description += f"; meta {metadata_id}"
           payload={
