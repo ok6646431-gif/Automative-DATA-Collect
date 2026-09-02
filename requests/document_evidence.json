@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-env-20260901-v1",
+  "request_id": "hd-hyundai-samho-env-20260902-v1",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "discovery_scope": {
     "history_window": {
@@ -12,133 +12,127 @@
     ],
     "current_public_document_categories": [
       "SUSTAINABILITY_REPORT",
-      "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
-      "ENVIRONMENTAL_MANAGEMENT",
-      "BAT_REFERENCE"
+      "ENVIRONMENTAL_MANAGEMENT"
     ],
-    "scope_note": "포스코 지속가능경영 공식 사이트에서 철강 사업회사 주식회사 포스코에 귀속되는 공개자료를 대상으로 한다. 포스코홀딩스 및 그룹 계열사의 별도 보고서는 제외한다. 2020~2021 보고서는 2022년 3월 물적분할 이전 철강사업의 역사적 연속자료로 경계 표시하여 보존한다. 2025 보고서는 공식 디지털 보고서 형식을 그대로 수집한다.",
+    "scope_note": "HD현대삼호 공식 보고서·정책 페이지와 HD한국조선해양 공식 보고서를 사용한다. 조선부문 통합/지속가능경영보고서는 각 연도 보고범위에 현대삼호중공업 또는 HD현대삼호가 포함된 경우에만 회사 자료로 보존하며, 다른 계열사의 독립 보고서로 대체하지 않는다. 2024년 3월 사명 변경 전 자료는 동일 법인의 역사적 연속자료로 취급한다.",
     "fallback_policy": "Only independently verified official-company or official-government routes may be used as fallbacks. A failed download is never converted into a no-data claim."
   },
   "documents": [
     {
-      "document_id": "POSCO_SUSTAINABILITY_2025_DIGITAL",
+      "document_id": "HSHI_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "포스코 2025 지속가능경영보고서 (디지털 보고서)",
+      "title": "2025 HD한국조선해양 지속가능경영보고서 - HD현대삼호 포함",
       "report_year": 2025,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645916083001125",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "source_url": "https://www.hd-ksoe.com/kr/sustainability/esg-library/report/list",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "2025 보고서는 포스코가 공식 디지털 형식으로 발간한 보고서이며 인쇄본/PDF 존재를 임의로 가정하지 않는다."
+      "notes": "2025 보고서는 HD한국조선해양, HD현대중공업, HD현대삼호, HD현대마린엔진을 보고경계로 하며 2026-06-30 공개가 확인되었다. 검증된 직접 PDF 경로를 임의 추정하지 않고 공식 보고서 목록 HTML을 보존한다."
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_2024",
+      "document_id": "HSHI_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Sustainability Report 2024 국문",
+      "title": "2024 HD한국조선해양 지속가능경영보고서 - HD현대삼호 포함",
       "report_year": 2024,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2024_kor.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "source_url": "https://www.hd-ksoe.com/upload/files/2025/08/f000e662-811d-4082-844d-1fb368a1810b.pdf",
+      "source_locator": "https://www.hd-ksoe.com/en/sustainability/esg-library/report/list",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_2023",
+      "document_id": "HSHI_INTEGRATED_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Sustainability Report 2023 국문",
+      "title": "2023 HD한국조선해양 통합보고서 - HD현대삼호 포함",
       "report_year": 2023,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2023_kor.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "source_url": "https://www.hshi.co.kr/download.do?dn=%28KOR%29+2023+HDKSOE_Integrated_Report.pdf&path=%2FAttachUP%2FREPORT&rn=1724201862844.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_2022",
+      "document_id": "HSHI_INTEGRATED_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Sustainability Report 2022",
+      "title": "2022 HD한국조선해양 통합보고서 - 현대삼호중공업 포함",
       "report_year": 2022,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2022_eng.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "source_url": "https://www.hshi.co.kr/download.do?dn=%28KOR%29+2022+HDKSOE_Integrated_Report.pdf&path=%2FAttachUP%2FREPORT&rn=1724202031709.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "현행 철강 사업회사 출범 첫 해의 공식 보고서."
+      "importance": "CORE"
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_2021",
+      "document_id": "HSHI_INTEGRATED_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Sustainability Report 2021",
+      "title": "2021 한국조선해양 통합보고서 - 현대삼호중공업 포함",
       "report_year": 2021,
-      "source_url": "https://sustainability.posco.com/assets/file/POSCO_Sustainability_Report_2021_eng.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "source_url": "https://hd.com/common/kr/docs/%5B2021%5D%20HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91%20%ED%86%B5%ED%95%A9%EB%B3%B4%EA%B3%A0%EC%84%9C%20-%202022%EB%85%84%20%EB%B0%9C%EA%B0%84.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "2022년 3월 물적분할 이전 철강사업 활동을 다루는 역사적 연속자료로 사용한다."
+      "importance": "CORE"
     },
     {
-      "document_id": "POSCO_SUSTAINABILITY_2020",
+      "document_id": "HSHI_INTEGRATED_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "POSCO Corporate Citizenship Report 2020 국문",
+      "title": "2020 한국조선해양 통합보고서 - 현대삼호중공업 포함",
       "report_year": 2020,
-      "source_url": "https://posco.co.kr/homepage/servlet/FileDown?file=%2Fhfiles%2Fboard%2F2b96d13e187c11eb685e861c8173b413.pdf&filename=posco_report_2020_kr.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
-      "expected_extension": "pdf",
-      "verification_status": "VERIFIED",
-      "importance": "CORE",
-      "notes": "2022년 3월 물적분할 이전 철강사업 활동을 다루는 역사적 연속자료로 사용한다."
-    },
-    {
-      "document_id": "POSCO_ESG_FACTBOOK_2024",
-      "document_type": "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
-      "title": "2024 POSCO ESG Factbook",
-      "report_year": 2024,
-      "source_url": "https://sustainability.posco.com/assets/file/2024_POSCO_ESG_Factbook.pdf",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do",
+      "source_url": "https://hd-hhi.com/upload/esgArchivesTotal/87_2_12c7d028-a9e8-4343-8257-ff38f1534f5b.pdf",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
       "expected_extension": "pdf",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "POSCO_ENVIRONMENTAL_MANAGEMENT_CURRENT",
+      "document_id": "HSHI_HSE_POLICY_CURRENT",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "포스코 환경경영",
+      "title": "HD현대삼호 HSE 경영방침",
       "report_year": 2026,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=1745995729003197",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=1745995729003197",
+      "source_url": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety",
+      "source_locator": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "POSCO_ENVIRONMENTAL_IMPACT_CURRENT",
+      "document_id": "HSHI_ENVIRONMENT_MANAGEMENT_CURRENT",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "포스코 환경영향 및 환경법규 대응 공개자료",
+      "title": "HD현대삼호 안전·보건·환경 - 환경관리 공개내용",
       "report_year": 2026,
-      "source_url": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781",
+      "source_url": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety2",
+      "source_locator": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety2",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
       "importance": "CORE"
     },
     {
-      "document_id": "NIER_STEEL_KBREF_REVISION_2023",
-      "document_type": "BAT_REFERENCE",
-      "title": "철강제조업 최적가용기법 기준서 개정판 공식 공개 근거",
-      "report_year": 2023,
-      "source_url": "https://www.mcee.go.kr/home/web/board/read.do?boardId=1646865&boardMasterId=939&maxIndexPages=10&maxPageItems=10&menuId=10598&pagerOffset=2270",
-      "source_locator": "https://ieps.nier.go.kr/brefos",
+      "document_id": "HSHI_ENVIRONMENT_DECLARATION_CURRENT",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "HD현대삼호 환경경영선언",
+      "report_year": 2026,
+      "source_url": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety4",
+      "source_locator": "https://www.hd-samho.com/PageLink.do?link=manage%2Fsafety4",
       "expected_extension": "html",
       "verification_status": "VERIFIED",
-      "importance": "TECHNICAL_REFERENCE",
-      "notes": "환경부·국립환경과학원의 2023 철강제조업 BAT 기준서 개정 공개 근거를 보존한다. 실제 철강 K-BREF 원문 파일은 공식 IEPS 첨부 경로를 별도 확인하기 전까지 존재를 추정하지 않는다."
+      "importance": "CORE"
+    },
+    {
+      "document_id": "HSHI_ISO_ENVIRONMENT_CURRENT",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "HD현대삼호 ISO 14001 환경경영시스템 인증 공개페이지",
+      "report_year": 2026,
+      "source_url": "https://www.hd-samho.com/bbs/safety3/list.do",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy3/list.do",
+      "expected_extension": "html",
+      "verification_status": "VERIFIED",
+      "importance": "SUPPORTING"
     }
   ],
   "gaps": [
     {
-      "gap_id": "POSCO_SUSTAINABILITY_2026_NOT_PUBLISHED",
+      "gap_id": "HSHI_SUSTAINABILITY_2026_NOT_PUBLISHED",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
       "year": 2026,
@@ -146,20 +140,8 @@
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "2026-09-01 현재 포스코 공식 지속가능경영보고서 목록의 최신 연차 보고서는 2025년 디지털 보고서이며 2026년 보고서는 공개되지 않았다.",
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/UI-PK_W027.do"
-    },
-    {
-      "gap_id": "POSCO_STEEL_KBREF_DIRECT_FILE_PENDING",
-      "source_key": "CORP_DOCS",
-      "document_type": "BAT_REFERENCE",
-      "year": 2023,
-      "verification_status": "VERIFIED",
-      "status": "DIRECT_FILE_NOT_YET_DECLARED",
-      "severity": "LOW",
-      "blocking": false,
-      "reason": "철강제조업 BAT 기준서 2023 개정 공개 사실과 공식 IEPS 위치는 확인했으나 이번 최초 운용 입력에서는 실제 기준서 첨부 PDF의 검증된 직접 경로를 아직 선언하지 않았다. 공식 공개 근거 HTML을 우선 보존한다.",
-      "source_locator": "https://ieps.nier.go.kr/brefos"
+      "reason": "2026-09-02 현재 HD현대삼호 공식 보고서·정책 페이지와 HD한국조선해양 공식 보고서 목록의 최신 보고대상연도는 2025년이며 2026년 지속가능경영보고서는 공개되지 않았다.",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do"
     }
   ]
 }

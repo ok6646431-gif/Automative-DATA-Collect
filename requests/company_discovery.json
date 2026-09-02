@@ -1,19 +1,18 @@
 {
   "schema_version": "1.0",
-  "request_id": "posco-env-20260901-v1",
-  "requested_company_name": "포스코",
-  "current_legal_name": "주식회사 포스코",
+  "request_id": "hd-hyundai-samho-env-20260902-v1",
+  "requested_company_name": "HD현대삼호",
+  "current_legal_name": "에이치디현대삼호 주식회사",
   "current_legal_name_active_period": {
-    "start_year": 2022
+    "start_year": 1998
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "주식회사 포스코 포항제철소·광양제철소",
+    "label": "에이치디현대삼호 주식회사 영암 조선소",
     "candidate_ids": [
-      "posco-pohang-steelworks",
-      "posco-gwangyang-steelworks"
+      "hd-hyundai-samho-yeongam-shipyard"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -21,169 +20,169 @@
   },
   "scope_notes": [
     {
-      "code": "CORE_STEELWORKS_SCOPE",
-      "subject": "포항제철소·광양제철소",
-      "detail": "주식회사 포스코의 국내 핵심 생산사업장인 포항제철소와 광양제철소를 환경자료 핵심 범위로 사용한다. 본사·서울사무소와 포스코그룹 별도 법인은 핵심 생산사업장 범위에서 제외한다."
+      "code": "CORE_SHIPYARD_SCOPE",
+      "subject": "영암 조선소",
+      "detail": "에이치디현대삼호 주식회사의 핵심 국내 생산사업장인 전남 영암군 삼호읍 대불로 93 사업장을 환경자료 핵심 범위로 사용한다. HD한국조선해양·HD현대중공업·HD현대미포 등 별도 법인 자료는 수집 결과에서 구분·제외한다."
     },
     {
-      "code": "LEGAL_ENTITY_SPINOFF_BOUNDARY_2022",
-      "subject": "2022년 3월 1일 물적분할 전후",
-      "detail": "현행 주식회사 포스코는 2022년 3월 1일 철강사업 물적분할로 신설되었다. 2020~2021 공개자료는 현행 법인의 동일기간 자료로 오인하지 않고, 분할 전 포스코 철강사업의 역사적 연속자료로 경계 표시하여 보존한다."
+      "code": "LEGAL_NAME_CHANGE_BOUNDARY_2024",
+      "subject": "2024년 3월 25일 사명 변경 전후",
+      "detail": "동일 법인이 2024년 3월 25일 현대삼호중공업에서 HD현대삼호로 상호를 변경했다. 2020~2023 및 일부 2024 공개자료의 현대삼호중공업 명칭은 동일 법인의 역사적 연속자료로 보존한다."
     }
   ],
   "company_aliases": [
     {
-      "name": "포스코",
+      "name": "HD현대삼호",
       "alias_type": "current_brand_name",
-      "active_period": {"start_year": 2022},
+      "active_period": {
+        "start_year": 2024
+      },
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/"
+      "source_locator": "https://www.hd-samho.com/"
     },
     {
-      "name": "(주)포스코",
+      "name": "에이치디현대삼호(주)",
       "alias_type": "source_native_alias",
-      "active_period": {"start_year": 2022},
+      "active_period": {
+        "start_year": 2024
+      },
       "verification_state": "SOURCE_VERIFIED",
-      "source_locator": "https://www.posco.com/"
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468"
     },
     {
-      "name": "POSCO",
-      "alias_type": "english_brand_name",
-      "active_period": {"start_year": 2022},
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/"
-    },
-    {
-      "name": "POSCO Co., Ltd.",
+      "name": "HD HYUNDAI SAMHO CO., LTD.",
       "alias_type": "english_legal_name",
-      "active_period": {"start_year": 2022},
+      "active_period": {
+        "start_year": 2024
+      },
       "verification_state": "VERIFIED",
-      "source_locator": "https://www.posco.com/"
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468"
+    },
+    {
+      "name": "HSHI",
+      "alias_type": "abbreviation",
+      "active_period": {
+        "start_year": 2024
+      },
+      "verification_state": "VERIFIED",
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
     }
   ],
   "historical_legal_names": [
     {
-      "name": "주식회사 포스코",
-      "alias_type": "spin_off_predecessor",
-      "active_period": {"start_year": 2020, "end_year": 2021},
+      "name": "현대삼호중공업 주식회사",
+      "alias_type": "former_legal_name",
+      "active_period": {
+        "start_year": 2020,
+        "end_year": 2024
+      },
       "verification_state": "VERIFIED",
-      "source_locator": "https://esign-cert.posco.com/e-sales/html_kr/main_cont/c83_notice_pop_poscoholdings.html"
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
     },
     {
-      "name": "포스코",
-      "alias_type": "spin_off_predecessor",
-      "active_period": {"start_year": 2020, "end_year": 2021},
+      "name": "현대삼호중공업",
+      "alias_type": "former_legal_name",
+      "active_period": {
+        "start_year": 2020,
+        "end_year": 2024
+      },
       "verification_state": "VERIFIED",
-      "source_locator": "https://esign-cert.posco.com/e-sales/html_kr/main_cont/c83_notice_pop_poscoholdings.html"
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
     },
     {
-      "name": "POSCO",
-      "alias_type": "spin_off_predecessor",
-      "active_period": {"start_year": 2020, "end_year": 2021},
+      "name": "현대삼호중공업(주)",
+      "alias_type": "source_native_alias",
+      "active_period": {
+        "start_year": 2020,
+        "end_year": 2024
+      },
+      "verification_state": "SOURCE_VERIFIED",
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
+    },
+    {
+      "name": "HYUNDAI SAMHO HEAVY INDUSTRIES CO., LTD.",
+      "alias_type": "former_legal_name",
+      "active_period": {
+        "start_year": 2020,
+        "end_year": 2024
+      },
       "verification_state": "VERIFIED",
-      "source_locator": "https://esign-cert.posco.com/e-sales/html_kr/main_cont/c83_notice_pop_poscoholdings.html"
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
     }
   ],
   "corporate_restructuring_evidence": [
     {
-      "event_type": "SPIN_OFF",
-      "effective_date": "2022-03-01",
-      "predecessor": "분할 전 주식회사 포스코(현 포스코홀딩스)",
-      "successor": "주식회사 포스코",
-      "scope": "철강 생산 및 판매 등 사업회사 부문",
+      "event_type": "LEGAL_NAME_CHANGE",
+      "effective_date": "2024-03-25",
+      "predecessor": "현대삼호중공업 주식회사",
+      "successor": "에이치디현대삼호 주식회사",
+      "scope": "동일 법인의 상호 변경",
       "verification_state": "VERIFIED",
-      "source_locator": "https://esign-cert.posco.com/e-sales/html_kr/main_cont/c83_notice_pop_poscoholdings.html"
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471"
     }
   ],
   "domestic_site_candidates": [
     {
-      "candidate_id": "posco-pohang-steelworks",
-      "site_name_raw": "포항제철소",
-      "address_raw": "경상북도 포항시 남구 동해안로 6262",
-      "business_unit_raw": "일관제철 생산사업장",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "posco-gwangyang-steelworks",
-      "site_name_raw": "광양제철소",
-      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
-      "business_unit_raw": "일관제철 생산사업장",
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+      "candidate_id": "hd-hyundai-samho-yeongam-shipyard",
+      "site_name_raw": "HD현대삼호 영암 조선소",
+      "address_raw": "전남 영암군 삼호읍 대불로 93",
+      "business_unit_raw": "선박 건조 및 산업설비 생산사업장",
+      "source_locator": "https://recruit.hd.com/kr/mainLayout/domestic",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://esign-cert.posco.com/e-sales/html_kr/main_cont/c83_notice_pop_poscoholdings.html",
-      "source_value_raw": "2022년 3월 1일 철강 사업회사 주식회사 포스코 신설",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
+      "source_value_raw": "에이치디현대삼호 주식회사 / HD HYUNDAI SAMHO CO., LTD. / 설립일 1998-11-04 / 업종 선박 및 수상 부유 구조물 건조업",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645916083001125",
-      "source_value_raw": "2025 지속가능경영보고서 국내 보고범위: 포항제철소, 광양제철소, 포항 본사, 서울사무소",
+      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471",
+      "source_value_raw": "2024년 3월 25일 현대삼호중공업에서 HD현대삼호로 상호 변경",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-      "source_value_raw": "포항제철소 공식 명칭 및 주소",
+      "source_locator": "https://recruit.hd.com/kr/mainLayout/domestic",
+      "source_value_raw": "영암 사업장: 전남 영암군 대불로 93",
       "verification_state": "VERIFIED"
     },
     {
-      "source_locator": "https://www.posco.com/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
-      "source_value_raw": "광양제철소 공식 명칭 및 주소",
+      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_value_raw": "HD현대삼호 공식 보고서·정책 페이지에 2020~2025 조선부문 지속가능경영/통합보고서 연차자료 공개",
       "verification_state": "VERIFIED"
     }
   ],
   "related_entity_exclusions": [
     {
-      "name": "포스코홀딩스",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
+      "name": "HD현대중공업",
+      "reason": "에이치디현대삼호와 별도 법인인 조선 계열사",
+      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "포스코퓨처엠",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
+      "name": "HD현대미포",
+      "reason": "에이치디현대삼호와 별도 법인인 조선 계열사",
+      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "포스코인터내셔널",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
+      "name": "HD한국조선해양",
+      "reason": "에이치디현대삼호의 모회사이자 별도 법인",
+      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "포스코이앤씨",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
+      "name": "HD현대마린엔진",
+      "reason": "에이치디현대삼호와 별도 법인인 조선해양 계열사",
+      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
       "verification_state": "VERIFIED"
     },
     {
-      "name": "포스코DX",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "포스코스틸리온",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "포스코엠텍",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "name": "포스코휴먼스",
-      "reason": "주식회사 포스코와 별도 법인",
-      "source_locator": "https://www.posco-inc.com/poscoinc/v4/kor/company/s91e2000300c.jsp",
+      "name": "HD현대",
+      "reason": "에이치디현대삼호와 별도 법인인 그룹 지주회사",
+      "source_locator": "https://hd-hhi.com/kr/investors/governance/subsidiary",
       "verification_state": "VERIFIED"
     }
   ],
@@ -197,26 +196,48 @@
     },
     "sources": {
       "ENVINFO": {
-        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2024
+        },
         "prefer_full_history": false,
         "max_details": 500
       },
       "PRTR": {
-        "requested_window": {"start_year": 2020, "end_year": 2024},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2024
+        },
         "prefer_full_history": false
       },
       "CHEM_STATS": {
-        "requested_survey_rounds": [2020, 2022, 2024],
-        "available_survey_rounds": [2020, 2022, 2024],
+        "requested_survey_rounds": [
+          2020,
+          2022,
+          2024
+        ],
+        "available_survey_rounds": [
+          2020,
+          2022,
+          2024
+        ],
         "prefer_full_history": true
       },
       "CLEANSYS_AIR": {
-        "requested_window": {"start_year": 2020, "end_year": 2025},
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2025
+        },
         "prefer_full_history": false
       },
       "SOOSIRO_WATER": {
-        "requested_window": {"start_year": 2020, "end_year": 2025},
-        "daily_available_years": [2024],
+        "requested_window": {
+          "start_year": 2020,
+          "end_year": 2025
+        },
+        "daily_available_years": [
+          2024
+        ],
         "prefer_full_history": false
       }
     }
