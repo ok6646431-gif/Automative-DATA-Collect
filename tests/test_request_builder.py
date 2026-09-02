@@ -63,5 +63,30 @@ class TestRequestBuilder(unittest.TestCase):
         self.assertEqual(r["sources"]["CLEANSYS_AIR"]["site_addresses"],expected)
         self.assertEqual(r["sources"]["SOOSIRO_WATER"]["site_addresses"],expected)
 
+    def test_verified_korean_legal_names_expand_source_native_legal_forms_with_same_bounds(self):
+        p={"request_id":"hd","company_display_name":"에이치디현대삼호 주식회사","aliases":[
+             {"term":"에이치디현대삼호 주식회사","scope":"current","alias_type":"current_legal_name","year_start":2024,"year_end":"auto"},
+             {"term":"HD현대삼호","scope":"current","alias_type":"requested_name","year_start":2024,"year_end":"auto"},
+             {"term":"HD HYUNDAI SAMHO CO., LTD.","scope":"current","alias_type":"english_legal_name","year_start":2024,"year_end":"auto"},
+             {"term":"현대삼호중공업","scope":"historical","alias_type":"former_legal_name","year_start":2020,"year_end":2024}],
+           "source_plan":{"ENVINFO":{"start_year":2020,"end_year":2024},"PRTR":{"start_year":2020,"end_year":2024},"CHEM_STATS":{"years":[2020,2022,2024]},"CLEANSYS_AIR":{"start_year":2020,"end_year":2025},"SOOSIRO_WATER":{"annual_years":[2020,2021,2022,2023,2024,2025],"daily_years":[2024]}}}
+        r=build(p)
+        chem=r["sources"]["CHEM_STATS"]["search_terms_by_year"]
+        self.assertIn("현대삼호중공업(주)",chem["2020"])
+        self.assertNotIn("에이치디현대삼호(주)",chem["2020"])
+        self.assertIn("현대삼호중공업(주)",chem["2024"])
+        self.assertIn("에이치디현대삼호(주)",chem["2024"])
+        self.assertNotIn("HD현대삼호(주)",chem["2024"])
+        self.assertIn("HD HYUNDAI SAMHO CO., LTD.",chem["2024"])
+
+        pr={x["term"]:(x["year_start"],x["year_end"]) for x in r["sources"]["PRTR"]["search_terms"]}
+        self.assertEqual(pr["현대삼호중공업(주)"],(2020,2024))
+        self.assertEqual(pr["에이치디현대삼호(주)"],(2024,2024))
+        self.assertNotIn("HD현대삼호(주)",pr)
+
+        air=r["sources"]["CLEANSYS_AIR"]
+        self.assertIn("에이치디현대삼호(주)",air["search_terms_by_year"]["2025"])
+        self.assertNotIn("현대삼호중공업(주)",air["search_terms_by_year"]["2025"])
+
 
 if __name__=="__main__": unittest.main()
