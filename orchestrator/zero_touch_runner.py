@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -27,6 +28,14 @@ _base_discover = zero_touch_discovery.discover
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
     discovery, documents, audit = g0_evidence_enrichment.enrich_discovery_from_audit(discovery, documents, audit)
+
+    # DART establishment date describes legal-entity continuity. A later rename only
+    # bounds the spelling of the current legal name; it never creates a new company.
+    legal = (((audit.get("stages") or {}).get("legal_identity") or {}).get("resolved") or {})
+    established = str(legal.get("establishment_date") or "")
+    m = re.search(r"(?:19|20)\d{2}", established)
+    if m:
+        discovery["legal_entity_active_period"] = {"start_year": int(m.group(0))}
 
     # Defensive normalization for outputs produced by older adapters during replay.
     for site in discovery.get("domestic_site_candidates", []) or []:
