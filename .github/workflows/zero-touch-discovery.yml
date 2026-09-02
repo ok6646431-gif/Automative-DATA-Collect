@@ -13,7 +13,10 @@ on:
     paths:
       - 'requests/zero_touch_request.json'
       - 'orchestrator/zero_touch_discovery.py'
+      - 'orchestrator/dart_public_resolver.py'
+      - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_zero_touch_discovery.py'
+      - 'tests/test_dart_public_resolver.py'
       - '.github/workflows/zero-touch-discovery.yml'
 
 permissions:
@@ -39,8 +42,9 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_zero_touch_discovery -v
+          if [ -f tests/test_dart_public_resolver.py ]; then python -m unittest tests.test_dart_public_resolver -v; fi
           python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs -v
 
       - name: Determine whether live Discovery was requested
@@ -70,7 +74,7 @@ jobs:
         env:
           COMPANY_NAME: ${{ steps.request.outputs.company_name }}
         run: >-
-          python orchestrator/zero_touch_discovery.py
+          python orchestrator/zero_touch_runner.py
           --company-name "$COMPANY_NAME"
           --out-dir generated-discovery
           --start-year 2020
@@ -109,8 +113,6 @@ jobs:
           else:
               audit=json.loads(required[-1].read_text(encoding='utf-8'))
               gate=str(audit.get('gate_status') or 'ERROR')
-              # Compile through the exact existing control-plane contract. This is a
-              # promotion prerequisite, not a synthetic schema-only check.
               if gate=='PASS':
                   from orchestrator.company_profile_builder import compile_discovery
                   from orchestrator.request_builder import build
