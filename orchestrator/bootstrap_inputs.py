@@ -100,31 +100,35 @@ def bootstrap_inputs(
         requested_scope = discovery.get("requested_scope") or {"mode": "COMPANY"}
         profile["requested_scope"] = requested_scope
         summary["requested_scope"] = requested_scope
-        # Archive completeness needs the same history policy and legal-name active
-        # period that Discovery used. Preserve them explicitly instead of making the
-        # archive layer guess a fixed five-report requirement for every company.
+        # Archive completeness needs the same history policy and both temporal
+        # concepts that Discovery used. A rename bounds a name spelling, not the
+        # existence of the legal entity itself.
         profile["minimum_history_years"] = int(
             (summary.get("collection_policies_selected") or {}).get("minimum_history_years") or 5
         )
         profile["current_legal_name_active_period"] = discovery.get("current_legal_name_active_period") or {}
+        profile["legal_entity_active_period"] = discovery.get("legal_entity_active_period") or {}
         profile["requested_history_window"] = _requested_history_window(discovery, profile)
         summary["requested_history_window"] = profile["requested_history_window"]
+        summary["legal_entity_active_period"] = profile["legal_entity_active_period"]
         mode = "DISCOVERY"
     elif profile_fallback_path.exists():
         profile = _read_json(profile_fallback_path)
         profile.setdefault("requested_scope", {"mode": "COMPANY"})
         profile.setdefault("minimum_history_years", 5)
         profile.setdefault("current_legal_name_active_period", {})
+        profile.setdefault("legal_entity_active_period", {})
         profile.setdefault("requested_history_window", _requested_history_window({}, profile))
         mode = "PROFILE_FALLBACK"
         summary = {
-            "summary_schema_version": "runtime-bootstrap-1.1",
+            "summary_schema_version": "runtime-bootstrap-1.2",
             "bootstrap_mode": mode,
             "request_id": profile.get("request_id"),
             "company_resolved": None,
             "current_name": profile.get("company_display_name"),
             "requested_scope": profile.get("requested_scope"),
             "requested_history_window": profile.get("requested_history_window"),
+            "legal_entity_active_period": profile.get("legal_entity_active_period"),
             "review_required_count": len(profile.get("discovery_review_required", [])),
             "note": "company_discovery.json absent; compatibility profile fallback used",
         }
@@ -148,6 +152,7 @@ def bootstrap_inputs(
         "company": profile.get("company_display_name"),
         "requested_scope": profile.get("requested_scope"),
         "requested_history_window": profile.get("requested_history_window"),
+        "legal_entity_active_period": profile.get("legal_entity_active_period"),
         "profile": str(profile_out),
         "request": str(request_out),
         "summary": str(summary_out),
