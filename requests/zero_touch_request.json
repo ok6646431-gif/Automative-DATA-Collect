@@ -1,4 +1,4 @@
 {
-  "company_name": "HD현대삼호",
-  "rerun_reason": "validate administrative-region address continuity"
+  "company_name": "한화오션",
+  "rerun_reason": "cross-company zero-touch E2E validation"
 }
