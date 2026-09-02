@@ -35,17 +35,37 @@ jobs:
           python-version: '3.12'
       - name: Run scope quality regressions
         run: python -m unittest tests.test_scope_quality -v
-      - name: Verify Samsung DS requested scope fixture
+      - name: Verify tracked requested scope consistency
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          d=json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
-          scope=d['requested_scope']
-          assert scope['candidate_ids']==[
-              'samsung-ds-giheung','samsung-ds-hwaseong','samsung-ds-pyeongtaek','samsung-ds-cheonan','samsung-ds-onyang'
-          ]
-          assert 'samsung-ds-suwon-sait' not in scope['candidate_ids']
-          assert any(x.get('candidate_id')=='samsung-ds-suwon-sait' for x in d['domestic_site_candidates'])
-          print(json.dumps(scope,ensure_ascii=False,indent=2))
+
+          d = json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
+          scope = d.get('requested_scope') or {'mode': 'COMPANY'}
+          candidate_ids = list(scope.get('candidate_ids') or [])
+          candidates = {
+              str(x.get('candidate_id')): x
+              for x in d.get('domestic_site_candidates', [])
+              if x.get('candidate_id')
+          }
+
+          assert len(candidate_ids) == len(set(candidate_ids)), 'requested_scope contains duplicate candidate_ids'
+          if scope.get('mode') == 'SITE_SET':
+              assert candidate_ids, 'SITE_SET requires at least one candidate_id'
+              missing = [candidate_id for candidate_id in candidate_ids if candidate_id not in candidates]
+              assert not missing, f'requested_scope references unknown site candidates: {missing}'
+              unresolved = [
+                  candidate_id
+                  for candidate_id in candidate_ids
+                  if candidates[candidate_id].get('identity_status') != 'CONFIRMED'
+                  or candidates[candidate_id].get('verification_state') != 'VERIFIED'
+              ]
+              assert not unresolved, f'requested_scope contains unresolved site candidates: {unresolved}'
+
+          print(json.dumps({
+              'requested_company_name': d.get('requested_company_name'),
+              'requested_scope': scope,
+              'selected_site_count': len(candidate_ids),
+          }, ensure_ascii=False, indent=2))
           PY
