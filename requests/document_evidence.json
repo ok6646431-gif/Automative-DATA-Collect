@@ -129,7 +129,7 @@
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "As of 2026-09-02, verified official report index pages list reports through 2025, not 2026.",
+      "reason": "As of 2026-09-03, verified official report index pages list reports through 2025, not 2026.",
       "source_locator": "https://www.hd-samho.com/"
     }
   ],
@@ -147,5 +147,5 @@
     ],
     "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page."
   },
-  "request_id": "hd-0b0f7339-env-g0-20260902"
+  "request_id": "hd-0b0f7339-env-g0-20260903"
 }
