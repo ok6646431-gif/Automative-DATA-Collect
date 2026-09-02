@@ -155,5 +155,8 @@
         "prefer_full_history": false
       }
     }
+  },
+  "legal_entity_active_period": {
+    "start_year": 1998
   }
 }
