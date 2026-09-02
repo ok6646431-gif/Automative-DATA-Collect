@@ -1,0 +1,31 @@
+name: Inspect blocked zero-touch Discovery audit
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/inspect-zero-touch-review.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download blocked Discovery artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p inspect
+          gh run download 33648022068 -n zero-touch-discovery-33648022068 -D inspect
+      - name: Print audit and generated contracts
+        run: |
+          for f in inspect/Discovery_Audit.json inspect/company_discovery.json inspect/document_evidence.json inspect/event_evidence.json; do
+            echo "===== $f ====="
+            cat "$f"
+            echo
+          done
