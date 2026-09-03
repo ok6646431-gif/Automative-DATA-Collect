@@ -13,6 +13,15 @@ class FakeResponse:
         self.content = content
         self.status_code = status
         self.headers = {"content-type": content_type}
+        self.closed = False
+
+    def iter_content(self, chunk_size=1):
+        data = self.content or b""
+        for i in range(0, len(data), chunk_size):
+            yield data[i:i + chunk_size]
+
+    def close(self):
+        self.closed = True
 
 
 class FakeHttp:
