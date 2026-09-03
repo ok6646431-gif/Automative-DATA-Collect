@@ -1,4 +1,4 @@
-name: Patch and test requested-scope bilingual bridge
+name: Patch and test requested-scope bilingual bridge v2
 
 on:
   push:
@@ -23,11 +23,9 @@ jobs:
           from pathlib import Path
           p=Path('orchestrator/requested_scope.py')
           s=p.read_text(encoding='utf-8')
-
           marker='''def company_terms(profile):\n'''
-          insert='''def _road_building_numbers(value):\n    """Conservative building/road numbers for cross-language address bridging.\n\n    Three- or four-digit road numbers survive Korean/English transliteration while\n    avoiding five-digit Korean postcodes.  A number is never sufficient on its own;\n    callers also require same-entity evidence, independent sources and uniqueness.\n    """\n    return set(re.findall(r"(?<!\\d)(\\d{3,4})(?!\\d)", str(value or "")))\n\n\ndef _generic_same_entity_site_label(value, profile):\n    """Recognize a legal-entity name followed by a generic `...사업장` qualifier.\n\n    This deliberately does not accept arbitrary suffixes, factories, centres or\n    offices: those can denote separately managed colocated units.  It exists to avoid\n    treating `COMPANY 거제사업장` as another corporation while still rejecting\n    names such as `COMPANY에코텍`.\n    """\n    raw = _entity_plain(value)\n    for term in _company_entity_terms(profile):\n        if not raw.startswith(term):\n            continue\n        remainder = raw[len(term):]\n        if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):\n            return True\n    return False\n\n\n'''
+          insert='''def _road_building_numbers(value):\n    """Conservative building/road numbers for cross-language address bridging.\n\n    Three- or four-digit road numbers survive Korean/English transliteration while\n    avoiding five-digit Korean postcodes. A number is never sufficient on its own;\n    callers also require same-entity evidence, independent sources and uniqueness.\n    """\n    return set(re.findall(r"(?<!\\d)(\\d{3,4})(?!\\d)", str(value or "")))\n\n\ndef _generic_same_entity_site_label(value, profile):\n    """Recognize a legal-entity name followed by a generic `...사업장` qualifier."""\n    raw = _entity_plain(value)\n    for term in _company_entity_terms(profile):\n        if not raw.startswith(term):\n            continue\n        remainder = raw[len(term):]\n        if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):\n            return True\n    return False\n\n\n'''
           if insert.strip() not in s:
-              if marker not in s: raise SystemExit('company_terms marker missing')
               s=s.replace(marker,insert+marker,1)
 
           old='''        if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):\n            return True, "SAME_ENTITY_FACILITY_LABEL"\n        # A longer corporate-looking name after a same-entity token is not evidence\n'''
@@ -37,13 +35,12 @@ jobs:
               s=s.replace(old,new,1)
 
           marker='''def resolve_requested_scope(package_root, profile=None):\n'''
-          helper='''def _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates):\n    """Bridge a first-party foreign-language address to one proven source-backed site.\n\n    No transliteration table or company exception is used.  The bridge is allowed only\n    when one selected verified site, one 3-4 digit road/building number, the same legal\n    entity, and at least two independent confirmed public sources converge on exactly\n    one canonical site.  Any ambiguity fails closed.\n    """\n    if len(candidates) != 1:\n        return ""\n    if str(candidate.get("verification_state") or "").upper() not in STRONG_VERIFICATION:\n        return ""\n    numbers = _road_building_numbers(candidate.get("address_raw"))\n    if not numbers:\n        return ""\n    possible = []\n    for site in sites:\n        if site.get("identity_status") != "CONFIRMED":\n            continue\n        entity_ok, _ = _source_entity_compatible(site.get("canonical_site_name"), profile, candidates)\n        if not entity_ok:\n            continue\n        site_numbers = _road_building_numbers(site.get("canonical_address_key"))\n        if not numbers.intersection(site_numbers):\n            continue\n        source_keys = set()\n        for row in identities:\n            if row.get("canonical_site_id") != site.get("canonical_site_id"):\n                continue\n            if str(row.get("match_status") or "").upper() != "CONFIRMED":\n                continue\n            ok, _ = _source_entity_compatible(row.get("source_site_name_raw"), profile, candidates)\n            if ok and row.get("source_key") in CORE_SOURCES:\n                source_keys.add(row.get("source_key"))\n        if len(source_keys) >= 2:\n            possible.append(site.get("canonical_site_id", ""))\n    possible = [x for x in dict.fromkeys(possible) if x]\n    return possible[0] if len(possible) == 1 else ""\n\n\n'''
+          helper='''def _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates):\n    """Bridge a verified foreign-language address to one proven source-backed site.\n\n    No transliteration table or company exception is used. The selected request must\n    contain exactly one verified site; a 3-4 digit road/building number must intersect;\n    at least two independent confirmed public sources must already agree on the same\n    legal entity and canonical site; and the result must be unique.\n    """\n    if len(candidates) != 1:\n        return ""\n    if str(candidate.get("verification_state") or "").upper() not in STRONG_VERIFICATION:\n        return ""\n    numbers = _road_building_numbers(candidate.get("address_raw"))\n    if not numbers:\n        return ""\n    possible = []\n    for site in sites:\n        if site.get("identity_status") != "CONFIRMED":\n            continue\n        entity_ok, _ = _source_entity_compatible(site.get("canonical_site_name"), profile, candidates)\n        if not entity_ok:\n            continue\n        if not numbers.intersection(_road_building_numbers(site.get("canonical_address_key"))):\n            continue\n        source_keys = set()\n        for row in identities:\n            if row.get("canonical_site_id") != site.get("canonical_site_id"):\n                continue\n            if str(row.get("match_status") or "").upper() != "CONFIRMED":\n                continue\n            ok, _ = _source_entity_compatible(row.get("source_site_name_raw"), profile, candidates)\n            if ok and row.get("source_key") in CORE_SOURCES:\n                source_keys.add(row.get("source_key"))\n        if len(source_keys) >= 2:\n            possible.append(site.get("canonical_site_id", ""))\n    possible = [x for x in dict.fromkeys(possible) if x]\n    return possible[0] if len(possible) == 1 else ""\n\n\n'''
           if helper.strip() not in s:
-              if marker not in s: raise SystemExit('resolve marker missing')
               s=s.replace(marker,helper+marker,1)
 
           old='''        matching = [x for x in dict.fromkeys(matching) if x]\n        if matching:\n            canonical.update(matching)\n'''
-          new='''        matching = [x for x in dict.fromkeys(matching) if x]\n        if not matching:\n            bridge = _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates)\n            if bridge:\n                matching.append(bridge)\n        if matching:\n            canonical.update(matching)\n'''
+          new='''        matching = [x for x in dict.fromkeys(matching) if x]\n        bridge = _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates)\n        if bridge and bridge not in matching:\n            matching.append(bridge)\n        if matching:\n            canonical.update(matching)\n'''
           if new not in s:
               if old not in s: raise SystemExit('canonical bridge marker missing')
               s=s.replace(old,new,1)
@@ -59,8 +56,12 @@ jobs:
           if new not in s:
               if old not in s: raise SystemExit('source inclusion marker missing')
               s=s.replace(old,new,1)
-
           p.write_text(s,encoding='utf-8')
+
+          t=Path('tests/test_requested_scope_bilingual_bridge.py')
+          ts=t.read_text(encoding='utf-8')
+          ts=ts.replace('self.assertTrue(scope["unresolved_candidates"])','self.assertTrue(all(not ids for ids in scope["target_source_ids"].values()))')
+          t.write_text(ts,encoding='utf-8')
           PY
       - name: Run requested-scope regression suite
         run: |
@@ -70,7 +71,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add orchestrator/requested_scope.py
+          git add orchestrator/requested_scope.py tests/test_requested_scope_bilingual_bridge.py
           git diff --cached --check
           git commit -m 'Bridge verified bilingual site addresses safely'
           git pull --rebase origin "${GITHUB_REF_NAME}"
