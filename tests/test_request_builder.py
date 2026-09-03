@@ -3,28 +3,29 @@ from orchestrator.request_builder import build
 
 
 class TestRequestBuilder(unittest.TestCase):
-    def test_predecessor_is_limited_to_active_years(self):
+    def test_predecessor_is_not_scheduled_as_company_alias(self):
         p={
             "request_id":"x","company_display_name":"테스트화학",
             "aliases":[
                 {"term":"테스트화학","scope":"current","year_start":2010,"year_end":"auto"},
-                {"term":"구테스트","scope":"predecessor","year_start":2000,"year_end":2016}
+                {"term":"구테스트","scope":"predecessor","alias_type":"spin_off_predecessor","year_start":2000,"year_end":2016}
             ],
             "source_plan":{
-                "ENVINFO":{"start_year":2024,"end_year":2024},
+                "ENVINFO":{"start_year":2015,"end_year":2024},
                 "PRTR":{"start_year":2015,"end_year":2024},
-                "CHEM_STATS":{"years":[2018,2020,2022,2024]},
+                "CHEM_STATS":{"years":[2016,2018,2020,2022,2024]},
                 "CLEANSYS_AIR":{"start_year":2015,"end_year":2025},
                 "SOOSIRO_WATER":{"annual_years":[2019,2020,2021,2022,2023,2024,2025],"daily_years":[2024]}
             }
         }
         r=build(p)
-        self.assertEqual(r["sources"]["ENVINFO"]["search_terms"],["테스트화학"])
-        pr=r["sources"]["PRTR"]["search_terms"]
-        old=[x for x in pr if x["term"]=="구테스트"][0]
-        self.assertEqual((old["year_start"],old["year_end"]),(2015,2016))
+        self.assertNotIn("구테스트",r["sources"]["ENVINFO"]["search_terms"])
+        self.assertFalse(any(x["term"]=="구테스트" for x in r["sources"]["PRTR"]["search_terms"]))
+        self.assertNotIn("구테스트",r["sources"]["CHEM_STATS"]["search_terms"])
         self.assertNotIn("구테스트",r["sources"]["CLEANSYS_AIR"]["search_terms"])
         self.assertNotIn("구테스트",r["sources"]["SOOSIRO_WATER"]["search_terms"])
+        self.assertNotIn("구테스트",r["sources"]["ENVINFO"]["search_terms_by_year"]["2016"])
+        self.assertNotIn("구테스트",r["sources"]["CHEM_STATS"]["search_terms_by_year"]["2016"])
 
     def test_bounded_alias_is_only_scheduled_during_active_period(self):
         p={"request_id":"x","company_display_name":"새회사","aliases":[
