@@ -24,7 +24,15 @@ def alias_overlap(alias, start, end):
     return max(a0,start) <= min(a1,end)
 
 
-def aliases_for(profile, start, end, include_predecessor=True):
+def aliases_for(profile, start, end, include_predecessor=False):
+    """Return aliases safe for company-wide source discovery.
+
+    Merger/spin-off predecessors are different legal entities, not historical spellings
+    of the current company.  They are therefore excluded by default from every broad
+    collector query.  A future site-level continuity mechanism may opt in explicitly
+    after ownership/business continuity is independently verified, but company-wide
+    predecessor inheritance must never happen implicitly.
+    """
     out=[]
     for a in profile.get("aliases", []):
         if a.get("search_enabled", True) is False:
@@ -75,7 +83,7 @@ def _query_terms(aliases):
     return out
 
 
-def terms_by_year(profile, years, include_predecessor=True):
+def terms_by_year(profile, years, include_predecessor=False):
     """Compile bounded aliases and legal-form variants for individual periods."""
     return {str(year): _query_terms(aliases_for(profile, year, year, include_predecessor))
             for year in years}
