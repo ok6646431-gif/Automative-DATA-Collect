@@ -8,10 +8,13 @@ on:
       - 'orchestrator/zero_touch_discovery.py'
       - 'orchestrator/dart_public_resolver.py'
       - 'orchestrator/g0_*.py'
+      - 'orchestrator/company_profile_builder.py'
       - 'orchestrator/request_builder.py'
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'tests/test_company_profile_builder.py'
+      - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
       - 'tests/test_capability_regression_corpus.py'
       - 'tests/regression_cases/capability_cases.json'
@@ -23,10 +26,13 @@ on:
       - 'orchestrator/zero_touch_discovery.py'
       - 'orchestrator/dart_public_resolver.py'
       - 'orchestrator/g0_*.py'
+      - 'orchestrator/company_profile_builder.py'
       - 'orchestrator/request_builder.py'
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'tests/test_company_profile_builder.py'
+      - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
       - 'tests/test_capability_regression_corpus.py'
       - 'tests/regression_cases/capability_cases.json'
@@ -49,10 +55,12 @@ jobs:
           python-version: '3.12'
       - name: Install test dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
-      - name: Run capability and requested-scope regressions
+      - name: Run capability, identity and requested-scope regressions
         run: >-
           python -m unittest
           tests.test_capability_regression_corpus
+          tests.test_company_profile_builder
+          tests.test_request_builder
           tests.test_requested_scope
           tests.test_requested_scope_subunits
           tests.test_requested_scope_rename_bridge
