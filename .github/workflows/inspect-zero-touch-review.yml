@@ -19,26 +19,43 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Check same-host stale path, scripted reports, real KRX rename
+      - name: Inspect official history and ESG navigation
         run: |
           python - <<'PY'
-          import json
+          import json,re
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
           from orchestrator.g0_official_site_recovery import _origin_variants
           from orchestrator.g0_scripted_report_enrichment import candidates_from_scripted_page
-          from orchestrator.g0_public_disclosure_enrichment import parse_official_rename_text
+          from orchestrator.g0_public_disclosure_enrichment import parse_official_rename_text,parse_official_rename_chronology
 
           http=base.Http()
           stale='https://www.hanwhaocean.com/pub/main/index.do'
           variants=_origin_variants(stale)
           print('ANCESTOR_ROOT_PRESENT', 'https://www.hanwhaocean.com/' in variants)
           print('ANCESTOR_ORDER', [x for x in variants if x.startswith('https://www.hanwhaocean.com/')][:8])
-          # Do not invoke the 90-page production crawl here. Verify that the same-host
-          # root itself is currently fetchable and self-identifies the requested company.
-          root=http.get('https://www.hanwhaocean.com/')
-          root_text=' '.join(BeautifulSoup(root.text,'html.parser').stripped_strings) if root and root.status_code < 400 else ''
-          print('ROOT_FETCH', getattr(root,'status_code',None), root.url if root else None, '한화오션' in root_text, len(root_text))
+
+          history='https://www.hanwhaocean.com/whoweare/history/'
+          hr=http.get(history)
+          ht=' '.join(BeautifulSoup(hr.text,'html.parser').stripped_strings) if hr and hr.status_code < 400 else ''
+          print('HISTORY_FETCH',getattr(hr,'status_code',None),len(ht))
+          for needle in ('대우조선해양','대우조선공업','2023','한화오션'):
+              pos=ht.find(needle)
+              print('HISTORY_NEEDLE',needle,pos,repr(ht[max(0,pos-350):pos+650] if pos>=0 else ''))
+
+          esg='https://esg.hanwhaocean.com/'
+          er=http.get(esg)
+          if er and er.status_code < 400:
+              er.encoding=er.apparent_encoding or er.encoding
+              soup=BeautifulSoup(er.text,'html.parser')
+              print('ESG_FETCH',er.status_code,er.url,len(er.text))
+              for tag in soup.find_all(['a','button','li','div']):
+                  blob=' '.join(tag.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
+                  low=blob.casefold()
+                  if any(x in low for x in ('보고서','report','sustainability','/dl/rep','rep/')):
+                      print('ESG_NAV',tag.name,repr(blob[:900]))
+          else:
+              print('ESG_FAIL',getattr(er,'status_code',None))
 
           report_page='https://esg.hanwhaocean.com/dl/rep/'
           rr=http.get(report_page)
@@ -46,14 +63,15 @@ jobs:
               rr.encoding=rr.apparent_encoding or rr.encoding
               found=candidates_from_scripted_page(http, rr.url, rr.text, 2020, 2026)
               print('SCRIPTED_YEARS', sorted({x['year'] for x in found}))
-              for x in sorted(found,key=lambda z:z['year']):
-                  print('SCRIPTED_DOC',json.dumps({k:x.get(k) for k in ('year','label','url','download_contract','content_type')},ensure_ascii=False))
           else:
               print('REPORT_PAGE_FAIL',getattr(rr,'status_code',None))
 
           krx='https://kind.krx.co.kr/external/2023/08/23/000283/20230823000965/10001.htm'
           kr=http.get(krx)
           kt=' '.join(BeautifulSoup(kr.text,'html.parser').stripped_strings) if kr and kr.status_code < 400 else ''
-          parsed=parse_official_rename_text(kt,'한화오션(주)')
-          print('KRX_RENAME',json.dumps(parsed,ensure_ascii=False))
+          print('KRX_DIRECT',json.dumps(parse_official_rename_text(kt,'한화오션(주)'),ensure_ascii=False))
+          print('KRX_CHRONO',json.dumps(parse_official_rename_chronology(kt,'한화오션(주)'),ensure_ascii=False))
+          for needle in ('2002.03.16','2023.05.23','대우조선해양(주)으로 상호 변경'):
+              pos=kt.find(needle)
+              print('KRX_NEEDLE',needle,pos,repr(kt[max(0,pos-300):pos+700] if pos>=0 else ''))
           PY
