@@ -1,5 +1,10 @@
 import unittest
 
+from orchestrator.g0_generic_js_report_recovery import (
+    candidates_from_generic_js_page,
+    extract_literal_calls,
+    reconstruct_targets,
+)
 from orchestrator.g0_scripted_report_enrichment import (
     candidates_from_scripted_page,
     extract_download_prefixes,
@@ -35,10 +40,27 @@ class FakeHttp:
                 text='function fileDownload(param) { let url = getContextPath() + "/attach?et=" + param; window.location.href = url; }',
                 content_type="application/javascript",
             )
+        if url.endswith("/js/generic-download.js"):
+            return FakeResponse(
+                url,
+                text=(
+                    'function downloadAnnual(path, original) {'
+                    ' window.location.href = "/common/download?file=" + encodeURIComponent(path)'
+                    ' + "&name=" + encodeURIComponent(original);'
+                    ' }'
+                ),
+                content_type="application/javascript",
+            )
         if "/attach?et=TOKEN2024" in url:
             return FakeResponse(
                 url,
                 content=b"%PDF-1.7\nmock",
+                content_type="application/octet-stream",
+            )
+        if "/common/download?file=%2Fupload%2Freport_2025.pdf&name=report_2025_kor.pdf" in url:
+            return FakeResponse(
+                url,
+                content=b"%PDF-1.7\ngeneric",
                 content_type="application/octet-stream",
             )
         return FakeResponse(url, status=404)
@@ -89,6 +111,55 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
             2026,
         )
         self.assertEqual(found, [])
+
+    def test_generic_literal_function_call_is_parsed(self):
+        calls = extract_literal_calls(
+            'downloadAnnual("/upload/report_2025.pdf", "report_2025_kor.pdf")'
+        )
+        self.assertEqual(
+            calls,
+            [("downloadAnnual", ["/upload/report_2025.pdf", "report_2025_kor.pdf"])],
+        )
+
+    def test_generic_js_contract_reconstructs_multi_argument_download(self):
+        body = (
+            'window.location.href = "/common/download?file=" + encodeURIComponent(path)'
+            ' + "&name=" + encodeURIComponent(original);'
+        )
+        targets = reconstruct_targets(
+            "https://official.example/esg/report/",
+            ["path", "original"],
+            ["/upload/report_2025.pdf", "report_2025_kor.pdf"],
+            body,
+        )
+        self.assertEqual(
+            targets,
+            ["https://official.example/common/download?file=%2Fupload%2Freport_2025.pdf&name=report_2025_kor.pdf"],
+        )
+
+    def test_generic_js_report_control_requires_semantics_and_pdf_bytes(self):
+        html = '''
+        <html><head><script src="/js/generic-download.js"></script></head><body>
+          <article class="annual-report">
+            <h3>2025 지속가능경영보고서</h3>
+            <a href="javascript:void(0)"
+               onclick='downloadAnnual("/upload/report_2025.pdf", "report_2025_kor.pdf")'>
+               국문 PDF 다운로드
+            </a>
+          </article>
+        </body></html>
+        '''
+        found, diagnostics = candidates_from_generic_js_page(
+            FakeHttp(),
+            "https://official.example/esg/report/",
+            html,
+            2020,
+            2026,
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["year"], 2025)
+        self.assertEqual(found[0]["download_contract"], "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION")
+        self.assertTrue(diagnostics[0]["function_definition_found"])
 
 
 if __name__ == "__main__":
