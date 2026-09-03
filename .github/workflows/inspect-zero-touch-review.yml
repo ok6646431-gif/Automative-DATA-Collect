@@ -19,35 +19,86 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Trace KIND viewer search implementation
+      - name: Resolve KIND document body from docpath form
         run: |
           python - <<'PY'
           import re
           from urllib.parse import urljoin
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_rename_chronology_recovery import _decode_response_text
+          from orchestrator.g0_rename_chronology_recovery import _decode_response_text, parse_official_name_chain
 
           http=base.Http()
-          wrapper='https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno=20230814001207'
-          x=http.get(wrapper)
-          raw=_decode_response_text(x,'한화오션(주)') if x else ''
-          soup=BeautifulSoup(raw,'html.parser')
-          for s in soup.find_all('script'):
-              src=str(s.get('src') or '').strip()
-              if not src: continue
-              target=urljoin(wrapper,src)
-              print('SCRIPT_SRC',target)
-              r=http.get(target,headers={'Referer':wrapper})
+          current='한화오션(주)'
+          cases=[
+              ('rename_listing','20230608000085','20230608000247'),
+              ('half_year','20230814001207','20230814003763'),
+          ]
+          for label,acpt,docno in cases:
+              wrapper=f'https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno={acpt}'
+              x=http.get(wrapper)
+              print('\nCASE',label,'WRAPPER',getattr(x,'status_code',None),x.url if x else None)
+              if not x or x.status_code>=400: continue
+              raw=_decode_response_text(x,current)
+              soup=BeautifulSoup(raw,'html.parser')
+              form=soup.find('form',id='docpathfrm') or soup.find('form',attrs={'name':'docpathfrm'})
+              print('FORM',dict(form.attrs) if form else None)
+              if not form: continue
+              payload={}
+              for tag in form.find_all(['input','select','textarea']):
+                  name=tag.get('name')
+                  if not name: continue
+                  if tag.name=='select':
+                      opt=tag.find('option',selected=True) or tag.find('option')
+                      payload[name]=opt.get('value','') if opt else ''
+                  else:
+                      payload[name]=tag.get('value','')
+              payload['docNo']=docno
+              print('PAYLOAD',payload)
+              action=urljoin(wrapper,form.get('action') or wrapper)
+              method=str(form.get('method') or 'get').lower()
+              if method=='post':
+                  r=http.post(action,data=payload,headers={'Referer':wrapper})
+              else:
+                  r=http.get(action,params=payload,headers={'Referer':wrapper})
+              print('DOCPATH_RESPONSE',method,action,getattr(r,'status_code',None),r.url if r else None)
               if not r or r.status_code>=400: continue
-              txt=_decode_response_text(r)
-              if any(n in txt for n in ('function search','search = function','setPath(','docLocPath')):
-                  print('MATCH_SCRIPT',target,'LEN',len(txt))
-                  for needle in ('function search','search = function','setPath(','docLocPath','docNo'):
-                      pos=0
-                      while True:
-                          i=txt.find(needle,pos)
-                          if i<0: break
-                          print('CONTEXT',needle,repr(txt[max(0,i-1600):i+5200]))
-                          pos=i+len(needle)
+              fixed=_decode_response_text(r,current)
+              text=' '.join(BeautifulSoup(fixed,'html.parser').stripped_strings)
+              print('DOCPATH_TEXT',repr(text[:2000]))
+              print('FLAGS','OLD', '대우조선해양' in text,'CURRENT','한화오션' in text,'RENAME','상호변경' in text or '사명 변경' in text)
+              print('CHAIN_DIRECT',parse_official_name_chain(text,current))
+              # docpathframe normally calls parent.setPath(...) or parent.setPath2(...).
+              calls=[]
+              for fn in ('setPath','setPath2'):
+                  for m in re.finditer(r'(?:parent\.|opener\.|top\.)?'+fn+r'\s*\((.*?)\)\s*;?',fixed,re.I|re.S):
+                      calls.append((fn,m.group(1)))
+              print('SETPATH_CALLS',[(fn,args[:1500]) for fn,args in calls])
+              urls=[]
+              for fn,args in calls:
+                  quoted=re.findall(r"['\"]([^'\"]*)['\"]",args)
+                  print('QUOTED',fn,quoted[:10])
+                  # setPath(tocLocPath, docLocPath, docServerPath, ...): second arg is body URL.
+                  if len(quoted)>=2 and quoted[1]:
+                      urls.append(urljoin(action,quoted[1]))
+              # Also accept explicit official doc URLs found in response.
+              for m in re.finditer(r'https?://[^\s\"\'<>]+',fixed):
+                  u=m.group(0)
+                  if 'kind.krx.co.kr' in u or 'dart.fss.or.kr' in u:
+                      urls.append(u)
+              seen=set()
+              for body_url in urls:
+                  if body_url in seen: continue
+                  seen.add(body_url)
+                  b=http.get(body_url,headers={'Referer':wrapper})
+                  print('BODY_URL',body_url,'STATUS',getattr(b,'status_code',None),'FINAL',b.url if b else None)
+                  if not b or b.status_code>=400: continue
+                  body=_decode_response_text(b,current)
+                  bt=' '.join(BeautifulSoup(body,'html.parser').stripped_strings)
+                  print('BODY_FLAGS','LEN',len(bt),'OLD','대우조선해양' in bt,'CURRENT','한화오션' in bt,'CHANGE','상호' in bt or '사명' in bt)
+                  for token in ('대우조선해양','한화오션','상호변경','사명 변경'):
+                      mm=re.search(re.escape(token),bt)
+                      if mm:
+                          print('BODY_CONTEXT',token,repr(bt[max(0,mm.start()-700):mm.end()+1400]))
+                  print('BODY_CHAIN',parse_official_name_chain(bt,current))
           PY
