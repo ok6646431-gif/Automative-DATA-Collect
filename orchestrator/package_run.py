@@ -1,6 +1,6 @@
 """Compatibility layer for final package validation semantics.
 
-The previous packager is preserved in ``package_run_core``.  This layer adds two
+The previous packager is preserved in ``package_run_core``. This layer adds two
 strictly bounded rules: collector-declared empty audit streams are not corruption,
 and identity reviews that demonstrably do not belong to a requested SITE_SET remain
 in the audit queue but do not block delivery.
@@ -20,10 +20,10 @@ from package_run_core import *  # preserve public helper contract
 import requested_scope as _scope
 
 # An empty audit stream is valid only when the collector status explicitly declares
-# the corresponding attempt count as zero.
-_core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})[
-    "source_id_backfill_attempts.jsonl"
-] = "source_id_backfill_attempts"
+# the corresponding attempt count as zero. Both historical/current audit filenames
+# are supported because the semantic counter, not the filename spelling, is decisive.
+for _audit_name in ("source_id_backfill_attempts.jsonl", "source_id_backfill_audit.jsonl"):
+    _core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})[_audit_name] = "source_id_backfill_attempts"
 
 _BASE_APPLY_REQUESTED_SCOPE = _core.apply_requested_scope
 
