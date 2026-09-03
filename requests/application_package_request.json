@@ -1,7 +1,7 @@
 {
   "schema_version": "application-package-request-1.0",
-  "source_run_id": 33584621639,
-  "source_artifact_name": "enterprise-env-human-archive",
-  "package_label": "HD현대삼호",
-  "replay_revision": "source-id-scope-v2"
+  "source_run_id": 33726982925,
+  "source_artifact_name": "hanwha-ocean-current-scope-reassembly",
+  "package_label": "한화오션",
+  "replay_revision": "hanwha-ocean-scope-baseline-v1"
 }
