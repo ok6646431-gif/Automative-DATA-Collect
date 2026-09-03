@@ -19,59 +19,44 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Verify KIND company-search POST contract
+      - name: Resolve KIND viewer endpoint for periodic report
         run: |
           python - <<'PY'
           import re
           from bs4 import BeautifulSoup
+          from urllib.parse import urlencode
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_rename_chronology_recovery import _decode_response_text
+          from orchestrator.g0_rename_chronology_recovery import _decode_response_text, parse_official_name_chain
 
           http=base.Http()
           main='https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpMain'
           r=http.get(main)
-          print('MAIN',getattr(r,'status_code',None),r.url if r else None)
-          payload={
-              'method':'searchDisclosureByCorpSub',
-              'currentPageSize':'100',
-              'pageIndex':'1',
-              'searchCodeType':'',
-              'orderIndex':'1',
-              'repIsuSrtCd':'A042660',
-              'allRepIsuSrtCd':'',
-              'forward':'searchdisclosurebycorp_sub',
-              'searchMode':'',
-              'kosreq':'',
-              'outsvcno':'',
-              'orderMode':'',
-              'orderStat':'',
-              'reportNm':'',
-              'reportCd':'',
-              'searchCorpName':'한화오션',
-              'fromDate':'20230101',
-              'toDate':'20231231',
-              'reportNmTemp':'',
-              'lastReport':'T',
-          }
-          endpoint='https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do'
-          x=http.post(endpoint,data=payload,headers={'Referer':main,'X-Requested-With':'XMLHttpRequest'})
-          print('POST',getattr(x,'status_code',None),x.url if x else None,x.headers.get('content-type') if x else None)
-          if not x or x.status_code>=400: raise SystemExit(0)
-          raw=_decode_response_text(x,'한화오션(주)')
-          soup=BeautifulSoup(raw,'html.parser')
-          text=' '.join(soup.stripped_strings)
-          print('TEXT',len(text),'CURRENT','한화오션' in text,'BIZ','사업보고서' in text,'Q','분기보고서' in text,'HALF','반기보고서' in text)
-          print('HEAD',repr(text[:7000]))
-          for tr in soup.find_all('tr'):
-              blob=' '.join(tr.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tr.attrs.items())
-              if any(k in blob for k in ('한화오션','사업보고서','분기보고서','반기보고서','2023')):
-                  print('ROW',repr(blob[:4000]))
-                  for a in tr.find_all('a'):
-                      print('A',dict(a.attrs),repr(' '.join(a.stripped_strings)))
-          nums=sorted(set(re.findall(r'20\d{12}',raw)))
-          print('ACPT_NUMBERS',nums,'COUNT',len(nums))
-          for m in re.finditer(r'openDisclsViewer\s*\(([^)]{0,500})\)',raw):
-              print('VIEWER',repr(m.group(0)))
-          for m in re.finditer(r'acptNo[^\n<]{0,300}',raw,re.I):
-              print('ACPT_HIT',repr(m.group(0)))
+          decoded=_decode_response_text(r,'한화오션(주)') if r else ''
+          soup=BeautifulSoup(decoded,'html.parser')
+          scripts='\n'.join((s.string or s.get_text() or '') for s in soup.find_all('script'))
+          for m in re.finditer(r'function\s+openDisclsViewer\s*\([^)]*\)\s*\{.{0,8000}?\}',scripts,re.I|re.S):
+              print('VIEWER_FUNC',repr(m.group(0)[:9000]))
+          for m in re.finditer(r'[^\n;]{0,500}openDisclsViewer[^\n;]{0,1200}',scripts,re.I):
+              print('VIEWER_HIT',repr(m.group(0)))
+
+          acpt='20230814001207'
+          candidates=[
+              'https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt,
+              'https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptNo='+acpt,
+              'https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt+'&docno=&viewerhost=&viewerport=',
+              'https://kind.krx.co.kr/common/disclsviewer.do?acptno='+acpt,
+              'https://kind.krx.co.kr/external/'+acpt,
+          ]
+          for url in candidates:
+              x=http.get(url,headers={'Referer':main})
+              if not x:
+                  print('TRY',url,'NO_RESPONSE'); continue
+              fixed=_decode_response_text(x,'한화오션(주)')
+              text=' '.join(BeautifulSoup(fixed,'html.parser').stripped_strings)
+              print('TRY',url,'STATUS',x.status_code,'FINAL',x.url,'LEN',len(text),'CURRENT','한화오션' in text,'OLD','대우조선해양' in text,'CHANGE','상호 변경' in text)
+              print('HEAD',repr(text[:1800]))
+              chain=parse_official_name_chain(text,'한화오션(주)')
+              print('CHAIN',chain)
+              if chain:
+                  break
           PY
