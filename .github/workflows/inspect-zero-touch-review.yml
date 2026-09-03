@@ -1,4 +1,4 @@
-name: Inspect official ESG report download structure
+name: Inspect ESG fileDownload JavaScript contract
 
 on:
   push:
@@ -19,37 +19,35 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe official report page download contract
+      - name: Probe fileDownload JavaScript and form contract
         run: |
           python - <<'PY'
-          import re, requests, json
+          import re, requests
           from bs4 import BeautifulSoup
           from urllib.parse import urljoin
-
-          s=requests.Session()
-          s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.8'})
-          urls=[
-            'https://esg.hanwhaocean.com/dl/rep/',
-            'https://www.hanwhaocean.com/sustainability/ov/',
-          ]
-          for url in urls:
-              print('\n===== PAGE',url,'=====')
+          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.8'})
+          root='https://esg.hanwhaocean.com/dl/rep/'
+          r=s.get(root,timeout=(10,40)); r.encoding=r.apparent_encoding or r.encoding
+          soup=BeautifulSoup(r.text,'html.parser')
+          print('PAGE',r.status_code,r.url,len(r.content))
+          scripts=[urljoin(r.url,x['src']) for x in soup.find_all('script',src=True)]
+          for url in scripts:
               try:
-                  r=s.get(url,timeout=(10,40),allow_redirects=True)
+                  js=s.get(url,timeout=(8,25))
               except Exception as e:
-                  print('ERROR',type(e).__name__,e); continue
-              print('status',r.status_code,'final',r.url,'ctype',r.headers.get('content-type'),'bytes',len(r.content))
-              r.encoding=r.apparent_encoding or r.encoding
-              soup=BeautifulSoup(r.text,'html.parser')
-              text=' '.join(soup.stripped_strings)
-              print('TEXT',text[:2500])
-              for tag in soup.find_all(['a','button','form','iframe','embed','object','input']):
-                  attrs={k:str(v) for k,v in tag.attrs.items() if k in {'href','src','data','action','onclick','value','name','id','class'}}
-                  label=' '.join(tag.stripped_strings).strip()
-                  payload=(label+' '+json.dumps(attrs,ensure_ascii=False)).lower()
-                  if any(k in payload for k in ('pdf','download','file','보고서','report','첨부','rep')):
-                      print('NODE',tag.name,repr(label),json.dumps(attrs,ensure_ascii=False))
-              for pat in [r'[^\"\'<>\s]{0,250}\.pdf[^\"\'<>\s]{0,250}',r'.{0,250}(?:download|file|attach|pdf|보고서).{0,800}']:
-                  for m in re.findall(pat,r.text,re.I|re.S)[:40]:
-                      print('RAW',re.sub(r'\s+',' ',m)[:1400])
+                  print('JSERR',url,type(e).__name__,e); continue
+              text=js.text
+              if re.search(r'fileDownload|downloadFrm|filePth|orginNm',text,re.I):
+                  print('\n===== JS',url,'status',js.status_code,'bytes',len(js.content),'=====')
+                  for m in re.finditer(r'fileDownload|downloadFrm|filePth|orginNm',text,re.I):
+                      print(re.sub(r'\s+',' ',text[max(0,m.start()-800):m.start()+1800])[:2600])
+                      break
+          # print inline scripts too
+          for sc in soup.find_all('script'):
+              text=sc.string or sc.get_text() or ''
+              if re.search(r'fileDownload|downloadFrm|filePth|orginNm',text,re.I):
+                  print('\n===== INLINE =====')
+                  for m in re.finditer(r'fileDownload|downloadFrm|filePth|orginNm',text,re.I):
+                      print(re.sub(r'\s+',' ',text[max(0,m.start()-800):m.start()+1800])[:2600])
+                      break
           PY
