@@ -105,6 +105,26 @@ class TestG0LiveAdapters(unittest.TestCase):
         links = _search_result_links("https://www.google.com/search?q=x", html)
         self.assertEqual(links, ["https://official.example/about", "https://official.example/news"])
 
+    def test_search_results_recover_displayed_cite_and_data_urls(self):
+        html = (
+            '<a href="https://www.bing.com/ck/a?x=1">tracking</a>'
+            '<div data-url="https://official.example/company/about">회사소개</div>'
+            '<cite>www.official.example</cite>'
+            '<script>{"destination":"https:\\/\\/official.example\\/sustainability"}</script>'
+        )
+        links = _search_result_links("https://www.bing.com/search?q=x", html)
+        self.assertIn("https://official.example/company/about", links)
+        self.assertIn("https://www.official.example", links)
+        self.assertIn("https://official.example/sustainability", links)
+        self.assertFalse(any("bing.com" in link for link in links))
+
+    def test_search_results_recover_bare_www_text(self):
+        links = _search_result_links(
+            "https://www.google.com/search?q=x",
+            "Official company website: www.official.example/about",
+        )
+        self.assertEqual(links, ["https://www.official.example/about"])
+
     def test_recovered_host_requires_self_identifying_corporate_structure(self):
         pages = [
             Page(
