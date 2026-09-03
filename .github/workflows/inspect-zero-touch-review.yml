@@ -1,4 +1,4 @@
-name: Inspect Hanwha Ocean report recovery paths
+name: Inspect Hanwha Ocean G0 second pass
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -15,67 +16,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe official legacy PDFs and KRX attachments
+      - name: Download second-pass G0 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p inspect/g0
+          gh run download 33707196612 -n zero-touch-discovery-33707196612 -D inspect/g0
+      - name: Print decisive G0 fields
         run: |
           python - <<'PY'
-          import re, requests
-          from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
-
-          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko,en;q=0.8'})
-          pdfs=[
-            'https://www.hanwhaocean.com/pub/images/contents/DSME_2022IR_Korean.pdf',
-            'https://www.hanwhaocean.com/pub/images/contents/DSME_2021IR_Korean.pdf',
-            'https://www.hanwhaocean.com/pub/images/contents/DSME_2020IR_Korean.pdf',
-            'https://www.hanwhaocean.com/pdf/DSME_2022IR_Korean.pdf',
-            'https://www.hanwhaocean.com/pdf/DSME_2021IR_Korean.pdf',
-            'https://www.hanwhaocean.com/pdf/DSME_2020IR_Korean.pdf',
-          ]
-          print('===== LEGACY PDF PROBES =====')
-          for url in pdfs:
-              try:
-                  r=s.get(url,headers={'Range':'bytes=0-31'},timeout=(8,25),allow_redirects=True,stream=True)
-                  head=next(r.iter_content(32),b'')
-                  print(url,'status=',r.status_code,'final=',r.url,'ctype=',r.headers.get('content-type'),'len=',r.headers.get('content-length'),'magic=',repr(head[:12]))
-                  r.close()
-              except Exception as e:
-                  print(url,'ERROR',type(e).__name__,e)
-
-          disclosures=[
-            'https://kind.krx.co.kr/external/2026/06/30/001426/20260622000504/61979.htm',
-            'https://kind.krx.co.kr/external/2025/06/25/000122/20250620000098/61979.htm',
-            'https://kind.krx.co.kr/external/2024/06/28/000594/20240626000584/61979.htm',
-            'https://kind.krx.co.kr/external/2022/07/01/000261/20220623000133/61979.htm',
-          ]
-          print('===== KRX DISCLOSURE LINK PROBES =====')
-          for url in disclosures:
-              try:
-                  r=s.get(url,timeout=(8,25),allow_redirects=True)
-                  print('\nPAGE',url,'status=',r.status_code,'final=',r.url,'bytes=',len(r.content))
-                  soup=BeautifulSoup(r.text,'html.parser')
-                  text=' '.join(soup.stripped_strings)
-                  print('TEXT',text[:600])
-                  hits=[]
-                  for tag in soup.find_all(['a','iframe','embed','object','form']):
-                      vals=[]
-                      for key in ('href','src','data','action','onclick'):
-                          if tag.get(key): vals.append(str(tag.get(key)))
-                      raw=' '.join(vals)
-                      label=' '.join(tag.stripped_strings).strip()
-                      marker=(label+' '+raw).casefold()
-                      if any(x in marker for x in ('.pdf','attach','download','file','첨부')):
-                          hits.append((label,raw))
-                  for label,raw in hits[:40]:
-                      print('LINK',repr(label),raw)
-                  # Also inspect raw HTML around PDF/file terms because KRX sometimes uses JS variables.
-                  for pat in (r'[^\"\'<>\s]{0,200}\.pdf[^\"\'<>\s]{0,200}', r'.{0,300}(?:첨부|download|file).{0,600}'):
-                      matches=re.findall(pat,r.text,re.I|re.S)
-                      for m in matches[:10]:
-                          print('RAW',re.sub(r'\s+',' ',m)[:1200])
-              except Exception as e:
-                  print('PAGE_ERROR',url,type(e).__name__,e)
+          import json
+          from pathlib import Path
+          root=Path('inspect/g0')
+          d=json.loads((root/'company_discovery.json').read_text(encoding='utf-8'))
+          docs=json.loads((root/'document_evidence.json').read_text(encoding='utf-8'))
+          audit=json.loads((root/'Discovery_Audit.json').read_text(encoding='utf-8'))
+          print('GATE',audit.get('gate_status'))
+          print('UNRESOLVED',json.dumps(d.get('unresolved_items') or [],ensure_ascii=False,indent=2))
+          print('CURRENT',d.get('current_legal_name'),d.get('current_legal_name_active_period'))
+          print('ENTITY_PERIOD',d.get('legal_entity_active_period'))
+          print('HISTORICAL',json.dumps(d.get('historical_legal_names') or [],ensure_ascii=False,indent=2))
+          print('RESTRUCTURING',json.dumps(d.get('corporate_restructuring_evidence') or [],ensure_ascii=False,indent=2))
+          print('RENAME_STAGE',json.dumps((audit.get('stages') or {}).get('public_disclosure_rename') or {},ensure_ascii=False,indent=2))
+          print('SCOPE',json.dumps(d.get('requested_scope') or {},ensure_ascii=False,indent=2))
+          print('SITES',json.dumps(d.get('domestic_site_candidates') or [],ensure_ascii=False,indent=2))
+          print('DOC_STATUS',docs.get('discovery_status'))
+          for x in sorted(docs.get('documents') or [],key=lambda z:(str(z.get('document_type')),int(z.get('report_year') or 0))):
+              print('DOC',json.dumps({k:x.get(k) for k in ('document_id','document_type','title','report_year','source_url','source_locator','expected_extension','verification_status')},ensure_ascii=False))
+          print('GAPS',json.dumps(docs.get('gaps') or [],ensure_ascii=False,indent=2))
+          print('STRICT_STAGE',json.dumps((audit.get('stages') or {}).get('strict_report_enrichment') or {},ensure_ascii=False,indent=2))
           PY
