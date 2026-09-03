@@ -83,7 +83,7 @@ class RequestedScopeBilingualBridgeTests(unittest.TestCase):
             scope = resolve_requested_scope(root)
             self.assertNotIn("SITE_MAIN", scope["target_canonical_site_ids"])
             self.assertNotIn("SITE_OTHER", scope["target_canonical_site_ids"])
-            self.assertTrue(scope["unresolved_candidates"])
+            self.assertTrue(all(not ids for ids in scope["target_source_ids"].values()))
         finally:
             td.cleanup()
 

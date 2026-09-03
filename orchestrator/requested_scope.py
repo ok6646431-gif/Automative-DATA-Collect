@@ -97,6 +97,28 @@ def _common_address_suffix(left, right):
     return suffix
 
 
+def _road_building_numbers(value):
+    """Conservative building/road numbers for cross-language address bridging.
+
+    Three- or four-digit road numbers survive Korean/English transliteration while
+    avoiding five-digit Korean postcodes. A number is never sufficient on its own;
+    callers also require same-entity evidence, independent sources and uniqueness.
+    """
+    return set(re.findall(r"(?<!\d)(\d{3,4})(?!\d)", str(value or "")))
+
+
+def _generic_same_entity_site_label(value, profile):
+    """Recognize a legal-entity name followed by a generic `...사업장` qualifier."""
+    raw = _entity_plain(value)
+    for term in _company_entity_terms(profile):
+        if not raw.startswith(term):
+            continue
+        remainder = raw[len(term):]
+        if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):
+            return True
+    return False
+
+
 def company_terms(profile):
     values = [profile.get("company_display_name"), profile.get("requested_company_name")]
     for alias in profile.get("aliases", []) or []:
@@ -230,6 +252,8 @@ def _source_entity_compatible(value, profile, candidates):
             return True, "SAME_ENTITY_REQUESTED_SUBUNIT"
         if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):
             return True, "SAME_ENTITY_FACILITY_LABEL"
+        if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):
+            return True, "SAME_ENTITY_GENERIC_SITE_LABEL"
         # A longer corporate-looking name after a same-entity token is not evidence
         # of the requested legal entity (e.g. COMPANY + FUTUREM/CHEMICAL).
         return False, "SOURCE_ENTITY_NAME_EXTENDS_CURRENT_COMPANY"
@@ -338,6 +362,45 @@ def _candidate_matches(candidate, site_name, site_address, profile, address_coun
     return addr_match or name_match
 
 
+def _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates):
+    """Bridge a verified foreign-language address to one proven source-backed site.
+
+    No transliteration table or company exception is used. The selected request must
+    contain exactly one verified site; a 3-4 digit road/building number must intersect;
+    at least two independent confirmed public sources must already agree on the same
+    legal entity and canonical site; and the result must be unique.
+    """
+    if len(candidates) != 1:
+        return ""
+    if str(candidate.get("verification_state") or "").upper() not in STRONG_VERIFICATION:
+        return ""
+    numbers = _road_building_numbers(candidate.get("address_raw"))
+    if not numbers:
+        return ""
+    possible = []
+    for site in sites:
+        if site.get("identity_status") != "CONFIRMED":
+            continue
+        entity_ok, _ = _source_entity_compatible(site.get("canonical_site_name"), profile, candidates)
+        if not entity_ok:
+            continue
+        if not numbers.intersection(_road_building_numbers(site.get("canonical_address_key"))):
+            continue
+        source_keys = set()
+        for row in identities:
+            if row.get("canonical_site_id") != site.get("canonical_site_id"):
+                continue
+            if str(row.get("match_status") or "").upper() != "CONFIRMED":
+                continue
+            ok, _ = _source_entity_compatible(row.get("source_site_name_raw"), profile, candidates)
+            if ok and row.get("source_key") in CORE_SOURCES:
+                source_keys.add(row.get("source_key"))
+        if len(source_keys) >= 2:
+            possible.append(site.get("canonical_site_id", ""))
+    possible = [x for x in dict.fromkeys(possible) if x]
+    return possible[0] if len(possible) == 1 else ""
+
+
 def resolve_requested_scope(package_root, profile=None):
     root = Path(package_root)
     profile = profile or (read_json(root / "Company_Profile.json", {}) or {})
@@ -377,6 +440,9 @@ def resolve_requested_scope(package_root, profile=None):
             if _candidate_matches(candidate, site.get("canonical_site_name"), site.get("canonical_address_key"), profile, address_counts):
                 matching.append(site.get("canonical_site_id", ""))
         matching = [x for x in dict.fromkeys(matching) if x]
+        bridge = _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates)
+        if bridge and bridge not in matching:
+            matching.append(bridge)
         if matching:
             canonical.update(matching)
         else:
@@ -392,6 +458,7 @@ def resolve_requested_scope(package_root, profile=None):
     source_ids = {s: set() for s in CORE_SOURCES}
     labels = {}
     excluded_source_ids = []
+    target_sites = [site for site in sites if site.get("canonical_site_id") in canonical]
     for row in identities:
         source = row.get("source_key", "")
         sid = str(row.get("source_site_id") or "")
@@ -413,6 +480,11 @@ def resolve_requested_scope(package_root, profile=None):
             include = any(
                 _candidate_matches(c, row.get("source_site_name_raw"), row.get("source_address_raw"), profile, address_counts)
                 for c in candidates
+            )
+        if not include and _generic_same_entity_site_label(row.get("source_site_name_raw"), profile):
+            include = any(
+                _address_match(row.get("source_address_raw"), site.get("canonical_address_key"))
+                for site in target_sites
             )
         if include:
             source_ids[source].add(sid)
