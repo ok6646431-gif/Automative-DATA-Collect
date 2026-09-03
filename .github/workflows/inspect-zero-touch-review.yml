@@ -1,4 +1,4 @@
-name: Inspect all ESG fileDownload implementations
+name: Verify scripted ESG download endpoint bytes
 
 on:
   push:
@@ -14,33 +14,26 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe all fileDownload implementations
+      - name: Verify first report token download
         run: |
           python - <<'PY'
           import re, requests
           from bs4 import BeautifulSoup
           from urllib.parse import urljoin
           s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.8'})
-          root='https://esg.hanwhaocean.com/dl/rep/'
-          r=s.get(root,timeout=(10,40)); r.encoding=r.apparent_encoding or r.encoding
+          page='https://esg.hanwhaocean.com/dl/rep/'
+          r=s.get(page,timeout=(10,40)); r.encoding=r.apparent_encoding or r.encoding
           soup=BeautifulSoup(r.text,'html.parser')
-          sources=[('INLINE:'+str(i), sc.string or sc.get_text() or '') for i,sc in enumerate(soup.find_all('script')) if not sc.get('src')]
-          for sc in soup.find_all('script',src=True):
-              url=urljoin(r.url,sc['src'])
-              try:
-                  x=s.get(url,timeout=(8,25)); sources.append((url,x.text))
-              except Exception as e:
-                  print('ERR',url,type(e).__name__,e)
-          for name,text in sources:
-              matches=list(re.finditer(r'fileDownload\s*\(',text,re.I))
-              if not matches: continue
-              print('\n===== SOURCE',name,'COUNT',len(matches),'=====')
-              for idx,m in enumerate(matches):
-                  print('---',idx,'---')
-                  print(re.sub(r'\s+',' ',text[max(0,m.start()-500):m.start()+1600])[:2100])
+          a=next(x for x in soup.find_all('a') if x.get('onclick') and re.search(r'fileDownload\s*\(',x.get('onclick'),re.I))
+          token=re.search(r'fileDownload\s*\(\s*[\"\']([^\"\']+)',a.get('onclick'),re.I).group(1)
+          target=urljoin(page,'/attach?et='+token)
+          print('NAME',a.get('download'))
+          print('TARGET_PREFIX',target[:90])
+          for label,headers in [('NO_REFERER',{}),('WITH_REFERER',{'Referer':page})]:
+              x=s.get(target,headers=headers,timeout=(10,60),allow_redirects=True)
+              print(label,'status',x.status_code,'final',x.url[:120],'ctype',x.headers.get('content-type'),'disp',x.headers.get('content-disposition'),'bytes',len(x.content),'magic',repr(x.content[:12]))
           PY
