@@ -1,5 +1,10 @@
 import unittest
 
+from orchestrator.g0_data_attr_report_recovery import (
+    candidates_from_data_attr_page,
+    extract_data_controls,
+    reconstruct_data_targets,
+)
 from orchestrator.g0_generic_js_report_recovery import (
     candidates_from_generic_js_page,
     extract_literal_calls,
@@ -62,6 +67,15 @@ class FakeHttp:
                 url,
                 content=b"%PDF-1.7\ngeneric",
                 content_type="application/octet-stream",
+            )
+        if "/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/2026%20" in url or (
+            "/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/" in url
+            and url.endswith(".pdf")
+        ):
+            return FakeResponse(
+                url,
+                content=b"%PDF-1.7\ndata-attr",
+                content_type="application/pdf",
             )
         return FakeResponse(url, status=404)
 
@@ -160,6 +174,86 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
         self.assertEqual(found[0]["year"], 2025)
         self.assertEqual(found[0]["download_contract"], "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION")
         self.assertTrue(diagnostics[0]["function_definition_found"])
+
+    def _data_attr_html(self):
+        return '''
+        <html><body>
+          <section class="report-library">
+            <h3>지속가능경영보고서</h3>
+            <article>
+              <span>2026 지속가능경영보고서</span>
+              <a href="javascript:;" class="btn icon-down_pdf fileDown"
+                 data-savenm="1786079799668_7461931077646106262.pdf"
+                 data-filepath="/attr/company"
+                 data-orgnm="2026 금호타이어 지속가능경영보고서.pdf">
+                 <span>국문 PDF 다운로드</span>
+              </a>
+            </article>
+          </section>
+          <script>
+          $(function(){
+            $(".fileDown").on('click', function(e){
+              e.preventDefault();
+              var ext = $(this).data('savenm').substring($(this).data('savenm').indexOf('.') + 1);
+              var save = $(this).data('savenm').substring(0, $(this).data('savenm').indexOf('.'));
+              var nm = $(this).data('orgnm').substring(0, $(this).data('orgnm').lastIndexOf('.'));
+              if(ext.toLowerCase() == 'pdf'){
+                var url = '/fileViewer/' + ext + '/' + save + $(this).data('filepath') + '/' + nm + '.' + ext;
+                window.open(url);
+              }else{
+                $('#fileFrm').attr('action', '/fileDownload.do');
+              }
+            });
+          })
+          </script>
+        </body></html>
+        '''
+
+    def test_data_attribute_report_control_is_extracted(self):
+        controls = extract_data_controls(self._data_attr_html(), 2020, 2026)
+        self.assertEqual(len(controls), 1)
+        self.assertEqual(controls[0]["year"], 2026)
+        self.assertEqual(controls[0]["data"]["filepath"], "/attr/company")
+        self.assertIn("fileDown", controls[0]["classes"])
+
+    def test_data_attribute_handler_reconstructs_viewer_url(self):
+        controls = extract_data_controls(self._data_attr_html(), 2020, 2026)
+        handler = '''
+              e.preventDefault();
+              var ext = $(this).data('savenm').substring($(this).data('savenm').indexOf('.') + 1);
+              var save = $(this).data('savenm').substring(0, $(this).data('savenm').indexOf('.'));
+              var nm = $(this).data('orgnm').substring(0, $(this).data('orgnm').lastIndexOf('.'));
+              if(ext.toLowerCase() == 'pdf'){
+                var url = '/fileViewer/' + ext + '/' + save + $(this).data('filepath') + '/' + nm + '.' + ext;
+                window.open(url);
+              }
+        '''
+        targets = reconstruct_data_targets(
+            "https://official.example/ko/ESG/Materials/Report/",
+            controls[0]["data"],
+            handler,
+        )
+        self.assertEqual(
+            targets,
+            [
+                "https://official.example/fileViewer/pdf/1786079799668_7461931077646106262"
+                "/attr/company/2026 금호타이어 지속가능경영보고서.pdf"
+            ],
+        )
+
+    def test_data_attribute_report_requires_handler_and_pdf_bytes(self):
+        found, diagnostics = candidates_from_data_attr_page(
+            FakeHttp(),
+            "https://official.example/ko/ESG/Materials/Report/",
+            self._data_attr_html(),
+            2020,
+            2026,
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["year"], 2026)
+        self.assertEqual(found[0]["download_contract"], "VERIFIED_DATA_ATTRIBUTE_JS_HANDLER")
+        self.assertIn("fileDown", diagnostics[0]["matched_handler_classes"])
+        self.assertTrue(diagnostics[0]["candidate_targets"])
 
 
 if __name__ == "__main__":
