@@ -28,7 +28,7 @@ zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_key
 def _official_rename_signals(pages, company):
     """Record bounded first-party evidence that the current company says it was renamed.
 
-    This is only a gate signal, never predecessor evidence.  It prevents a current name
+    This is only a gate signal, never predecessor evidence. It prevents a current name
     from being silently projected backwards when a first-party history page explicitly
     says a rename occurred but no predecessor/effective chain has been verified.
     """
@@ -81,6 +81,15 @@ def _attach_official_recovery(audit):
         official_stage["resolved_official_root"] = recovery["resolved_url"]
 
 
+def _has_verified_rename(discovery):
+    return any(
+        isinstance(x, dict)
+        and x.get("event_type") == "rename"
+        and x.get("verification_state") == "VERIFIED"
+        for x in discovery.get("corporate_restructuring_evidence", []) or []
+    )
+
+
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
     _attach_official_recovery(audit)
@@ -89,15 +98,18 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
         discovery, documents, audit
     )
 
-    # Try already-exposed official disclosure prose/chronologies first.  If those do
-    # not resolve the predecessor, use DART's verified listed-company code to query
-    # KIND company disclosures directly and follow the official viewer to the actual
-    # periodic-report body.  No search engine is needed for this final recovery path.
-    discovery = g0_public_disclosure_enrichment.enrich(discovery, audit)
-    discovery = g0_rename_chronology_recovery.enrich(discovery, audit)
+    # Direct official disclosure recovery is the primary path for listed companies.
+    # DART already supplies a verified six-digit company/stock code, so KIND can be
+    # queried deterministically without a search engine. Only when that path cannot
+    # resolve a verified rename chain do we pay the cost of the older locator-based
+    # public-disclosure and chronology fallbacks.
     discovery = g0_kind_disclosure_recovery.enrich(discovery, audit)
+    if not _has_verified_rename(discovery):
+        discovery = g0_public_disclosure_enrichment.enrich(discovery, audit)
+    if not _has_verified_rename(discovery):
+        discovery = g0_rename_chronology_recovery.enrich(discovery, audit)
 
-    # Strict annual-report classification rejects brochures and generic PDFs.  The
+    # Strict annual-report classification rejects brochures and generic PDFs. The
     # first scripted adapter handles opaque download tokens on pages reached normally;
     # the navigation fallback recovers report index pages hidden behind semantic DOM or
     # JavaScript navigation on the already trusted report host.
@@ -107,7 +119,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     g0_report_enrichment.refresh_document_unresolved(discovery, documents, audit)
 
     # DART establishment date describes legal-entity continuity, not the spelling of
-    # the current legal name.  A verified rename below overwrites the current-name
+    # the current legal name. A verified rename below overwrites the current-name
     # active period with the true rename boundary.
     legal = (((audit.get("stages") or {}).get("legal_identity") or {}).get("resolved") or {})
     established = str(legal.get("establishment_date") or "")
