@@ -13,6 +13,7 @@ from orchestrator.g0_official_site_recovery import (
     _origin_variants,
     _search_result_links,
 )
+from orchestrator.g0_report_catalog_policy import _catalog_supports_nonpublication
 from orchestrator.zero_touch_discovery import Page
 
 
@@ -124,6 +125,13 @@ class TestG0LiveAdapters(unittest.TestCase):
             "Official company website: www.official.example/about",
         )
         self.assertEqual(links, ["https://www.official.example/about"])
+
+    def test_verified_report_catalog_interior_hole_is_nonpublication(self):
+        years = [2020, 2022, 2023, 2024, 2025, 2026]
+        self.assertTrue(_catalog_supports_nonpublication(2021, years))
+        self.assertFalse(_catalog_supports_nonpublication(2019, years))
+        self.assertFalse(_catalog_supports_nonpublication(2027, years))
+        self.assertFalse(_catalog_supports_nonpublication(2022, years))
 
     def test_recovered_host_requires_self_identifying_corporate_structure(self):
         pages = [
