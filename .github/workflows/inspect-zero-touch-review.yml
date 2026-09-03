@@ -19,45 +19,33 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Verify generic official rename locator and report navigation
+      - name: Inspect KIND company disclosure search contract
         run: |
           python - <<'PY'
-          import json
+          import re
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_rename_chronology_recovery import (
-              _decode_response_text, _search_official_disclosures, parse_official_name_chain,
-          )
-          from orchestrator.g0_scripted_report_navigation import extract_report_navigation_targets
-          from orchestrator.g0_scripted_report_enrichment import candidates_from_scripted_page
+          from orchestrator.g0_rename_chronology_recovery import _decode_response_text
 
           http=base.Http()
-          current='한화오션(주)'
-          located=_search_official_disclosures(http,'한화오션')
-          print('LOCATED_COUNT',len(located))
-          for url in located: print('LOCATED',url)
-          parsed=[]
-          for url in located[:20]:
-              r=http.get(url)
-              if not r or r.status_code>=400: continue
-              text=' '.join(BeautifulSoup(_decode_response_text(r,current),'html.parser').stripped_strings)
-              chain=parse_official_name_chain(text,current)
-              if chain:
-                  parsed.append((r.url,chain))
-          print('LOCATED_PARSED',json.dumps(parsed,ensure_ascii=False))
-
-          root='https://esg.hanwhaocean.com/'
-          r=http.get(root)
+          url='https://kind.krx.co.kr/disclosureSimpleSearch.do?method=disclosureSimpleSearchMain&repIsuSrtCd=A042660'
+          r=http.get(url)
+          print('STATUS',getattr(r,'status_code',None),r.url if r else None)
           if r and r.status_code<400:
-              r.encoding=r.apparent_encoding or r.encoding
-              targets=extract_report_navigation_targets(r.url,r.text)
-              print('REPORT_NAV_TARGETS',json.dumps(targets,ensure_ascii=False))
-              years=[]
-              for target in targets[:20]:
-                  x=http.get(target)
-                  if not x or x.status_code>=400: continue
-                  x.encoding=x.apparent_encoding or x.encoding
-                  found=candidates_from_scripted_page(http,x.url,x.text,2020,2026)
-                  years.extend(int(c['year']) for c in found)
-              print('REPORT_NAV_YEARS',sorted(set(years)))
+              decoded=_decode_response_text(r,'한화오션(주)')
+              soup=BeautifulSoup(decoded,'html.parser')
+              text=' '.join(soup.stripped_strings)
+              print('TEXT',len(text),'HAS_CURRENT','한화오션' in text,'BUSINESS_REPORT','사업보고서' in text)
+              for form in soup.find_all('form'):
+                  blob=' '.join(f'{k}={v}' for k,v in form.attrs.items())
+                  print('FORM',blob)
+                  for inp in form.find_all(['input','select'])[:80]:
+                      print('FIELD',inp.name,dict(inp.attrs))
+              hits=set()
+              for tag in soup.find_all(['script','a','button']):
+                  blob=(tag.string or tag.get_text() or '')+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
+                  if any(x in blob for x in ('searchDisclosure','SimpleSearch','ajax','disclosure','repIsuSrtCd','searchCorpName','method=')):
+                      for m in re.finditer(r'[^\n;]{0,180}(?:searchDisclosure|SimpleSearch|ajax|disclosure|repIsuSrtCd|method=)[^\n;]{0,260}',blob,re.I):
+                          hits.add(m.group(0).strip())
+              for hit in sorted(hits)[:120]: print('HIT',repr(hit))
           PY
