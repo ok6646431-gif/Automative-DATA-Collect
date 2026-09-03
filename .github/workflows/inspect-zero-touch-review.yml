@@ -19,59 +19,49 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect official history and ESG navigation
+      - name: Inspect DART report navigation and KRX encoding
         run: |
           python - <<'PY'
           import json,re
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_official_site_recovery import _origin_variants
-          from orchestrator.g0_scripted_report_enrichment import candidates_from_scripted_page
           from orchestrator.g0_public_disclosure_enrichment import parse_official_rename_text,parse_official_rename_chronology
+          from orchestrator.g0_rename_chronology_recovery import parse_official_name_chain
 
           http=base.Http()
-          stale='https://www.hanwhaocean.com/pub/main/index.do'
-          variants=_origin_variants(stale)
-          print('ANCESTOR_ROOT_PRESENT', 'https://www.hanwhaocean.com/' in variants)
-          print('ANCESTOR_ORDER', [x for x in variants if x.startswith('https://www.hanwhaocean.com/')][:8])
-
-          history='https://www.hanwhaocean.com/whoweare/history/'
-          hr=http.get(history)
-          ht=' '.join(BeautifulSoup(hr.text,'html.parser').stripped_strings) if hr and hr.status_code < 400 else ''
-          print('HISTORY_FETCH',getattr(hr,'status_code',None),len(ht))
-          for needle in ('대우조선해양','대우조선공업','2023','한화오션'):
-              pos=ht.find(needle)
-              print('HISTORY_NEEDLE',needle,pos,repr(ht[max(0,pos-350):pos+650] if pos>=0 else ''))
-
-          esg='https://esg.hanwhaocean.com/'
-          er=http.get(esg)
-          if er and er.status_code < 400:
-              er.encoding=er.apparent_encoding or er.encoding
-              soup=BeautifulSoup(er.text,'html.parser')
-              print('ESG_FETCH',er.status_code,er.url,len(er.text))
-              for tag in soup.find_all(['a','button','li','div']):
-                  blob=' '.join(tag.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
-                  low=blob.casefold()
-                  if any(x in low for x in ('보고서','report','sustainability','/dl/rep','rep/')):
-                      print('ESG_NAV',tag.name,repr(blob[:900]))
-          else:
-              print('ESG_FAIL',getattr(er,'status_code',None))
-
-          report_page='https://esg.hanwhaocean.com/dl/rep/'
-          rr=http.get(report_page)
-          if rr and rr.status_code < 400:
-              rr.encoding=rr.apparent_encoding or rr.encoding
-              found=candidates_from_scripted_page(http, rr.url, rr.text, 2020, 2026)
-              print('SCRIPTED_YEARS', sorted({x['year'] for x in found}))
-          else:
-              print('REPORT_PAGE_FAIL',getattr(rr,'status_code',None))
-
           krx='https://kind.krx.co.kr/external/2023/08/23/000283/20230823000965/10001.htm'
           kr=http.get(krx)
-          kt=' '.join(BeautifulSoup(kr.text,'html.parser').stripped_strings) if kr and kr.status_code < 400 else ''
-          print('KRX_DIRECT',json.dumps(parse_official_rename_text(kt,'한화오션(주)'),ensure_ascii=False))
-          print('KRX_CHRONO',json.dumps(parse_official_rename_chronology(kt,'한화오션(주)'),ensure_ascii=False))
-          for needle in ('2002.03.16','2023.05.23','대우조선해양(주)으로 상호 변경'):
-              pos=kt.find(needle)
-              print('KRX_NEEDLE',needle,pos,repr(kt[max(0,pos-300):pos+700] if pos>=0 else ''))
+          print('KRX_ENCODING',getattr(kr,'encoding',None),getattr(kr,'apparent_encoding',None),kr.headers.get('content-type') if kr else None)
+          if kr and kr.status_code < 400:
+              original=kr.text
+              print('ORIGINAL_HAS_CURRENT','한화오션' in original,'MOJIBAKE',original.count('ì'),original.count('ë'))
+              if kr.apparent_encoding:
+                  kr.encoding=kr.apparent_encoding
+              fixed=kr.text
+              kt=' '.join(BeautifulSoup(fixed,'html.parser').stripped_strings)
+              print('FIXED_HAS_CURRENT','한화오션' in kt,'HAS_OLD','대우조선해양' in kt,'LEN',len(kt))
+              print('FIXED_CHAIN',json.dumps(parse_official_name_chain(kt,'한화오션(주)'),ensure_ascii=False))
+              print('LEGACY_CHRONO',json.dumps(parse_official_rename_chronology(kt,'한화오션(주)'),ensure_ascii=False))
+              for needle in ('2002.03.16','2023.05.23','대우조선해양(주)으로 상호 변경','한화오션(주)로 상호 변경'):
+                  pos=kt.find(needle)
+                  print('FIXED_NEEDLE',needle,pos,repr(kt[max(0,pos-200):pos+450] if pos>=0 else ''))
+
+          for code in ('A001','A002','A003'):
+              url=f'https://dart.fss.or.kr/navi/searchNavi.do?naviCode={code}&naviCrpCik=00111704&naviCrpNm=%ED%95%9C%ED%99%94%EC%98%A4%EC%85%98'
+              r=http.get(url)
+              print('DART_NAVI',code,getattr(r,'status_code',None),r.url if r else None,getattr(r,'encoding',None),getattr(r,'apparent_encoding',None))
+              if not r or r.status_code>=400:
+                  continue
+              if r.apparent_encoding:
+                  r.encoding=r.apparent_encoding
+              soup=BeautifulSoup(r.text,'html.parser')
+              text=' '.join(soup.stripped_strings)
+              print('DART_TEXT',code,len(text),repr(text[:1200]))
+              shown=0
+              for tag in soup.find_all(['a','button','tr','td']):
+                  blob=' '.join(tag.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
+                  if any(x in blob for x in ('사업보고서','rcpNo','rcpno','2023','2024','2025')):
+                      print('DART_LINK',code,repr(blob[:1200]))
+                      shown+=1
+                      if shown>=20: break
           PY
