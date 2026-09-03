@@ -19,49 +19,35 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe KIND docNo body resolver
+      - name: Trace KIND viewer search implementation
         run: |
           python - <<'PY'
           import re
+          from urllib.parse import urljoin
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_rename_chronology_recovery import _decode_response_text, parse_official_name_chain
+          from orchestrator.g0_rename_chronology_recovery import _decode_response_text
 
           http=base.Http()
-          current='한화오션(주)'
-          acpt='20230814001207'
-          wrapper='https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt
+          wrapper='https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno=20230814001207'
           x=http.get(wrapper)
-          raw=_decode_response_text(x,current) if x else ''
+          raw=_decode_response_text(x,'한화오션(주)') if x else ''
           soup=BeautifulSoup(raw,'html.parser')
-          scripts='\n'.join((s.string or s.get_text() or '') for s in soup.find_all('script'))
-
-          for needle in ('function search', 'docLocPath', 'docpathfrm', 'JLDDST60200_i2.jsp', 'ajaxSubmit'):
-              print('=== NEEDLE',needle,'===')
-              start=0
-              while True:
-                  idx=scripts.find(needle,start)
-                  if idx < 0: break
-                  print(repr(scripts[max(0,idx-1800):idx+5200]))
-                  start=idx+len(needle)
-
-          docno='20230814003763'
-          candidates=[
-              ('GET','https://kind.krx.co.kr/common/disclsviewer.do?method=search&docNo='+docno,{}),
-              ('GET','https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt+'&docNo='+docno,{}),
-              ('POST','https://kind.krx.co.kr/common/disclsviewer.do',{'method':'search','acptNo':acpt,'docNo':docno}),
-              ('POST','https://kind.krx.co.kr/common/disclsviewer.do',{'method':'searchDoc','acptNo':acpt,'docNo':docno}),
-              ('POST','https://kind.krx.co.kr/common/disclsviewer.do',{'method':'searchDocPath','acptNo':acpt,'docNo':docno}),
-          ]
-          for method,url,data in candidates:
-              r=http.get(url,headers={'Referer':wrapper}) if method=='GET' else http.post(url,data=data,headers={'Referer':wrapper,'X-Requested-With':'XMLHttpRequest'})
-              print('TRY',method,url,data,'STATUS',getattr(r,'status_code',None),'FINAL',r.url if r else None)
+          for s in soup.find_all('script'):
+              src=str(s.get('src') or '').strip()
+              if not src: continue
+              target=urljoin(wrapper,src)
+              print('SCRIPT_SRC',target)
+              r=http.get(target,headers={'Referer':wrapper})
               if not r or r.status_code>=400: continue
-              fixed=_decode_response_text(r,current)
-              text=' '.join(BeautifulSoup(fixed,'html.parser').stripped_strings)
-              print('RESULT','LEN',len(text),'CURRENT','한화오션' in text,'OLD','대우조선해양' in text,'CHANGE','상호' in text,repr(text[:1600]))
-              chain=parse_official_name_chain(text,current)
-              print('CHAIN',chain)
-              for m in re.finditer(r'[^\n<>]{0,400}(?:docpath|docLocPath|external/[^\s\"\']+)[^\n<>]{0,700}',fixed,re.I):
-                  print('PATH_HIT',repr(m.group(0)[:1300]))
+              txt=_decode_response_text(r)
+              if any(n in txt for n in ('function search','search = function','setPath(','docLocPath')):
+                  print('MATCH_SCRIPT',target,'LEN',len(txt))
+                  for needle in ('function search','search = function','setPath(','docLocPath','docNo'):
+                      pos=0
+                      while True:
+                          i=txt.find(needle,pos)
+                          if i<0: break
+                          print('CONTEXT',needle,repr(txt[max(0,i-1600):i+5200]))
+                          pos=i+len(needle)
           PY
