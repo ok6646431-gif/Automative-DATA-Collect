@@ -2,6 +2,7 @@ import unittest
 
 from bs4 import BeautifulSoup
 
+from orchestrator.g0_authority_site_recovery import extract_homepage_candidates
 from orchestrator.g0_live_adapters import (
     FLEX_ROAD_ADDRESS_RE,
     _candidate_view_links,
@@ -125,6 +126,16 @@ class TestG0LiveAdapters(unittest.TestCase):
             "Official company website: www.official.example/about",
         )
         self.assertEqual(links, ["https://www.official.example/about"])
+
+    def test_kind_periodic_filing_homepage_field_is_extracted(self):
+        text = (
+            "회사명 : 예시회사(주) 본점소재지 : 서울특별시 중구 "
+            "(홈페이지) http://www.example-company.com 작성책임자 : 홍길동"
+        )
+        self.assertEqual(
+            extract_homepage_candidates(text),
+            ["http://www.example-company.com"],
+        )
 
     def test_verified_report_catalog_interior_hole_is_nonpublication(self):
         years = [2020, 2022, 2023, 2024, 2025, 2026]
