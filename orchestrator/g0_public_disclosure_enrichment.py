@@ -1,14 +1,14 @@
 """Generic official-disclosure enrichment for G0 rename continuity.
 
-Search engines are used only to locate candidate KRX/KIND or DART pages.  A rename is
+Search engines are used only to locate candidate KRX/KIND or DART pages. A rename is
 promoted only after the official disclosure itself states the predecessor, successor
-and effective date.  This is intentionally independent from any one company.
+and effective date. This is intentionally independent from any one company.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlparse
 
 from bs4 import BeautifulSoup
@@ -17,6 +17,10 @@ from orchestrator import zero_touch_discovery as base
 
 OFFICIAL_DISCLOSURE_HOSTS = ("kind.krx.co.kr", "dart.fss.or.kr")
 RENAME_WORDS = ("상호 변경", "상호가 변경", "상호를 변경", "사명 변경", "회사명 변경")
+DATE_PATTERNS = (
+    re.compile(r"(20\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일"),
+    re.compile(r"(20\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2})"),
+)
 
 
 def _dedupe(values: Iterable[str]) -> List[str]:
@@ -34,22 +38,38 @@ def _strip_suffix(value: str) -> str:
     return text
 
 
-def _parse_date(value: str) -> Optional[str]:
-    for pat in (
-        r"(20\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일",
-        r"(20\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2})",
-    ):
-        m = re.search(pat, value)
-        if m:
-            return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
-    return None
+def _date_candidates(value: str) -> List[Tuple[int, int, str]]:
+    candidates: List[Tuple[int, int, str]] = []
+    for pat in DATE_PATTERNS:
+        for m in pat.finditer(value):
+            candidates.append((
+                m.start(),
+                m.end(),
+                f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}",
+            ))
+    return sorted(candidates, key=lambda x: (x[0], x[1]))
+
+
+def _nearest_effective_date(value: str, rename_start: int) -> Optional[str]:
+    """Pick the date nearest the rename clause, preferring dates immediately before it.
+
+    Disclosures often contain establishment dates earlier in the same paragraph. Taking
+    the first date therefore mis-bounds rename continuity. The effective date is normally
+    the closest explicit date preceding the OLD -> NEW statement; only when no preceding
+    date exists do we use the closest following date.
+    """
+    candidates = _date_candidates(value)
+    if not candidates:
+        return None
+    preceding = [x for x in candidates if x[1] <= rename_start]
+    if preceding:
+        return min(preceding, key=lambda x: rename_start - x[1])[2]
+    return min(candidates, key=lambda x: abs(x[0] - rename_start))[2]
 
 
 def _history_year_hint(http: Any, audit: Dict[str, Any], current_name: str) -> Optional[Dict[str, Any]]:
     stage = ((audit.get("stages") or {}).get("official_site") or {})
     urls = list(stage.get("sample_pages") or [])
-    # Prefer already-crawled history/about pages, then use a bounded official-domain
-    # locator search when the crawl ordering did not put history in the audit sample.
     prioritized = [u for u in urls if any(x in u.casefold() for x in ("history", "연혁", "company", "about"))]
     root = str(stage.get("resolved_official_root") or stage.get("dart_website") or "")
     domain = base._host(root)
@@ -66,8 +86,6 @@ def _history_year_hint(http: Any, audit: Dict[str, Any], current_name: str) -> O
             continue
         if not any(word in text for word in RENAME_WORDS):
             continue
-        # Official history pages commonly state only the calendar year.  The year is a
-        # locator hint, never the final effective date.
         for m in re.finditer(r"(?<!\d)(20\d{2})(?!\d)", text):
             year = int(m.group(1))
             context = text[max(0, m.start() - 250):m.end() + 650]
@@ -110,7 +128,6 @@ def requests_quote(value: str) -> str:
 
 def _clean_company_capture(value: str) -> str:
     value = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n,.;:'\"‘’“”")
-    # Drop prose that may precede the last company-like token in a permissive capture.
     tokens = value.split()
     if len(tokens) > 6:
         value = " ".join(tokens[-6:])
@@ -134,8 +151,11 @@ def parse_official_rename_text(text: str, current_name: str) -> Optional[Dict[st
             new_norm = base.normalize_name(new)
             if not new_norm or not (current_norm in new_norm or new_norm in current_norm):
                 continue
-            window = compact[max(0, m.start() - 450):m.end() + 250]
-            date = _parse_date(window)
+            window_start = max(0, m.start() - 450)
+            window_end = min(len(compact), m.end() + 250)
+            window = compact[window_start:window_end]
+            local_rename_start = m.start() - window_start
+            date = _nearest_effective_date(window, local_rename_start)
             if not date:
                 continue
             return {"date": date, "predecessor": old, "successor": new}
