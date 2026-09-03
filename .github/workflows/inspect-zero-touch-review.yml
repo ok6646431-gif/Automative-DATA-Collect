@@ -1,4 +1,4 @@
-name: Inspect DART former-name endpoint
+name: Inspect Hanwha Ocean report recovery paths
 
 on:
   push:
@@ -19,49 +19,63 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe DART former-name request contract
+      - name: Probe official legacy PDFs and KRX attachments
         run: |
           python - <<'PY'
           import re, requests
           from bs4 import BeautifulSoup
           from urllib.parse import urljoin
-          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Referer':'https://dart.fss.or.kr/'})
-          key='00111704'
-          urls=[
-            'https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey='+key,
-            'https://dart.fss.or.kr/dsae001/main.do?selectKey='+key,
+
+          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko,en;q=0.8'})
+          pdfs=[
+            'https://www.hanwhaocean.com/pub/images/contents/DSME_2022IR_Korean.pdf',
+            'https://www.hanwhaocean.com/pub/images/contents/DSME_2021IR_Korean.pdf',
+            'https://www.hanwhaocean.com/pub/images/contents/DSME_2020IR_Korean.pdf',
+            'https://www.hanwhaocean.com/pdf/DSME_2022IR_Korean.pdf',
+            'https://www.hanwhaocean.com/pdf/DSME_2021IR_Korean.pdf',
+            'https://www.hanwhaocean.com/pdf/DSME_2020IR_Korean.pdf',
           ]
-          for url in urls:
-              r=s.get(url,timeout=(8,25),allow_redirects=True)
-              print('\n===== BASE',url,'status',r.status_code,'final',r.url,'=====')
-              text=r.text
-              for pat in ['historyFmlNm','fmlNm','former','과거','상호','회사명']:
-                  for m in re.finditer(pat,text,re.I):
-                      print('RAW_CONTEXT',pat,re.sub(r'\s+',' ',text[max(0,m.start()-500):m.start()+1000])[:1500])
-                      break
-              soup=BeautifulSoup(text,'html.parser')
-              for a in soup.find_all('a',href=True):
-                  payload=' '.join(a.stripped_strings)+' '+a['href']+' '+str(a.get('onclick') or '')
-                  if re.search(r'history|fml|former|상호|과거',payload,re.I):
-                      print('LINK',repr(' '.join(a.stripped_strings)),urljoin(r.url,a['href']),a.get('onclick'))
-              for form in soup.find_all('form'):
-                  payload=' '.join(str(x) for x in [form.get('action'),form.get('method'),form.get('id'),form.get('name')])
-                  if re.search(r'history|fml|corp',payload,re.I):
-                      print('FORM',payload)
-                      for node in form.find_all(['input','select','textarea']):
-                          if node.get('name'):
-                              print(' FIELD',node.get('name'),node.get('value'))
-          endpoint='https://dart.fss.or.kr/corp/historyFmlNm.ax'
-          variants=[
-            {'selectKey':key}, {'textCrpCik':key}, {'crpCik':key}, {'corpCik':key},
-            {'corpCode':key}, {'crpCd':key}, {'selectKey':key,'textCrpCik':key},
+          print('===== LEGACY PDF PROBES =====')
+          for url in pdfs:
+              try:
+                  r=s.get(url,headers={'Range':'bytes=0-31'},timeout=(8,25),allow_redirects=True,stream=True)
+                  head=next(r.iter_content(32),b'')
+                  print(url,'status=',r.status_code,'final=',r.url,'ctype=',r.headers.get('content-type'),'len=',r.headers.get('content-length'),'magic=',repr(head[:12]))
+                  r.close()
+              except Exception as e:
+                  print(url,'ERROR',type(e).__name__,e)
+
+          disclosures=[
+            'https://kind.krx.co.kr/external/2026/06/30/001426/20260622000504/61979.htm',
+            'https://kind.krx.co.kr/external/2025/06/25/000122/20250620000098/61979.htm',
+            'https://kind.krx.co.kr/external/2024/06/28/000594/20240626000584/61979.htm',
+            'https://kind.krx.co.kr/external/2022/07/01/000261/20220623000133/61979.htm',
           ]
-          for payload in variants:
-              for method in ['GET','POST']:
-                  try:
-                      r=s.get(endpoint,params=payload,timeout=(8,25)) if method=='GET' else s.post(endpoint,data=payload,timeout=(8,25))
-                      txt=' '.join(BeautifulSoup(r.text,'html.parser').stripped_strings)
-                      print('\nPROBE',method,payload,'status',r.status_code,'bytes',len(r.content),'text',txt[:1200])
-                  except Exception as e:
-                      print('ERR',method,payload,type(e).__name__,e)
+          print('===== KRX DISCLOSURE LINK PROBES =====')
+          for url in disclosures:
+              try:
+                  r=s.get(url,timeout=(8,25),allow_redirects=True)
+                  print('\nPAGE',url,'status=',r.status_code,'final=',r.url,'bytes=',len(r.content))
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  text=' '.join(soup.stripped_strings)
+                  print('TEXT',text[:600])
+                  hits=[]
+                  for tag in soup.find_all(['a','iframe','embed','object','form']):
+                      vals=[]
+                      for key in ('href','src','data','action','onclick'):
+                          if tag.get(key): vals.append(str(tag.get(key)))
+                      raw=' '.join(vals)
+                      label=' '.join(tag.stripped_strings).strip()
+                      marker=(label+' '+raw).casefold()
+                      if any(x in marker for x in ('.pdf','attach','download','file','첨부')):
+                          hits.append((label,raw))
+                  for label,raw in hits[:40]:
+                      print('LINK',repr(label),raw)
+                  # Also inspect raw HTML around PDF/file terms because KRX sometimes uses JS variables.
+                  for pat in (r'[^\"\'<>\s]{0,200}\.pdf[^\"\'<>\s]{0,200}', r'.{0,300}(?:첨부|download|file).{0,600}'):
+                      matches=re.findall(pat,r.text,re.I|re.S)
+                      for m in matches[:10]:
+                          print('RAW',re.sub(r'\s+',' ',m)[:1200])
+              except Exception as e:
+                  print('PAGE_ERROR',url,type(e).__name__,e)
           PY
