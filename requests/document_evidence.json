@@ -116,7 +116,7 @@
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification."
     }
   ],
   "gaps": [

@@ -4,7 +4,7 @@
   "requested_company_name": "한화오션",
   "current_legal_name": "한화오션(주)",
   "current_legal_name_active_period": {
-    "start_year": 2000
+    "start_year": 2023
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
@@ -23,17 +23,48 @@
       "name": "한화오션",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704"
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
+      "active_period": {
+        "start_year": 2023
+      }
     },
     {
       "name": "Hanwha Ocean Co., Ltd.",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704"
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
+      "active_period": {
+        "start_year": 2023
+      }
     }
   ],
-  "historical_legal_names": [],
-  "corporate_restructuring_evidence": [],
+  "historical_legal_names": [
+    {
+      "name": "대우조선해양(주)",
+      "alias_type": "former_legal_name",
+      "active_period": {
+        "start_year": 2020,
+        "end_year": 2023
+      },
+      "verification_state": "VERIFIED",
+      "source_locator": "https://kind.krx.co.kr/external/2023/08/14/001207/20230814003763/11012.htm"
+    }
+  ],
+  "corporate_restructuring_evidence": [
+    {
+      "event_type": "rename",
+      "effective_period": {
+        "start_year": 2023,
+        "end_year": 2023
+      },
+      "effective_date": "2023-05-23",
+      "predecessor": "대우조선해양(주)",
+      "successor": "한화오션(주)",
+      "scope": "same legal entity name change",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://kind.krx.co.kr/external/2023/08/14/001207/20230814003763/11012.htm"
+    }
+  ],
   "domestic_site_candidates": [
     {
       "candidate_id": "3370geojedaerogeojesigyeongsangnamdo53302r-4a56f252",
