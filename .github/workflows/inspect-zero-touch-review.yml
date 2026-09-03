@@ -87,9 +87,10 @@ jobs:
           assert comp['status']=='COMPLETE', comp
           assert not any('REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED' in x for x in comp.get('incomplete_keys',[])), comp
 
-          manifest=json.loads((root/'Archive_Manifest.json').read_text(encoding='utf-8-sig'))
-          print('ARCHIVE_MANIFEST',json.dumps(manifest,ensure_ascii=False,indent=2)[:8000])
-          assert manifest.get('archive_status')=='COMPLETE', manifest
+          archive=json.loads((root/'Archive_Summary.json').read_text(encoding='utf-8-sig'))
+          print('ARCHIVE_SUMMARY',json.dumps(archive,ensure_ascii=False,indent=2)[:8000])
+          assert archive.get('archive_completeness')=='COMPLETE', archive
+          assert archive.get('target_source_ids')==ids, (archive.get('target_source_ids'),ids)
 
           z=root/'Human_Archive.zip'
           assert z.exists() and z.stat().st_size>0
@@ -120,6 +121,6 @@ jobs:
             assembled/Requested_Scope.json
             assembled/Analysis_Ready_Index.csv
             assembled/Collection_Completeness.json
-            assembled/Archive_Manifest.json
+            assembled/Archive_Summary.json
             assembled/Human_Archive.zip
           retention-days: 7
