@@ -17,30 +17,30 @@ jobs:
           python-version: '3.12'
       - name: Install diagnostic dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Verify data-attribute report recovery against live page
+      - name: Inspect live domestic-site catalog structure
         run: |
           python - <<'PY'
-          import json
-          from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_data_attr_report_recovery import (
-              candidates_from_data_attr_page,
-              extract_data_controls,
-          )
-          url='https://www.kumhotire.com/ko/ESG/Materials/Report/'
-          http=base.Http()
-          r=http.get(url)
-          if not r or r.status_code >= 400:
-              raise SystemExit('report page fetch failed')
-          controls=extract_data_controls(r.text,2020,2026)
-          found,diagnostics=candidates_from_data_attr_page(http,r.url,r.text,2020,2026)
-          print('CONTROL_YEARS',sorted({x['year'] for x in controls}))
-          print('FOUND_YEARS',sorted({x['year'] for x in found}))
-          print('FOUND')
-          print(json.dumps(found,ensure_ascii=False,indent=2))
-          print('DIAGNOSTICS')
-          print(json.dumps(diagnostics,ensure_ascii=False,indent=2)[:30000])
-          expected={2020,2022,2023,2024,2025,2026}
-          actual={int(x['year']) for x in found}
-          if actual != expected:
-              raise SystemExit(f'expected {sorted(expected)} but recovered {sorted(actual)}')
+          import re, requests
+          from bs4 import BeautifulSoup
+          url='https://www.kumhotire.com/ko/company/domeList.do'
+          r=requests.get(url,timeout=(6,20),headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko,en;q=0.8'})
+          print('STATUS',r.status_code,'FINAL',r.url,'CTYPE',r.headers.get('content-type'),'LEN',len(r.text))
+          soup=BeautifulSoup(r.text,'html.parser')
+          text=' '.join(soup.stripped_strings)
+          print('TEXT',text[:12000])
+          for needle in ['국내사업장','국내 사업장','중앙연구소','광주공장','평택공장','곡성공장','어등대로','평택항로','금호길']:
+              print('\n===',needle,'===')
+              m=re.search(re.escape(needle),r.text,re.I)
+              if m:
+                  print(r.text[max(0,m.start()-1200):min(len(r.text),m.end()+2200)].replace('\n',' ')[:3600])
+              else:
+                  print('NOT FOUND')
+          print('\n=== ADDRESS-LIKE TAGS ===')
+          shown=0
+          for tag in soup.find_all(True):
+              blob=' '.join(tag.stripped_strings)
+              if re.search(r'(서울|광주|경기|전남|전라남도).{0,120}(로|길)\s*\d+',blob):
+                  print(str(tag)[:4000].replace('\n',' '))
+                  shown+=1
+                  if shown>=20: break
           PY
