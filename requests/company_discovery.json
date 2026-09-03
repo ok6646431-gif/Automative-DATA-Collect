@@ -1,18 +1,18 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-a382d2ca-env-g0-20260903",
-  "requested_company_name": "한화오션",
-  "current_legal_name": "한화오션(주)",
+  "request_id": "company-5c099e6d-env-g0-20260903",
+  "requested_company_name": "금호타이어",
+  "current_legal_name": "금호타이어(주)",
   "current_legal_name_active_period": {
-    "start_year": 2023
+    "start_year": 2003
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "한화오션 주요 사업장",
+    "label": "금호타이어(주) 주요 사업장",
     "candidate_ids": [
-      "3370geojedaerogeojesigyeongsangnamdo53302r-4a56f252"
+      "156-87-078dcc75"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -20,75 +20,40 @@
   },
   "company_aliases": [
     {
-      "name": "한화오션",
+      "name": "금호타이어",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
-      "active_period": {
-        "start_year": 2023
-      }
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00481454"
     },
     {
-      "name": "Hanwha Ocean Co., Ltd.",
+      "name": "KUMHO TIRE CO., INC.",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
-      "active_period": {
-        "start_year": 2023
-      }
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00481454"
     }
   ],
-  "historical_legal_names": [
-    {
-      "name": "대우조선해양(주)",
-      "alias_type": "former_legal_name",
-      "active_period": {
-        "start_year": 2020,
-        "end_year": 2023
-      },
-      "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2023/08/14/001207/20230814003763/11012.htm"
-    }
-  ],
-  "corporate_restructuring_evidence": [
-    {
-      "event_type": "rename",
-      "effective_period": {
-        "start_year": 2023,
-        "end_year": 2023
-      },
-      "effective_date": "2023-05-23",
-      "predecessor": "대우조선해양(주)",
-      "successor": "한화오션(주)",
-      "scope": "same legal entity name change",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://kind.krx.co.kr/external/2023/08/14/001207/20230814003763/11012.htm"
-    }
-  ],
+  "historical_legal_names": [],
+  "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "3370geojedaerogeojesigyeongsangnamdo53302r-4a56f252",
-      "site_name_raw": "한화오션 주요 사업장",
-      "address_raw": "3370, Geoje-daero, Geoje-si, Gyeongsangnam-do, 53302, Republic of Korea",
-      "business_unit_raw": "official-profile primary operational location",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
+      "candidate_id": "156-87-078dcc75",
+      "site_name_raw": "금호타이어(주) 주요 사업장",
+      "address_raw": "경기도 평택시 포승읍 평택항로156번길 87",
+      "business_unit_raw": "official-site primary operational location",
+      "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "official_profile_pages": [
-          "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704"
-        ],
-        "operational_terms": [
-          "DART_ADDRESS"
-        ],
-        "evidence_score": 30
+        "official_page_count": 2,
+        "address_occurrences": 2,
+        "operational_context_hits": 2
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
-      "source_value_raw": "한화오션(주) / Hanwha Ocean Co., Ltd. / establishment 2000-10-23 / website www.hanwhaocean.com/pub/main/index.do",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00481454",
+      "source_value_raw": "금호타이어(주) / KUMHO TIRE CO., INC. / establishment 2003-06-30 / website www.kumhotire.co.kr",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -151,6 +116,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 2000
+    "start_year": 2003
   }
 }

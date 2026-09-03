@@ -3,45 +3,45 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_bda33e6afa",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_025c06386b",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "한화오션",
+      "title": "금호타이어",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaocean.com/sustainability/ov/",
-      "source_locator": "https://www.hanwhaocean.com/sustainability/ov/",
+      "source_url": "https://www.kumhotire.com/ko/ESG/Environment/EcoProducts/",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Environment/EcoProducts/",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_a375af70f8",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_4a1871e1d8",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "한화오션",
+      "title": "금호타이어",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaocean.com/whoweare/gn/aff/",
-      "source_locator": "https://www.hanwhaocean.com/whoweare/gn/aff/",
+      "source_url": "https://www.kumhotire.com/ko/ESG/Environment/EcoWorkplace/",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Environment/EcoWorkplace/",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_8c1ce27e8c",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_543ad1bf19",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "Hanwha",
+      "title": "금호타이어",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaocean.com/en/",
-      "source_locator": "https://www.hanwhaocean.com/en/",
+      "source_url": "https://www.kumhotire.com/ko/ESG/Environment/Climate/",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Environment/Climate/",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_e6d2382c40",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_3e0faa1d24",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "Hanwha",
+      "title": "금호타이어",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaocean.com/en/sustainability/ov/",
-      "source_locator": "https://www.hanwhaocean.com/en/sustainability/ov/",
+      "source_url": "https://www.kumhotire.com/ko/ESG/Materials/Policy/",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Policy/",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING"
@@ -49,88 +49,88 @@
     {
       "document_id": "AUTO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "한화오션_지속가능경영보고서_2020_kor.pdf",
+      "title": "국문 PDF 다운로드 2020 지속가능경영보고서 국문 PDF 다운로드 영문 PDF 다운로드",
       "report_year": 2020,
-      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC8wKhh18Di3YwI21vV97S%2B2tETe2jfDqe1LMO7lxrHnCT51uPq3eK%2B0nzdQ6MmaGDE3aFIRUiaBrJp1bb1Xf%2FNgVUjwEfuoZclgwjqJVUeKlEUmonGH%2FnoJPlE0K5UWlMw%3D%3D",
-      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "source_url": "https://www.kumhotire.com/fileViewer/pdf/1672124186824_6560184506336613900/attr/company/2020_SustainabilityReport_KOR.pdf",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
-    },
-    {
-      "document_id": "AUTO_SUSTAINABILITY_2021",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "한화오션_지속가능경영보고서_2021_kor.pdf",
-      "report_year": 2021,
-      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FCwFoqN%2By2mX8bHn3umOG%2FcC0c8zqzxKzyNqgDP1mVyKmAYNp3l4o3xrhNSQKTGIZRSxB%2FWVrYD42XRQbHmHo%2FKZzfrfePfllbuC8bVs%2FHxz5rT24TDyQ%2F9r5zrL9qkui8w%3D%3D",
-      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
+      "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "한화오션_지속가능경영보고서_2022_kor.pdf",
+      "title": "국문 PDF 다운로드 2022 지속가능경영보고서 국문 PDF 다운로드 영문 PDF 다운로드",
       "report_year": 2022,
-      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC1wlQPiDCOOFCAO1xOEsRUJZLU0eGtrP6rhWqULTTsKuRusohRJ9g8WBuJrWufIHgtfacjKjSaRtd3H7hrk8bdnV4foIqYoTdXq0D4sz7uTDAXf%2FMGURaAL3KBdIDZakMQ%3D%3D",
-      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "source_url": "https://www.kumhotire.com/fileViewer/pdf/1672124240941_331497606090146824/attr/company/2022_SustainabilityReport_KOR.pdf",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
+      "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "한화오션_지속가능경영보고서_2023_kor.pdf",
+      "title": "국문 PDF 다운로드 2023 지속가능경영보고서 국문 PDF 다운로드 영문 PDF 다운로드",
       "report_year": 2023,
-      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC3kEngJpIu7UIQdQLnKssve6GGUl%2B%2FG4krxQPylFZwWoTYJ1xmlqj0SC62yByWUSlrl6BkxlBLk6O3G%2F7T7gtKgSxF4i5DswzFHWdnAFqYFcsu4JmuBY7ZlVnl3kYfsBvg%3D%3D",
-      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "source_url": "https://www.kumhotire.com/fileViewer/pdf/1693265519698_3657843200394428294/attr/company/2023%20%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
+      "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "다운로드",
+      "title": "국문 PDF 다운로드 2024 지속가능경영보고서 국문 PDF 다운로드 영문 PDF 다운로드",
       "report_year": 2024,
-      "source_url": "https://www.hanwhaocean.com/pdf/%ED%95%9C%ED%99%94%EC%98%A4%EC%85%98_%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C_2024_F.pdf",
-      "source_locator": "https://www.hanwhaocean.com/sustainability/ov/",
+      "source_url": "https://www.kumhotire.com/fileViewer/pdf/1725004545692_1399769037652014379/attr/company/2024_%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4_%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+      "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "한화오션 지속가능경영보고서 2025.pdf",
+      "title": "국문 PDF 다운로드 2025 지속가능경영보고서 국문 PDF 다운로드 영문 PDF 다운로드",
       "report_year": 2025,
-      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC9dXhMJlaqZaPRPiVgcMwS%2F6%2F035MdEOc74BYJaNpRaMMGMFB1lF7cdluAbm%2Fq7YpOeqrxTEaG5ktjH298dQ765pCkXsfpkNINTnjD%2F4r%2BmBmVM4Mjq9PFnWmsnUUczO9Q%3D%3D",
-      "source_locator": "https://esg.hanwhaocean.com/",
+      "source_url": "https://www.kumhotire.com/fileViewer/pdf/1782802484300_960348885600182088/attr/company/2025%20%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification."
+      "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification."
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2026",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "국문 PDF 다운로드 2026 지속가능경영보고서 국문 PDF 다운로드 영문 PDF 다운로드",
+      "report_year": 2026,
+      "source_url": "https://www.kumhotire.com/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/2026%20%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification."
     }
   ],
   "gaps": [
     {
-      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
+      "gap_id": "AUTO_SUSTAINABILITY_2021_NOT_LISTED",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2026,
+      "year": 2021,
       "verification_status": "SOURCE_VERIFIED",
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "As of 2026-09-03, verified official report sources list reports through 2025, not 2026.",
-      "source_locator": "https://esg.hanwhaocean.com/"
+      "reason": "A verified first-party sustainability-report catalog lists report years on both sides of 2021 but does not list a 2021 report; the gap is preserved as publisher cadence/non-publication rather than a collector failure.",
+      "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/"
     }
   ],
   "discovery_scope": {
@@ -147,5 +147,5 @@
     ],
     "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page."
   },
-  "request_id": "company-a382d2ca-env-g0-20260903"
+  "request_id": "company-5c099e6d-env-g0-20260903"
 }
