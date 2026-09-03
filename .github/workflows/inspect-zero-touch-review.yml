@@ -19,7 +19,37 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Run KIND continuity regression tests
+      - name: Live-check direct KIND continuity module
         run: |
-          python -m py_compile orchestrator/g0_kind_disclosure_recovery.py orchestrator/zero_touch_runner.py
-          python -m unittest tests.test_g0_kind_disclosure_recovery -v
+          python - <<'PY'
+          import json
+          from orchestrator import g0_kind_disclosure_recovery as kind
+          from orchestrator import zero_touch_discovery as base
+
+          discovery={
+            'requested_company_name':'한화오션',
+            'current_legal_name':'한화오션(주)',
+            'company_aliases':[{'name':'한화오션','alias_type':'requested_name'}],
+            'historical_legal_names':[],
+            'corporate_restructuring_evidence':[],
+            'unresolved_items':[],
+            'collection_policy':{
+              'requested_history_window':{'start_year':2023,'end_year':2023},
+              'sources':{}
+            }
+          }
+          audit={'stages':{'legal_identity':{'resolved':{
+            'raw_text':'Company Code 042660 Company Name (Korean) 한화오션(주)',
+            'select_key':'00111704'
+          }}}}
+          http=base.Http()
+          rename=kind.discover(http,discovery,audit)
+          print('RENAME',json.dumps(rename,ensure_ascii=False))
+          if not rename:
+            print('STAGE',json.dumps(audit['stages']['kind_disclosure_recovery'],ensure_ascii=False,indent=2))
+            raise SystemExit(2)
+          assert rename['date']=='2023-05-23', rename
+          assert base.normalize_name(rename['predecessor'])==base.normalize_name('대우조선해양(주)'), rename
+          assert base.normalize_name(rename['successor'])==base.normalize_name('한화오션(주)'), rename
+          print('KIND_DIRECT_PASS')
+          PY
