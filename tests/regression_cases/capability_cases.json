@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {
+      "id": "REPORT-ANNUAL-001",
+      "capability": "G0-REPORT-SEMANTICS",
+      "kind": "report_semantics",
+      "label": "2025 지속가능경영보고서 다운로드",
+      "url": "https://official.example/reports/2025_sustainability_report.pdf",
+      "expected": true
+    },
+    {
+      "id": "REPORT-BROCHURE-001",
+      "capability": "G0-REPORT-SEMANTICS",
+      "kind": "report_semantics",
+      "label": "2025 브로슈어 다운로드",
+      "url": "https://official.example/media/company_brochure_2025.pdf",
+      "expected": false
+    },
+    {
+      "id": "RENAME-CHAIN-001",
+      "capability": "G0-RENAME-CONTINUITY",
+      "kind": "rename_chain",
+      "current_name": "신회사(주)",
+      "text": "2002.03.16 : 구회사(주)으로 상호 변경 2023.05.23 : 신회사(주)로 상호 변경",
+      "expected_predecessor": "구회사(주)",
+      "expected_date": "2023-05-23"
+    },
+    {
+      "id": "ADDRESS-ADMIN-001",
+      "capability": "SITE-ADMIN-REGION-CONTINUITY",
+      "kind": "address_match",
+      "left": "전남광주통합특별시 영암군 삼호읍 대불로 93",
+      "right": "전라남도 영암군 삼호읍 대불로 93",
+      "expected": true
+    },
+    {
+      "id": "ADDRESS-BILINGUAL-NUMBER-001",
+      "capability": "SITE-BILINGUAL-ADDRESS-CONTINUITY",
+      "kind": "road_number_overlap",
+      "left": "3370, Geoje-daero, Geoje-si, Gyeongsangnam-do, 53302, Republic of Korea",
+      "right": "경상남도 거제시 거제대로 3370",
+      "expected_numbers": ["3370"]
+    },
+    {
+      "id": "ENTITY-SITE-LABEL-001",
+      "capability": "SITE-SAME-ENTITY-FACILITY-LABEL",
+      "kind": "generic_site_label",
+      "company": "테스트오션(주)",
+      "source_name": "테스트오션(주) 거제사업장",
+      "expected": true
+    },
+    {
+      "id": "ENTITY-RELATED-001",
+      "capability": "RELATED-ENTITY-EXCLUSION",
+      "kind": "generic_site_label",
+      "company": "테스트오션(주)",
+      "source_name": "테스트오션에코텍(주)",
+      "expected": false
+    },
+    {
+      "id": "SCOPE-EMPTY-BINDING-001",
+      "capability": "ARCHIVE-NONEMPTY-BINDING",
+      "kind": "scope_binding_guard",
+      "mode": "SITE_SET",
+      "source": "PRTR",
+      "raw_data_present": true,
+      "target_ids": [],
+      "expected_blocker": true
+    },
+    {
+      "id": "SCOPE-BOUND-001",
+      "capability": "ARCHIVE-NONEMPTY-BINDING",
+      "kind": "scope_binding_guard",
+      "mode": "SITE_SET",
+      "source": "PRTR",
+      "raw_data_present": true,
+      "target_ids": ["414"],
+      "expected_blocker": false
+    }
+  ]
+}
