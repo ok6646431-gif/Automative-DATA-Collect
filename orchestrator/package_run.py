@@ -8,7 +8,12 @@ in the audit queue but do not block delivery.
 
 import csv
 import json
+import sys
 from pathlib import Path
+
+_THIS_DIR = str(Path(__file__).resolve().parent)
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
 
 import package_run_core as _core
 from package_run_core import *  # preserve public helper contract
