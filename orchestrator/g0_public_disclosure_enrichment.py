@@ -1,12 +1,14 @@
-"""Generic official-disclosure enrichment for G0 rename continuity.
+"""Generic official-disclosure enrichment for G0 legal-name continuity.
 
-Search engines are used only to locate candidate KRX/KIND or DART pages. A rename is
-promoted only after the official disclosure itself states the predecessor, successor
-and effective date. This is intentionally independent from any one company.
+Search engines are locator-only.  A rename is promoted only after an official KRX/KIND
+or DART page itself supplies an exact date and a legal-name change chain.  The parser
+supports both prose (OLD -> NEW) and chronology rows such as
+``2023.05.23 : NEW_NAME로 상호 변경``.
 """
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlparse
@@ -16,10 +18,8 @@ from bs4 import BeautifulSoup
 from orchestrator import zero_touch_discovery as base
 
 OFFICIAL_DISCLOSURE_HOSTS = ("kind.krx.co.kr", "dart.fss.or.kr")
-RENAME_WORDS = ("상호 변경", "상호가 변경", "상호를 변경", "사명 변경", "회사명 변경")
-DATE_PATTERNS = (
-    re.compile(r"(20\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일"),
-    re.compile(r"(20\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2})"),
+DATE_RE = re.compile(
+    r"(?:(20\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일|(20\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2}))"
 )
 
 
@@ -34,84 +34,114 @@ def _dedupe(values: Iterable[str]) -> List[str]:
 
 def _strip_suffix(value: str) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
-    text = re.sub(r"(?:\s*주식회사|\s*\(주\)|\s*㈜)\s*$", "", text).strip()
+    return re.sub(r"(?:\s*주식회사|\s*\(주\)|\s*㈜)\s*$", "", text).strip()
+
+
+def _successor_variants(current_name: str) -> List[str]:
+    raw = str(current_name or "").strip()
+    values = [raw, _strip_suffix(raw)]
+    if raw.endswith("주식회사"):
+        values.append(raw[:-4].strip() + "(주)")
+    if raw.endswith("(주)"):
+        values.append(raw[:-3].strip())
+    return _dedupe(values)
+
+
+def _date_value(match: re.Match[str]) -> str:
+    if match.group(1):
+        y, m, d = match.group(1), match.group(2), match.group(3)
+    else:
+        y, m, d = match.group(4), match.group(5), match.group(6)
+    return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+
+
+def _nearest_date_before(text: str, anchor: int, max_distance: int = 500) -> Optional[str]:
+    candidates = [(m.end(), _date_value(m)) for m in DATE_RE.finditer(text[:anchor])]
+    if not candidates:
+        return None
+    end, value = max(candidates, key=lambda x: x[0])
+    return value if anchor - end <= max_distance else None
+
+
+def _clean_name(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n,.;:：-'\"‘’“”")
+    # Chronology rows often contain bullet/section prose before the legal name.  Keep
+    # only the segment after the last hard separator, never arbitrary whitespace.
+    for sep in ("：", ":", "•", "·", " - ", " – ", " — "):
+        if sep in text:
+            text = text.rsplit(sep, 1)[-1].strip()
+    if "에서" in text:
+        text = text.rsplit("에서", 1)[-1].strip()
     return text
 
 
-def _date_candidates(value: str) -> List[Tuple[int, int, str]]:
-    candidates: List[Tuple[int, int, str]] = []
-    for pat in DATE_PATTERNS:
-        for m in pat.finditer(value):
-            candidates.append((
-                m.start(),
-                m.end(),
-                f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}",
-            ))
-    return sorted(candidates, key=lambda x: (x[0], x[1]))
-
-
-def _nearest_effective_date(value: str, rename_anchor: int) -> Optional[str]:
-    candidates = _date_candidates(value)
-    if not candidates:
-        return None
-    preceding = [x for x in candidates if x[1] <= rename_anchor]
-    if preceding:
-        return min(preceding, key=lambda x: rename_anchor - x[1])[2]
-    return min(candidates, key=lambda x: abs(x[0] - rename_anchor))[2]
-
-
-def _history_year_hint(http: Any, audit: Dict[str, Any], current_name: str) -> Optional[Dict[str, Any]]:
-    stage = ((audit.get("stages") or {}).get("official_site") or {})
-    urls = list(stage.get("sample_pages") or [])
-    prioritized = [u for u in urls if any(x in u.casefold() for x in ("history", "연혁", "company", "about"))]
-    root = str(stage.get("resolved_official_root") or stage.get("dart_website") or "")
-    domain = base._host(root)
-    if domain:
-        for query in (f'"{_strip_suffix(current_name)}" "사명 변경"', f'"{_strip_suffix(current_name)}" "상호 변경"'):
-            prioritized.extend(base.search_official_domain_links(http, domain, query))
-    for url in _dedupe(prioritized)[:12]:
-        r = http.get(url)
-        if not r or r.status_code >= 400:
+def parse_official_rename_text(text: str, current_name: str) -> Optional[Dict[str, str]]:
+    """Parse a direct OLD -> current-name rename statement from official text."""
+    compact = re.sub(r"\s+", " ", str(text or ""))
+    current_norm = base.normalize_name(current_name)
+    for successor in sorted(_successor_variants(current_name), key=len, reverse=True):
+        if not successor:
             continue
-        text = " ".join(BeautifulSoup(r.text, "html.parser").stripped_strings)
-        norm = base.normalize_name(text)
-        if base.normalize_name(current_name) not in norm:
-            continue
-        if not any(word in text for word in RENAME_WORDS):
-            continue
-        for m in re.finditer(r"(?<!\d)(20\d{2})(?!\d)", text):
-            year = int(m.group(1))
-            context = text[max(0, m.start() - 250):m.end() + 650]
-            if base.normalize_name(current_name) in base.normalize_name(context) and any(w in context for w in RENAME_WORDS):
-                return {"year": year, "source_locator": r.url, "context": context[:1200]}
+        sr = re.escape(successor)
+        patterns = (
+            rf"(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{{2,120}}?)\s*에서\s*(?P<new>{sr})\s*(?:으로|로)\s*(?:상호(?:가|를)?|사명(?:이|을)?)\s*변경",
+            rf"(?:상호|사명)(?:를|을)?\s*(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{{2,120}}?)\s*에서\s*(?P<new>{sr})\s*(?:으로|로)\s*변경",
+        )
+        for pattern in patterns:
+            for m in re.finditer(pattern, compact, re.I):
+                old = _clean_name(m.group("old"))
+                if not old or base.normalize_name(old) == current_norm:
+                    continue
+                date = _nearest_date_before(compact, m.start("new"))
+                if date:
+                    return {"date": date, "predecessor": old, "successor": m.group("new").strip()}
     return None
 
 
-def _search_result_urls(http: Any, query: str) -> List[str]:
-    urls: List[str] = []
-    searches = [
-        "https://www.google.com/search?q=" + requests_quote(query),
-        "https://www.bing.com/search?q=" + requests_quote(query),
-        "https://html.duckduckgo.com/html/?q=" + requests_quote(query),
-    ]
-    for search_url in searches:
-        r = http.get(search_url)
-        if not r or r.status_code >= 400:
+def parse_official_rename_chronology(text: str, current_name: str) -> Optional[Dict[str, Any]]:
+    """Parse date/resulting-name chronology and infer the immediately prior legal name.
+
+    Example supported shape::
+      2002.03.16 : OLD_NAME(주)으로 상호 변경
+      2023.05.23 : CURRENT_NAME(주)로 상호 변경
+    """
+    compact = re.sub(r"\s+", " ", str(text or ""))
+    entries: List[Dict[str, Any]] = []
+    for dm in DATE_RE.finditer(compact):
+        after = compact[dm.end(): dm.end() + 260]
+        # Stop at the next explicit date so one row cannot consume the following row.
+        next_date = DATE_RE.search(after)
+        if next_date:
+            after = after[:next_date.start()]
+        m = re.search(
+            r"(?P<name>[가-힣A-Za-z0-9&.·㈜()\- ]{2,120}?)(?:으로|로)\s*(?:상호|사명)(?:가|를|을|이)?\s*변경",
+            after,
+            re.I,
+        )
+        if not m:
             continue
-        soup = BeautifulSoup(r.text, "html.parser")
-        for a in soup.find_all("a", href=True):
-            href = unquote(str(a["href"]))
-            if href.startswith("/url?"):
-                q = parse_qs(urlparse(href).query)
-                href = (q.get("q") or q.get("url") or [""])[0]
-            if href.startswith("//"):
-                href = "https:" + href
-            host = base._host(href)
-            if host in OFFICIAL_DISCLOSURE_HOSTS or any(host.endswith("." + x) for x in OFFICIAL_DISCLOSURE_HOSTS):
-                urls.append(href.split("#")[0])
-        if urls:
-            break
-    return _dedupe(urls)
+        name = _clean_name(m.group("name"))
+        if not name:
+            continue
+        entries.append({"date": _date_value(dm), "name": name, "position": dm.start()})
+
+    current_norm = base.normalize_name(current_name)
+    for idx, entry in enumerate(entries):
+        if base.normalize_name(entry["name"]) != current_norm:
+            continue
+        predecessor = None
+        for prev in reversed(entries[:idx]):
+            if base.normalize_name(prev["name"]) and base.normalize_name(prev["name"]) != current_norm:
+                predecessor = prev["name"]
+                break
+        if predecessor:
+            return {
+                "date": entry["date"],
+                "predecessor": predecessor,
+                "successor": entry["name"],
+                "chronology": entries,
+            }
+    return None
 
 
 def requests_quote(value: str) -> str:
@@ -119,62 +149,47 @@ def requests_quote(value: str) -> str:
     return quote_plus(value)
 
 
-def _clean_company_capture(value: str) -> str:
-    value = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n,.;:'\"‘’“”")
-    if "에서" in value:
-        value = value.rsplit("에서", 1)[-1].strip()
-    # Remove sentence/date lead-in that can remain before the immediate predecessor.
-    for sep in ("되었습니다.", "됐습니다.", ".", ";", ":"):
-        if sep in value:
-            value = value.rsplit(sep, 1)[-1].strip()
-    value = re.sub(r"^(?:20\d{2}년\s*\d{1,2}월\s*\d{1,2}일\s*)", "", value).strip()
-    tokens = value.split()
-    if len(tokens) > 6:
-        value = " ".join(tokens[-6:])
-    return value
+def _official_urls_from_search_html(payload: str) -> List[str]:
+    """Extract official disclosure URLs from hrefs and encoded/raw search-result text."""
+    decoded = html_lib.unescape(unquote(str(payload or "")))
+    urls: List[str] = []
+    if "<" in decoded:
+        soup = BeautifulSoup(decoded, "html.parser")
+        for a in soup.find_all("a", href=True):
+            href = unquote(str(a["href"]))
+            if href.startswith("/url?"):
+                q = parse_qs(urlparse(href).query)
+                href = (q.get("q") or q.get("url") or [""])[0]
+            urls.append(href)
+    # Bing/Google occasionally wrap the target inside JavaScript/JSON rather than an
+    # actionable href.  Regex recovery remains locator-only; every target is fetched
+    # and re-verified on the official host before use.
+    urls.extend(re.findall(r"https?://[^\s\"'<>]+", decoded, re.I))
+    out: List[str] = []
+    for href in urls:
+        href = href.replace("&amp;", "&").rstrip("),.;]}")
+        host = base._host(href)
+        if host in OFFICIAL_DISCLOSURE_HOSTS or any(host.endswith("." + x) for x in OFFICIAL_DISCLOSURE_HOSTS):
+            clean = href.split("#")[0]
+            if clean not in out:
+                out.append(clean)
+    return out
 
 
-def _successor_variants(current_name: str) -> List[str]:
-    values = [str(current_name or "").strip(), _strip_suffix(current_name)]
-    raw = str(current_name or "").strip()
-    if raw.endswith("주식회사"):
-        values.append(raw[: -len("주식회사")].strip() + "(주)")
-    if raw.endswith("(주)"):
-        values.append(raw[:-3].strip())
-    return _dedupe(values)
-
-
-def parse_official_rename_text(text: str, current_name: str) -> Optional[Dict[str, str]]:
-    """Parse an explicit OLD -> verified-current-name rename statement."""
-    compact = re.sub(r"\s+", " ", str(text or ""))
-    current_norm = base.normalize_name(current_name)
-    for successor in sorted(_successor_variants(current_name), key=len, reverse=True):
-        if not successor:
+def _search_result_urls(http: Any, query: str) -> List[str]:
+    # Bing first: fewer automated-query throttles in Actions. Google is bounded fallback.
+    searches = [
+        "https://www.bing.com/search?q=" + requests_quote(query) + "&count=20",
+        "https://www.google.com/search?q=" + requests_quote(query) + "&num=20",
+    ]
+    for search_url in searches:
+        r = http.get(search_url)
+        if not r or r.status_code >= 400:
             continue
-        successor_re = re.escape(successor)
-        patterns = (
-            rf"(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{{2,120}}?)\s*에서\s*(?P<new>{successor_re})\s*(?:으로|로)\s*(?:상호(?:가|를)?|사명(?:이|을)?)\s*변경",
-            rf"(?:상호|사명)(?:를|을)?\s*(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{{2,120}}?)\s*에서\s*(?P<new>{successor_re})\s*(?:으로|로)\s*변경",
-        )
-        for pattern in patterns:
-            for m in re.finditer(pattern, compact, re.I):
-                old = _clean_company_capture(m.group("old"))
-                new = m.group("new").strip()
-                if not old or base.normalize_name(old) == current_norm:
-                    continue
-                if base.normalize_name(new) != current_norm and not (
-                    base.normalize_name(new) in current_norm or current_norm in base.normalize_name(new)
-                ):
-                    continue
-                window_start = max(0, m.start() - 450)
-                window_end = min(len(compact), m.end() + 250)
-                window = compact[window_start:window_end]
-                local_anchor = m.start("new") - window_start
-                date = _nearest_effective_date(window, local_anchor)
-                if not date:
-                    continue
-                return {"date": date, "predecessor": old, "successor": new}
-    return None
+        found = _official_urls_from_search_html(r.text)
+        if found:
+            return found
+    return []
 
 
 def discover_official_rename(http: Any, discovery: Dict[str, Any], audit: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -183,39 +198,38 @@ def discover_official_rename(http: Any, discovery: Dict[str, Any], audit: Dict[s
     current = str(discovery.get("current_legal_name") or discovery.get("requested_company_name") or "").strip()
     if not current:
         return None
-    hint = _history_year_hint(http, audit, current)
     brand = _strip_suffix(current)
-    queries: List[str] = []
-    if hint:
-        queries.extend([
-            f'site:kind.krx.co.kr "{brand}" "상호" "변경" {hint["year"]}',
-            f'site:dart.fss.or.kr "{brand}" "상호" "변경" {hint["year"]}',
-        ])
-    queries.extend([
-        f'site:kind.krx.co.kr "{brand}" "상호가 변경"',
-        f'site:dart.fss.or.kr "{brand}" "상호가 변경"',
-    ])
+    queries = [
+        f'site:kind.krx.co.kr/external "{brand}" "상호의 변경"',
+        f'site:kind.krx.co.kr/external "{brand}" "상호 변경"',
+        f'site:kind.krx.co.kr/external "{brand}" "연 혁"',
+        f'site:dart.fss.or.kr "{brand}" "상호의 변경"',
+    ]
     candidates: List[str] = []
     for query in queries:
         candidates.extend(_search_result_urls(http, query))
+        candidates = _dedupe(candidates)
         if len(candidates) >= 12:
             break
-    for url in _dedupe(candidates)[:16]:
+    checked: List[Dict[str, Any]] = []
+    for url in candidates[:16]:
         r = http.get(url)
         if not r or r.status_code >= 400:
             continue
         text = " ".join(BeautifulSoup(r.text, "html.parser").stripped_strings)
-        parsed = parse_official_rename_text(text, current)
-        if not parsed:
+        if base.normalize_name(current) not in base.normalize_name(text):
             continue
-        if hint and int(parsed["date"][:4]) != int(hint["year"]):
+        parsed = parse_official_rename_chronology(text, current) or parse_official_rename_text(text, current)
+        checked.append({"url": r.url, "parsed": parsed})
+        if not parsed:
             continue
         parsed.update({
             "source_locator": r.url,
-            "evidence_type": "OFFICIAL_DISCLOSURE_EXPLICIT_RENAME",
-            "history_hint": hint,
+            "evidence_type": "OFFICIAL_DISCLOSURE_RENAME_CHAIN",
         })
+        audit.setdefault("stages", {})["public_disclosure_rename_candidates"] = checked
         return parsed
+    audit.setdefault("stages", {})["public_disclosure_rename_candidates"] = checked
     return None
 
 
@@ -240,7 +254,9 @@ def apply_rename(discovery: Dict[str, Any], audit: Dict[str, Any], rename: Dict[
         })
     discovery["current_legal_name_active_period"] = {"start_year": rename_year}
     for alias in discovery.get("company_aliases", []) or []:
-        if isinstance(alias, dict) and alias.get("alias_type") in {"requested_name", "english_legal_name", "current_brand_name", "current_alias", "current_legal_alias"}:
+        if isinstance(alias, dict) and alias.get("alias_type") in {
+            "requested_name", "english_legal_name", "current_brand_name", "current_alias", "current_legal_alias"
+        }:
             alias["active_period"] = {"start_year": rename_year}
     events = discovery.setdefault("corporate_restructuring_evidence", [])
     if not any(isinstance(x, dict) and x.get("event_type") == "rename" and x.get("effective_date") == date for x in events):
