@@ -1,8 +1,10 @@
 """Recover a current first-party company website when DART's website field is stale.
 
-Search engines are candidate locators only. A replacement host is accepted only after
-its own pages are fetched and show a self-identifying corporate-site structure for the
-requested company. No company/domain pairs are hard-coded here.
+Recovery preserves the DART-declared host first. A stale deep path is progressively
+shortened on that same host before any search engine is consulted. Search engines are
+candidate locators only; a replacement host is accepted only after its own pages are
+fetched and show a self-identifying corporate-site structure for the requested company.
+No company/domain pairs are hard-coded here.
 """
 
 from __future__ import annotations
@@ -51,18 +53,48 @@ def _dedupe(values: Iterable[str]) -> List[str]:
     return out
 
 
+def _path_candidates(path: str) -> List[str]:
+    """Return exact path then progressively shorter directory ancestors and root."""
+    clean = str(path or "/").strip() or "/"
+    if not clean.startswith("/"):
+        clean = "/" + clean
+    values = [clean]
+    # If the DART URL points at a file/controller, its containing directories remain
+    # first-party locations and are safer recovery candidates than external search.
+    parts = [p for p in clean.split("/") if p]
+    if parts:
+        # Remove one trailing component at a time. `/a/b/index.do` -> `/a/b/` -> `/a/` -> `/`.
+        for keep in range(len(parts) - 1, -1, -1):
+            candidate = "/" + "/".join(parts[:keep])
+            if candidate != "/":
+                candidate += "/"
+            values.append(candidate)
+    values.append("/")
+    return _dedupe(values)
+
+
 def _origin_variants(url: str) -> List[str]:
     parsed = urlparse(url if "://" in url else "https://" + url)
     host = parsed.hostname or ""
     if not host:
         return [url]
     bare = host.removeprefix("www.")
-    hosts = [host, bare, "www." + bare]
-    schemes = [parsed.scheme if parsed.scheme in {"http", "https"} else "https", "https", "http"]
-    path = parsed.path or "/"
-    if parsed.query:
-        path += "?" + parsed.query
-    return _dedupe(f"{scheme}://{h}{path}" for scheme in schemes for h in hosts)
+    hosts = _dedupe([host, bare, "www." + bare])
+    schemes = _dedupe([parsed.scheme if parsed.scheme in {"http", "https"} else "https", "https", "http"])
+    paths = _path_candidates(parsed.path or "/")
+    out: List[str] = []
+    for path_i, path in enumerate(paths):
+        for scheme in schemes:
+            for h in hosts:
+                # Query parameters are meaningful only for the original exact path;
+                # never carry a stale controller query onto a parent/root candidate.
+                suffix = path
+                if path_i == 0 and parsed.query:
+                    suffix += "?" + parsed.query
+                value = f"{scheme}://{h}{suffix}"
+                if value not in out:
+                    out.append(value)
+    return out
 
 
 def _search_result_links(search_url: str, html: str) -> List[str]:
@@ -104,7 +136,6 @@ def _locate_candidates(http: base.Http, company: str) -> List[str]:
                 break
         if found:
             break
-    # Keep at most one representative URL per host, preserving ranking order.
     host_seen: set[str] = set()
     ranked: List[str] = []
     for url in found:
@@ -133,12 +164,7 @@ def _corporate_self_identifies(company: str, pages: Sequence[base.Page], links: 
         structure_words.update(word for word in CORPORATE_STRUCTURE_WORDS if word in low)
         ownership_words.update(word for word in OWNERSHIP_WORDS if word in low)
     host = _host(pages[0].url)
-    internal_links = {
-        target for _, _, target in links
-        if _host(target) == host
-    }
-    # A search result cannot establish identity by itself. Require the fetched site to
-    # repeatedly identify the company and expose a multi-section corporate structure.
+    internal_links = {target for _, _, target in links if _host(target) == host}
     verified = (
         company_pages >= 2
         and len(structure_words) >= 4
@@ -170,16 +196,19 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
         last_recovery["resolved_url"] = pages[0].url
         return pages, links
 
-    # First preserve trust in the DART-declared host and try only transport/WWW variants.
+    # Preserve the DART-declared host before widening trust. Try transport/WWW variants
+    # and progressively shorter same-host paths (stale controllers and legacy folders
+    # commonly disappear while the corporate domain itself remains valid).
     for variant in _origin_variants(start_url):
         if variant == start_url:
             continue
         pages, links = BASE_CRAWL(http, variant, company, max_pages=max_pages)
         if pages:
+            method = "DART_HOST_PATH_ANCESTOR" if urlparse(variant).path != urlparse(start_url if "://" in start_url else "https://" + start_url).path else "DART_HOST_VARIANT"
             last_recovery.update({
                 "status": "RECOVERED",
                 "resolved_url": pages[0].url,
-                "method": "DART_HOST_VARIANT",
+                "method": method,
             })
             return pages, links
 
