@@ -10,9 +10,12 @@
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "금호타이어(주) 주요 사업장",
+    "label": "금호타이어(주) 국내 사업장",
     "candidate_ids": [
-      "156-87-078dcc75"
+      "21521-77a933a3",
+      "658-b31d2d10",
+      "156-87-e796bab4",
+      "8563-17d015a5"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -36,17 +39,59 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "156-87-078dcc75",
-      "site_name_raw": "금호타이어(주) 주요 사업장",
-      "address_raw": "경기도 평택시 포승읍 평택항로156번길 87",
-      "business_unit_raw": "official-site primary operational location",
+      "candidate_id": "21521-77a933a3",
+      "site_name_raw": "금호타이어 중앙연구소",
+      "address_raw": "경기도 용인시 기흥구 사은로 215-21",
+      "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "official_page_count": 2,
-        "address_occurrences": 2,
-        "operational_context_hits": 2
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "658-b31d2d10",
+      "site_name_raw": "금호타이어 광주공장",
+      "address_raw": "전남광주통합특별시 광산구 어등대로 658",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "156-87-e796bab4",
+      "site_name_raw": "금호타이어 평택공장",
+      "address_raw": "경기도 평택시 포승읍 평택항로156번길 87",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "8563-17d015a5",
+      "site_name_raw": "금호타이어 곡성공장",
+      "address_raw": "전남광주통합특별시 곡성군 입면 금호길 85-63",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     }
   ],
