@@ -1,4 +1,4 @@
-name: Verify scripted ESG download endpoint bytes
+name: Inspect Hanwha Ocean G0 run 30 output
 
 on:
   push:
@@ -8,32 +8,40 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Verify first report token download
+      - uses: actions/checkout@v4
+      - name: Download G0 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p inspect/g0
+          gh run download 33709897356 -n zero-touch-discovery-33709897356 -D inspect/g0
+      - name: Print decisive fields
         run: |
           python - <<'PY'
-          import re, requests
-          from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
-          s=requests.Session(); s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.8'})
-          page='https://esg.hanwhaocean.com/dl/rep/'
-          r=s.get(page,timeout=(10,40)); r.encoding=r.apparent_encoding or r.encoding
-          soup=BeautifulSoup(r.text,'html.parser')
-          a=next(x for x in soup.find_all('a') if x.get('onclick') and re.search(r'fileDownload\s*\(',x.get('onclick'),re.I))
-          token=re.search(r'fileDownload\s*\(\s*[\"\']([^\"\']+)',a.get('onclick'),re.I).group(1)
-          target=urljoin(page,'/attach?et='+token)
-          print('NAME',a.get('download'))
-          print('TARGET_PREFIX',target[:90])
-          for label,headers in [('NO_REFERER',{}),('WITH_REFERER',{'Referer':page})]:
-              x=s.get(target,headers=headers,timeout=(10,60),allow_redirects=True)
-              print(label,'status',x.status_code,'final',x.url[:120],'ctype',x.headers.get('content-type'),'disp',x.headers.get('content-disposition'),'bytes',len(x.content),'magic',repr(x.content[:12]))
+          import json
+          from pathlib import Path
+          root=Path('inspect/g0')
+          d=json.loads((root/'company_discovery.json').read_text(encoding='utf-8'))
+          docs=json.loads((root/'document_evidence.json').read_text(encoding='utf-8'))
+          audit=json.loads((root/'Discovery_Audit.json').read_text(encoding='utf-8'))
+          print('GATE',audit.get('gate_status'))
+          print('UNRESOLVED',json.dumps(d.get('unresolved_items') or [],ensure_ascii=False,indent=2))
+          print('CURRENT',d.get('current_legal_name'),d.get('current_legal_name_active_period'))
+          print('ENTITY',d.get('legal_entity_active_period'))
+          print('HISTORICAL',json.dumps(d.get('historical_legal_names') or [],ensure_ascii=False,indent=2))
+          print('RESTRUCTURING',json.dumps(d.get('corporate_restructuring_evidence') or [],ensure_ascii=False,indent=2))
+          print('DOC_STATUS',docs.get('discovery_status'))
+          for x in sorted(docs.get('documents') or [],key=lambda z:(str(z.get('document_type')),int(z.get('report_year') or 0))):
+              print('DOC',json.dumps({k:x.get(k) for k in ('document_id','document_type','title','report_year','source_url','source_locator','verification_status')},ensure_ascii=False))
+          print('GAPS',json.dumps(docs.get('gaps') or [],ensure_ascii=False,indent=2))
+          st=audit.get('stages') or {}
+          for k in ('official_site','public_disclosure_rename_candidates','public_disclosure_rename','strict_report_enrichment','scripted_report_enrichment'):
+              print('STAGE',k,json.dumps(st.get(k),ensure_ascii=False,indent=2))
           PY
