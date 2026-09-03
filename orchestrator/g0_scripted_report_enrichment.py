@@ -1,15 +1,10 @@
 """Recover annual reports exposed through verified official JavaScript download controls.
 
-Some corporate report libraries do not place the PDF in an ``href``.  Instead an
-official page exposes the report year/file name and calls a small JavaScript download
-function with an opaque token.  This module treats that pattern generically:
-
-1. the page must already belong to a verified official/same-organization report host;
-2. the page must expose strong annual-report semantics and a year;
-3. the download function contract must be read from a same-host script;
-4. the derived endpoint must return actual PDF bytes before it is promoted.
-
-No company names, report filenames, or download tokens are hard-coded here.
+Some corporate report libraries do not place the PDF in an ``href``. Instead an
+official page exposes the report year/file name and calls a JavaScript download
+function with an opaque token. This module handles that pattern generically and
+fail-closed: same-host script contract + annual-report semantics + real PDF bytes are
+all required before promotion.
 """
 
 from __future__ import annotations
@@ -17,7 +12,7 @@ from __future__ import annotations
 import re
 from collections import deque
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
@@ -26,8 +21,7 @@ from orchestrator import g0_report_enrichment as strict
 from orchestrator import zero_touch_discovery as base
 
 DOWNLOAD_CALL_RE = re.compile(
-    r"fileDownload\s*\(\s*(['\"])(?P<token>.+?)\1\s*\)",
-    re.I,
+    r"fileDownload\s*\(\s*(['\"])(?P<token>.+?)\1\s*\)", re.I
 )
 DOWNLOAD_FUNCTION_RE = re.compile(
     r"function\s+fileDownload\s*\(\s*(?P<arg>[A-Za-z_$][\w$]*)\s*\)\s*\{(?P<body>.{0,2400}?)\}",
@@ -61,21 +55,11 @@ def _is_html_response(response: Any) -> bool:
 
 
 def extract_download_prefixes(script_text: str) -> List[str]:
-    """Return relative/absolute URL prefixes used by ``fileDownload(token)``.
-
-    Example accepted implementation::
-        function fileDownload(param) {
-          let url = getContextPath() + "/attach?et=" + param;
-          window.location.href = url;
-        }
-    """
+    """Extract literal URL prefixes from a ``fileDownload(token)`` implementation."""
     prefixes: List[str] = []
-    text = str(script_text or "")
-    for fn in DOWNLOAD_FUNCTION_RE.finditer(text):
+    for fn in DOWNLOAD_FUNCTION_RE.finditer(str(script_text or "")):
         arg = re.escape(fn.group("arg"))
         body = fn.group("body")
-        # Require a literal URL component with a query parameter whose value is the
-        # opaque function argument.  This deliberately ignores arbitrary JS execution.
         pattern = re.compile(
             r"(['\"])(?P<prefix>(?:https?://[^'\"]+|/[^'\"]*|[^'\"]+/[^'\"]*)\?[^'\"]*=)\1\s*\+\s*"
             + arg + r"\b",
@@ -87,14 +71,14 @@ def extract_download_prefixes(script_text: str) -> List[str]:
 
 
 def _page_download_prefixes(http: Any, page_url: str, html: str) -> List[str]:
+    if "fileDownload" not in str(html or ""):
+        return []
     soup = BeautifulSoup(html or "", "html.parser")
     page_host = base._host(page_url)
     prefixes: List[str] = []
-    # Inline scripts are allowed because they are part of the already verified page.
     for script in soup.find_all("script"):
         if not script.get("src"):
             prefixes.extend(extract_download_prefixes(script.string or script.get_text() or ""))
-    # External script contracts must remain on the same host as the verified page.
     for script in soup.find_all("script", src=True)[:30]:
         url = urljoin(page_url, script["src"])
         if base._host(url) != page_host:
@@ -103,6 +87,8 @@ def _page_download_prefixes(http: Any, page_url: str, html: str) -> List[str]:
         if not response or response.status_code >= 400:
             continue
         prefixes.extend(extract_download_prefixes(response.text))
+        if prefixes:
+            break
     return _dedupe(prefixes)
 
 
@@ -114,8 +100,6 @@ def _anchor_context(anchor: Any) -> str:
     label = " ".join(anchor.stripped_strings).strip()
     if label:
         parts.append(label)
-    # Report libraries commonly put the year/title in the surrounding LI/TR/DIV while
-    # the anchor itself merely says "download".
     node = anchor
     for _ in range(4):
         node = getattr(node, "parent", None)
@@ -131,20 +115,20 @@ def _anchor_context(anchor: Any) -> str:
 
 
 def _verify_pdf(http: Any, target: str, source: str) -> Tuple[bool, str, str]:
-    """Verify actual PDF bytes, sending Referer only for the validation request.
-
-    The stored URL remains the direct derived endpoint; the downstream downloader can
-    still re-fetch it independently.  A content-type claim without PDF magic is not
-    enough.
-    """
-    response = http.get(target, headers={"Referer": source})
+    """Verify PDF magic from a streamed first chunk; do not download the whole file."""
+    response = http.get(target, headers={"Referer": source}, stream=True)
     if not response or response.status_code >= 400:
+        if response:
+            response.close()
         return False, target, ""
-    body = bytes(response.content or b"")
     ctype = str(response.headers.get("content-type") or "")
-    if not body.lstrip().startswith(b"%PDF-"):
-        return False, response.url or target, ctype
-    return True, response.url or target, ctype
+    try:
+        first = next(response.iter_content(chunk_size=64), b"")
+        ok = bytes(first or b"").lstrip().startswith(b"%PDF-")
+        final = response.url or target
+    finally:
+        response.close()
+    return ok, final, ctype
 
 
 def candidates_from_scripted_page(
@@ -155,6 +139,8 @@ def candidates_from_scripted_page(
     current_year: int,
 ) -> List[Dict[str, Any]]:
     """Extract and byte-verify annual-report candidates from one trusted page."""
+    if "fileDownload" not in str(html or ""):
+        return []
     soup = BeautifulSoup(html or "", "html.parser")
     prefixes = _page_download_prefixes(http, page_url, html)
     if not prefixes:
@@ -168,8 +154,7 @@ def candidates_from_scripted_page(
             continue
         context = _anchor_context(anchor)
         download_name = str(anchor.get("download") or "")
-        semantic_url = download_name or page_url
-        if not strict.strong_report_semantics(context, semantic_url, page_url):
+        if not strict.strong_report_semantics(context, download_name or page_url, page_url):
             continue
         year = base._year_from(" ".join((context, download_name)))
         if not year or year < start_year or year > current_year:
@@ -222,7 +207,7 @@ def _crawl_for_scripted_candidates(
     start: str,
     start_year: int,
     current_year: int,
-    max_pages: int = 28,
+    max_pages: int = 16,
 ) -> Tuple[List[Dict[str, Any]], List[str]]:
     host = base._host(start)
     if not host:
@@ -231,6 +216,7 @@ def _crawl_for_scripted_candidates(
     seen: set[str] = set()
     candidates: List[Dict[str, Any]] = []
     pages: List[str] = []
+    desired = set(range(start_year, current_year))
     while queue and len(seen) < max_pages:
         best_i = max(range(len(queue)), key=lambda i: queue[i][0])
         _, url = queue[best_i]
@@ -243,9 +229,12 @@ def _crawl_for_scripted_candidates(
         if not response or response.status_code >= 400 or not _is_html_response(response):
             continue
         pages.append(response.url)
-        candidates.extend(candidates_from_scripted_page(
-            http, response.url, response.text, start_year, current_year
-        ))
+        if "fileDownload" in response.text:
+            candidates.extend(candidates_from_scripted_page(
+                http, response.url, response.text, start_year, current_year
+            ))
+            if desired and desired.issubset({int(x["year"]) for x in candidates}):
+                break
         soup = BeautifulSoup(response.text, "html.parser")
         outgoing: List[Tuple[int, str]] = []
         for anchor in soup.find_all("a", href=True):
@@ -257,7 +246,7 @@ def _crawl_for_scripted_candidates(
             marker = (" ".join(anchor.stripped_strings) + " " + target).casefold()
             priority = 60 if any(token in marker for token in REPORT_NAV_TOKENS) else 1
             outgoing.append((priority, target))
-        for item in sorted(outgoing, reverse=True)[:50]:
+        for item in sorted(outgoing, reverse=True)[:40]:
             queue.append(item)
     return candidates, pages
 
@@ -275,22 +264,19 @@ def enrich(
     http = base.Http()
     recovered: List[Dict[str, Any]] = []
     visited_pages: List[str] = []
+    desired = set(range(start_year, current_year))
     for start in _trusted_starts(discovery, audit)[:6]:
-        candidates, pages = _crawl_for_scripted_candidates(
-            http, start, start_year, current_year
-        )
+        candidates, pages = _crawl_for_scripted_candidates(http, start, start_year, current_year)
         recovered.extend(candidates)
         visited_pages.extend(pages)
+        if desired and desired.issubset({int(x["year"]) for x in recovered}):
+            break
 
-    supporting = [
-        d for d in documents.get("documents", []) or []
-        if d.get("document_type") != "SUSTAINABILITY_REPORT"
-    ]
+    supporting = [d for d in documents.get("documents", []) or [] if d.get("document_type") != "SUSTAINABILITY_REPORT"]
     annual_by_year: Dict[int, Dict[str, Any]] = {}
     for d in documents.get("documents", []) or []:
-        if d.get("document_type") != "SUSTAINABILITY_REPORT" or not d.get("report_year"):
-            continue
-        annual_by_year[int(d["report_year"])] = d
+        if d.get("document_type") == "SUSTAINABILITY_REPORT" and d.get("report_year"):
+            annual_by_year[int(d["report_year"])] = d
     for candidate in sorted(recovered, key=lambda x: int(x.get("score") or 0), reverse=True):
         year = int(candidate["year"])
         if year in annual_by_year:
@@ -305,58 +291,42 @@ def enrich(
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + PDF byte verification.",
+            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
         }
 
     found_years = set(annual_by_year)
-    gaps: List[Dict[str, Any]] = [
-        g for g in documents.get("gaps", []) or []
-        if g.get("document_type") != "SUSTAINABILITY_REPORT"
-    ]
+    gaps: List[Dict[str, Any]] = [g for g in documents.get("gaps", []) or [] if g.get("document_type") != "SUSTAINABILITY_REPORT"]
     old_annual_gaps = {
         int(g.get("year")): g for g in documents.get("gaps", []) or []
         if g.get("document_type") == "SUSTAINABILITY_REPORT" and g.get("year")
     }
-    source_locator = next(iter(_trusted_starts(discovery, audit)), "")
+    starts = _trusted_starts(discovery, audit)
+    source_locator = starts[0] if starts else ""
     for year in range(start_year, current_year + 1):
         if year in found_years:
             continue
         if year == current_year and found_years and max(found_years) == current_year - 1:
             gaps.append({
                 "gap_id": f"AUTO_SUSTAINABILITY_{year}_NOT_LISTED",
-                "source_key": "CORP_DOCS",
-                "document_type": "SUSTAINABILITY_REPORT",
-                "year": year,
-                "verification_status": "SOURCE_VERIFIED",
-                "status": "NOT_PUBLISHED",
-                "severity": "LOW",
-                "blocking": False,
+                "source_key": "CORP_DOCS", "document_type": "SUSTAINABILITY_REPORT", "year": year,
+                "verification_status": "SOURCE_VERIFIED", "status": "NOT_PUBLISHED", "severity": "LOW", "blocking": False,
                 "reason": f"As of {datetime.now(base.KST).date().isoformat()}, verified official report sources list reports through {current_year - 1}, not {current_year}.",
                 "source_locator": source_locator,
             })
         else:
             gaps.append(old_annual_gaps.get(year) or {
                 "gap_id": f"AUTO_SUSTAINABILITY_{year}_UNRESOLVED",
-                "source_key": "CORP_DOCS",
-                "document_type": "SUSTAINABILITY_REPORT",
-                "year": year,
-                "verification_status": "UNVERIFIED",
-                "status": "DISCOVERY_GAP",
-                "severity": "MEDIUM",
-                "blocking": True,
+                "source_key": "CORP_DOCS", "document_type": "SUSTAINABILITY_REPORT", "year": year,
+                "verification_status": "UNVERIFIED", "status": "DISCOVERY_GAP", "severity": "MEDIUM", "blocking": True,
                 "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
                 "source_locator": source_locator,
             })
 
     documents["documents"] = [*supporting, *[annual_by_year[y] for y in sorted(annual_by_year)]]
     documents["gaps"] = gaps
-    documents["discovery_status"] = (
-        "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE"
-        if not any(g.get("blocking") for g in gaps)
-        else "PARTIAL"
-    )
+    documents["discovery_status"] = "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE" if not any(g.get("blocking") for g in gaps) else "PARTIAL"
     audit.setdefault("stages", {})["scripted_report_enrichment"] = {
-        "trusted_starts": _trusted_starts(discovery, audit),
+        "trusted_starts": starts,
         "visited_pages": _dedupe(visited_pages),
         "recovered_years": sorted({int(x["year"]) for x in recovered}),
         "recovered_candidate_count": len(recovered),
