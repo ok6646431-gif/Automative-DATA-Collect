@@ -1,22 +1,17 @@
-"""Recover legal-name continuity from official chronology-style disclosures.
+"""Recover legal-name continuity from official chronology-style evidence.
 
-The first G0 rename adapter handles explicit ``OLD에서 NEW로 변경`` prose.  Public
-business reports also commonly express name history as dated chronology rows:
-
-    2002.03.16 : OLD_NAME(주)으로 상호 변경
-    2023.05.23 : CURRENT_NAME(주)로 상호 변경
-
-This fallback is company-agnostic.  It searches only official DART/KRX disclosure
-pages or already verified first-party company history pages, parses the resulting-name
-chain, and promotes the latest predecessor only when the current legal name is an exact
-normalized match.
+This fallback is used only when the earlier explicit rename adapters did not establish a
+bounded legal-name change.  It accepts evidence from verified first-party company pages
+and official DART/KRX disclosures, repairs ambiguous legacy HTML encodings before
+parsing, and requires an exact normalized match to the current legal name before a
+predecessor is promoted.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Any, Dict, Iterable, List, Optional
-from urllib.parse import parse_qs, quote_plus, unquote, urlencode, urlparse
+from urllib.parse import parse_qs, quote_plus, unquote, urlencode, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -44,6 +39,53 @@ def _dedupe(values: Iterable[str]) -> List[str]:
     return out
 
 
+def _decode_response_text(response: Any, current_name: str = "") -> str:
+    """Choose the most credible decoding for a fetched official HTML response.
+
+    Some KIND/KRX pages omit or misstate their charset.  ``requests`` can then expose
+    UTF-8 bytes as mojibake.  We score the declared text plus bounded candidate decodes
+    from the original bytes; presence of the already verified current legal name is the
+    strongest signal, followed by Korean legal-history vocabulary and Hangul density.
+    """
+    candidates: List[str] = []
+    try:
+        candidates.append(str(response.text or ""))
+    except Exception:
+        pass
+    raw = getattr(response, "content", b"") or b""
+    encodings = _dedupe([
+        str(getattr(response, "encoding", "") or ""),
+        str(getattr(response, "apparent_encoding", "") or ""),
+        "utf-8", "cp949", "euc-kr",
+    ])
+    if raw:
+        for encoding in encodings:
+            try:
+                candidates.append(bytes(raw).decode(encoding, errors="strict"))
+            except (UnicodeDecodeError, LookupError, TypeError):
+                continue
+    candidates = _dedupe(candidates)
+    if not candidates:
+        return ""
+
+    current_norm = base.normalize_name(current_name)
+
+    def score(text: str) -> int:
+        normalized = base.normalize_name(text)
+        value = 0
+        if current_norm and current_norm in normalized:
+            value += 500
+        for token, weight in (("상호", 45), ("사명", 30), ("변경", 45), ("연혁", 20), ("회사", 10)):
+            if token in text:
+                value += weight
+        value += min(180, len(re.findall(r"[가-힣]", text)) // 8)
+        value -= text.count("�") * 20
+        value -= min(120, sum(text.count(x) for x in ("ì", "ë", "ê", "í", "\x80", "\x81")))
+        return value
+
+    return max(candidates, key=score)
+
+
 def _date_value(match: re.Match[str]) -> str:
     if match.group("y1"):
         y, m, d = match.group("y1"), match.group("m1"), match.group("d1")
@@ -54,13 +96,10 @@ def _date_value(match: re.Match[str]) -> str:
 
 def _clean_resulting_name(value: str) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n,.;:：-'\"‘’“”")
-    # Keep the final segment after chronology separators/bullets.  Do not split on
-    # ordinary spaces because Korean legal names can contain them.
-    for sep in ("：", ":", "•", "·", " - ", " – ", " — ", "|"):
+    for sep in ("：", ":", "•", " - ", " – ", " — ", "|"):
         if sep in text:
             text = text.rsplit(sep, 1)[-1].strip()
-    text = re.sub(r"^(?:및|또한|당사(?:의)?|회사(?:의)?|상호(?:를|를)?)[\s:：-]+", "", text).strip()
-    return text
+    return re.sub(r"^(?:및|또한|당사(?:의)?|회사(?:의)?)[\s:：-]+", "", text).strip()
 
 
 def parse_resulting_name_chronology(text: str, current_name: str) -> Optional[Dict[str, Any]]:
@@ -71,33 +110,22 @@ def parse_resulting_name_chronology(text: str, current_name: str) -> Optional[Di
     for idx, dm in enumerate(dates):
         end = dates[idx + 1].start() if idx + 1 < len(dates) else min(len(compact), dm.end() + 420)
         segment = compact[dm.end(): min(end, dm.end() + 420)]
-        cm = CHANGE_RE.search(segment)
-        if not cm:
+        change = CHANGE_RE.search(segment)
+        if not change:
             continue
-        name = _clean_resulting_name(cm.group("name"))
-        if not name:
-            continue
-        entries.append({
-            "date": _date_value(dm),
-            "name": name,
-            "position": dm.start(),
-        })
+        name = _clean_resulting_name(change.group("name"))
+        if name:
+            entries.append({"date": _date_value(dm), "name": name, "position": dm.start()})
 
     current_norm = base.normalize_name(current_name)
-    current_indices = [
-        i for i, entry in enumerate(entries)
-        if base.normalize_name(entry["name"]) == current_norm
-    ]
+    current_indices = [i for i, entry in enumerate(entries) if base.normalize_name(entry["name"]) == current_norm]
     if not current_indices:
         return None
-    # The most recent exact current-name row is the legal-name boundary of interest.
     idx = current_indices[-1]
-    predecessor = None
-    for prev in reversed(entries[:idx]):
-        norm = base.normalize_name(prev["name"])
-        if norm and norm != current_norm:
-            predecessor = prev["name"]
-            break
+    predecessor = next(
+        (entry["name"] for entry in reversed(entries[:idx]) if base.normalize_name(entry["name"]) not in {"", current_norm}),
+        None,
+    )
     if not predecessor:
         return None
     return {
@@ -110,42 +138,35 @@ def parse_resulting_name_chronology(text: str, current_name: str) -> Optional[Di
 
 
 def parse_multi_change_prose(text: str, current_name: str) -> Optional[Dict[str, Any]]:
-    """Parse prose listing successive name changes in one sentence.
-
-    Example: ``2002년 ... A에서 B로, 2023년 ... CURRENT로 변경``.  The predecessor
-    of CURRENT is B, not A.
-    """
     compact = re.sub(r"\s+", " ", str(text or ""))
-    current_norm = base.normalize_name(current_name)
-    # First collect dated resulting-name mentions near name-change language.
     mentions: List[Dict[str, str]] = []
     for dm in DATE_ANY_RE.finditer(compact):
         segment = compact[dm.end(): dm.end() + 360]
-        stop = DATE_ANY_RE.search(segment)
-        if stop:
-            segment = segment[:stop.start()]
-        # Accept both 'NAME로 상호 변경' and chain prose ending in 'NAME로 변경'.
-        candidates = re.findall(
+        next_date = DATE_ANY_RE.search(segment)
+        if next_date:
+            segment = segment[:next_date.start()]
+        for raw in re.findall(
             r"([가-힣A-Za-z0-9&.·㈜()\-\s]{2,120}?)(?:으로|로)(?=\s*(?:상호|사명|회사명)?\s*(?:변경|,|\.))",
             segment,
             re.I,
-        )
-        for raw in candidates:
+        ):
             name = _clean_resulting_name(raw)
             if name:
                 mentions.append({"date": _date_value(dm), "name": name})
+
+    current_norm = base.normalize_name(current_name)
     for idx, item in enumerate(mentions):
         if base.normalize_name(item["name"]) != current_norm:
             continue
-        for prev in reversed(mentions[:idx]):
-            if base.normalize_name(prev["name"]) and base.normalize_name(prev["name"]) != current_norm:
-                return {
-                    "date": item["date"],
-                    "predecessor": prev["name"],
-                    "successor": item["name"],
-                    "chronology": mentions,
-                    "evidence_type": "OFFICIAL_MULTI_CHANGE_PROSE",
-                }
+        predecessor = next(
+            (x["name"] for x in reversed(mentions[:idx]) if base.normalize_name(x["name"]) not in {"", current_norm}),
+            None,
+        )
+        if predecessor:
+            return {
+                "date": item["date"], "predecessor": predecessor, "successor": item["name"],
+                "chronology": mentions, "evidence_type": "OFFICIAL_MULTI_CHANGE_PROSE",
+            }
     return None
 
 
@@ -165,17 +186,13 @@ def _unwrap_search_href(href: str) -> str:
         q = parse_qs(parsed.query)
         return (q.get("q") or q.get("url") or [""])[0]
     if "duckduckgo.com/l/" in value:
-        q = parse_qs(parsed.query)
-        return (q.get("uddg") or [""])[0]
+        return (parse_qs(parsed.query).get("uddg") or [""])[0]
     return value
 
 
 def _official_urls_from_search(html: str) -> List[str]:
     soup = BeautifulSoup(html or "", "html.parser")
-    urls: List[str] = []
-    for a in soup.find_all("a", href=True):
-        urls.append(_unwrap_search_href(str(a["href"])))
-    # Preserve the legacy raw/encoded extraction too.
+    urls = [_unwrap_search_href(str(a["href"])) for a in soup.find_all("a", href=True)]
     urls.extend(legacy._official_urls_from_search_html(html))
     out: List[str] = []
     for url in urls:
@@ -198,16 +215,15 @@ def _search_official_disclosures(http: Any, brand: str) -> List[str]:
     found: List[str] = []
     for query in queries:
         encoded = quote_plus(query)
-        searches = [
+        for search_url in (
             "https://html.duckduckgo.com/html/?q=" + encoded,
             "https://www.bing.com/search?q=" + encoded + "&count=20",
             "https://www.google.com/search?q=" + encoded + "&num=20",
-        ]
-        for search_url in searches:
+        ):
             response = http.get(search_url)
             if not response or response.status_code >= 400:
                 continue
-            found.extend(_official_urls_from_search(response.text))
+            found.extend(_official_urls_from_search(_decode_response_text(response)))
             found = _dedupe(found)
             if found:
                 break
@@ -221,78 +237,93 @@ def _dart_navi_candidates(audit: Dict[str, Any], current_name: str) -> List[str]
     key = str(legal.get("select_key") or "").strip()
     if not key:
         return []
-    # These are DART's platform-wide periodic-report navigation categories.  They are
-    # queried as bounded official fallbacks and accepted only if their fetched content
-    # contains an exact current-name change chain.
-    params_base = {"naviCrpCik": key, "naviCrpNm": current_name}
-    urls: List[str] = []
-    for code in ("A001", "A002", "A003"):
-        params = {"naviCode": code, **params_base}
-        urls.append("https://dart.fss.or.kr/navi/searchNavi.do?" + urlencode(params))
-    return urls
+    return [
+        "https://dart.fss.or.kr/navi/searchNavi.do?" + urlencode({
+            "naviCode": code, "naviCrpCik": key, "naviCrpNm": current_name,
+        })
+        for code in ("A001", "A002", "A003")
+    ]
 
 
 def _official_company_history_pages(audit: Dict[str, Any]) -> List[str]:
     stage = ((audit.get("stages") or {}).get("official_site") or {})
-    pages = list(stage.get("sample_pages") or [])
-    chosen: List[str] = []
-    for url in pages:
-        marker = str(url).casefold()
-        if any(x in marker for x in ("history", "company", "about", "overview", "whoweare")):
-            chosen.append(url)
+    pages = [
+        str(url) for url in stage.get("sample_pages") or []
+        if any(token in str(url).casefold() for token in ("history", "company", "about", "overview", "whoweare"))
+    ]
     root = str(stage.get("resolved_official_root") or "").strip()
     if root:
-        chosen.append(root)
-    return _dedupe(chosen)[:12]
+        pages.append(root)
+    return _dedupe(pages)[:12]
+
+
+def _same_official_boundary(url: str, audit: Dict[str, Any]) -> bool:
+    host = base._host(url)
+    if host in OFFICIAL_DISCLOSURE_HOSTS or any(host.endswith("." + h) for h in OFFICIAL_DISCLOSURE_HOSTS):
+        return True
+    stage = ((audit.get("stages") or {}).get("official_site") or {})
+    roots = [str(stage.get("resolved_official_root") or ""), *(stage.get("sample_pages") or [])]
+    return any(root and base._same_org_host(root, url) for root in roots)
+
+
+def _follow_dart_report_links(source_url: str, html: str) -> List[str]:
+    """Recover bounded DART report links exposed by a corporate navigation page."""
+    soup = BeautifulSoup(html or "", "html.parser")
+    targets: List[str] = []
+    for tag in soup.find_all(["a", "button", "tr", "td"]):
+        blob = " ".join(tag.stripped_strings) + " " + " ".join(f"{k}={v}" for k, v in tag.attrs.items())
+        if not any(token in blob for token in ("사업보고서", "반기보고서", "분기보고서", "rcpNo", "rcpno")):
+            continue
+        href = str(tag.get("href") or "")
+        if href:
+            target = urljoin(source_url, href).split("#")[0]
+            if base._host(target) == "dart.fss.or.kr":
+                targets.append(target)
+        for rcp in re.findall(r"(?:rcpNo|rcpno)[^0-9]{0,8}(20\d{12})", blob):
+            targets.append("https://dart.fss.or.kr/dsaf001/main.do?rcpNo=" + rcp)
+    return _dedupe(targets)[:20]
 
 
 def discover(http: Any, discovery: Dict[str, Any], audit: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    if any(
-        isinstance(x, dict) and x.get("event_type") == "rename"
-        for x in discovery.get("corporate_restructuring_evidence", []) or []
-    ):
+    if any(isinstance(x, dict) and x.get("event_type") == "rename" for x in discovery.get("corporate_restructuring_evidence", []) or []):
         return None
     current = str(discovery.get("current_legal_name") or discovery.get("requested_company_name") or "").strip()
     if not current:
         return None
     brand = legacy._strip_suffix(current)
-
-    candidate_urls = [
+    queue = _dedupe([
         *_official_company_history_pages(audit),
         *_dart_navi_candidates(audit, current),
         *_search_official_disclosures(http, brand),
-    ]
+    ])
     checked: List[Dict[str, Any]] = []
-    for url in _dedupe(candidate_urls)[:36]:
+    seen: set[str] = set()
+    while queue and len(seen) < 44:
+        url = queue.pop(0)
+        if url in seen:
+            continue
+        seen.add(url)
         response = http.get(url)
-        if not response or response.status_code >= 400:
+        if not response or response.status_code >= 400 or not _same_official_boundary(response.url, audit):
             continue
-        host = base._host(response.url)
-        official_company_host = base._same_org_host(
-            str((((audit.get("stages") or {}).get("official_site") or {}).get("resolved_official_root") or ""),
-            response.url,
-        )
-        official_disclosure = host in OFFICIAL_DISCLOSURE_HOSTS or any(host.endswith("." + h) for h in OFFICIAL_DISCLOSURE_HOSTS)
-        if not official_company_host and not official_disclosure:
-            continue
-        text = " ".join(BeautifulSoup(response.text, "html.parser").stripped_strings)
-        if base.normalize_name(current) not in base.normalize_name(text):
-            continue
-        parsed = parse_official_name_chain(text, current)
+        decoded = _decode_response_text(response, current)
+        text = " ".join(BeautifulSoup(decoded, "html.parser").stripped_strings)
+        parsed = parse_official_name_chain(text, current) if base.normalize_name(current) in base.normalize_name(text) else None
         checked.append({"url": response.url, "parsed": parsed})
         if parsed:
             parsed["source_locator"] = response.url
             audit.setdefault("stages", {})["rename_chronology_recovery_candidates"] = checked
             return parsed
+        if base._host(response.url) == "dart.fss.or.kr":
+            for target in _follow_dart_report_links(response.url, decoded):
+                if target not in seen and target not in queue:
+                    queue.append(target)
     audit.setdefault("stages", {})["rename_chronology_recovery_candidates"] = checked
     return None
 
 
 def enrich(discovery: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
-    if any(
-        isinstance(x, dict) and x.get("event_type") == "rename"
-        for x in discovery.get("corporate_restructuring_evidence", []) or []
-    ):
+    if any(isinstance(x, dict) and x.get("event_type") == "rename" for x in discovery.get("corporate_restructuring_evidence", []) or []):
         return discovery
     http = base.Http()
     rename = discover(http, discovery, audit)
