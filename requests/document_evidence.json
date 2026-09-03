@@ -3,120 +3,120 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_bda33e6afa",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "한화오션",
+      "report_year": 2026,
+      "source_url": "https://www.hanwhaocean.com/sustainability/ov/",
+      "source_locator": "https://www.hanwhaocean.com/sustainability/ov/",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_a375af70f8",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "한화오션",
+      "report_year": 2026,
+      "source_url": "https://www.hanwhaocean.com/whoweare/gn/aff/",
+      "source_locator": "https://www.hanwhaocean.com/whoweare/gn/aff/",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_8c1ce27e8c",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "Hanwha",
+      "report_year": 2026,
+      "source_url": "https://www.hanwhaocean.com/en/",
+      "source_locator": "https://www.hanwhaocean.com/en/",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_ENVIRONMENT_PAGE_e6d2382c40",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "Hanwha",
+      "report_year": 2026,
+      "source_url": "https://www.hanwhaocean.com/en/sustainability/ov/",
+      "source_locator": "https://www.hanwhaocean.com/en/sustainability/ov/",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING"
+    },
+    {
       "document_id": "AUTO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2020년 현대중공업그룹 통합보고서",
+      "title": "한화오션_지속가능경영보고서_2020_kor.pdf",
       "report_year": 2020,
-      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1606291030474.pdf&dn=2020_KSOE_IR_KR.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC8wKhh18Di3YwI21vV97S%2B2tETe2jfDqe1LMO7lxrHnCT51uPq3eK%2B0nzdQ6MmaGDE3aFIRUiaBrJp1bb1Xf%2FNgVUjwEfuoZclgwjqJVUeKlEUmonGH%2FnoJPlE0K5UWlMw%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021년 현대삼호중공업 ESG HIGHLIGHTS",
+      "title": "한화오션_지속가능경영보고서_2021_kor.pdf",
       "report_year": 2021,
-      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1664354654193.PDF&dn=2021+%ED%98%84%EB%8C%80%EC%82%BC%ED%98%B8%EC%A4%91%EA%B3%B5%EC%97%85+ESG+HIGHLIGHTS.PDF",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FCwFoqN%2By2mX8bHn3umOG%2FcC0c8zqzxKzyNqgDP1mVyKmAYNp3l4o3xrhNSQKTGIZRSxB%2FWVrYD42XRQbHmHo%2FKZzfrfePfllbuC8bVs%2FHxz5rT24TDyQ%2F9r5zrL9qkui8w%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022년 현대삼호중공업 ESG HIGHLIGHTS (영문)",
+      "title": "한화오션_지속가능경영보고서_2022_kor.pdf",
       "report_year": 2022,
-      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1696557258303.PDF&dn=2022+%ED%98%84%EB%8C%80%EC%82%BC%ED%98%B8%EC%A4%91%EA%B3%B5%EC%97%85+ESG+HIGHLIGHTS+%28%EC%98%81%EB%AC%B8%29+.PDF",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC1wlQPiDCOOFCAO1xOEsRUJZLU0eGtrP6rhWqULTTsKuRusohRJ9g8WBuJrWufIHgtfacjKjSaRtd3H7hrk8bdnV4foIqYoTdXq0D4sz7uTDAXf%2FMGURaAL3KBdIDZakMQ%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023년 HD한국조선해양 통합보고서(국문)",
+      "title": "한화오션_지속가능경영보고서_2023_kor.pdf",
       "report_year": 2023,
-      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1724201862844.pdf&dn=%28KOR%29+2023+HDKSOE_Integrated_Report.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC3kEngJpIu7UIQdQLnKssve6GGUl%2B%2FG4krxQPylFZwWoTYJ1xmlqj0SC62yByWUSlrl6BkxlBLk6O3G%2F7T7gtKgSxF4i5DswzFHWdnAFqYFcsu4JmuBY7ZlVnl3kYfsBvg%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024년 HD한국조선해양 지속가능경영보고서_국문",
+      "title": "다운로드",
       "report_year": 2024,
-      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1757374873802.pdf&dn=HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91_SR+2024-%EA%B5%AD%EB%AC%B8+%EC%B5%9C%EC%A2%85_0826+v1.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_url": "https://www.hanwhaocean.com/pdf/%ED%95%9C%ED%99%94%EC%98%A4%EC%85%98_%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C_2024_F.pdf",
+      "source_locator": "https://www.hanwhaocean.com/sustainability/ov/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
+      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025년 HD한국조선해양 지속가능경영보고서_국문",
+      "title": "한화오션 지속가능경영보고서 2025.pdf",
       "report_year": 2025,
-      "source_url": "https://www.hd-samho.com/download.do?path=/AttachUP/REPORT&rn=1787209376756.pdf&dn=2025+HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91+%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C+%28KOR%29.pdf",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC9dXhMJlaqZaPRPiVgcMwS%2F6%2F035MdEOc74BYJaNpRaMMGMFB1lF7cdluAbm%2Fq7YpOeqrxTEaG5ktjH298dQ765pCkXsfpkNINTnjD%2F4r%2BmBmVM4Mjq9PFnWmsnUUczO9Q%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type."
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_09b55bd663",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/",
-      "source_locator": "https://www.hd-samho.com/",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_88a556317e",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/bbs/report_policy2/list.do",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy2/list.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_3e435d125f",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy1/list.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_6c8969ec4c",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "HD현대삼호",
-      "report_year": 2026,
-      "source_url": "https://www.hd-samho.com/bbs/report_policy3/list.do",
-      "source_locator": "https://www.hd-samho.com/bbs/report_policy3/list.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified."
     }
   ],
   "gaps": [
@@ -129,8 +129,8 @@
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "As of 2026-09-03, verified official report index pages list reports through 2025, not 2026.",
-      "source_locator": "https://www.hd-samho.com/"
+      "reason": "As of 2026-09-03, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://esg.hanwhaocean.com/"
     }
   ],
   "discovery_scope": {
@@ -147,5 +147,5 @@
     ],
     "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page."
   },
-  "request_id": "hd-0b0f7339-env-g0-20260903"
+  "request_id": "company-a382d2ca-env-g0-20260903"
 }

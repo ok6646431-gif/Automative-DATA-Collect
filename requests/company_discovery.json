@@ -1,18 +1,18 @@
 {
   "schema_version": "1.0",
-  "request_id": "hd-0b0f7339-env-g0-20260903",
-  "requested_company_name": "HD현대삼호",
-  "current_legal_name": "에이치디현대삼호 주식회사",
+  "request_id": "company-a382d2ca-env-g0-20260903",
+  "requested_company_name": "한화오션",
+  "current_legal_name": "한화오션(주)",
   "current_legal_name_active_period": {
-    "start_year": 2024
+    "start_year": 2000
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "HD현대삼호 주요 사업장",
+    "label": "한화오션 주요 사업장",
     "candidate_ids": [
-      "hd-93-820eb739"
+      "3370geojedaerogeojesigyeongsangnamdo53302r-4a56f252"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -20,81 +20,44 @@
   },
   "company_aliases": [
     {
-      "name": "HD현대삼호",
+      "name": "한화오션",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
-      "active_period": {
-        "start_year": 2024
-      }
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704"
     },
     {
-      "name": "HD HYUNDAI SAMHO CO., LTD.",
+      "name": "Hanwha Ocean Co., Ltd.",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
-      "active_period": {
-        "start_year": 2024
-      }
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704"
     }
   ],
-  "historical_legal_names": [
-    {
-      "name": "현대삼호중공업",
-      "alias_type": "former_legal_name",
-      "active_period": {
-        "start_year": 2020,
-        "end_year": 2024
-      },
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471&seek=%ED%9A%8C%EC%82%AC%EB%AA%85&selKeyword=subject&pg=1"
-    }
-  ],
-  "corporate_restructuring_evidence": [
-    {
-      "event_type": "rename",
-      "effective_period": {
-        "start_year": 2024,
-        "end_year": 2024
-      },
-      "effective_date": "2024-03-25",
-      "predecessor": "현대삼호중공업",
-      "successor": "에이치디현대삼호 주식회사",
-      "scope": "same legal entity name change",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://www.hd-samho.com/bbs/news/view.do?n=471&seek=%ED%9A%8C%EC%82%AC%EB%AA%85&selKeyword=subject&pg=1"
-    }
-  ],
+  "historical_legal_names": [],
+  "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "hd-93-820eb739",
-      "site_name_raw": "HD현대삼호 주요 사업장",
-      "address_raw": "전남광주통합특별시 영암군 삼호읍 대불로 93",
+      "candidate_id": "3370geojedaerogeojesigyeongsangnamdo53302r-4a56f252",
+      "site_name_raw": "한화오션 주요 사업장",
+      "address_raw": "3370, Geoje-daero, Geoje-si, Gyeongsangnam-do, 53302, Republic of Korea",
       "business_unit_raw": "official-profile primary operational location",
-      "source_locator": "https://www.hd-samho.com/PageLink.do?link=about/status",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "official_profile_pages": [
-          "https://www.hd-samho.com/PageLink.do?link=about/status",
-          "https://www.hd-samho.com/PageLink.do?link=about/intro",
-          "https://www.hd-samho.com/PageLink.do?link=about/founder2",
-          "https://www.hd-samho.com/PageLink.do?link=about/founder"
+          "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704"
         ],
         "operational_terms": [
-          "생산야드",
-          "산단",
-          "공장",
-          "조선소"
+          "DART_ADDRESS"
         ],
-        "evidence_score": 68
+        "evidence_score": 30
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00332468",
-      "source_value_raw": "에이치디현대삼호 주식회사 / HD HYUNDAI SAMHO CO., LTD. / establishment 1998-11-04 / website www.hshi.co.kr",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
+      "source_value_raw": "한화오션(주) / Hanwha Ocean Co., Ltd. / establishment 2000-10-23 / website www.hanwhaocean.com/pub/main/index.do",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -157,6 +120,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 1998
+    "start_year": 2000
   }
 }
