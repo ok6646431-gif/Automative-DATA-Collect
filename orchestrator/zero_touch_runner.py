@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from orchestrator import dart_public_resolver
 from orchestrator import g0_authority_site_recovery
+from orchestrator import g0_data_attr_report_recovery
 from orchestrator import g0_domestic_site_catalog_enrichment
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_generic_js_report_recovery
@@ -111,10 +112,12 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_report_enrichment.enrich(discovery, documents, audit)
     documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
     documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
-    # General fallback for report controls that use arbitrary JavaScript function names
-    # or multiple literal arguments. The function body must be statically reconstructable
-    # from same-host scripts and the resulting target must return real PDF bytes.
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
+    # Some first-party report libraries bind a shared click handler to a CSS class and
+    # derive the PDF viewer URL from data-* metadata instead of placing a function call
+    # on each link. Reconstruct only a statically inspectable same-host handler and
+    # require real PDF bytes before promotion.
+    documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
     )
