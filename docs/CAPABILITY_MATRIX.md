@@ -20,18 +20,30 @@
 | G0-REPORT-SEMANTICS | 브로슈어/IR PDF의 보고서 오분류 | 지속가능/통합/ESG 보고서 의미가 강한 PDF만 연차 series로 승격 | brochure/catalog/IR 등은 연도와 PDF 여부만으로 승격 금지 | `test_g0_report_enrichment.py`, `test_capability_regression_corpus.py` | 한화오션 | VERIFIED |
 | DOC-ANNUAL-COVERAGE | 최신 몇 년만 찾고 과거 연차 누락 | 요청 history 전체 연차를 검사하고 공식 NOT_PUBLISHED만 gap 해소로 인정 | 검증되지 않은 연도 누락은 blocking gap | `test_collection_completeness.py` | HD현대삼호, 한화오션 | VERIFIED |
 | SOURCE-LEGAL-NAME-VARIANTS | `(주)`, `㈜`, `주식회사` 등 공공DB 표기 차이 | 검증된 legal alias에서만 표기 변형을 생성하고 동일 연도 경계를 유지 | brand에 임의 법인 접미사 생성 금지 | `test_request_builder.py` | HD현대삼호, 한화오션 | VERIFIED |
+| G0-PREDECESSOR-ISOLATION | 분사/합병 predecessor를 현재 법인 검색어로 오인 | `scope=predecessor` alias는 모든 company-wide collector에서 기본 제외하고 별도 continuity 검증 없이는 검색하지 않음 | 모회사/피합병법인 전체 자료 자동 상속 금지 | `test_request_builder.py`, capability CI | LG에너지솔루션 live 검증 예정 | IMPLEMENTED |
 | SITE-ADMIN-REGION-CONTINUITY | 행정구역 개편으로 주소 앞부분 변경 | 하위 행정구역+도로주소의 보수적 suffix가 유지될 때 동일 site 후보로 연결 | 짧은 도로번호 일치만으로 결합 금지 | `test_admin_region_address_continuity.py`, `test_requested_scope_rename_bridge.py` | HD현대삼호 | VERIFIED |
 | SITE-BILINGUAL-ADDRESS-CONTINUITY | 공식 영문주소와 공공DB 한글주소 | 3~4자리 도로/건물번호, 동일 법인, 2개 이상 독립 source, 유일한 canonical site가 동시에 성립할 때만 bridge | 후보가 둘 이상이면 자동결합 금지 | `test_requested_scope_bilingual_bridge.py`, `test_capability_regression_corpus.py` | 한화오션 | VERIFIED |
 | SITE-SAME-ENTITY-FACILITY-LABEL | `회사명 거제사업장`을 별도 법인으로 오인 | 동일 법인명 뒤의 보수적인 일반 `...사업장` 표기는 legal-entity compatible로 허용하되 실제 scope 포함에는 주소 근거를 추가 요구 | 센터/사무소/현장/임의 suffix를 동일 규칙으로 자동 포함하지 않음 | `test_requested_scope_bilingual_bridge.py` | 한화오션 | VERIFIED |
 | SITE-MULTI-SITE-SCOPE | company-wide raw와 사용자 요청 사업장 분리 | raw는 전체 보존, delivery/analysis만 requested SITE_SET으로 필터 | 원천자료 삭제 금지 | `test_requested_scope_rename_bridge.py`, archive/package tests | HD현대삼호, 한화오션 | VERIFIED |
-| RELATED-ENTITY-EXCLUSION | 유사 회사명/관계사 혼입 | verified related entity 또는 same-entity rule을 충족하지 못한 source identity는 user scope에서 제외 | 회사명 prefix만으로 동일 법인 인정 금지 | `test_requested_scope_bilingual_bridge.py`, `test_capability_regression_corpus.py` | 한화오션에코텍 분리 검증 | IMPLEMENTED |
-| ARCHIVE-RAW-VS-USER-LAYER | raw evidence와 전달자료 혼재 | 원천 company-wide evidence는 보존하고 Human Archive/application package는 requested scope만 제공 | 제외 근거 metadata는 보존 가능, 실제 off-scope 자료는 user layer 금지 | application/archive validation tests | HD현대삼호 | VERIFIED |
+| RELATED-ENTITY-EXCLUSION | 유사 회사명/관계사 혼입 | verified related entity 또는 same-entity rule을 충족하지 못한 source identity는 user scope에서 제외 | 회사명 prefix만으로 동일 법인 인정 금지 | `test_requested_scope_bilingual_bridge.py`, `test_capability_regression_corpus.py` | 한화오션: 에코텍 raw 보존, user layer 0건 | VERIFIED |
+| ARCHIVE-RAW-VS-USER-LAYER | raw evidence와 전달자료 혼재 | 원천 company-wide evidence는 보존하고 Human Archive/application package는 requested scope만 제공 | 제외 근거 metadata는 보존 가능, 실제 off-scope 자료는 user layer 금지 | application/archive validation tests | HD현대삼호, 한화오션 | VERIFIED |
 | ARCHIVE-REQUESTED-SCOPE | source ID를 requested canonical site에 결합 | Site_Master + Source_Identity + verified Discovery evidence로 source별 target ID 생성 | identity 불명확 시 분석/전달에서 제외 또는 review | requested-scope tests | HD현대삼호, 한화오션 | VERIFIED |
 | ARCHIVE-NONEMPTY-BINDING | raw에는 데이터가 있는데 SITE_SET source ID가 0인 false COMPLETE | data-bearing source마다 target ID가 없으면 `REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED` 생성 | COMPLETE 금지 | `test_requested_scope_completeness_guard.py`, `test_capability_regression_corpus.py` | 한화오션에서 결함 발견 후 보강 | VERIFIED |
 | SOURCE-RETRY-OUTAGE | 외부 공공시스템 일시 장애 | bounded retry/replay 후 성공 증거와 실패 상태를 분리 | 조회 실패를 NO_DATA로 변환 금지 | collection/replay tests | 한화오션 ICIS retry | IMPLEMENTED |
-| G0-SPINOFF-CONTINUITY | 분사 전후 어느 자료가 신설 법인에 귀속되는지 | 사명변경과 별개 event type으로 자산/사업/사업장 continuity evidence 필요 | 모회사 과거자료를 신설법인의 historical alias로 자동 상속 금지 | 미구축 | LG에너지솔루션 예정 | NOT_IMPLEMENTED |
+| G0-SPINOFF-CONTINUITY | 분사 전후 어느 자료가 신설 법인에 귀속되는지 | predecessor 자동상속은 차단했으며, 향후 자산/사업/사업장 continuity evidence로 site/source 단위 귀속을 검증 | 모회사 과거자료를 신설법인의 historical alias로 자동 상속 금지 | predecessor isolation 구축, site continuity 미구축 | LG에너지솔루션 예정 | PARTIAL |
 | G0-MERGER-MA-CONTINUITY | 합병/사업양수도/법인 통합 | predecessor를 alias가 아니라 별도 법인 event로 관리하고 site/source 귀속을 기간별 검증 | predecessor company-wide 자료 자동 편입 금지 | 일부 event/scope tests | 한화에어로스페이스 예정 | PARTIAL |
 | SITE-LARGE-MULTI-SITE | 대형 복수 사업장과 공통 법인명 row | 빈 site label을 모든 사업장에 매칭하지 않고 사업장별 source ID를 유지 | 법인명만 있는 row의 무차별 site 결합 금지 | requested-scope/site identity tests | 삼성전자, SK하이닉스 추가 검증 예정 | PARTIAL |
+
+## 한화오션 live baseline
+
+- 재조립 검증 run: `33726982925`
+- 요청 scope source ID: ENV-INFO `00000000000000185726`, PRTR `414`, CHEM_STATS `ACW978N`
+- scope 적용 후 분석행: `10`, off-scope 분석행: `0`
+- Collection Completeness: `COMPLETE`, 43/43 items complete
+- Human Archive: `COMPLETE`, user files 50, system files 214
+- 관련법인 증거는 `90_시스템원본`에 보존되며 실제 user-facing 영역의 한화오션에코텍 hit는 `0`
+- Human Archive SHA256: `9bbbc5a13a556c80451d014cbe415b99e8fdb05b1d1512cd9aeaa1a8d72a4505`
+- 검증 artifact ID: `9882400415`
 
 ## 운영 원칙
 
