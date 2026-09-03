@@ -19,13 +19,12 @@ def write_csv(path, rows, fields):
 class FinalValidationSemanticsTests(unittest.TestCase):
     def test_declared_empty_chemical_backfill_audit_is_not_corruption(self):
         status = {"source_id_backfill_attempts": 0}
-        self.assertTrue(
-            package_run.declared_empty_row_stream(
-                "CHEM_STATS", Path("source_id_backfill_attempts.jsonl"), status
+        for name in ("source_id_backfill_attempts.jsonl", "source_id_backfill_audit.jsonl"):
+            self.assertTrue(
+                package_run.declared_empty_row_stream("CHEM_STATS", Path(name), status)
             )
-        )
 
-    def test_legacy_lot_address_bridges_only_with_official_name_and_public_corroboration(self):
+    def test_legacy_lot_address_bridges_with_site_level_public_corroboration(self):
         profile = {
             "company_display_name": "테스트타이어(주)",
             "aliases": [{"term": "테스트타이어"}],
@@ -45,10 +44,12 @@ class FinalValidationSemanticsTests(unittest.TestCase):
                 "years": ["2024"], "raw_ref": "env",
             },
             {
-                "source_key": "PRTR", "source_site_id": "P1",
-                "source_site_name_raw": "테스트타이어(주) 곡성공장",
+                # Some registers expose only the legal company name while the exact
+                # official road address still anchors the row to one verified site.
+                "source_key": "CHEM_STATS", "source_site_id": "C1",
+                "source_site_name_raw": "테스트타이어(주)",
                 "source_address_raw": "전남광주통합특별시 곡성군 입면 금호길 85-63",
-                "years": ["2024"], "raw_ref": "prtr",
+                "years": ["2024"], "raw_ref": "chem",
             },
         ]
         _, sites, identities, validations = postprocess.resolve_identity(candidates, profile)
@@ -58,7 +59,7 @@ class FinalValidationSemanticsTests(unittest.TestCase):
             by_source["ENVINFO"]["match_basis"],
             "OFFICIAL_SITE_NAME_LEGACY_ADDRESS_CROSS_SOURCE",
         )
-        self.assertEqual(by_source["ENVINFO"]["canonical_site_id"], by_source["PRTR"]["canonical_site_id"])
+        self.assertEqual(by_source["ENVINFO"]["canonical_site_id"], by_source["CHEM_STATS"]["canonical_site_id"])
         self.assertFalse(any(v.get("object_key") == "ENVINFO:E1" for v in validations))
         self.assertFalse(any(s.get("identity_status") == "NEW_SITE_CANDIDATE" for s in sites))
 
@@ -116,7 +117,8 @@ class FinalValidationSemanticsTests(unittest.TestCase):
                 {"mode": "SITE_SET", "target_source_ids": {"ENVINFO": ["G1"]}},
             )
             self.assertEqual(changed, 1)
-            queue = list(csv.DictReader((root / "Validation_Queue.csv").open(encoding="utf-8-sig")))
+            with (root / "Validation_Queue.csv").open(encoding="utf-8-sig") as f:
+                queue = list(csv.DictReader(f))
             by_id = {r["validation_id"]: r for r in queue}
             self.assertEqual(by_id["VS"]["status"], "OUT_OF_SCOPE_RETAINED")
             self.assertEqual(by_id["VG"]["status"], "REVIEW_REQUIRED")
