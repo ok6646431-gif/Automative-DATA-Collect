@@ -1,0 +1,48 @@
+name: Diagnose report HTML once
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/diagnose-report-html.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch and inspect report page
+        run: |
+          python - <<'PY'
+          import re, requests
+          from bs4 import BeautifulSoup
+          url='https://www.kumhotire.com/ko/ESG/Materials/Report/'
+          r=requests.get(url,timeout=(6,20),headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko,en;q=0.8'})
+          print('STATUS',r.status_code,'FINAL',r.url,'CTYPE',r.headers.get('content-type'))
+          text=r.text
+          print('HTML_LEN',len(text))
+          for needle in ['2026 지속가능경영보고서','국문 PDF 다운로드','영문 PDF 다운로드','fileViewer','download','pdf']:
+              print('\n=== NEEDLE',needle,'===')
+              for m in list(re.finditer(re.escape(needle),text,re.I))[:8]:
+                  print(text[max(0,m.start()-900):min(len(text),m.end()+1400)].replace('\n',' ')[:2600])
+          soup=BeautifulSoup(text,'html.parser')
+          print('\n=== TAGS WITH PDF/DOWNLOAD TEXT OR ATTR ===')
+          shown=0
+          for tag in soup.find_all(True):
+              blob=(' '.join(tag.stripped_strings)+' '+str(tag.attrs)).casefold()
+              if 'pdf' in blob or '다운로드' in blob or 'download' in blob:
+                  print(str(tag)[:3000].replace('\n',' '))
+                  shown+=1
+                  if shown>=30: break
+          print('\n=== SCRIPT SRCS ===')
+          for s in soup.find_all('script',src=True): print(s.get('src'))
+          print('\n=== INLINE SCRIPT MATCHES ===')
+          for s in soup.find_all('script'):
+              if s.get('src'): continue
+              body=s.string or s.get_text() or ''
+              if re.search(r'pdf|download|fileViewer|report',body,re.I):
+                  print(body[:6000])
+          PY
