@@ -50,21 +50,14 @@ def _date_candidates(value: str) -> List[Tuple[int, int, str]]:
     return sorted(candidates, key=lambda x: (x[0], x[1]))
 
 
-def _nearest_effective_date(value: str, rename_start: int) -> Optional[str]:
-    """Pick the date nearest the rename clause, preferring dates immediately before it.
-
-    Disclosures often contain establishment dates earlier in the same paragraph. Taking
-    the first date therefore mis-bounds rename continuity. The effective date is normally
-    the closest explicit date preceding the OLD -> NEW statement; only when no preceding
-    date exists do we use the closest following date.
-    """
+def _nearest_effective_date(value: str, rename_anchor: int) -> Optional[str]:
     candidates = _date_candidates(value)
     if not candidates:
         return None
-    preceding = [x for x in candidates if x[1] <= rename_start]
+    preceding = [x for x in candidates if x[1] <= rename_anchor]
     if preceding:
-        return min(preceding, key=lambda x: rename_start - x[1])[2]
-    return min(candidates, key=lambda x: abs(x[0] - rename_start))[2]
+        return min(preceding, key=lambda x: rename_anchor - x[1])[2]
+    return min(candidates, key=lambda x: abs(x[0] - rename_anchor))[2]
 
 
 def _history_year_hint(http: Any, audit: Dict[str, Any], current_name: str) -> Optional[Dict[str, Any]]:
@@ -128,6 +121,10 @@ def requests_quote(value: str) -> str:
 
 def _clean_company_capture(value: str) -> str:
     value = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n,.;:'\"‘’“”")
+    # If prose contains an earlier locative particle (e.g. 임시주주총회에서), only the
+    # segment after the last such boundary can be the predecessor adjacent to OLD→NEW.
+    if "에서" in value:
+        value = value.rsplit("에서", 1)[-1].strip()
     tokens = value.split()
     if len(tokens) > 6:
         value = " ".join(tokens[-6:])
@@ -154,8 +151,10 @@ def parse_official_rename_text(text: str, current_name: str) -> Optional[Dict[st
             window_start = max(0, m.start() - 450)
             window_end = min(len(compact), m.end() + 250)
             window = compact[window_start:window_end]
-            local_rename_start = m.start() - window_start
-            date = _nearest_effective_date(window, local_rename_start)
+            # Anchor date selection at the successor token, not the regex start. The
+            # permissive predecessor capture may begin in surrounding prose.
+            local_anchor = m.start("new") - window_start
+            date = _nearest_effective_date(window, local_anchor)
             if not date:
                 continue
             return {"date": date, "predecessor": old, "successor": new}
