@@ -19,36 +19,49 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect KIND document selector contract
+      - name: Probe KIND docNo body resolver
         run: |
           python - <<'PY'
           import re
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_rename_chronology_recovery import _decode_response_text
+          from orchestrator.g0_rename_chronology_recovery import _decode_response_text, parse_official_name_chain
 
           http=base.Http()
           current='한화오션(주)'
-          referer='https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpMain'
-          for acpt in ('20230608000085','20230814001207'):
-              url='https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt
-              x=http.get(url,headers={'Referer':referer})
-              print('VIEWER',acpt,getattr(x,'status_code',None),x.url if x else None)
-              if not x or x.status_code >= 400:
-                  continue
-              raw=_decode_response_text(x,current)
-              soup=BeautifulSoup(raw,'html.parser')
-              for select_id in ('mainDoc','attachedDoc','oldDoc'):
-                  sel=soup.find('select',id=select_id)
-                  print('SELECT',acpt,select_id,dict(sel.attrs) if sel else None)
-                  if sel:
-                      for opt in sel.find_all('option'):
-                          print('OPTION',acpt,select_id,dict(opt.attrs),repr(' '.join(opt.stripped_strings)))
-              scripts='\n'.join((s.string or s.get_text() or '') for s in soup.find_all('script'))
-              for fname in ('search','fnChangeDoc','fnChangeAttach','fnChangeOldDoc'):
-                  pat=r'function\s+'+re.escape(fname)+r'\s*\([^)]*\)\s*\{.*?\n\}'
-                  for m in re.finditer(pat,scripts,re.I|re.S):
-                      print('FUNC',acpt,fname,repr(m.group(0)[:9000]))
-              for m in re.finditer(r'[^\n;]{0,800}(?:disclsviewer\.do|docViewFrm|docpathfrm|docNo)[^\n;]{0,2200}',scripts,re.I):
-                  print('SCRIPT_HIT',acpt,repr(m.group(0)[:3000]))
+          acpt='20230814001207'
+          wrapper='https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt
+          x=http.get(wrapper)
+          raw=_decode_response_text(x,current) if x else ''
+          soup=BeautifulSoup(raw,'html.parser')
+          scripts='\n'.join((s.string or s.get_text() or '') for s in soup.find_all('script'))
+
+          for needle in ('function search', 'docLocPath', 'docpathfrm', 'JLDDST60200_i2.jsp', 'ajaxSubmit'):
+              print('=== NEEDLE',needle,'===')
+              start=0
+              while True:
+                  idx=scripts.find(needle,start)
+                  if idx < 0: break
+                  print(repr(scripts[max(0,idx-1800):idx+5200]))
+                  start=idx+len(needle)
+
+          docno='20230814003763'
+          candidates=[
+              ('GET','https://kind.krx.co.kr/common/disclsviewer.do?method=search&docNo='+docno,{}),
+              ('GET','https://kind.krx.co.kr/common/disclsviewer.do?method=search&acptno='+acpt+'&docNo='+docno,{}),
+              ('POST','https://kind.krx.co.kr/common/disclsviewer.do',{'method':'search','acptNo':acpt,'docNo':docno}),
+              ('POST','https://kind.krx.co.kr/common/disclsviewer.do',{'method':'searchDoc','acptNo':acpt,'docNo':docno}),
+              ('POST','https://kind.krx.co.kr/common/disclsviewer.do',{'method':'searchDocPath','acptNo':acpt,'docNo':docno}),
+          ]
+          for method,url,data in candidates:
+              r=http.get(url,headers={'Referer':wrapper}) if method=='GET' else http.post(url,data=data,headers={'Referer':wrapper,'X-Requested-With':'XMLHttpRequest'})
+              print('TRY',method,url,data,'STATUS',getattr(r,'status_code',None),'FINAL',r.url if r else None)
+              if not r or r.status_code>=400: continue
+              fixed=_decode_response_text(r,current)
+              text=' '.join(BeautifulSoup(fixed,'html.parser').stripped_strings)
+              print('RESULT','LEN',len(text),'CURRENT','한화오션' in text,'OLD','대우조선해양' in text,'CHANGE','상호' in text,repr(text[:1600]))
+              chain=parse_official_name_chain(text,current)
+              print('CHAIN',chain)
+              for m in re.finditer(r'[^\n<>]{0,400}(?:docpath|docLocPath|external/[^\s\"\']+)[^\n<>]{0,700}',fixed,re.I):
+                  print('PATH_HIT',repr(m.group(0)[:1300]))
           PY
