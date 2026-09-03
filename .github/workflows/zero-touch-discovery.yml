@@ -19,6 +19,7 @@ on:
       - 'orchestrator/g0_official_site_recovery.py'
       - 'orchestrator/g0_public_disclosure_enrichment.py'
       - 'orchestrator/g0_report_enrichment.py'
+      - 'orchestrator/g0_scripted_report_enrichment.py'
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_zero_touch_discovery.py'
       - 'tests/test_dart_public_resolver.py'
@@ -26,6 +27,7 @@ on:
       - 'tests/test_g0_live_adapters.py'
       - 'tests/test_g0_public_disclosure_enrichment.py'
       - 'tests/test_g0_report_enrichment.py'
+      - 'tests/test_g0_scripted_report_enrichment.py'
       - '.github/workflows/zero-touch-discovery.yml'
 
 permissions:
@@ -51,13 +53,14 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_report_enrichment.py orchestrator/zero_touch_runner.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_report_enrichment.py orchestrator/g0_scripted_report_enrichment.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_zero_touch_discovery -v
           python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_evidence_enrichment -v
           python -m unittest tests.test_g0_live_adapters -v
           python -m unittest tests.test_g0_public_disclosure_enrichment -v
           python -m unittest tests.test_g0_report_enrichment -v
+          python -m unittest tests.test_g0_scripted_report_enrichment -v
           python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs tests.test_request_builder tests.test_rename_continuity_contract -v
 
       - name: Determine whether live Discovery was requested
