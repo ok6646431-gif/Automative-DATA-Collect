@@ -19,49 +19,36 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect DART report navigation and KRX encoding
+      - name: Verify current chronology decoder on live KRX and DART
         run: |
           python - <<'PY'
-          import json,re
+          import json
           from bs4 import BeautifulSoup
           from orchestrator import zero_touch_discovery as base
-          from orchestrator.g0_public_disclosure_enrichment import parse_official_rename_text,parse_official_rename_chronology
-          from orchestrator.g0_rename_chronology_recovery import parse_official_name_chain
+          from orchestrator.g0_rename_chronology_recovery import (
+              _decode_response_text, _follow_dart_report_links, parse_official_name_chain,
+          )
 
           http=base.Http()
+          current='한화오션(주)'
           krx='https://kind.krx.co.kr/external/2023/08/23/000283/20230823000965/10001.htm'
           kr=http.get(krx)
           print('KRX_ENCODING',getattr(kr,'encoding',None),getattr(kr,'apparent_encoding',None),kr.headers.get('content-type') if kr else None)
           if kr and kr.status_code < 400:
-              original=kr.text
-              print('ORIGINAL_HAS_CURRENT','한화오션' in original,'MOJIBAKE',original.count('ì'),original.count('ë'))
-              if kr.apparent_encoding:
-                  kr.encoding=kr.apparent_encoding
-              fixed=kr.text
-              kt=' '.join(BeautifulSoup(fixed,'html.parser').stripped_strings)
-              print('FIXED_HAS_CURRENT','한화오션' in kt,'HAS_OLD','대우조선해양' in kt,'LEN',len(kt))
-              print('FIXED_CHAIN',json.dumps(parse_official_name_chain(kt,'한화오션(주)'),ensure_ascii=False))
-              print('LEGACY_CHRONO',json.dumps(parse_official_rename_chronology(kt,'한화오션(주)'),ensure_ascii=False))
-              for needle in ('2002.03.16','2023.05.23','대우조선해양(주)으로 상호 변경','한화오션(주)로 상호 변경'):
-                  pos=kt.find(needle)
-                  print('FIXED_NEEDLE',needle,pos,repr(kt[max(0,pos-200):pos+450] if pos>=0 else ''))
+              decoded=_decode_response_text(kr,current)
+              text=' '.join(BeautifulSoup(decoded,'html.parser').stripped_strings)
+              print('KRX_DECODED', '한화오션' in text, '대우조선해양' in text, len(text))
+              print('KRX_CHAIN',json.dumps(parse_official_name_chain(text,current),ensure_ascii=False))
 
           for code in ('A001','A002','A003'):
               url=f'https://dart.fss.or.kr/navi/searchNavi.do?naviCode={code}&naviCrpCik=00111704&naviCrpNm=%ED%95%9C%ED%99%94%EC%98%A4%EC%85%98'
               r=http.get(url)
-              print('DART_NAVI',code,getattr(r,'status_code',None),r.url if r else None,getattr(r,'encoding',None),getattr(r,'apparent_encoding',None))
+              print('DART_NAVI',code,getattr(r,'status_code',None),r.url if r else None)
               if not r or r.status_code>=400:
                   continue
-              if r.apparent_encoding:
-                  r.encoding=r.apparent_encoding
-              soup=BeautifulSoup(r.text,'html.parser')
-              text=' '.join(soup.stripped_strings)
-              print('DART_TEXT',code,len(text),repr(text[:1200]))
-              shown=0
-              for tag in soup.find_all(['a','button','tr','td']):
-                  blob=' '.join(tag.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
-                  if any(x in blob for x in ('사업보고서','rcpNo','rcpno','2023','2024','2025')):
-                      print('DART_LINK',code,repr(blob[:1200]))
-                      shown+=1
-                      if shown>=20: break
+              decoded=_decode_response_text(r,current)
+              text=' '.join(BeautifulSoup(decoded,'html.parser').stripped_strings)
+              links=_follow_dart_report_links(r.url,decoded)
+              print('DART_TEXT',code,len(text),'HAS_CURRENT','한화오션' in text,'LINK_COUNT',len(links))
+              for link in links[:15]: print('DART_REPORT_LINK',code,link)
           PY
