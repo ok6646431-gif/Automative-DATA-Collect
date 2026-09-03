@@ -7,9 +7,18 @@
 | 기업 | 대표 검증 유형 | 현재 역할 |
 |---|---|---|
 | HD현대삼호 | 동일 법인 사명변경, 행정구역 명칭 변경, company-wide raw와 main-yard scope 분리 | rename/address/scope 기본 회귀 기준 |
-| 한화오션 | 대우조선해양 시절 과거자료, stale DART URL, ESG 별도 host, JS PDF, 브로슈어 오분류, 영문 DART 주소↔한글 공공DB 주소, 관계사 한화오션에코텍 | 복합 zero-touch 회귀 기준 |
+| 한화오션 | 대우조선해양 시절 과거자료, stale DART URL, ESG 별도 host, JS PDF, 브로슈어 오분류, 영문 DART 주소↔한글 공공DB 주소, 관계사 한화오션에코텍 | G0 → collection → requested scope → Human Archive → application package 복합 E2E 회귀 기준 |
 | 금호석유화학 | 상대적으로 안정적인 downstream packaging | 정상경로 baseline |
 | POSCO | 기존 package/application pipeline 교차검증 | downstream baseline |
+
+한화오션 고정 baseline:
+- requested-scope/Human Archive 재조립 run `33726982925`: COMPLETE
+- source IDs: ENV-INFO `00000000000000185726`, PRTR `414`, CHEM_STATS `ACW978N`
+- scope 적용 분석 10행, off-scope 0행
+- 한화오션에코텍은 raw audit layer에만 보존되고 실제 user-facing 자료 hit 0건
+- application package run `33727949676`: PASS
+- application ZIP SHA256 `51c6b7a5488c774fcd454d957c74156faa1483326eda8d23bff2c36aec3352ed`
+- application artifact ID `9882695103`
 
 ## Tier 2 — 다음 capability 확장 기업
 
@@ -92,4 +101,4 @@
 | 새 기업당 generic production code 변경 수 | 감소 |
 | company-specific production exception 수 | 항상 0 |
 
-다음 권장 순서: **한화오션 최종 고정 → LG에너지솔루션 → 삼성전자 DS → 한화에어로스페이스 → SK하이닉스**.
+다음 권장 순서: **LG에너지솔루션 → 삼성전자 DS → 한화에어로스페이스 → SK하이닉스**.
