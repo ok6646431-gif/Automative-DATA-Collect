@@ -11,41 +11,36 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install diagnostic dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Fetch and inspect report page
+      - name: Verify data-attribute report recovery against live page
         run: |
           python - <<'PY'
-          import re, requests
-          from bs4 import BeautifulSoup
+          import json
+          from orchestrator import zero_touch_discovery as base
+          from orchestrator.g0_data_attr_report_recovery import (
+              candidates_from_data_attr_page,
+              extract_data_controls,
+          )
           url='https://www.kumhotire.com/ko/ESG/Materials/Report/'
-          r=requests.get(url,timeout=(6,20),headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko,en;q=0.8'})
-          print('STATUS',r.status_code,'FINAL',r.url,'CTYPE',r.headers.get('content-type'))
-          text=r.text
-          print('HTML_LEN',len(text))
-          for needle in ['2026 지속가능경영보고서','국문 PDF 다운로드','영문 PDF 다운로드','fileViewer','download','pdf']:
-              print('\n=== NEEDLE',needle,'===')
-              for m in list(re.finditer(re.escape(needle),text,re.I))[:8]:
-                  print(text[max(0,m.start()-900):min(len(text),m.end()+1400)].replace('\n',' ')[:2600])
-          soup=BeautifulSoup(text,'html.parser')
-          print('\n=== TAGS WITH PDF/DOWNLOAD TEXT OR ATTR ===')
-          shown=0
-          for tag in soup.find_all(True):
-              blob=(' '.join(tag.stripped_strings)+' '+str(tag.attrs)).casefold()
-              if 'pdf' in blob or '다운로드' in blob or 'download' in blob:
-                  print(str(tag)[:3000].replace('\n',' '))
-                  shown+=1
-                  if shown>=30: break
-          print('\n=== SCRIPT SRCS ===')
-          for s in soup.find_all('script',src=True): print(s.get('src'))
-          print('\n=== INLINE SCRIPT MATCHES ===')
-          for s in soup.find_all('script'):
-              if s.get('src'): continue
-              body=s.string or s.get_text() or ''
-              if re.search(r'pdf|download|fileViewer|report',body,re.I):
-                  print(body[:6000])
+          http=base.Http()
+          r=http.get(url)
+          if not r or r.status_code >= 400:
+              raise SystemExit('report page fetch failed')
+          controls=extract_data_controls(r.text,2020,2026)
+          found,diagnostics=candidates_from_data_attr_page(http,r.url,r.text,2020,2026)
+          print('CONTROL_YEARS',sorted({x['year'] for x in controls}))
+          print('FOUND_YEARS',sorted({x['year'] for x in found}))
+          print('FOUND')
+          print(json.dumps(found,ensure_ascii=False,indent=2))
+          print('DIAGNOSTICS')
+          print(json.dumps(diagnostics,ensure_ascii=False,indent=2)[:30000])
+          expected={2020,2022,2023,2024,2025,2026}
+          actual={int(x['year']) for x in found}
+          if actual != expected:
+              raise SystemExit(f'expected {sorted(expected)} but recovered {sorted(actual)}')
           PY
-          # one-shot diagnostics only; remove this workflow after the fix is verified
