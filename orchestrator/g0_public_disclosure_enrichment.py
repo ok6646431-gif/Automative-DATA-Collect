@@ -121,43 +121,59 @@ def requests_quote(value: str) -> str:
 
 def _clean_company_capture(value: str) -> str:
     value = re.sub(r"\s+", " ", str(value or "")).strip(" \t\r\n,.;:'\"‘’“”")
-    # If prose contains an earlier locative particle (e.g. 임시주주총회에서), only the
-    # segment after the last such boundary can be the predecessor adjacent to OLD→NEW.
     if "에서" in value:
         value = value.rsplit("에서", 1)[-1].strip()
+    # Remove sentence/date lead-in that can remain before the immediate predecessor.
+    for sep in ("되었습니다.", "됐습니다.", ".", ";", ":"):
+        if sep in value:
+            value = value.rsplit(sep, 1)[-1].strip()
+    value = re.sub(r"^(?:20\d{2}년\s*\d{1,2}월\s*\d{1,2}일\s*)", "", value).strip()
     tokens = value.split()
     if len(tokens) > 6:
         value = " ".join(tokens[-6:])
     return value
 
 
+def _successor_variants(current_name: str) -> List[str]:
+    values = [str(current_name or "").strip(), _strip_suffix(current_name)]
+    raw = str(current_name or "").strip()
+    if raw.endswith("주식회사"):
+        values.append(raw[: -len("주식회사")].strip() + "(주)")
+    if raw.endswith("(주)"):
+        values.append(raw[:-3].strip())
+    return _dedupe(values)
+
+
 def parse_official_rename_text(text: str, current_name: str) -> Optional[Dict[str, str]]:
-    """Parse an explicit OLD -> NEW rename statement from official disclosure text."""
+    """Parse an explicit OLD -> verified-current-name rename statement."""
     compact = re.sub(r"\s+", " ", str(text or ""))
     current_norm = base.normalize_name(current_name)
-    patterns = (
-        r"(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{2,80}?)\s*에서\s*(?P<new>[가-힣A-Za-z0-9&.·㈜()\- ]{2,80}?)\s*로\s*상호(?:가|를)?\s*변경",
-        r"상호를\s*(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{2,80}?)\s*에서\s*(?P<new>[가-힣A-Za-z0-9&.·㈜()\- ]{2,80}?)\s*(?:으로|로)\s*변경",
-    )
-    for pattern in patterns:
-        for m in re.finditer(pattern, compact, re.I):
-            old = _clean_company_capture(m.group("old"))
-            new = _clean_company_capture(m.group("new"))
-            if not old or not new or base.normalize_name(old) == current_norm:
-                continue
-            new_norm = base.normalize_name(new)
-            if not new_norm or not (current_norm in new_norm or new_norm in current_norm):
-                continue
-            window_start = max(0, m.start() - 450)
-            window_end = min(len(compact), m.end() + 250)
-            window = compact[window_start:window_end]
-            # Anchor date selection at the successor token, not the regex start. The
-            # permissive predecessor capture may begin in surrounding prose.
-            local_anchor = m.start("new") - window_start
-            date = _nearest_effective_date(window, local_anchor)
-            if not date:
-                continue
-            return {"date": date, "predecessor": old, "successor": new}
+    for successor in sorted(_successor_variants(current_name), key=len, reverse=True):
+        if not successor:
+            continue
+        successor_re = re.escape(successor)
+        patterns = (
+            rf"(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{{2,120}}?)\s*에서\s*(?P<new>{successor_re})\s*(?:으로|로)\s*(?:상호(?:가|를)?|사명(?:이|을)?)\s*변경",
+            rf"(?:상호|사명)(?:를|을)?\s*(?P<old>[가-힣A-Za-z0-9&.·㈜()\- ]{{2,120}}?)\s*에서\s*(?P<new>{successor_re})\s*(?:으로|로)\s*변경",
+        )
+        for pattern in patterns:
+            for m in re.finditer(pattern, compact, re.I):
+                old = _clean_company_capture(m.group("old"))
+                new = m.group("new").strip()
+                if not old or base.normalize_name(old) == current_norm:
+                    continue
+                if base.normalize_name(new) != current_norm and not (
+                    base.normalize_name(new) in current_norm or current_norm in base.normalize_name(new)
+                ):
+                    continue
+                window_start = max(0, m.start() - 450)
+                window_end = min(len(compact), m.end() + 250)
+                window = compact[window_start:window_end]
+                local_anchor = m.start("new") - window_start
+                date = _nearest_effective_date(window, local_anchor)
+                if not date:
+                    continue
+                return {"date": date, "predecessor": old, "successor": new}
     return None
 
 
