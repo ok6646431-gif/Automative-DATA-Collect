@@ -9,6 +9,7 @@ No company/domain pairs are hard-coded here.
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 from urllib.parse import parse_qs, unquote, urljoin, urlparse
@@ -97,20 +98,63 @@ def _origin_variants(url: str) -> List[str]:
     return out
 
 
+def _clean_search_candidate(value: str) -> str:
+    """Normalize a search-result URL candidate without trusting the search engine."""
+    raw = html_lib.unescape(unquote(str(value or "").strip())).replace("\\/", "/")
+    raw = raw.strip(" \t\r\n\"'()[]{}<>,.;")
+    if raw.startswith("//"):
+        raw = "https:" + raw
+    elif raw.casefold().startswith("www."):
+        raw = "https://" + raw
+    if not raw.startswith(("http://", "https://")):
+        return ""
+    # Fragments do not affect corporate-host verification and create duplicates.
+    return raw.split("#", 1)[0]
+
+
 def _search_result_links(search_url: str, html: str) -> List[str]:
-    soup = BeautifulSoup(html or "", "html.parser")
+    """Extract candidate destinations from heterogeneous search-result markup.
+
+    Direct anchors remain preferred. Modern search engines also place the displayed
+    destination in cite elements, data attributes, JSON/script blobs, or plain result
+    text while the clickable href points to a tracking endpoint. Those embedded URLs
+    are only *locators*: every replacement host still has to pass the independent
+    first-party corporate-site verification in ``_corporate_self_identifies``.
+    """
+    source = html or ""
+    soup = BeautifulSoup(source, "html.parser")
     out: List[str] = []
+
+    def add(value: str) -> None:
+        candidate = _clean_search_candidate(value)
+        if candidate and not _blocked(candidate):
+            out.append(candidate)
+
     for a in soup.find_all("a", href=True):
         href = str(a.get("href") or "").strip()
         if href.startswith("/url?"):
             href = parse_qs(urlparse(href).query).get("q", [""])[0]
         elif "duckduckgo.com/l/" in href:
             href = parse_qs(urlparse(href).query).get("uddg", [""])[0]
-        if href.startswith("//"):
-            href = "https:" + href
-        href = unquote(href)
-        if href.startswith("http") and not _blocked(href):
-            out.append(href.split("#")[0])
+        add(href)
+
+    # Search engines frequently expose the destination outside href attributes.
+    for tag in soup.find_all(True):
+        for attr in ("data-url", "data-href", "data-target", "data-destination"):
+            if tag.has_attr(attr):
+                add(str(tag.get(attr) or ""))
+    for cite in soup.find_all("cite"):
+        add(cite.get_text(" ", strip=True))
+
+    # Last-resort locator extraction from visible text / serialized result metadata.
+    # Include bare www.* hosts because result pages often display those without scheme.
+    decoded = html_lib.unescape(source).replace("\\/", "/")
+    haystacks = (soup.get_text(" ", strip=True), decoded)
+    pattern = re.compile(r"(?i)(?:https?://|www\.)[^\s<>\"'\\]+")
+    for haystack in haystacks:
+        for match in pattern.findall(haystack):
+            add(match)
+
     return _dedupe(out)
 
 
