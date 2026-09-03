@@ -17,11 +17,15 @@ on:
       - 'orchestrator/g0_evidence_enrichment.py'
       - 'orchestrator/g0_live_adapters.py'
       - 'orchestrator/g0_official_site_recovery.py'
+      - 'orchestrator/g0_public_disclosure_enrichment.py'
+      - 'orchestrator/g0_report_enrichment.py'
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_zero_touch_discovery.py'
       - 'tests/test_dart_public_resolver.py'
       - 'tests/test_g0_evidence_enrichment.py'
       - 'tests/test_g0_live_adapters.py'
+      - 'tests/test_g0_public_disclosure_enrichment.py'
+      - 'tests/test_g0_report_enrichment.py'
       - '.github/workflows/zero-touch-discovery.yml'
 
 permissions:
@@ -47,11 +51,13 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/zero_touch_runner.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_report_enrichment.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_zero_touch_discovery -v
           python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_evidence_enrichment -v
           python -m unittest tests.test_g0_live_adapters -v
+          python -m unittest tests.test_g0_public_disclosure_enrichment -v
+          python -m unittest tests.test_g0_report_enrichment -v
           python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs tests.test_request_builder tests.test_rename_continuity_contract -v
 
       - name: Determine whether live Discovery was requested
@@ -177,10 +183,6 @@ jobs:
           cp generated-discovery/document_evidence.json "$promo_dir/document_evidence.json"
           cp generated-discovery/event_evidence.json "$promo_dir/event_evidence.json"
 
-          # The live crawl can take several minutes. Unrelated commits may advance the
-          # control-plane branch during that time. Re-anchor to the latest remote tip,
-          # then apply only the verified generated inputs, so promotion never fails
-          # merely because the checkout became stale.
           git fetch origin "${GITHUB_REF_NAME}"
           git reset --hard "origin/${GITHUB_REF_NAME}"
           mkdir -p requests
