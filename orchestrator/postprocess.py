@@ -37,7 +37,7 @@ def _admin_units(value):
     text = re.sub(r"\s+", " ", str(value or "")).strip()
     if not text:
         return set()
-    # Deliberately ignore top-level province/metropolitan labels.  A bridge needs at
+    # Deliberately ignore top-level province/metropolitan labels. A bridge needs at
     # least two shared lower units such as 평택시+포승읍 or 곡성군+입면.
     return set(re.findall(r"[0-9A-Za-z가-힣]+(?:시|군|구|읍|면)", text))
 
@@ -72,17 +72,19 @@ def _unique_official_site_by_name(profile, site_rows):
 
 
 def resolve_identity(candidates, profile):
-    base_result = _BASE_RESOLVE_IDENTITY(candidates, profile)
-    company_id, site_rows, id_rows, validations = base_result
+    company_id, site_rows, id_rows, validations = _BASE_RESOLVE_IDENTITY(candidates, profile)
 
     official = _unique_official_site_by_name(profile, site_rows)
-    corroborated = defaultdict(set)
+    # Independent corroboration is site-level, not label-level. Some public sources
+    # expose only the legal company name while their exact official road address has
+    # already anchored them to one verified canonical site. That is still independent
+    # physical-site evidence. Co-located ambiguous official addresses remain protected
+    # by the preserved core because they are not exact-address auto-confirmed.
+    corroborated_by_site = defaultdict(set)
     for row in id_rows:
         if row.get("match_status") != "CONFIRMED" or not row.get("canonical_site_id"):
             continue
-        key = _core.normalize_name(row.get("source_site_name_raw"), profile)
-        if key:
-            corroborated[(row.get("canonical_site_id"), key)].add(row.get("source_key"))
+        corroborated_by_site[row.get("canonical_site_id")].add(row.get("source_key"))
 
     bridged_keys = set()
     bridged_candidate_ids = set()
@@ -94,7 +96,7 @@ def resolve_identity(candidates, profile):
             continue
         official_candidate, canonical_row = official[key]
         canonical_id = canonical_row.get("canonical_site_id")
-        other_sources = corroborated.get((canonical_id, key), set()) - {row.get("source_key")}
+        other_sources = corroborated_by_site.get(canonical_id, set()) - {row.get("source_key")}
         if not other_sources:
             continue
         shared = _admin_units(row.get("source_address_raw")) & _admin_units(official_candidate.get("address_raw"))
