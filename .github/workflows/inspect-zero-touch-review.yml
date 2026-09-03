@@ -1,4 +1,4 @@
-name: Inspect Hanwha Ocean G0 second pass
+name: Inspect Hanwha Ocean G0 locator audit
 
 on:
   push:
@@ -22,27 +22,18 @@ jobs:
         run: |
           mkdir -p inspect/g0
           gh run download 33707196612 -n zero-touch-discovery-33707196612 -D inspect/g0
-      - name: Print decisive G0 fields
+      - name: Print KRX and report-search attempts
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          root=Path('inspect/g0')
-          d=json.loads((root/'company_discovery.json').read_text(encoding='utf-8'))
-          docs=json.loads((root/'document_evidence.json').read_text(encoding='utf-8'))
-          audit=json.loads((root/'Discovery_Audit.json').read_text(encoding='utf-8'))
-          print('GATE',audit.get('gate_status'))
-          print('UNRESOLVED',json.dumps(d.get('unresolved_items') or [],ensure_ascii=False,indent=2))
-          print('CURRENT',d.get('current_legal_name'),d.get('current_legal_name_active_period'))
-          print('ENTITY_PERIOD',d.get('legal_entity_active_period'))
-          print('HISTORICAL',json.dumps(d.get('historical_legal_names') or [],ensure_ascii=False,indent=2))
-          print('RESTRUCTURING',json.dumps(d.get('corporate_restructuring_evidence') or [],ensure_ascii=False,indent=2))
-          print('RENAME_STAGE',json.dumps((audit.get('stages') or {}).get('public_disclosure_rename') or {},ensure_ascii=False,indent=2))
-          print('SCOPE',json.dumps(d.get('requested_scope') or {},ensure_ascii=False,indent=2))
-          print('SITES',json.dumps(d.get('domestic_site_candidates') or [],ensure_ascii=False,indent=2))
-          print('DOC_STATUS',docs.get('discovery_status'))
-          for x in sorted(docs.get('documents') or [],key=lambda z:(str(z.get('document_type')),int(z.get('report_year') or 0))):
-              print('DOC',json.dumps({k:x.get(k) for k in ('document_id','document_type','title','report_year','source_url','source_locator','expected_extension','verification_status')},ensure_ascii=False))
-          print('GAPS',json.dumps(docs.get('gaps') or [],ensure_ascii=False,indent=2))
-          print('STRICT_STAGE',json.dumps((audit.get('stages') or {}).get('strict_report_enrichment') or {},ensure_ascii=False,indent=2))
+          audit=json.loads(Path('inspect/g0/Discovery_Audit.json').read_text(encoding='utf-8'))
+          attempts=audit.get('http_attempts') or []
+          print('TOTAL_ATTEMPTS',len(attempts))
+          for x in attempts:
+              url=str(x.get('url') or x.get('final_url') or '')
+              final=str(x.get('final_url') or '')
+              joined=(url+' '+final).lower()
+              if any(k in joined for k in ('kind.krx.co.kr','google.com/search','bing.com/search','duckduckgo.com','esg.hanwhaocean.com')):
+                  print(json.dumps(x,ensure_ascii=False))
           PY
