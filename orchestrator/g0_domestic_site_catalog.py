@@ -5,12 +5,19 @@ Environmental collection must not collapse a multi-plant company to one arbitrar
 facilities. This adapter promotes the complete listed set only when one first-party page
 clearly identifies itself as a domestic-site catalog and contains at least two distinct
 operational-site addresses.
+
+Structured DOM pairs are preferred over flattened-text inference. Corporate site pages
+commonly publish repeated facility cards such as ``name`` + ``addr`` or equivalent
+class/data attributes. When those pairs are available, use the exact first-party label
+and address from the same card. Flattened text remains only as a conservative fallback.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+from bs4 import BeautifulSoup
 
 from orchestrator import g0_live_adapters as live
 from orchestrator import zero_touch_discovery as base
@@ -25,10 +32,115 @@ SITE_NAME_RE = re.compile(
     re.I,
 )
 OPERATIONAL_SUFFIXES = ("공장", "연구소", "사업장", "센터", "사무소", "본사")
+NAME_CLASS_HINTS = ("name", "title", "site-name", "site_name", "branch-name", "plant-name", "factory-name")
+ADDRESS_CLASS_HINTS = ("addr", "address", "site-addr", "site_addr", "site-address", "location-address")
 
 
 def _compact(value: str) -> str:
     return re.sub(r"[^0-9가-힣]+", "", str(value or ""))
+
+
+def _class_tokens(tag: Any) -> List[str]:
+    attrs = getattr(tag, "attrs", {}) or {}
+    raw = attrs.get("class") or []
+    if isinstance(raw, str):
+        raw = raw.split()
+    return [str(x).casefold() for x in raw]
+
+
+def _class_matches(tag: Any, hints: Sequence[str]) -> bool:
+    tokens = _class_tokens(tag)
+    for token in tokens:
+        if token in hints:
+            return True
+        if any(hint in token for hint in hints if len(hint) >= 4):
+            return True
+    return False
+
+
+def _operational_name(value: str, company: str) -> str:
+    name = re.sub(r"\s+", " ", str(value or "")).strip(" -:：|")
+    if not name or not any(name.endswith(suffix) for suffix in OPERATIONAL_SUFFIXES):
+        return ""
+    company_norm = base.normalize_name(company)
+    name_norm = base.normalize_name(name)
+    # An explicit domestic-site catalog can use a brand rather than the legal suffix,
+    # but it should still identify the requested company when a company name is present.
+    if company_norm and name_norm and company_norm not in name_norm and name_norm not in company_norm:
+        return ""
+    return name
+
+
+def _validated_address(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    match = live.FLEX_ROAD_ADDRESS_RE.search(text)
+    if not match:
+        return ""
+    return re.sub(r"\s+", " ", match.group(1)).strip()
+
+
+def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
+    """Extract exact facility-name/address pairs from repeated first-party DOM cards."""
+    html = str(page.html or "")
+    if not html.strip():
+        return {}
+    soup = BeautifulSoup(html, "html.parser")
+    found: Dict[str, Dict[str, Any]] = {}
+
+    address_tags = [tag for tag in soup.find_all(True) if _class_matches(tag, ADDRESS_CLASS_HINTS)]
+    for address_tag in address_tags:
+        address = _validated_address(" ".join(address_tag.stripped_strings))
+        if not address:
+            continue
+
+        # Stay inside the nearest repeated card/list item. This prevents a page-level
+        # heading from being paired with a different facility's address.
+        container = address_tag
+        chosen_container = None
+        for _ in range(6):
+            container = getattr(container, "parent", None)
+            if container is None:
+                break
+            if getattr(container, "name", "") in {"li", "article"}:
+                chosen_container = container
+                break
+            classes = _class_tokens(container)
+            if any(any(hint in token for hint in ("branch", "site", "plant", "factory", "location", "card", "item")) for token in classes):
+                chosen_container = container
+                break
+        if chosen_container is None:
+            chosen_container = getattr(address_tag, "parent", None)
+        if chosen_container is None:
+            continue
+
+        name_candidates: List[str] = []
+        for tag in chosen_container.find_all(True):
+            if _class_matches(tag, NAME_CLASS_HINTS):
+                value = " ".join(tag.stripped_strings).strip()
+                if value:
+                    name_candidates.append(value)
+            data_title = str((getattr(tag, "attrs", {}) or {}).get("data-title") or "").strip()
+            if data_title:
+                name_candidates.append(data_title)
+
+        name = ""
+        for candidate in name_candidates:
+            name = _operational_name(candidate, company)
+            if name:
+                break
+        if not name:
+            continue
+
+        key = _compact(address)
+        if not key:
+            continue
+        found.setdefault(key, {
+            "name": name,
+            "address": address,
+            "source_locator": page.url,
+            "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR",
+        })
+    return found
 
 
 def _site_name(text: str, address_start: int, company: str) -> str:
@@ -36,19 +148,37 @@ def _site_name(text: str, address_start: int, company: str) -> str:
     match = SITE_NAME_RE.search(before)
     if match:
         name = re.sub(r"\s+", " ", match.group(1)).strip(" -:：|")
-        # Keep the nearest facility phrase, stripping unrelated preceding prose.
         pieces = re.split(r"[|•·\n\r\t]", name)
         name = pieces[-1].strip() if pieces else name
-        # If a long sentence slipped into the regex, keep from the last company token.
         company_token = re.sub(r"\s+", "", company)
         compact_name = re.sub(r"\s+", "", name)
         idx = compact_name.rfind(company_token)
         if idx > 0:
-            # Fall back to a suffix-only label when whitespace reconstruction is unsafe.
             suffix = next((s for s in OPERATIONAL_SUFFIXES if compact_name.endswith(s)), "사업장")
             return f"{company} {suffix}"
         return name
     return f"{company} 사업장"
+
+
+def _flattened_text_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
+    text = str(page.text or "")
+    found: Dict[str, Dict[str, Any]] = {}
+    for match in live.FLEX_ROAD_ADDRESS_RE.finditer(text):
+        address = re.sub(r"\s+", " ", match.group(1)).strip()
+        context = text[max(0, match.start() - 220): min(len(text), match.end() + 80)]
+        if not any(term in context for term in OPERATIONAL_SUFFIXES):
+            continue
+        key = _compact(address)
+        if not key:
+            continue
+        name = _site_name(text, match.start(), company)
+        found.setdefault(key, {
+            "name": name,
+            "address": address,
+            "source_locator": page.url,
+            "extraction_contract": "FLATTENED_TEXT_FALLBACK",
+        })
+    return found
 
 
 def discover(
@@ -61,21 +191,9 @@ def discover(
         if not any(word.casefold() in folded for word in CATALOG_WORDS):
             continue
 
-        found: Dict[str, Dict[str, Any]] = {}
-        for match in live.FLEX_ROAD_ADDRESS_RE.finditer(text):
-            address = re.sub(r"\s+", " ", match.group(1)).strip()
-            context = text[max(0, match.start() - 220): min(len(text), match.end() + 80)]
-            if not any(term in context for term in OPERATIONAL_SUFFIXES):
-                continue
-            key = _compact(address)
-            if not key:
-                continue
-            name = _site_name(text, match.start(), company)
-            found.setdefault(key, {
-                "name": name,
-                "address": address,
-                "source_locator": page.url,
-            })
+        found = _structured_dom_sites(company, page)
+        if len(found) < 2:
+            found = _flattened_text_sites(company, page)
 
         # A dedicated catalog with only one address is not enough evidence that the
         # complete multi-site set was enumerated. Leave the normal resolver in control.
@@ -96,6 +214,7 @@ def discover(
                 "discovery_evidence": {
                     "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
                     "catalog_page": item["source_locator"],
+                    "extraction_contract": item.get("extraction_contract"),
                 },
             })
         scope = {
