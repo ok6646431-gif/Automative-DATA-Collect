@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 
 from orchestrator import g0_kind_disclosure_recovery as kind
+from orchestrator.company_profile_builder import compile_discovery
+from orchestrator.request_builder import build
 
 
 class FakeHttp:
@@ -116,6 +118,61 @@ class TestKindDisclosureRecovery(unittest.TestCase):
         self.assertEqual(discovery["historical_legal_names"][0]["name"], "대우조선해양(주)")
         self.assertEqual(discovery["historical_legal_names"][0]["active_period"], {"start_year": 2020, "end_year": 2023})
         self.assertEqual(discovery["company_aliases"][0]["active_period"], {"start_year": 2023})
+
+    def test_compiled_collection_terms_respect_rename_boundary(self):
+        from orchestrator.g0_public_disclosure_enrichment import apply_rename
+
+        discovery = {
+            "schema_version": "1.0",
+            "request_id": "rename-boundary-regression",
+            "requested_company_name": "한화오션",
+            "current_legal_name": "한화오션(주)",
+            "current_legal_name_active_period": {"start_year": 2000},
+            "company_verification_state": "VERIFIED",
+            "confidence": "HIGH",
+            "requested_scope": {"mode": "SITE_SET", "label": "한화오션 주요 사업장", "candidate_ids": ["site-a"]},
+            "company_aliases": [
+                {"name": "한화오션", "alias_type": "requested_name", "verification_state": "VERIFIED"},
+                {"name": "Hanwha Ocean Co., Ltd.", "alias_type": "english_legal_name", "verification_state": "VERIFIED"},
+            ],
+            "historical_legal_names": [],
+            "corporate_restructuring_evidence": [],
+            "domestic_site_candidates": [{
+                "candidate_id": "site-a", "site_name_raw": "한화오션 거제사업장",
+                "address_raw": "경상남도 거제시 거제대로 3370",
+                "identity_status": "CONFIRMED", "verification_state": "VERIFIED",
+            }],
+            "identity_evidence": [], "related_entity_exclusions": [], "unresolved_items": [], "event_evidence_references": [],
+            "collection_policy": {
+                "minimum_history_years": 5,
+                "requested_history_window": {"start_year": 2020, "end_year": 2026},
+                "sources": {
+                    "ENVINFO": {"requested_window": {"start_year": 2020, "end_year": 2024}, "prefer_full_history": False},
+                    "PRTR": {"requested_window": {"start_year": 2020, "end_year": 2024}, "prefer_full_history": False},
+                    "CHEM_STATS": {"available_survey_rounds": [2020, 2022, 2024], "requested_survey_rounds": [2020, 2022, 2024], "prefer_full_history": True},
+                    "CLEANSYS_AIR": {"requested_window": {"start_year": 2020, "end_year": 2025}, "prefer_full_history": False},
+                    "SOOSIRO_WATER": {"requested_window": {"start_year": 2020, "end_year": 2025}, "daily_available_years": [2024], "prefer_full_history": False},
+                },
+            },
+        }
+        apply_rename(discovery, {"stages": {}}, {
+            "date": "2023-05-23", "predecessor": "대우조선해양(주)", "successor": "한화오션(주)",
+            "source_locator": "https://kind.krx.co.kr/external/2023/08/14/report.htm",
+        })
+        profile, summary = compile_discovery(discovery)
+        self.assertEqual(summary["review_required_count"], 0)
+        request = build(profile)
+        terms = request["sources"]["ENVINFO"]["search_terms_by_year"]
+        for year in (2020, 2021, 2022):
+            values = terms[str(year)] if str(year) in terms else terms[year]
+            self.assertTrue(any("대우조선해양" in value for value in values))
+            self.assertFalse(any("한화오션" in value for value in values))
+        transition = terms["2023"] if "2023" in terms else terms[2023]
+        self.assertTrue(any("대우조선해양" in value for value in transition))
+        self.assertTrue(any("한화오션" in value for value in transition))
+        current = terms["2024"] if "2024" in terms else terms[2024]
+        self.assertTrue(any("한화오션" in value for value in current))
+        self.assertFalse(any("대우조선해양" in value for value in current))
 
 
 if __name__ == "__main__":
