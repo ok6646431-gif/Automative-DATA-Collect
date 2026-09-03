@@ -19,6 +19,7 @@ from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
 from orchestrator import g0_public_disclosure_enrichment
 from orchestrator import g0_report_enrichment
+from orchestrator import g0_scripted_report_enrichment
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
@@ -43,6 +44,11 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     # generic downloadable PDFs cannot satisfy an annual series; a directly linked
     # same-organization ESG/report host may be crawled only for document evidence.
     documents = g0_report_enrichment.enrich(discovery, documents, audit)
+
+    # Some verified corporate report libraries expose no PDF href and instead use an
+    # opaque JavaScript token.  Recover those only after reading the same-host script
+    # contract and verifying actual PDF bytes from the derived direct endpoint.
+    documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
     g0_report_enrichment.refresh_document_unresolved(discovery, documents, audit)
 
     # Make stale-DART-website recovery explicit in the audit. Search engines, when
