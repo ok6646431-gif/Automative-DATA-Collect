@@ -1,4 +1,4 @@
-name: Inspect Hanwha Ocean G0 run 30 output
+name: Live-check generic recovery adapters
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
@@ -16,32 +15,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download G0 artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p inspect/g0
-          gh run download 33709897356 -n zero-touch-discovery-33709897356 -D inspect/g0
-      - name: Print decisive fields
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Check same-host stale path, scripted reports, real KRX rename
         run: |
           python - <<'PY'
           import json
-          from pathlib import Path
-          root=Path('inspect/g0')
-          d=json.loads((root/'company_discovery.json').read_text(encoding='utf-8'))
-          docs=json.loads((root/'document_evidence.json').read_text(encoding='utf-8'))
-          audit=json.loads((root/'Discovery_Audit.json').read_text(encoding='utf-8'))
-          print('GATE',audit.get('gate_status'))
-          print('UNRESOLVED',json.dumps(d.get('unresolved_items') or [],ensure_ascii=False,indent=2))
-          print('CURRENT',d.get('current_legal_name'),d.get('current_legal_name_active_period'))
-          print('ENTITY',d.get('legal_entity_active_period'))
-          print('HISTORICAL',json.dumps(d.get('historical_legal_names') or [],ensure_ascii=False,indent=2))
-          print('RESTRUCTURING',json.dumps(d.get('corporate_restructuring_evidence') or [],ensure_ascii=False,indent=2))
-          print('DOC_STATUS',docs.get('discovery_status'))
-          for x in sorted(docs.get('documents') or [],key=lambda z:(str(z.get('document_type')),int(z.get('report_year') or 0))):
-              print('DOC',json.dumps({k:x.get(k) for k in ('document_id','document_type','title','report_year','source_url','source_locator','verification_status')},ensure_ascii=False))
-          print('GAPS',json.dumps(docs.get('gaps') or [],ensure_ascii=False,indent=2))
-          st=audit.get('stages') or {}
-          for k in ('official_site','public_disclosure_rename_candidates','public_disclosure_rename','strict_report_enrichment','scripted_report_enrichment'):
-              print('STAGE',k,json.dumps(st.get(k),ensure_ascii=False,indent=2))
+          from bs4 import BeautifulSoup
+          from orchestrator import zero_touch_discovery as base
+          from orchestrator.g0_official_site_recovery import _origin_variants
+          from orchestrator.g0_scripted_report_enrichment import candidates_from_scripted_page
+          from orchestrator.g0_public_disclosure_enrichment import parse_official_rename_text
+
+          http=base.Http()
+          stale='https://www.hanwhaocean.com/pub/main/index.do'
+          variants=_origin_variants(stale)
+          print('ANCESTOR_ROOT_PRESENT', 'https://www.hanwhaocean.com/' in variants)
+          print('ANCESTOR_ORDER', [x for x in variants if x.startswith('https://www.hanwhaocean.com/')][:8])
+          # Do not invoke the 90-page production crawl here. Verify that the same-host
+          # root itself is currently fetchable and self-identifies the requested company.
+          root=http.get('https://www.hanwhaocean.com/')
+          root_text=' '.join(BeautifulSoup(root.text,'html.parser').stripped_strings) if root and root.status_code < 400 else ''
+          print('ROOT_FETCH', getattr(root,'status_code',None), root.url if root else None, '한화오션' in root_text, len(root_text))
+
+          report_page='https://esg.hanwhaocean.com/dl/rep/'
+          rr=http.get(report_page)
+          if rr and rr.status_code < 400:
+              rr.encoding=rr.apparent_encoding or rr.encoding
+              found=candidates_from_scripted_page(http, rr.url, rr.text, 2020, 2026)
+              print('SCRIPTED_YEARS', sorted({x['year'] for x in found}))
+              for x in sorted(found,key=lambda z:z['year']):
+                  print('SCRIPTED_DOC',json.dumps({k:x.get(k) for k in ('year','label','url','download_contract','content_type')},ensure_ascii=False))
+          else:
+              print('REPORT_PAGE_FAIL',getattr(rr,'status_code',None))
+
+          krx='https://kind.krx.co.kr/external/2023/08/23/000283/20230823000965/10001.htm'
+          kr=http.get(krx)
+          kt=' '.join(BeautifulSoup(kr.text,'html.parser').stripped_strings) if kr and kr.status_code < 400 else ''
+          parsed=parse_official_rename_text(kt,'한화오션(주)')
+          print('KRX_RENAME',json.dumps(parsed,ensure_ascii=False))
           PY
