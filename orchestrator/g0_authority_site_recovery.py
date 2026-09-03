@@ -97,10 +97,14 @@ def _authority_candidate(
                 # KIND filing is the trust anchor; use the original first-party crawler
                 # directly so a failed candidate cannot widen back into web search.
                 pages, links = official.BASE_CRAWL(http, candidate, company, max_pages=90)
+                landing_url = pages[0].url if pages else None
                 check.setdefault("candidate_checks", []).append({
                     "candidate": candidate,
                     "pages_crawled": len(pages),
-                    "resolved_url": pages[0].url if pages else None,
+                    "landing_url": landing_url,
+                    "landing_host_changed": bool(
+                        landing_url and base._host(landing_url) != base._host(candidate)
+                    ),
                 })
                 if pages:
                     authority = {
@@ -109,8 +113,14 @@ def _authority_candidate(
                         "filing_date": str(row.get("date") or ""),
                         "filing_body_url": str(body.get("body_url") or ""),
                         "homepage_field": candidate,
+                        "initial_landing_url": landing_url,
                     }
-                    return pages[0].url, authority, pages, links
+                    # Preserve the authority-declared homepage as the trust root. A
+                    # geo-aware corporate site may redirect a US runner to a regional
+                    # domain, while the crawl still discovers the global/Korean pages.
+                    # Promoting that regional landing host would incorrectly exclude the
+                    # authority-declared host from downstream report classification.
+                    return candidate, authority, pages, links
     return None
 
 
