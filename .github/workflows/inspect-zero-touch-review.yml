@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect KIND company-search submit contract
+      - name: Verify KIND company-search POST contract
         run: |
           python - <<'PY'
           import re
@@ -31,58 +31,47 @@ jobs:
           main='https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpMain'
           r=http.get(main)
           print('MAIN',getattr(r,'status_code',None),r.url if r else None)
-          if not r or r.status_code>=400: raise SystemExit(0)
-          decoded=_decode_response_text(r,'한화오션(주)')
-          soup=BeautifulSoup(decoded,'html.parser')
-          scripts='\n'.join((s.string or s.get_text() or '') for s in soup.find_all('script'))
-          for name in ('fnSearch','searchDisclosure','searchDisclosureByCorp','fnSearchCorp','fnSearchDiscls','searchForm'):
-              for m in re.finditer(r'function\s+'+re.escape(name)+r'\s*\([^)]*\)\s*\{.{0,6000}?\}',scripts,re.I|re.S):
-                  print('FUNC',name,repr(m.group(0)[:7000]))
-          for m in re.finditer(r'[^\n;]{0,300}(?:searchDisclosureByCorp|searchForm|ajaxSubmit|method\s*=|searchResult|searchDiscls)[^\n;]{0,800}',scripts,re.I):
-              print('SCRIPT_HIT',repr(m.group(0)))
-
-          form=soup.find('form',id='searchForm') or soup.find('form',attrs={'name':'searchForm'})
-          print('FORM',dict(form.attrs) if form else None)
-          payload={}
-          if form:
-              for tag in form.find_all(['input','select']):
-                  name=tag.get('name')
-                  if not name: continue
-                  if tag.name=='select':
-                      opt=tag.find('option',selected=True) or tag.find('option')
-                      payload[name]=opt.get('value','') if opt else ''
-                  else:
-                      typ=str(tag.get('type') or '').lower()
-                      if typ in {'checkbox','radio'} and not tag.has_attr('checked'): continue
-                      payload[name]=tag.get('value','')
-          payload.update({
+          payload={
+              'method':'searchDisclosureByCorpSub',
+              'currentPageSize':'100',
+              'pageIndex':'1',
+              'searchCodeType':'',
+              'orderIndex':'1',
               'repIsuSrtCd':'A042660',
+              'allRepIsuSrtCd':'',
+              'forward':'searchdisclosurebycorp_sub',
+              'searchMode':'',
+              'kosreq':'',
+              'outsvcno':'',
+              'orderMode':'',
+              'orderStat':'',
+              'reportNm':'',
+              'reportCd':'',
               'searchCorpName':'한화오션',
               'fromDate':'20230101',
               'toDate':'20231231',
-              'currentPageSize':'100',
-              'pageIndex':'1',
+              'reportNmTemp':'',
               'lastReport':'T',
-          })
-          print('BASE_PAYLOAD',payload)
-
-          candidates=[
-              'https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpList',
-              'https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpResult',
-              'https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorp',
-              'https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpMain',
-          ]
-          for url in candidates:
-              p=dict(payload)
-              x=http.post(url,data=p,headers={'Referer':main,'X-Requested-With':'XMLHttpRequest'})
-              if not x:
-                  print('TRY',url,'NO_RESPONSE'); continue
-              text=' '.join(BeautifulSoup(_decode_response_text(x,'한화오션(주)'),'html.parser').stripped_strings)
-              print('TRY',url,x.status_code,x.url,'LEN',len(text),'CURRENT','한화오션' in text,'BIZ','사업보고서' in text,'Q','분기보고서' in text)
-              if len(text)>0: print('TRY_HEAD',repr(text[:4000]))
-              raw=_decode_response_text(x,'한화오션(주)')
-              nums=sorted(set(re.findall(r'20\d{12}',raw)))
-              print('NUMS',nums[:40])
-              for m in re.finditer(r'openDisclsViewer\s*\(([^)]{0,500})\)',raw):
-                  print('VIEWER',repr(m.group(0)))
+          }
+          endpoint='https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do'
+          x=http.post(endpoint,data=payload,headers={'Referer':main,'X-Requested-With':'XMLHttpRequest'})
+          print('POST',getattr(x,'status_code',None),x.url if x else None,x.headers.get('content-type') if x else None)
+          if not x or x.status_code>=400: raise SystemExit(0)
+          raw=_decode_response_text(x,'한화오션(주)')
+          soup=BeautifulSoup(raw,'html.parser')
+          text=' '.join(soup.stripped_strings)
+          print('TEXT',len(text),'CURRENT','한화오션' in text,'BIZ','사업보고서' in text,'Q','분기보고서' in text,'HALF','반기보고서' in text)
+          print('HEAD',repr(text[:7000]))
+          for tr in soup.find_all('tr'):
+              blob=' '.join(tr.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tr.attrs.items())
+              if any(k in blob for k in ('한화오션','사업보고서','분기보고서','반기보고서','2023')):
+                  print('ROW',repr(blob[:4000]))
+                  for a in tr.find_all('a'):
+                      print('A',dict(a.attrs),repr(' '.join(a.stripped_strings)))
+          nums=sorted(set(re.findall(r'20\d{12}',raw)))
+          print('ACPT_NUMBERS',nums,'COUNT',len(nums))
+          for m in re.finditer(r'openDisclsViewer\s*\(([^)]{0,500})\)',raw):
+              print('VIEWER',repr(m.group(0)))
+          for m in re.finditer(r'acptNo[^\n<]{0,300}',raw,re.I):
+              print('ACPT_HIT',repr(m.group(0)))
           PY
