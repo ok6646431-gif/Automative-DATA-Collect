@@ -1,4 +1,4 @@
-name: Inspect Hanwha Ocean requested-scope binding
+name: Patch and test requested-scope bilingual bridge
 
 on:
   push:
@@ -8,57 +8,70 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download corrected Hanwha Ocean metadata
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          rm -rf inspect && mkdir -p inspect
-          gh run download 33718125027 -n enterprise-env-metadata -D inspect
-      - name: Print site identity and requested-scope evidence
+        with:
+          fetch-depth: 0
+      - name: Patch requested-scope resolver generically
         run: |
           python - <<'PY'
-          import csv, json
           from pathlib import Path
-          root=Path('inspect')
+          p=Path('orchestrator/requested_scope.py')
+          s=p.read_text(encoding='utf-8')
 
-          def files(name):
-              return sorted(root.rglob(name))
-          def print_json(name):
-              for p in files(name):
-                  print(f'\n===== {p} =====')
-                  try: print(json.dumps(json.loads(p.read_text(encoding='utf-8-sig')),ensure_ascii=False,indent=2))
-                  except Exception as e: print('ERR',e)
-          def print_csv(name, limit=200):
-              for p in files(name):
-                  print(f'\n===== {p} =====')
-                  with p.open(encoding='utf-8-sig',newline='') as f:
-                      rows=list(csv.DictReader(f))
-                  print('ROWS',len(rows),'FIELDS',list(rows[0]) if rows else [])
-                  for r in rows[:limit]: print(json.dumps(r,ensure_ascii=False))
+          marker='''def company_terms(profile):\n'''
+          insert='''def _road_building_numbers(value):\n    """Conservative building/road numbers for cross-language address bridging.\n\n    Three- or four-digit road numbers survive Korean/English transliteration while\n    avoiding five-digit Korean postcodes.  A number is never sufficient on its own;\n    callers also require same-entity evidence, independent sources and uniqueness.\n    """\n    return set(re.findall(r"(?<!\\d)(\\d{3,4})(?!\\d)", str(value or "")))\n\n\ndef _generic_same_entity_site_label(value, profile):\n    """Recognize a legal-entity name followed by a generic `...사업장` qualifier.\n\n    This deliberately does not accept arbitrary suffixes, factories, centres or\n    offices: those can denote separately managed colocated units.  It exists to avoid\n    treating `COMPANY 거제사업장` as another corporation while still rejecting\n    names such as `COMPANY에코텍`.\n    """\n    raw = _entity_plain(value)\n    for term in _company_entity_terms(profile):\n        if not raw.startswith(term):\n            continue\n        remainder = raw[len(term):]\n        if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):\n            return True\n    return False\n\n\n'''
+          if insert.strip() not in s:
+              if marker not in s: raise SystemExit('company_terms marker missing')
+              s=s.replace(marker,insert+marker,1)
 
-          for n in ['Requested_Scope.json','Archive_Manifest.json','Collection_Completeness.json','Package_Validation.json']:
-              print_json(n)
-          for n in ['Site_Master.csv','Source_Identity.csv','Analysis_Ready_Index.csv','Validation_Queue.csv']:
-              print_csv(n)
-          for source in ['ENVINFO','PRTR','CHEM_STATS']:
-              for p in sorted((root/'output'/source).glob('*.csv')) if (root/'output'/source).exists() else []:
-                  if p.name in {'discovery.csv','candidates.csv','fact_candidates.csv'}:
-                      print_csv(p.name, 100)
-          print('\n===== MATCHING GEOJE / HANWHA / DSME TEXT =====')
-          for p in root.rglob('*'):
-              if not p.is_file() or p.suffix.lower() not in {'.csv','.json','.jsonl','.txt'}: continue
-              try: text=p.read_text(encoding='utf-8-sig',errors='replace')
-              except Exception: continue
-              lines=[x for x in text.splitlines() if any(k in x for k in ['거제','Geoje','대우조선','한화오션'])]
-              if lines:
-                  print('\n--',p,'--')
-                  for line in lines[:120]: print(line[:4000])
+          old='''        if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):\n            return True, "SAME_ENTITY_FACILITY_LABEL"\n        # A longer corporate-looking name after a same-entity token is not evidence\n'''
+          new='''        if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):\n            return True, "SAME_ENTITY_FACILITY_LABEL"\n        if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):\n            return True, "SAME_ENTITY_GENERIC_SITE_LABEL"\n        # A longer corporate-looking name after a same-entity token is not evidence\n'''
+          if new not in s:
+              if old not in s: raise SystemExit('entity compatibility marker missing')
+              s=s.replace(old,new,1)
+
+          marker='''def resolve_requested_scope(package_root, profile=None):\n'''
+          helper='''def _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates):\n    """Bridge a first-party foreign-language address to one proven source-backed site.\n\n    No transliteration table or company exception is used.  The bridge is allowed only\n    when one selected verified site, one 3-4 digit road/building number, the same legal\n    entity, and at least two independent confirmed public sources converge on exactly\n    one canonical site.  Any ambiguity fails closed.\n    """\n    if len(candidates) != 1:\n        return ""\n    if str(candidate.get("verification_state") or "").upper() not in STRONG_VERIFICATION:\n        return ""\n    numbers = _road_building_numbers(candidate.get("address_raw"))\n    if not numbers:\n        return ""\n    possible = []\n    for site in sites:\n        if site.get("identity_status") != "CONFIRMED":\n            continue\n        entity_ok, _ = _source_entity_compatible(site.get("canonical_site_name"), profile, candidates)\n        if not entity_ok:\n            continue\n        site_numbers = _road_building_numbers(site.get("canonical_address_key"))\n        if not numbers.intersection(site_numbers):\n            continue\n        source_keys = set()\n        for row in identities:\n            if row.get("canonical_site_id") != site.get("canonical_site_id"):\n                continue\n            if str(row.get("match_status") or "").upper() != "CONFIRMED":\n                continue\n            ok, _ = _source_entity_compatible(row.get("source_site_name_raw"), profile, candidates)\n            if ok and row.get("source_key") in CORE_SOURCES:\n                source_keys.add(row.get("source_key"))\n        if len(source_keys) >= 2:\n            possible.append(site.get("canonical_site_id", ""))\n    possible = [x for x in dict.fromkeys(possible) if x]\n    return possible[0] if len(possible) == 1 else ""\n\n\n'''
+          if helper.strip() not in s:
+              if marker not in s: raise SystemExit('resolve marker missing')
+              s=s.replace(marker,helper+marker,1)
+
+          old='''        matching = [x for x in dict.fromkeys(matching) if x]\n        if matching:\n            canonical.update(matching)\n'''
+          new='''        matching = [x for x in dict.fromkeys(matching) if x]\n        if not matching:\n            bridge = _unique_cross_source_bilingual_bridge(candidate, sites, identities, profile, candidates)\n            if bridge:\n                matching.append(bridge)\n        if matching:\n            canonical.update(matching)\n'''
+          if new not in s:
+              if old not in s: raise SystemExit('canonical bridge marker missing')
+              s=s.replace(old,new,1)
+
+          old='''    source_ids = {s: set() for s in CORE_SOURCES}\n    labels = {}\n    excluded_source_ids = []\n    for row in identities:\n'''
+          new='''    source_ids = {s: set() for s in CORE_SOURCES}\n    labels = {}\n    excluded_source_ids = []\n    target_sites = [site for site in sites if site.get("canonical_site_id") in canonical]\n    for row in identities:\n'''
+          if new not in s:
+              if old not in s: raise SystemExit('target_sites marker missing')
+              s=s.replace(old,new,1)
+
+          old='''        if not include:\n            include = any(\n                _candidate_matches(c, row.get("source_site_name_raw"), row.get("source_address_raw"), profile, address_counts)\n                for c in candidates\n            )\n        if include:\n'''
+          new='''        if not include:\n            include = any(\n                _candidate_matches(c, row.get("source_site_name_raw"), row.get("source_address_raw"), profile, address_counts)\n                for c in candidates\n            )\n        if not include and _generic_same_entity_site_label(row.get("source_site_name_raw"), profile):\n            include = any(\n                _address_match(row.get("source_address_raw"), site.get("canonical_address_key"))\n                for site in target_sites\n            )\n        if include:\n'''
+          if new not in s:
+              if old not in s: raise SystemExit('source inclusion marker missing')
+              s=s.replace(old,new,1)
+
+          p.write_text(s,encoding='utf-8')
           PY
+      - name: Run requested-scope regression suite
+        run: |
+          python -m py_compile orchestrator/requested_scope.py
+          python -m unittest tests.test_requested_scope_rename_bridge tests.test_requested_scope_bilingual_bridge -v
+      - name: Commit generic scope fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/requested_scope.py
+          git diff --cached --check
+          git commit -m 'Bridge verified bilingual site addresses safely'
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
