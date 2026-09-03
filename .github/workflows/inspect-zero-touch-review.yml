@@ -1,4 +1,4 @@
-name: Patch fail-closed scope completeness guard
+name: Re-evaluate Hanwha Ocean metadata with current scope rules
 
 on:
   push:
@@ -8,52 +8,58 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  actions: read
+  contents: read
 
 jobs:
-  patch:
+  inspect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Patch collection completeness guard
+      - name: Download corrected-name Hanwha Ocean metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf inspect && mkdir -p inspect
+          gh run download 33718125027 -n enterprise-env-metadata -D inspect
+      - name: Re-evaluate old package with current generic rules
         run: |
           python - <<'PY'
+          import csv, json
           from pathlib import Path
-          p=Path('orchestrator/collection_completeness.py')
-          s=p.read_text(encoding='utf-8')
+          from orchestrator.requested_scope import resolve_requested_scope, apply_requested_scope
+          from orchestrator.collection_completeness import requested_scope_binding_rows
 
-          old='''    "DOCUMENT_DISCOVERY_PARTIAL", "DOCUMENT_EVIDENCE_MISSING",\n}\n'''
-          new='''    "DOCUMENT_DISCOVERY_PARTIAL", "DOCUMENT_EVIDENCE_MISSING",\n    "REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED",\n}\n'''
-          if new not in s:
-              if old not in s: raise SystemExit('incomplete-state marker missing')
-              s=s.replace(old,new,1)
+          roots=[p.parent for p in Path('inspect').rglob('Requested_Scope.json')]
+          if not roots:
+              raise SystemExit('Requested_Scope.json not found')
+          root=roots[0]
+          print('PACKAGE_ROOT',root)
 
-          marker='''def audit(package_root, profile_path, request_path=None, evidence_path=None):\n'''
-          helper='''def requested_scope_binding_rows(package_root, public_audit_rows):\n    """Fail closed when company-wide raw data cannot be bound to a requested site.\n\n    A SITE_SET query is collected company-wide on purpose. If a core source returned\n    substantive data but Requested_Scope contains no target source ID for that source,\n    we have not proved that the requested site has no data; we have only failed to bind\n    the raw identities. Such a package must never be labelled COMPLETE.\n    """\n    package = Path(package_root)\n    scope = read_json(package / "Requested_Scope.json", {}) or {}\n    if str(scope.get("mode") or "").upper() != "SITE_SET":\n        return []\n    target = scope.get("target_source_ids") or {}\n    core = {"ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"}\n    data_sources = {\n        str(x.get("source") or "")\n        for x in public_audit_rows\n        if str(x.get("source") or "") in core and x.get("completeness_state") == "DATA_PRESENT"\n    }\n    out = []\n    for source in sorted(data_sources):\n        bound = [str(x) for x in (target.get(source) or []) if str(x).strip()]\n        if bound:\n            continue\n        out.append(row(\n            source, "SCOPE_BINDING", scope.get("label") or "SITE_SET",\n            "REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED",\n            query_state="COMPLETE", data=True,\n            evidence="raw_source_data_present=Y; requested_target_source_ids=0; mode=SITE_SET",\n            note="원천 수집에는 공개자료가 있으나 요청 사업장에 연결된 source ID가 없어 자료 없음으로 판정할 수 없음",\n        ))\n    return out\n\n\n'''
-          if helper.strip() not in s:
-              if marker not in s: raise SystemExit('audit marker missing')
-              s=s.replace(marker,helper+marker,1)
+          old=json.loads((root/'Requested_Scope.json').read_text(encoding='utf-8-sig'))
+          print('OLD_TARGET_IDS',json.dumps(old.get('target_source_ids'),ensure_ascii=False))
+          with (root/'Collection_Completeness.csv').open(encoding='utf-8-sig',newline='') as f:
+              old_public=list(csv.DictReader(f))
+          old_guard=requested_scope_binding_rows(root,old_public)
+          print('OLD_FALSE_COMPLETE_GUARD',json.dumps(old_guard,ensure_ascii=False,indent=2))
+          assert {r['source'] for r in old_guard} >= {'ENVINFO','PRTR','CHEM_STATS'}, old_guard
 
-          old='''    evidence = read_json(evidence_path, {}) if evidence_path and Path(evidence_path).exists() else {}\n    rows = public_rows(output, request) + document_rows(package, profile, evidence or {})\n    incomplete = [x for x in rows if x["completeness_state"] in INCOMPLETE_STATES]\n'''
-          new='''    evidence = read_json(evidence_path, {}) if evidence_path and Path(evidence_path).exists() else {}\n    public = public_rows(output, request)\n    rows = public + document_rows(package, profile, evidence or {})\n    rows += requested_scope_binding_rows(package, public)\n    incomplete = [x for x in rows if x["completeness_state"] in INCOMPLETE_STATES]\n'''
-          if new not in s:
-              if old not in s: raise SystemExit('audit rows marker missing')
-              s=s.replace(old,new,1)
+          scope=resolve_requested_scope(root)
+          ids={k:sorted(v) for k,v in scope['target_source_ids'].items()}
+          print('NEW_CANONICAL',sorted(scope['target_canonical_site_ids']))
+          print('NEW_TARGET_IDS',json.dumps(ids,ensure_ascii=False,indent=2))
+          print('NEW_EXCLUSIONS',json.dumps(scope['excluded_source_ids'],ensure_ascii=False,indent=2))
+          assert '414' in ids['PRTR'], ids
+          assert 'ACW978N' in ids['CHEM_STATS'], ids
+          assert '00000000000000185726' in ids['ENVINFO'], ids
+          assert 'CP000000000000003970' not in ids['ENVINFO'], ids
+          assert 'CT000000000000002997' not in ids['ENVINFO'], ids
+          assert 'ADN807N' not in ids['CHEM_STATS'], ids
 
-          p.write_text(s,encoding='utf-8')
+          applied=apply_requested_scope(root)
+          print('APPLIED_SCOPE',json.dumps({k:applied.get(k) for k in ['target_canonical_site_ids','target_source_ids','analysis_rows_before','analysis_rows_after']},ensure_ascii=False,indent=2))
+          new_guard=requested_scope_binding_rows(root,old_public)
+          print('NEW_GUARD',json.dumps(new_guard,ensure_ascii=False,indent=2))
+          assert not new_guard, new_guard
+          print('HANWHA_SCOPE_REEVALUATION_PASS')
           PY
-      - name: Run completeness regressions
-        run: |
-          python -m py_compile orchestrator/collection_completeness.py
-          python -m unittest tests.test_collection_completeness tests.test_requested_scope_completeness_guard -v
-      - name: Commit fail-closed completeness guard
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add orchestrator/collection_completeness.py tests/test_requested_scope_completeness_guard.py
-          git diff --cached --check
-          git commit -m 'Block complete packages with unbound requested-site data'
-          git pull --rebase origin "${GITHUB_REF_NAME}"
-          git push origin HEAD:"${GITHUB_REF_NAME}"
