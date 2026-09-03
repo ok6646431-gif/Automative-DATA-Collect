@@ -46,3 +46,4 @@ jobs:
               if re.search(r'pdf|download|fileViewer|report',body,re.I):
                   print(body[:6000])
           PY
+          # one-shot diagnostics only; remove this workflow after the fix is verified
