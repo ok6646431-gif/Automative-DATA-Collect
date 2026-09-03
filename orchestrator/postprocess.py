@@ -8,8 +8,13 @@ source already linked to the official site.
 """
 
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
+
+_THIS_DIR = str(Path(__file__).resolve().parent)
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
 
 import postprocess_core as _core
 from postprocess_core import *  # re-export the existing public contract
@@ -67,13 +72,8 @@ def _unique_official_site_by_name(profile, site_rows):
 
 
 def resolve_identity(candidates, profile):
-    site_rows, id_rows, validations = _BASE_RESOLVE_IDENTITY(candidates, profile)[1:]
-    # _BASE_RESOLVE_IDENTITY returns company_id first. Capture it separately without
-    # calling the expensive resolver twice.
-    # The slice above intentionally leaves the existing output objects mutable.
-    company_id = site_rows[0].get("company_id") if site_rows else (
-        profile.get("company_id") or _core.stable_id("COMP_", _core.normalize_name(profile.get("company_display_name")))
-    )
+    base_result = _BASE_RESOLVE_IDENTITY(candidates, profile)
+    company_id, site_rows, id_rows, validations = base_result
 
     official = _unique_official_site_by_name(profile, site_rows)
     corroborated = defaultdict(set)
