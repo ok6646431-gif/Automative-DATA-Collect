@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect KIND company disclosure search contract
+      - name: Probe KIND company disclosure AJAX result
         run: |
           python - <<'PY'
           import re
@@ -28,24 +28,49 @@ jobs:
           from orchestrator.g0_rename_chronology_recovery import _decode_response_text
 
           http=base.Http()
-          url='https://kind.krx.co.kr/disclosureSimpleSearch.do?method=disclosureSimpleSearchMain&repIsuSrtCd=A042660'
-          r=http.get(url)
-          print('STATUS',getattr(r,'status_code',None),r.url if r else None)
-          if r and r.status_code<400:
-              decoded=_decode_response_text(r,'한화오션(주)')
-              soup=BeautifulSoup(decoded,'html.parser')
-              text=' '.join(soup.stripped_strings)
-              print('TEXT',len(text),'HAS_CURRENT','한화오션' in text,'BUSINESS_REPORT','사업보고서' in text)
-              for form in soup.find_all('form'):
-                  blob=' '.join(f'{k}={v}' for k,v in form.attrs.items())
-                  print('FORM',blob)
-                  for inp in form.find_all(['input','select'])[:80]:
-                      print('FIELD',inp.name,dict(inp.attrs))
-              hits=set()
-              for tag in soup.find_all(['script','a','button']):
-                  blob=(tag.string or tag.get_text() or '')+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
-                  if any(x in blob for x in ('searchDisclosure','SimpleSearch','ajax','disclosure','repIsuSrtCd','searchCorpName','method=')):
-                      for m in re.finditer(r'[^\n;]{0,180}(?:searchDisclosure|SimpleSearch|ajax|disclosure|repIsuSrtCd|method=)[^\n;]{0,260}',blob,re.I):
-                          hits.add(m.group(0).strip())
-              for hit in sorted(hits)[:120]: print('HIT',repr(hit))
+          main='https://kind.krx.co.kr/disclosureSimpleSearch.do?method=disclosureSimpleSearchMain&repIsuSrtCd=A042660'
+          r=http.get(main)
+          print('MAIN',getattr(r,'status_code',None),r.url if r else None)
+          if not r or r.status_code>=400:
+              raise SystemExit(0)
+          html=_decode_response_text(r,'한화오션(주)')
+          soup=BeautifulSoup(html,'html.parser')
+          form=soup.find('form',id='searchForm')
+          payload={}
+          for inp in form.find_all('input') if form else []:
+              name=inp.get('name')
+              if name:
+                  payload[name]=inp.get('value','')
+          payload['pageIndex']='1'
+          payload['currentPageSize']='100'
+          print('PAYLOAD',payload)
+          result_url='https://kind.krx.co.kr/disclosureSimpleSearch.do?method=mainDisclosureSearchResult'
+          x=http.post(result_url,data=payload,headers={'Referer':main,'X-Requested-With':'XMLHttpRequest'})
+          print('POST',getattr(x,'status_code',None),x.url if x else None,x.headers.get('content-type') if x else None)
+          if not x or x.status_code>=400:
+              raise SystemExit(0)
+          decoded=_decode_response_text(x,'한화오션(주)')
+          sx=BeautifulSoup(decoded,'html.parser')
+          text=' '.join(sx.stripped_strings)
+          print('RESULT_TEXT',len(text),'CURRENT','한화오션' in text,'BUSINESS','사업보고서' in text,'QUARTER','분기보고서' in text)
+          print('TEXT_HEAD',repr(text[:5000]))
+          for tag in sx.find_all(['tr','td','a','button','script']):
+              blob=' '.join(tag.stripped_strings)+' '+ ' '.join(f'{k}={v}' for k,v in tag.attrs.items())
+              if any(k in blob for k in ('사업보고서','분기보고서','반기보고서','openDisclsViewer','acptNo','2023','2024','2025','한화오션')):
+                  print('ROW',repr(blob[:2500]))
+          nums=sorted(set(re.findall(r'20\d{12}',decoded)))
+          print('ACPT_NUMBERS',nums[:100], 'COUNT',len(nums))
+          for m in re.finditer(r'openDisclsViewer\s*\(([^)]{0,500})\)',decoded):
+              print('VIEWER',repr(m.group(0)))
+          # Also try the explicit company-search endpoint discovered in KIND navigation.
+          corp='https://kind.krx.co.kr/disclosure/searchdisclosurebycorp.do?method=searchDisclosureByCorpMain'
+          c=http.get(corp)
+          print('CORP_MAIN',getattr(c,'status_code',None),c.url if c else None)
+          if c and c.status_code<400:
+              ch=_decode_response_text(c,'한화오션(주)')
+              cs=BeautifulSoup(ch,'html.parser')
+              for f in cs.find_all('form'):
+                  print('CORP_FORM',' '.join(f'{k}={v}' for k,v in f.attrs.items()))
+                  for i in f.find_all(['input','select'])[:100]:
+                      print('CORP_FIELD',i.name,dict(i.attrs))
           PY
