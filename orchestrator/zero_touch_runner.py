@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from orchestrator import dart_public_resolver
+from orchestrator import g0_authority_site_recovery
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_kind_disclosure_recovery
 from orchestrator import g0_live_adapters
@@ -94,6 +95,14 @@ def _has_verified_rename(discovery):
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
     _attach_official_recovery(audit)
+
+    # If DART's website field is stale, recover the current first-party homepage from a
+    # recent KIND periodic filing before any search-engine-dependent enrichment. The
+    # listed-company code and the explicit homepage field in the filing are the trust
+    # anchors; the recovered site itself must still be reachable before promotion.
+    discovery, documents, audit = g0_authority_site_recovery.enrich(
+        discovery, documents, audit
+    )
 
     discovery, documents, audit = g0_evidence_enrichment.enrich_discovery_from_audit(
         discovery, documents, audit
