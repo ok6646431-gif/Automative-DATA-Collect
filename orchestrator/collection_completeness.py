@@ -28,6 +28,7 @@ INCOMPLETE_STATES = {
     "UNQUERIED_PERIOD", "QUERY_FAILED", "SOURCE_FAILED", "ARTIFACT_INCOMPLETE",
     "DOCUMENT_DOWNLOAD_FAILED", "DOCUMENT_FILE_MISSING", "DOCUMENT_DISCOVERY_MISSING",
     "DOCUMENT_DISCOVERY_PARTIAL", "DOCUMENT_EVIDENCE_MISSING",
+    "REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED",
 }
 ANNUAL_DOCUMENT_TYPES = {
     "SUSTAINABILITY_REPORT", "ESG_REPORT", "ENVIRONMENTAL_REPORT",
@@ -431,13 +432,49 @@ def merge_validations(package, additions):
     return len(review)
 
 
+def requested_scope_binding_rows(package_root, public_audit_rows):
+    """Fail closed when company-wide raw data cannot be bound to a requested site.
+
+    A SITE_SET query is collected company-wide on purpose. If a core source returned
+    substantive data but Requested_Scope contains no target source ID for that source,
+    we have not proved that the requested site has no data; we have only failed to bind
+    the raw identities. Such a package must never be labelled COMPLETE.
+    """
+    package = Path(package_root)
+    scope = read_json(package / "Requested_Scope.json", {}) or {}
+    if str(scope.get("mode") or "").upper() != "SITE_SET":
+        return []
+    target = scope.get("target_source_ids") or {}
+    core = {"ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER"}
+    data_sources = {
+        str(x.get("source") or "")
+        for x in public_audit_rows
+        if str(x.get("source") or "") in core and x.get("completeness_state") == "DATA_PRESENT"
+    }
+    out = []
+    for source in sorted(data_sources):
+        bound = [str(x) for x in (target.get(source) or []) if str(x).strip()]
+        if bound:
+            continue
+        out.append(row(
+            source, "SCOPE_BINDING", scope.get("label") or "SITE_SET",
+            "REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED",
+            query_state="COMPLETE", data=True,
+            evidence="raw_source_data_present=Y; requested_target_source_ids=0; mode=SITE_SET",
+            note="원천 수집에는 공개자료가 있으나 요청 사업장에 연결된 source ID가 없어 자료 없음으로 판정할 수 없음",
+        ))
+    return out
+
+
 def audit(package_root, profile_path, request_path=None, evidence_path=None):
     package = Path(package_root); output = package/"output"
     profile = read_json(profile_path, {}) or {}
     request = read_json(request_path, {}) if request_path and Path(request_path).exists() else build_request(profile)
     request = request or {}
     evidence = read_json(evidence_path, {}) if evidence_path and Path(evidence_path).exists() else {}
-    rows = public_rows(output, request) + document_rows(package, profile, evidence or {})
+    public = public_rows(output, request)
+    rows = public + document_rows(package, profile, evidence or {})
+    rows += requested_scope_binding_rows(package, public)
     incomplete = [x for x in rows if x["completeness_state"] in INCOMPLETE_STATES]
     no_data = [x for x in rows if x["completeness_state"] == "NO_DATA_CONFIRMED"]
     complete = [x for x in rows if x["completeness_state"] in {"DATA_PRESENT", "NO_DATA_CONFIRMED"}]
