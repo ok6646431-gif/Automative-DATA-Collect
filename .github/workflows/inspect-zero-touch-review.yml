@@ -1,4 +1,4 @@
-name: Re-evaluate Hanwha Ocean metadata with current scope rules
+name: Reassemble Hanwha Ocean with current scope rules
 
 on:
   push:
@@ -14,52 +14,112 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Download corrected-name Hanwha Ocean metadata
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install package dependencies
+        run: python -m pip install --disable-pip-version-check xlsxwriter requests beautifulsoup4
+      - name: Bootstrap current Hanwha Ocean inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download previously verified raw source artifacts
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          rm -rf inspect && mkdir -p inspect
-          gh run download 33718125027 -n enterprise-env-metadata -D inspect
-      - name: Re-evaluate old package with current generic rules
+          rm -rf collected assembled
+          mkdir -p collected/stable collected/icis/icis-attempt-1 collected/icis/icis-attempt-2
+          gh run download 33718125027 -n stable-public-sources -D collected/stable
+          gh run download 33718125027 -n stable-corporate-documents -D collected/stable
+          gh run download 33718125027 -n icis-attempt-1 -D collected/icis/icis-attempt-1
+          gh run download 33718125027 -n icis-attempt-2 -D collected/icis/icis-attempt-2
+      - name: Reassemble with current generic code
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Build human-facing archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
+      - name: Verify scope, analysis and archive contract
         run: |
           python - <<'PY'
-          import csv, json
+          import csv, json, zipfile
           from pathlib import Path
-          from orchestrator.requested_scope import resolve_requested_scope, apply_requested_scope
-          from orchestrator.collection_completeness import requested_scope_binding_rows
+          root=Path('assembled')
+          scope=json.loads((root/'Requested_Scope.json').read_text(encoding='utf-8-sig'))
+          ids=scope['target_source_ids']
+          print('TARGET_SOURCE_IDS',json.dumps(ids,ensure_ascii=False,indent=2))
+          assert ids['ENVINFO']==['00000000000000185726'], ids
+          assert ids['PRTR']==['414'], ids
+          assert ids['CHEM_STATS']==['ACW978N'], ids
+          assert not ids['CLEANSYS_AIR'] and not ids['SOOSIRO_WATER'], ids
 
-          roots=[p.parent for p in Path('inspect').rglob('Requested_Scope.json')]
-          if not roots:
-              raise SystemExit('Requested_Scope.json not found')
-          root=roots[0]
-          print('PACKAGE_ROOT',root)
+          with (root/'Analysis_Ready_Index.csv').open(encoding='utf-8-sig',newline='') as f:
+              rows=list(csv.DictReader(f))
+          print('ANALYSIS_ROWS',len(rows))
+          assert len(rows)>0, 'analysis must not be empty after requested-scope fix'
+          allowed={
+              ('ENVINFO','00000000000000185726'),
+              ('PRTR','414'),
+              ('CHEM_STATS','ACW978N'),
+          }
+          bad=[]
+          for r in rows:
+              pair=(r.get('source_key',''),str(r.get('source_site_id') or ''))
+              if pair not in allowed:
+                  bad.append(pair)
+          print('ANALYSIS_OFF_SCOPE',sorted(set(bad)))
+          assert not bad, bad
 
-          old=json.loads((root/'Requested_Scope.json').read_text(encoding='utf-8-sig'))
-          print('OLD_TARGET_IDS',json.dumps(old.get('target_source_ids'),ensure_ascii=False))
-          with (root/'Collection_Completeness.csv').open(encoding='utf-8-sig',newline='') as f:
-              old_public=list(csv.DictReader(f))
-          old_guard=requested_scope_binding_rows(root,old_public)
-          print('OLD_FALSE_COMPLETE_GUARD',json.dumps(old_guard,ensure_ascii=False,indent=2))
-          assert {r['source'] for r in old_guard} >= {'ENVINFO','PRTR','CHEM_STATS'}, old_guard
+          comp=json.loads((root/'Collection_Completeness.json').read_text(encoding='utf-8-sig'))
+          print('COMPLETENESS',json.dumps(comp,ensure_ascii=False,indent=2))
+          assert comp['status']=='COMPLETE', comp
+          assert not any('REQUESTED_SCOPE_SOURCE_BINDING_UNRESOLVED' in x for x in comp.get('incomplete_keys',[])), comp
 
-          scope=resolve_requested_scope(root)
-          ids={k:sorted(v) for k,v in scope['target_source_ids'].items()}
-          print('NEW_CANONICAL',sorted(scope['target_canonical_site_ids']))
-          print('NEW_TARGET_IDS',json.dumps(ids,ensure_ascii=False,indent=2))
-          print('NEW_EXCLUSIONS',json.dumps(scope['excluded_source_ids'],ensure_ascii=False,indent=2))
-          assert '414' in ids['PRTR'], ids
-          assert 'ACW978N' in ids['CHEM_STATS'], ids
-          assert '00000000000000185726' in ids['ENVINFO'], ids
-          assert 'CP000000000000003970' not in ids['ENVINFO'], ids
-          assert 'CT000000000000002997' not in ids['ENVINFO'], ids
-          assert 'ADN807N' not in ids['CHEM_STATS'], ids
+          manifest=json.loads((root/'Archive_Manifest.json').read_text(encoding='utf-8-sig'))
+          print('ARCHIVE_MANIFEST',json.dumps(manifest,ensure_ascii=False,indent=2)[:8000])
+          assert manifest.get('archive_status')=='COMPLETE', manifest
 
-          applied=apply_requested_scope(root)
-          print('APPLIED_SCOPE',json.dumps({k:applied.get(k) for k in ['target_canonical_site_ids','target_source_ids','analysis_rows_before','analysis_rows_after']},ensure_ascii=False,indent=2))
-          new_guard=requested_scope_binding_rows(root,old_public)
-          print('NEW_GUARD',json.dumps(new_guard,ensure_ascii=False,indent=2))
-          assert not new_guard, new_guard
-          print('HANWHA_SCOPE_REEVALUATION_PASS')
+          z=root/'Human_Archive.zip'
+          assert z.exists() and z.stat().st_size>0
+          forbidden=['한화오션에코텍','CP000000000000003970','CT000000000000002997','ADN807N']
+          actual_hits=[]
+          with zipfile.ZipFile(z) as ar:
+              names=ar.namelist()
+              for name in names:
+                  if '원본검증목록' in name or '00_자료목록' in name:
+                      continue
+                  if any(x in name for x in forbidden):
+                      actual_hits.append(('name',name))
+                  if name.lower().endswith(('.csv','.json','.jsonl','.txt','.md')):
+                      try: text=ar.read(name).decode('utf-8-sig',errors='replace')
+                      except Exception: continue
+                      for token in forbidden:
+                          if token in text:
+                              actual_hits.append((token,name))
+          print('USER_LAYER_FORBIDDEN_HITS',actual_hits)
+          assert not actual_hits, actual_hits
+          print('HANWHA_REASSEMBLY_PASS')
           PY
+      - name: Upload reassembled verification package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanwha-ocean-current-scope-reassembly
+          path: |
+            assembled/Requested_Scope.json
+            assembled/Analysis_Ready_Index.csv
+            assembled/Collection_Completeness.json
+            assembled/Archive_Manifest.json
+            assembled/Human_Archive.zip
+          retention-days: 7
