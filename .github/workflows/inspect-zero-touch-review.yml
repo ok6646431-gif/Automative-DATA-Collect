@@ -1,4 +1,4 @@
-name: Inspect Hanwha Ocean G0 locator audit
+name: Inspect official ESG report download structure
 
 on:
   push:
@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
 
 jobs:
@@ -16,24 +15,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download second-pass G0 artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p inspect/g0
-          gh run download 33707196612 -n zero-touch-discovery-33707196612 -D inspect/g0
-      - name: Print KRX and report-search attempts
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Probe official report page download contract
         run: |
           python - <<'PY'
-          import json
-          from pathlib import Path
-          audit=json.loads(Path('inspect/g0/Discovery_Audit.json').read_text(encoding='utf-8'))
-          attempts=audit.get('http_attempts') or []
-          print('TOTAL_ATTEMPTS',len(attempts))
-          for x in attempts:
-              url=str(x.get('url') or x.get('final_url') or '')
-              final=str(x.get('final_url') or '')
-              joined=(url+' '+final).lower()
-              if any(k in joined for k in ('kind.krx.co.kr','google.com/search','bing.com/search','duckduckgo.com','esg.hanwhaocean.com')):
-                  print(json.dumps(x,ensure_ascii=False))
+          import re, requests, json
+          from bs4 import BeautifulSoup
+          from urllib.parse import urljoin
+
+          s=requests.Session()
+          s.headers.update({'User-Agent':'Mozilla/5.0 Chrome/151 Safari/537.36','Accept-Language':'ko-KR,ko;q=0.9,en;q=0.8'})
+          urls=[
+            'https://esg.hanwhaocean.com/dl/rep/',
+            'https://www.hanwhaocean.com/sustainability/ov/',
+          ]
+          for url in urls:
+              print('\n===== PAGE',url,'=====')
+              try:
+                  r=s.get(url,timeout=(10,40),allow_redirects=True)
+              except Exception as e:
+                  print('ERROR',type(e).__name__,e); continue
+              print('status',r.status_code,'final',r.url,'ctype',r.headers.get('content-type'),'bytes',len(r.content))
+              r.encoding=r.apparent_encoding or r.encoding
+              soup=BeautifulSoup(r.text,'html.parser')
+              text=' '.join(soup.stripped_strings)
+              print('TEXT',text[:2500])
+              for tag in soup.find_all(['a','button','form','iframe','embed','object','input']):
+                  attrs={k:str(v) for k,v in tag.attrs.items() if k in {'href','src','data','action','onclick','value','name','id','class'}}
+                  label=' '.join(tag.stripped_strings).strip()
+                  payload=(label+' '+json.dumps(attrs,ensure_ascii=False)).lower()
+                  if any(k in payload for k in ('pdf','download','file','보고서','report','첨부','rep')):
+                      print('NODE',tag.name,repr(label),json.dumps(attrs,ensure_ascii=False))
+              for pat in [r'[^\"\'<>\s]{0,250}\.pdf[^\"\'<>\s]{0,250}',r'.{0,250}(?:download|file|attach|pdf|보고서).{0,800}']:
+                  for m in re.findall(pat,r.text,re.I|re.S)[:40]:
+                      print('RAW',re.sub(r'\s+',' ',m)[:1400])
           PY
