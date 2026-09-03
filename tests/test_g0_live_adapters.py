@@ -84,6 +84,18 @@ class TestG0LiveAdapters(unittest.TestCase):
         self.assertIn("http://www.old-company.example/", variants)
         self.assertIn("http://old-company.example/", variants)
 
+    def test_stale_dart_deep_path_generates_same_host_ancestors_before_search(self):
+        variants = _origin_variants("https://www.example.com/pub/main/index.do?lang=ko")
+        self.assertIn("https://www.example.com/pub/main/index.do?lang=ko", variants)
+        self.assertIn("https://www.example.com/pub/main/", variants)
+        self.assertIn("https://www.example.com/pub/", variants)
+        self.assertIn("https://www.example.com/", variants)
+        self.assertNotIn("https://www.example.com/?lang=ko", variants)
+        self.assertLess(
+            variants.index("https://www.example.com/pub/main/"),
+            variants.index("https://www.example.com/"),
+        )
+
     def test_search_results_are_locator_only_and_public_platforms_are_filtered(self):
         html = (
             '<a href="/url?q=https%3A%2F%2Fofficial.example%2Fabout">공식</a>'
