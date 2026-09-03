@@ -14,6 +14,7 @@ from orchestrator import dart_public_resolver
 from orchestrator import g0_authority_site_recovery
 from orchestrator import g0_domestic_site_catalog_enrichment
 from orchestrator import g0_evidence_enrichment
+from orchestrator import g0_generic_js_report_recovery
 from orchestrator import g0_kind_disclosure_recovery
 from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
@@ -110,6 +111,10 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_report_enrichment.enrich(discovery, documents, audit)
     documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
     documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
+    # General fallback for report controls that use arbitrary JavaScript function names
+    # or multiple literal arguments. The function body must be statically reconstructable
+    # from same-host scripts and the resulting target must return real PDF bytes.
+    documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
     )
