@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from orchestrator import dart_public_resolver
 from orchestrator import g0_evidence_enrichment
+from orchestrator import g0_kind_disclosure_recovery
 from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
 from orchestrator import g0_public_disclosure_enrichment
@@ -22,7 +23,47 @@ from orchestrator import g0_scripted_report_navigation
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
-zero_touch_discovery.crawl_official = g0_official_site_recovery.crawl_official
+
+
+def _official_rename_signals(pages, company):
+    """Record bounded first-party evidence that the current company says it was renamed.
+
+    This is only a gate signal, never predecessor evidence.  It prevents a current name
+    from being silently projected backwards when a first-party history page explicitly
+    says a rename occurred but no predecessor/effective chain has been verified.
+    """
+    out = []
+    company_norm = zero_touch_discovery.normalize_name(company)
+    phrase_re = re.compile(r"(?:상호\s*(?:가|를|을)?\s*변경|상호변경|사명\s*(?:이|을|를)?\s*변경)")
+    year_re = re.compile(r"(?:19|20)\d{2}")
+    for page in pages or []:
+        text = re.sub(r"\s+", " ", str(getattr(page, "text", "") or ""))
+        for match in phrase_re.finditer(text):
+            context = text[max(0, match.start() - 500): match.end() + 700]
+            if company_norm and company_norm not in zero_touch_discovery.normalize_name(context):
+                continue
+            years = [int(x) for x in year_re.findall(context)]
+            item = {
+                "year": years[-1] if years else None,
+                "url": str(getattr(page, "url", "") or ""),
+                "context": context[:900],
+            }
+            if item not in out:
+                out.append(item)
+    return out[:20]
+
+
+def _crawl_official_with_continuity_signal(http, start_url, company, max_pages=90):
+    pages, links = g0_official_site_recovery.crawl_official(
+        http, start_url, company, max_pages=max_pages
+    )
+    g0_official_site_recovery.last_recovery["rename_signals"] = _official_rename_signals(
+        pages, company
+    )
+    return pages, links
+
+
+zero_touch_discovery.crawl_official = _crawl_official_with_continuity_signal
 zero_touch_discovery.discover_site_candidates = g0_live_adapters.discover_site_candidates
 zero_touch_discovery._extract_rename_date_and_names = g0_live_adapters.extract_rename_date_and_names
 
@@ -48,11 +89,13 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
         discovery, documents, audit
     )
 
-    # First try explicit public-disclosure rename prose.  Then recover the common
-    # chronology form (dated resulting legal names), repairing legacy HTML encodings
-    # before parsing.  Both remain fail-closed and official-source-only at promotion.
+    # Try already-exposed official disclosure prose/chronologies first.  If those do
+    # not resolve the predecessor, use DART's verified listed-company code to query
+    # KIND company disclosures directly and follow the official viewer to the actual
+    # periodic-report body.  No search engine is needed for this final recovery path.
     discovery = g0_public_disclosure_enrichment.enrich(discovery, audit)
     discovery = g0_rename_chronology_recovery.enrich(discovery, audit)
+    discovery = g0_kind_disclosure_recovery.enrich(discovery, audit)
 
     # Strict annual-report classification rejects brochures and generic PDFs.  The
     # first scripted adapter handles opaque download tokens on pages reached normally;
@@ -63,8 +106,9 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
     g0_report_enrichment.refresh_document_unresolved(discovery, documents, audit)
 
-    # DART establishment date describes legal-entity continuity.  A later rename only
-    # bounds the spelling of the current legal name; it never creates a new company.
+    # DART establishment date describes legal-entity continuity, not the spelling of
+    # the current legal name.  A verified rename below overwrites the current-name
+    # active period with the true rename boundary.
     legal = (((audit.get("stages") or {}).get("legal_identity") or {}).get("resolved") or {})
     established = str(legal.get("establishment_date") or "")
     m = re.search(r"(?:19|20)\d{2}", established)
@@ -85,6 +129,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
         event = sorted(rename_events, key=lambda x: str(x.get("effective_date") or ""))[-1]
         rename_year = (event.get("effective_period") or {}).get("start_year")
         if rename_year:
+            discovery["current_legal_name_active_period"] = {"start_year": int(rename_year)}
             for alias in discovery.get("company_aliases", []) or []:
                 if not isinstance(alias, dict):
                     continue
@@ -94,6 +139,9 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
                 }:
                     alias["active_period"] = {"start_year": int(rename_year)}
 
+    # Run this once more after every enrichment so an unresolved first-party rename
+    # signal can never be hidden by otherwise successful site/document discovery.
+    g0_kind_disclosure_recovery.enforce_historical_continuity_gate(discovery, audit)
     audit["gate_status"] = "PASS" if not discovery.get("unresolved_items") else "REVIEW_REQUIRED"
     return discovery, documents, audit
 
