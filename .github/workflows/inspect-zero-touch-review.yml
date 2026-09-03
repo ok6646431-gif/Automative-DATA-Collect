@@ -96,10 +96,17 @@ jobs:
           assert z.exists() and z.stat().st_size>0
           forbidden=['한화오션에코텍','CP000000000000003970','CT000000000000002997','ADN807N']
           actual_hits=[]
+          raw_preserved_hits=[]
           with zipfile.ZipFile(z) as ar:
-              names=ar.namelist()
-              for name in names:
-                  if '원본검증목록' in name or '00_자료목록' in name:
+              for name in ar.namelist():
+                  # 90_시스템원본 is deliberately company-wide raw evidence. Related
+                  # entities may remain there for auditability; they must not appear in
+                  # the actual human-delivery folders. 00_자료목록 is metadata and may
+                  # reference excluded raw evidence as an exclusion/audit record.
+                  if '/90_시스템원본/' in name:
+                      if any(x in name for x in forbidden): raw_preserved_hits.append(('name',name))
+                      continue
+                  if '/00_자료목록/' in name or '원본검증목록' in name:
                       continue
                   if any(x in name for x in forbidden):
                       actual_hits.append(('name',name))
@@ -109,6 +116,7 @@ jobs:
                       for token in forbidden:
                           if token in text:
                               actual_hits.append((token,name))
+          print('RAW_LAYER_RELATED_ENTITY_PRESERVED',len(raw_preserved_hits))
           print('USER_LAYER_FORBIDDEN_HITS',actual_hits)
           assert not actual_hits, actual_hits
           print('HANWHA_REASSEMBLY_PASS')
