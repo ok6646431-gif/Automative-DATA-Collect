@@ -6,6 +6,12 @@ on:
       - 'run/control-plane'
     paths:
       - '.github/workflows/repackage-validation.yml'
+      - 'orchestrator/postprocess.py'
+      - 'orchestrator/postprocess_core.py'
+      - 'orchestrator/package_run.py'
+      - 'orchestrator/package_run_core.py'
+      - 'orchestrator/requested_scope.py'
+      - 'tests/test_final_validation_semantics.py'
   workflow_dispatch:
 
 permissions:
