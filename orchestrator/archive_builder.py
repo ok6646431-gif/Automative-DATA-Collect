@@ -257,6 +257,29 @@ def render_html_pdf(html_path,pdf_path):
     except Exception as exc: return False,f'{type(exc).__name__}: {exc}'
 
 
+def render_url_pdf(url,pdf_path):
+    """Render a verified official web URL for the user layer.
+
+    Saved HTML remains in 90_시스템원본 for reproducibility, but many modern pages
+    require live CSS/JS/assets to be human-readable. A broken local-HTML render is
+    never promoted merely because it has a PDF extension.
+    """
+    browser=browser_binary()
+    if not browser: return False,'no chromium-compatible browser found'
+    pdf_path=Path(pdf_path).resolve(); pdf_path.parent.mkdir(parents=True,exist_ok=True)
+    cmd=[browser,'--headless=new','--disable-gpu','--no-sandbox','--no-pdf-header-footer','--virtual-time-budget=12000',f'--print-to-pdf={pdf_path}',str(url)]
+    try:
+        cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=75,check=False)
+        ok=valid_pdf(pdf_path)
+        err=''
+        if not ok:
+            err=cp.stderr.decode('utf-8',errors='replace')[-1000:]
+        elif cp.returncode!=0:
+            err=f'non-zero exit code {cp.returncode} but PDF is valid: '+cp.stderr.decode('utf-8',errors='replace')[-500:]
+        return ok,err
+    except Exception as exc: return False,f'{type(exc).__name__}: {exc}'
+
+
 def build_envinfo_user(package_root,archive_root,scope,labels):
     root=Path(package_root); env=root/'output'/'ENVINFO'; user=Path(archive_root)/USER_ROOT/'03_환경정보공개시스템'; created=[]; failures=[]
     profile=read_json(root/'Company_Profile.json',{}) or {}; tokens=target_site_tokens(profile)
@@ -337,6 +360,9 @@ def build_review_report_user(package_root,archive_root,company_name):
     """
     root=Path(package_root); folder=Path(archive_root)/USER_ROOT/'00_환경관리검토'; created=[]; found_pdf=False
     for name,required in REVIEW_REPORT_FILES:
+        # HTML/JSON companions remain in 90_시스템원본. The user layer exposes only
+        # finished review artifacts (PDF/XLSX).
+        if not required: continue
         src=root/name
         if not src.exists(): continue
         created.append(unique_copy(src,folder,f'{safe(company_name)}_{name}'))
@@ -367,10 +393,29 @@ def build_corporate_user(package_root,archive_root,company_name):
         dtype=str(doc.get('document_type') or 'OTHER_OFFICIAL_DOCUMENT'); title=str(doc.get('title') or '')
         folder=user/doc_user_folder(dtype,title); year=str(doc.get('report_year') or '')
         suffix=src.suffix or Path(str(doc.get('original_filename') or '')).suffix
-        if dtype=='SUSTAINABILITY_REPORT' and year: name=f'{safe(company_name)}_지속가능경영보고서_{year}{suffix}'
-        elif year: name=f'{year}_{safe(title or doc.get("original_filename") or src.name)}{suffix if suffix and not str(title).lower().endswith(suffix.lower()) else ""}'
-        else: name=doc.get('original_filename') or f'{safe(title)}{suffix}'
-        copied=unique_copy(src,folder,name); created.append(copied)
+        source_for_user=src; rendered_tmp=None
+        if str(suffix).lower() in {'.html','.htm'}:
+            rendered_tmp=root/f'.user_render_{sha256(src)[:16]}.pdf'
+            source_url=str(doc.get('source_url') or '').strip()
+            if source_url.startswith(('https://','http://')):
+                ok,err=render_url_pdf(source_url,rendered_tmp)
+            else:
+                ok,err=render_html_pdf(src,rendered_tmp)
+            if not ok:
+                x=dict(doc); x['user_archive_status']='PDF_RENDER_FAILED'; x['user_archive_error']=err; rows.append(x)
+                if rendered_tmp.exists(): rendered_tmp.unlink()
+                continue
+            source_for_user=rendered_tmp; suffix='.pdf'
+        if dtype=='SUSTAINABILITY_REPORT' and year:
+            name=f'{safe(company_name)}_지속가능경영보고서_{year}{suffix}'
+        elif year:
+            base_title=safe(title or doc.get('original_filename') or src.name)
+            name=f'{year}_{base_title}{suffix if suffix and not str(base_title).lower().endswith(suffix.lower()) else ""}'
+        else:
+            raw_name=str(doc.get('original_filename') or safe(title) or src.name)
+            name=f'{safe(Path(raw_name).stem)}{suffix}' if rendered_tmp is not None else raw_name
+        copied=unique_copy(source_for_user,folder,name); created.append(copied)
+        if rendered_tmp is not None and rendered_tmp.exists(): rendered_tmp.unlink()
         x=dict(doc); x['user_archive_path']=str(copied.relative_to(archive_root)); rows.append(x)
     return created,rows
 
@@ -426,7 +471,9 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     exposed_docs=docs_created+promoted
     sustainability=[p for p in exposed_docs if '04_지속가능경영보고서' in str(p)]; policy=[p for p in exposed_docs if '06_회사환경정책' in str(p)]; guides=[p for p in docs_created if '07_가이드라인_참고자료' in str(p)]
     expected_env=sum(1 for r in read_csv(package_root/'output'/'ENVINFO'/'discovery.csv') if str(r.get('compId') or '') in scope['ENVINFO'])
-    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present}
+    forbidden_user_suffixes={'.html','.htm','.json','.jsonl'}
+    user_machine_formats_absent=not any(p.is_file() and p.suffix.lower() in forbidden_user_suffixes for p in (archive_root/USER_ROOT).rglob('*'))
+    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present,'user_machine_formats_absent':user_machine_formats_absent}
     completeness='COMPLETE' if all(checks.values()) else 'INCOMPLETE'; idx=archive_root/'00_자료목록'
     manifest={'schema_version':'2.0','company_id':company_id,'company_display_name':company_name,'created_at':datetime.now(timezone.utc).isoformat(),'archive_root':archive_root.name,'archive_completeness':completeness,'acceptance_checks':checks,'target_site_tokens':[x[0] for x in tokens],'target_source_ids':{k:sorted(v) for k,v in scope.items()},'user_files':len(user_files),'system_files':sum(1 for p in (archive_root/SYSTEM_ROOT).rglob('*') if p.is_file()),'xlsx_exports':len(excels),'envinfo_promoted_references':len(promoted),'envinfo_pdf_failures':env_failures,'principle':'01_사용자자료만으로 조사·비교가 가능해야 하며, 재현용 raw 자료는 90_시스템원본에 격리한다.'}
     (idx/'Archive_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
