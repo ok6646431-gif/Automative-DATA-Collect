@@ -1,6 +1,6 @@
 {
-  "schema_version": "1.0",
-  "authority_policy": "Official Korean government/NIER sources only. A catalog entry is a reference candidate, never proof that a company applies the BAT.",
+  "schema_version": "1.1",
+  "authority_policy": "Official Korean government/NIER sources only. A catalog entry is a reference candidate, never proof that a company applies the BAT. Verified direct official PDF endpoints may be retained with a byte-level SHA-256 fingerprint and are preferred over rediscovering the attachment from a slower catalog page.",
   "entries": [
     {
       "catalog_id": "KBREF_RUBBER_PRODUCTS_PENDING_2029",
@@ -13,6 +13,8 @@
       "effective_from": "2029-01-01",
       "official_source_locator": "https://opinion.lawmaking.go.kr/lmSts/govLm/2000000329968/detailRP",
       "official_document_page": "",
+      "official_pdf_url": "",
+      "official_pdf_sha256": "",
       "ksic_prefixes": ["221"],
       "industry_terms": ["고무제품 제조업", "타이어 및 튜브 제조업", "타이어", "고무제품"],
       "process_terms": ["배합", "혼합", "정련", "압출", "성형", "가황"],
@@ -33,6 +35,8 @@
       "effective_from": "",
       "official_source_locator": "https://ieps.nier.go.kr/web/board/5/1898/",
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/1898/",
+      "official_pdf_url": "https://ieps.nier.go.kr/jfile/readDownloadFile.do?fileId=18556eef00760&fileSeq=2&useSecurity=&uploadMode=db",
+      "official_pdf_sha256": "600da16cd5e9ad9554cc954305aace523668ef0c7916ef5797ede2ded8c2da85",
       "ksic_prefixes": [],
       "industry_terms": ["전기 및 증기 생산시설", "발전", "증기 생산"],
       "process_terms": ["연소"],
@@ -40,7 +44,7 @@
       "domains": ["AIR", "GHG_ENERGY", "WATER"],
       "default_role": "COMMON_UTILITY",
       "collection_policy": "COLLECT_WHEN_MATCHED",
-      "notes": "주업종 일치가 아니라 실제 전기·증기 생산/보일러 등 공통설비 근거가 확인될 때 기술적 후보로 사용한다."
+      "notes": "주업종 일치가 아니라 실제 전기·증기 생산/보일러 등 공통설비 근거가 확인될 때 기술적 후보로 사용한다. 공식 PDF endpoint와 SHA-256은 2026-09-04 실제 수집 성공본에서 byte-verified."
     },
     {
       "catalog_id": "KBREF_SEMICONDUCTOR_2020",
@@ -53,6 +57,8 @@
       "effective_from": "",
       "official_source_locator": "https://ieps.nier.go.kr/web/board/5/664/",
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/664/",
+      "official_pdf_url": "",
+      "official_pdf_sha256": "",
       "ksic_prefixes": ["261"],
       "industry_terms": ["반도체 제조업", "전자집적회로 제조업", "반도체"],
       "process_terms": ["식각", "세정", "증착", "포토", "확산"],
@@ -73,6 +79,8 @@
       "effective_from": "",
       "official_source_locator": "https://ieps.nier.go.kr/web/board/5/1789/",
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/1789/",
+      "official_pdf_url": "",
+      "official_pdf_sha256": "",
       "ksic_prefixes": ["38"],
       "industry_terms": ["폐기물처리업"],
       "process_terms": ["소각시설", "폐기물 소각", "매립시설", "폐기물 매립"],
