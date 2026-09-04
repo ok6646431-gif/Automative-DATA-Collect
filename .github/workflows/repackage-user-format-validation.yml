@@ -44,6 +44,7 @@ jobs:
           tests.test_archive_user_dedup_v2
           tests.test_archive_zip_dedup
           tests.test_bat_resolver
+          tests.test_bat_revision_collection
           -v
       - name: Install Korean fonts
         run: |
@@ -92,7 +93,7 @@ jobs:
           PYTHONPATH: orchestrator
         run: |
           python - <<'PY'
-          import json, zipfile
+          import csv,json,zipfile,io
           from archive_acceptance import assert_pass, validate_archive_zip
 
           report=assert_pass(validate_archive_zip('assembled/Human_Archive.zip', expected_env_pdf_count=15), 'Kumho final Human Archive')
@@ -104,24 +105,38 @@ jobs:
           bat=summary.get('bat_archive') or {}
           if int(bat.get('bat_archive_candidate_count') or 0) != 5:
               raise SystemExit(f"Expected 5 Kumho site/BAT candidates, got {bat.get('bat_archive_candidate_count')}")
-          if int(bat.get('bat_archive_pdf_count') or 0) < 1:
-              raise SystemExit('Published matched official BAT PDF missing from Human Archive')
+          if int(bat.get('bat_archive_current_pdf_count') or 0) < 1:
+              raise SystemExit('Published matched current official BAT PDF missing from Human Archive')
           if bat.get('bat_archive_failures'):
               raise SystemExit(f"BAT archive failures: {bat.get('bat_archive_failures')}")
 
           with zipfile.ZipFile('assembled/Human_Archive.zip') as z:
               names=z.namelist()
               bat_xlsx=[n for n in names if n.endswith('/BAT_기준서/BAT_적용후보_및_수집현황.xlsx')]
-              bat_pdfs=[n for n in names if '/BAT_기준서/' in n and n.lower().endswith('.pdf')]
+              current_pdfs=[n for n in names if '/BAT_기준서/01_현행_우선판/' in n and n.lower().endswith('.pdf')]
+              old_pdfs=[n for n in names if '/BAT_기준서/02_구판_아카이브/' in n and n.lower().endswith('.pdf')]
+              all_bat_pdfs=[n for n in names if '/BAT_기준서/' in n and n.lower().endswith('.pdf')]
+              misplaced=[n for n in all_bat_pdfs if '/01_현행_우선판/' not in n and '/02_구판_아카이브/' not in n]
               if len(bat_xlsx)!=1:
                   raise SystemExit(f'Expected one BAT applicability XLSX, got {bat_xlsx}')
-              if len(bat_pdfs)<1:
-                  raise SystemExit('No BAT PDF in final Human Archive ZIP')
-              if any('고무제품' in n and n.lower().endswith('.pdf') for n in names):
+              if not current_pdfs:
+                  raise SystemExit('No current/preferred BAT PDF in final Human Archive ZIP')
+              if misplaced:
+                  raise SystemExit(f'BAT PDFs outside revision folders: {misplaced}')
+              if any('고무제품' in n for n in all_bat_pdfs):
                   raise SystemExit('Unpublished rubber-products BAT must not appear as a PDF')
+              if any('전기 및 증기' in n or '전기_및_증기' in n for n in all_bat_pdfs):
+                  raise SystemExit('Electric/steam industry BAT must not be exposed for Kumho boiler evidence')
+              if not any('업종공통' in n or '보일러' in n for n in current_pdfs):
+                  raise SystemExit(f'Current common-boiler BAT PDF not found: {current_pdfs}')
               forbidden=[n for n in names if '/01_사용자자료/' in n and n.lower().endswith(('.html','.htm','.json','.jsonl'))]
               if forbidden:
                   raise SystemExit(f'Forbidden machine-readable files in user archive: {forbidden[:10]}')
+
+              # The workbook is part of the delivery contract; inspect its ZIP signature without needing openpyxl.
+              xlsx_bytes=z.read(bat_xlsx[0])
+              if not xlsx_bytes.startswith(b'PK'):
+                  raise SystemExit('BAT applicability workbook is not a valid XLSX container')
 
           print(json.dumps({
               'FINAL_ARCHIVE_ACCEPTANCE':'PASS',
@@ -131,7 +146,8 @@ jobs:
               'normalization':summary.get('user_format_normalization'),
               'envinfo_user_attachment_dedup':dedup,
               'bat_archive':bat,
-              'bat_pdf_members':bat_pdfs,
+              'current_bat_pdf_members':current_pdfs,
+              'superseded_bat_pdf_members':old_pdfs,
               'bat_xlsx_members':bat_xlsx,
           },ensure_ascii=False))
           PY
