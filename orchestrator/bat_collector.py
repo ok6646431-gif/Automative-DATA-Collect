@@ -1,11 +1,6 @@
-import csv, hashlib, json, re, time
+import csv, hashlib, json, re
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qsl, urlencode, urlunparse
-
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
-from bs4 import BeautifulSoup
 
 try:
     from .bat_resolver import CATALOG_PATH, read_json, read_csv
@@ -34,6 +29,12 @@ def sha256_bytes(data): return hashlib.sha256(data).hexdigest()
 
 
 def _session():
+    # BAT network dependencies are intentionally lazy-loaded. Importing package_run
+    # must not require requests/bs4 unless the BAT collector is actually executed.
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.util.retry import Retry
+
     retry=Retry(
         total=4, connect=4, read=3, status=3,
         backoff_factor=1.2,
@@ -59,6 +60,8 @@ def _quoted_urls(text):
 
 
 def attachment_candidates(page_url,html):
+    from bs4 import BeautifulSoup
+
     soup=BeautifulSoup(html,'html.parser'); candidates=[]
     for a in soup.find_all('a'):
         label=' '.join(a.stripped_strings)
@@ -96,13 +99,26 @@ def _page_variants(page_url):
     return list(dict.fromkeys(values))
 
 
-def _get(session,url,timeout=(20,90)):
+def _get(session,url,timeout=(15,90)):
     r=session.get(url,timeout=timeout,allow_redirects=True)
     r.raise_for_status()
     return r
 
 
-def fetch_pdf_from_official_page(page_url):
+def _verified_pdf_response(response,expected_sha=''):
+    data=response.content
+    if not data.lstrip().startswith(b'%PDF-'):
+        raise RuntimeError(f'Official response is not a PDF: {response.url}')
+    digest=sha256_bytes(data)
+    expected=str(expected_sha or '').strip().lower()
+    if expected and digest.lower()!=expected:
+        raise RuntimeError(f'Official PDF SHA-256 changed: expected={expected} actual={digest} url={response.url}')
+    return response.url,data,digest
+
+
+def fetch_pdf_from_official_page(page_url,expected_sha=''):
+    import requests
+
     session=_session(); errors=[]
     for page in _page_variants(page_url):
         try:
@@ -111,21 +127,52 @@ def fetch_pdf_from_official_page(page_url):
             errors.append(f'page:{page}:{type(exc).__name__}:{exc}')
             continue
         if r.content.lstrip().startswith(b'%PDF-'):
-            return r.url,r.content,'DIRECT_PDF_PAGE'
+            final,data,_=_verified_pdf_response(r,expected_sha)
+            return final,data,'DIRECT_PDF_PAGE'
         candidates=attachment_candidates(r.url,r.text)
         for _,url,label in candidates:
-            # Attachment candidates must stay on the same official host or an explicit
-            # government redirect reached from that official page.
             try:
                 rr=_get(session,url)
             except requests.RequestException as exc:
                 errors.append(f'attachment:{url}:{type(exc).__name__}:{exc}')
                 continue
             if rr.content.lstrip().startswith(b'%PDF-'):
-                return rr.url,rr.content,f'OFFICIAL_PAGE_ATTACHMENT:{label[:100]}'
+                final,data,_=_verified_pdf_response(rr,expected_sha)
+                return final,data,f'OFFICIAL_PAGE_ATTACHMENT:{label[:100]}'
             errors.append(f'attachment_not_pdf:{rr.url}')
     detail=' | '.join(errors[-8:]) if errors else 'no attachment candidates'
     raise RuntimeError('No PDF attachment could be resolved and byte-verified from the official document page; '+detail)
+
+
+def fetch_pdf_from_entry(entry):
+    """Prefer a previously byte-verified official direct PDF endpoint.
+
+    The board/catalog page remains the discovery fallback. This avoids making every
+    company run depend on a slow IEPS HTML page while still failing closed if the
+    direct official bytes change unexpectedly.
+    """
+    import requests
+
+    direct=str(entry.get('official_pdf_url') or '').strip()
+    expected=str(entry.get('official_pdf_sha256') or '').strip().lower()
+    errors=[]
+    if direct.startswith(('https://','http://')):
+        try:
+            rr=_get(_session(),direct)
+            final,data,digest=_verified_pdf_response(rr,expected)
+            return final,data,f'VERIFIED_OFFICIAL_DIRECT_PDF:sha256={digest}'
+        except Exception as exc:
+            errors.append(f'direct:{direct}:{type(exc).__name__}:{exc}')
+
+    page=str(entry.get('official_document_page') or entry.get('official_source_locator') or '').strip()
+    if page.startswith(('https://','http://')):
+        try:
+            return fetch_pdf_from_official_page(page,expected)
+        except Exception as exc:
+            errors.append(f'page_fallback:{type(exc).__name__}:{exc}')
+
+    detail=' | '.join(errors[-6:]) if errors else 'no official direct PDF or document page'
+    raise RuntimeError('Official BAT PDF collection failed; '+detail)
 
 
 def collect(package,catalog_path=CATALOG_PATH):
@@ -160,11 +207,10 @@ def collect(package,catalog_path=CATALOG_PATH):
             rows.append({**base,'collection_status':'NOT_YET_PUBLISHED'}); pending+=1; continue
         if 'COLLECT' not in actions:
             rows.append({**base,'collection_status':'REVIEW_BEFORE_COLLECTION'}); continue
-        page=str(entry.get('official_document_page') or entry.get('official_source_locator') or '')
-        if not page.startswith(('https://','http://')):
-            rows.append({**base,'collection_status':'DOWNLOAD_FAILED','notes':(base['notes']+'; missing official document page').strip('; ')}); failed+=1; continue
+        if not any(str(entry.get(k) or '').startswith(('https://','http://')) for k in ('official_pdf_url','official_document_page','official_source_locator')):
+            rows.append({**base,'collection_status':'DOWNLOAD_FAILED','notes':(base['notes']+'; missing official document locator').strip('; ')}); failed+=1; continue
         try:
-            final_url,data,basis=fetch_pdf_from_official_page(page)
+            final_url,data,basis=fetch_pdf_from_entry(entry)
             folder=out/'documents'; folder.mkdir(parents=True,exist_ok=True)
             filename=safe(entry.get('title'))+'.pdf'; path=folder/filename
             path.write_bytes(data)
@@ -184,7 +230,7 @@ def collect(package,catalog_path=CATALOG_PATH):
     status={
         'source_key':'BAT_REFERENCES','status':state,
         'candidate_documents':len(rows),'downloaded':downloaded,'failed':failed,'pending_publication':pending,
-        'policy':'Only official government/NIER pages are accepted; transient official-site failure remains explicit and never becomes fabricated reference evidence.'
+        'policy':'Only official government/NIER sources are accepted. Verified direct official PDFs are preferred; catalog-page discovery is fallback; byte/SHA mismatch and transient failure remain explicit.'
     }
     (out/'status.json').write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding='utf-8')
     return status
