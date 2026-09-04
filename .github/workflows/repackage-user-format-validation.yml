@@ -8,6 +8,7 @@ on:
       - '.github/workflows/repackage-user-format-validation.yml'
       - 'orchestrator/archive_builder.py'
       - 'orchestrator/archive_acceptance.py'
+      - 'orchestrator/archive_contract.json'
       - 'orchestrator/archive_stage.py'
       - 'orchestrator/user_archive_format.py'
       - 'tools/prepare_human_archive_delivery.py'
