@@ -149,6 +149,26 @@ def _active_entries(catalog):
     return [e for e in (catalog.get('entries',[]) or []) if e.get('preferred',True) is not False]
 
 
+def _match_role(entry, direct_industry, inherited_industry, direct_process, direct_utility):
+    """Return the allowed candidate role or an empty string.
+
+    Matching is intentionally fail-closed by reference kind:
+    - INDUSTRY: KSIC/industry evidence is mandatory. Generic process words never create a candidate.
+    - INDUSTRY_OR_SECONDARY_PROCESS: industry evidence creates PRIMARY; site-specific process evidence may create SECONDARY_PROCESS.
+    - COMMON_FACILITY: a site-specific utility/facility term is mandatory.
+
+    Company-level technical text is never enough to project a process/facility BAT onto every site.
+    """
+    kind=str(entry.get('reference_kind') or 'INDUSTRY').upper()
+    if direct_industry or inherited_industry:
+        return str(entry.get('industry_match_role') or ('PRIMARY' if kind=='INDUSTRY' else entry.get('default_role') or 'SECONDARY_PROCESS'))
+    if kind=='INDUSTRY_OR_SECONDARY_PROCESS' and direct_process:
+        return str(entry.get('process_match_role') or 'SECONDARY_PROCESS')
+    if kind=='COMMON_FACILITY' and direct_utility:
+        return 'COMMON_UTILITY'
+    return ''
+
+
 def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
     pkg=Path(pkg); as_of=as_of or date.today(); catalog=read_json(catalog_path,{}) or {}; entries=_active_entries(catalog)
     evidence,site_names=collect_evidence(pkg); rows=[]; site_ids=[cid for cid in evidence if cid!='COMPANY']
@@ -156,19 +176,13 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
         for cid in site_ids:
             site=evidence[cid]; company=evidence.get('COMPANY',{})
             industry_text=' | '.join(site.get('industry',[])); process_text=' | '.join(site.get('process',[]))
-            company_industry=' | '.join(company.get('industry',[])); company_process=' | '.join(company.get('process',[]))
+            company_industry=' | '.join(company.get('industry',[]))
             ksic=_ksic_hits(entry.get('ksic_prefixes',[]),site.get('ksic_codes',set())); ind=_term_hits(entry.get('industry_terms',[]),industry_text)
             proc=_term_hits(entry.get('process_terms',[]),process_text); util=_term_hits(entry.get('utility_terms',[]),process_text)
-            company_ind=_term_hits(entry.get('industry_terms',[]),company_industry); company_proc=_term_hits(entry.get('process_terms',[])+entry.get('utility_terms',[]),company_process)
-            direct_industry=bool(ksic or ind); direct_technical=bool(proc or util); inherited_industry=not direct_industry and bool(company_ind); inherited_technical=not direct_technical and bool(company_proc)
-            if not (direct_industry or direct_technical or inherited_industry or inherited_technical): continue
-
-            if direct_industry or inherited_industry:
-                role=str(entry.get('industry_match_role') or ('PRIMARY' if entry.get('reference_kind')=='INDUSTRY' else entry.get('default_role') or 'SECONDARY_PROCESS'))
-            elif util:
-                role='COMMON_UTILITY'
-            else:
-                role=str(entry.get('process_match_role') or 'SECONDARY_PROCESS')
+            company_ind=_term_hits(entry.get('industry_terms',[]),company_industry)
+            direct_industry=bool(ksic or ind); inherited_industry=not direct_industry and bool(company_ind)
+            role=_match_role(entry,direct_industry,inherited_industry,bool(proc),bool(util))
+            if not role: continue
 
             future=_effective_is_future(entry.get('effective_from'),as_of) or str(entry.get('legal_status') or '').startswith('PROPOSED_')
             if future and role=='PRIMARY': state='FUTURE_PRIMARY_CANDIDATE'
@@ -177,14 +191,21 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
             else: state='TECHNICAL_CANDIDATE'
 
             direct_channels=sorted(site.get('channels',set()))
-            if direct_industry or (direct_technical and len(direct_channels)>=2): applicability='STRONG_CANDIDATE'
-            elif direct_technical: applicability='SUPPORTING_CANDIDATE'
-            else: applicability='REVIEW_REQUIRED'
+            technical_only=not direct_industry and not inherited_industry
+            if direct_industry:
+                applicability='STRONG_CANDIDATE'
+            elif technical_only and len(direct_channels)>=2:
+                applicability='STRONG_CANDIDATE'
+            elif technical_only:
+                applicability='SUPPORTING_CANDIDATE'
+            else:
+                applicability='REVIEW_REQUIRED'
 
             pub=str(entry.get('publication_status') or ''); policy=str(entry.get('collection_policy') or '')
             if pub!='PUBLISHED': action='WAIT_FOR_PUBLICATION'
             elif policy in ('WAIT_FOR_LATEST_LOCATOR','METADATA_ONLY'): action='WAIT_FOR_LATEST_LOCATOR'
-            elif applicability=='REVIEW_REQUIRED': action='REVIEW_BEFORE_COLLECTION'
+            elif applicability=='REVIEW_REQUIRED' or (technical_only and applicability=='SUPPORTING_CANDIDATE'):
+                action='REVIEW_BEFORE_COLLECTION'
             else: action='COLLECT'
 
             evidence_bits=[]
@@ -193,7 +214,6 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
             if proc: evidence_bits.append('process='+','.join(proc))
             if util: evidence_bits.append('utility='+','.join(util))
             if inherited_industry: evidence_bits.append('company_industry='+','.join(company_ind))
-            if inherited_technical: evidence_bits.append('company_technical='+','.join(company_proc))
             family=entry.get('catalog_family') or entry.get('catalog_id','')
             rows.append({
                 'candidate_id':f"BATMAP_{family}_{cid}",'catalog_id':entry.get('catalog_id',''),'catalog_family':family,
@@ -205,8 +225,8 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
     rows.sort(key=lambda r:(r['site_name'],r['candidate_role'],r['catalog_family']))
     write_csv(pkg/'BAT_Applicability_Candidates.csv',rows,CANDIDATE_FIELDS)
     selected_catalog=sorted({r['catalog_id'] for r in rows if r['collection_action']=='COLLECT'})
-    plan={'schema_version':'1.2','as_of':as_of.isoformat(),'policy':'MULTI_BAT_SITE_LEVEL_FAIL_CLOSED','candidate_count':len(rows),'site_count':len({r['canonical_site_id'] for r in rows}),'collect_catalog_ids':selected_catalog,'candidates':rows,
-          'boundaries':['A BAT candidate is not proof that the company applies that BAT.','Primary industry, secondary process and common utility references may coexist for one site.','Future/proposed legal applicability is kept distinct from current legal applicability.','Superseded revisions never compete with the preferred/current family revision.','A known newer publication without a verified official locator is WAIT_FOR_LATEST_LOCATOR; an older edition is not silently substituted.','Unpublished references are WAIT_FOR_PUBLICATION and never represented by a fake file.']}
+    plan={'schema_version':'1.3','as_of':as_of.isoformat(),'policy':'MULTI_BAT_SITE_LEVEL_FAIL_CLOSED','candidate_count':len(rows),'site_count':len({r['canonical_site_id'] for r in rows}),'collect_catalog_ids':selected_catalog,'candidates':rows,
+          'boundaries':['A BAT candidate is not proof that the company applies that BAT.','Pure INDUSTRY references require KSIC or industry evidence; generic process words alone never create an industry BAT candidate.','Only INDUSTRY_OR_SECONDARY_PROCESS references may use site-specific process-only evidence.','COMMON_FACILITY references require site-specific utility/facility evidence.','Single-channel technical evidence is REVIEW_BEFORE_COLLECTION rather than automatic collection.','Primary industry, secondary process and common utility references may coexist for one site.','Future/proposed legal applicability is kept distinct from current legal applicability.','Superseded revisions never compete with the preferred/current family revision.','A known newer publication without a verified official locator is WAIT_FOR_LATEST_LOCATOR; an older edition is not silently substituted.','Unpublished references are WAIT_FOR_PUBLICATION and never represented by a fake file.']}
     (pkg/'BAT_Collection_Plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2),encoding='utf-8'); return plan
 
 if __name__=='__main__':
