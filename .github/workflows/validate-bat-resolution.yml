@@ -65,7 +65,7 @@ jobs:
           --icis collected/icis
           --profile requests/runtime/company_profile.generated.json
           --out assembled
-      - name: Verify BAT resolution and official collection
+      - name: Verify BAT resolution and fail-closed collection
         run: |
           python - <<'PY'
           import csv,json
@@ -75,39 +75,74 @@ jobs:
           boiler=[r for r in rows if r['catalog_id']=='KBREF_COMMON_BOILER_2021']
           electric=[r for r in rows if r.get('catalog_family')=='KBREF_FAMILY_ELECTRIC_STEAM']
           expected_rubber={'금호타이어 광주공장','금호타이어 곡성공장','금호타이어 평택공장'}
+          expected_boiler={'금호타이어 광주공장','금호타이어 곡성공장'}
           actual_rubber={r['site_name'] for r in rubber}
-          if not expected_rubber.issubset(actual_rubber):
-              raise SystemExit(f'Missing direct industry-grounded rubber candidates: expected={sorted(expected_rubber)} actual={sorted(actual_rubber)}')
-          if any(r['candidate_role']!='PRIMARY' or r['candidate_state']!='FUTURE_PRIMARY_CANDIDATE' for r in rubber if r['site_name'] in expected_rubber):
-              raise SystemExit('Rubber industry candidates must remain future primary candidates')
+          actual_boiler={r['site_name'] for r in boiler}
+          if actual_rubber != expected_rubber:
+              raise SystemExit(f'Rubber candidates changed unexpectedly: expected={sorted(expected_rubber)} actual={sorted(actual_rubber)}')
+          if any(r['candidate_role']!='PRIMARY' or r['candidate_state']!='FUTURE_PRIMARY_CANDIDATE' or r['applicability_state']!='STRONG_CANDIDATE' for r in rubber):
+              raise SystemExit(f'Rubber industry candidates must remain strong future PRIMARY candidates: {rubber}')
           if any(r['collection_action']!='WAIT_FOR_PUBLICATION' for r in rubber):
               raise SystemExit('Unpublished rubber BAT must remain WAIT_FOR_PUBLICATION')
-          if not boiler or not any(r['candidate_role']=='COMMON_UTILITY' and r['applicability_state'] in {'STRONG_CANDIDATE','SUPPORTING_CANDIDATE'} for r in boiler):
-              raise SystemExit('Expected evidence-backed common boiler BAT candidate was not resolved')
+          if actual_boiler != expected_boiler:
+              raise SystemExit(f'Boiler candidates changed unexpectedly: expected={sorted(expected_boiler)} actual={sorted(actual_boiler)}')
+          if any(r['candidate_role']!='COMMON_UTILITY' or r['applicability_state']!='SUPPORTING_CANDIDATE' or r['collection_action']!='REVIEW_BEFORE_COLLECTION' for r in boiler):
+              raise SystemExit(f'Single-channel boiler evidence must remain supporting review-before-collection: {boiler}')
+          if any(r.get('evidence_channels')!='Management_Action_Ledger' for r in boiler):
+              raise SystemExit(f'Boiler confidence must count only the actual matching evidence channel: {boiler}')
           if electric:
-              raise SystemExit(f'General tire-factory boiler evidence must not resolve the electric/steam industry BAT: {electric}')
+              raise SystemExit(f'Generic tire-factory process evidence must not resolve the electric/steam industry BAT: {electric}')
+          allowed_families={'KBREF_FAMILY_RUBBER_PRODUCTS','KBREF_FAMILY_COMMON_BOILER'}
+          unexpected=[r for r in rows if r.get('catalog_family') not in allowed_families]
+          if unexpected:
+              raise SystemExit(f'Unrelated BAT families resolved on Kumho: {unexpected}')
+          if len(rows)!=5:
+              raise SystemExit(f'Expected exactly five evidence-backed Kumho BAT candidates, got {len(rows)}: {rows}')
           status=json.load(open('assembled/output/BAT_REFERENCES/status.json',encoding='utf-8'))
           summary=json.load(open('assembled/BAT_Summary.json',encoding='utf-8'))
-          if int(status.get('current_failed') or 0)!=0 or int(status.get('current_downloaded') or 0)<1:
-              raise SystemExit(f'Current published official BAT reference was not collected successfully: {status}')
+          if int(status.get('current_failed') or 0)!=0:
+              raise SystemExit(f'BAT collector recorded a current-reference failure: {status}')
+          if int(status.get('current_downloaded') or 0)!=0 or int(status.get('downloaded') or 0)!=0:
+              raise SystemExit(f'Weak/pending Kumho candidates must not be auto-downloaded: {status}')
+          if status.get('status')!='NO_PUBLISHED_MATCH':
+              raise SystemExit(f'No published candidate cleared the collection gate; status must reflect that: {status}')
           with open('assembled/output/BAT_REFERENCES/document_index.csv',encoding='utf-8-sig',newline='') as f:
               docs=list(csv.DictReader(f))
-          current_boiler=[r for r in docs if r['catalog_id']=='KBREF_COMMON_BOILER_2021' and r['collection_status']=='DOWNLOADED']
-          if not current_boiler or any(r.get('preferred_for_matching')!='true' for r in current_boiler):
-              raise SystemExit(f'Current boiler BAT document is missing or misclassified: {current_boiler}')
           if any(r.get('revision_status')=='SUPERSEDED_ARCHIVE_ONLY' and r.get('preferred_for_matching')!='false' for r in docs):
               raise SystemExit('Superseded archive documents must never be preferred for matching')
           print(json.dumps({
               'BAT_VALIDATION':'PASS',
               'candidate_count':len(rows),
               'rubber_sites':sorted(actual_rubber),
-              'boiler_sites':sorted({r['site_name'] for r in boiler}),
+              'boiler_sites':sorted(actual_boiler),
               'electric_steam_candidate_count':len(electric),
-              'candidates':[{k:r[k] for k in ['site_name','catalog_id','catalog_family','revision_generation','candidate_role','candidate_state','applicability_state','collection_action','evidence_basis']} for r in rows],
+              'unexpected_family_count':len(unexpected),
+              'candidates':[{k:r[k] for k in ['site_name','catalog_id','catalog_family','revision_generation','candidate_role','candidate_state','applicability_state','collection_action','evidence_channels','evidence_basis']} for r in rows],
               'collection_status':status,
               'document_revisions':[{k:r.get(k,'') for k in ['catalog_id','catalog_family','revision_generation','publication_year','revision_status','preferred_for_matching','collection_status','stored_path']} for r in docs],
               'bat_summary':summary,
           },ensure_ascii=False,indent=2))
+          PY
+      - name: Byte-verify official common boiler BAT source
+        run: |
+          python - <<'PY'
+          import hashlib,json,requests
+          from pathlib import Path
+          catalog=json.loads(Path('orchestrator/bat_master_catalog.json').read_text(encoding='utf-8'))
+          entry=next(e for e in catalog['entries'] if e['catalog_id']=='KBREF_COMMON_BOILER_2021')
+          url=entry.get('official_pdf_url') or ''
+          expected=entry.get('official_pdf_sha256') or ''
+          if not url or not expected:
+              raise SystemExit('Common boiler catalog entry lacks verified official PDF URL/SHA')
+          r=requests.get(url,timeout=120)
+          r.raise_for_status()
+          body=r.content
+          actual=hashlib.sha256(body).hexdigest()
+          if not body.startswith(b'%PDF'):
+              raise SystemExit(f'Official boiler endpoint did not return PDF bytes: {body[:16]!r}')
+          if actual!=expected:
+              raise SystemExit(f'Official boiler PDF SHA changed: expected={expected} actual={actual} bytes={len(body)}')
+          print(json.dumps({'OFFICIAL_BOILER_PDF':'PASS','bytes':len(body),'sha256':actual,'url':url},ensure_ascii=False))
           PY
       - name: Upload BAT validation artifact
         if: always()
