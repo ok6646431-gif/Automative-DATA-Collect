@@ -6,6 +6,13 @@ on:
       - run/control-plane
     paths:
       - '.github/workflows/repackage-user-format-validation.yml'
+      - 'orchestrator/archive_builder.py'
+      - 'orchestrator/archive_acceptance.py'
+      - 'orchestrator/archive_stage.py'
+      - 'orchestrator/user_archive_format.py'
+      - 'tools/prepare_human_archive_delivery.py'
+      - 'tests/test_archive_delivery_contract.py'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,6 +29,8 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Run archive and delivery contract tests
+        run: python -m unittest tests.test_archive_delivery_contract -v
       - name: Install Korean fonts
         run: |
           sudo apt-get update
@@ -64,49 +73,44 @@ jobs:
           --package assembled
           --stable collected/stable
           --documents requests/document_evidence.json
-      - name: Verify user-facing formats
+      - name: Validate exact final Human Archive ZIP
+        env:
+          PYTHONPATH: orchestrator
         run: |
           python - <<'PY'
-          import json, zipfile
-          from pathlib import PurePosixPath
-          z=zipfile.ZipFile('assembled/Human_Archive.zip')
-          names=[n for n in z.namelist() if not n.endswith('/')]
-          user=[n for n in names if '/01_사용자자료/' in n]
-          leaked=[n for n in user if PurePosixPath(n).suffix.lower() in {'.html','.json','.jsonl'}]
-          if leaked:
-              raise SystemExit('machine-readable files leaked into user layer: '+str(leaked[:10]))
-          required=[
-              'CleanSYS_대기TMS_정리.xlsx',
-              'SOOSIRO_수질TMS_정리.xlsx',
-              'PRTR_화학물질배출이동량_정리.xlsx',
-              '화학물질통계_정리.xlsx',
-          ]
-          missing=[x for x in required if not any(n.endswith('/'+x) for n in user)]
-          if missing:
-              raise SystemExit('missing user XLSX: '+str(missing))
-          env_pdf=[n for n in user if '/03_환경정보공개시스템/' in n and '/환경정보공개_' in n and n.endswith('.pdf')]
-          if len(env_pdf)!=15:
-              raise SystemExit(f'expected 15 ENVINFO PDFs, got {len(env_pdf)}')
-          policies=[n for n in user if '/06_회사환경정책/기타_공식자료/' in n]
-          if len(policies)<4 or any(not n.endswith('.pdf') for n in policies):
-              raise SystemExit('corporate policy pages were not normalized to PDF: '+str(policies))
-          sustainability=[n for n in user if '/04_지속가능경영보고서/' in n and n.endswith('.pdf')]
-          bad_subfolder=[]
-          for n in sustainability:
-              tail=n.split('/04_지속가능경영보고서/',1)[1]
-              if '/' in tail: bad_subfolder.append(n)
-          if bad_subfolder:
-              raise SystemExit('sustainability year subfolders remain: '+str(bad_subfolder))
+          import json
+          from archive_acceptance import assert_pass, validate_archive_zip
+          report=assert_pass(validate_archive_zip('assembled/Human_Archive.zip', expected_env_pdf_count=15), 'Kumho final Human Archive')
           summary=json.load(open('assembled/Archive_Summary.json',encoding='utf-8'))
-          norm=summary.get('user_format_normalization') or {}
           print(json.dumps({
-              'USER_FORMAT_VALIDATION':'PASS',
-              'user_files':len(user),
-              'envinfo_pdfs':len(env_pdf),
-              'corporate_policy_pdfs':len(policies),
-              'sustainability_pdfs':len(sustainability),
-              'normalization':norm,
+              'FINAL_ARCHIVE_ACCEPTANCE':'PASS',
+              'zip_sha256':summary.get('zip_sha256'),
+              'checks':report['checks'],
+              'normalization':summary.get('user_format_normalization'),
           },ensure_ascii=False))
+          PY
+      - name: Build byte-preserving delivery package
+        run: >-
+          python tools/prepare_human_archive_delivery.py
+          --source assembled/Human_Archive.zip
+          --out-dir delivery
+          --prefix '금호타이어_환경자료_2020-2026'
+          --max-mib 450
+      - name: Verify delivery lineage manifest
+        run: |
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          m=json.load(open('delivery/Delivery_Manifest.json',encoding='utf-8'))
+          if m.get('status')!='PASS': raise SystemExit('delivery manifest did not pass')
+          h=hashlib.sha256(Path('assembled/Human_Archive.zip').read_bytes()).hexdigest()
+          if m.get('source_archive_sha256')!=h: raise SystemExit('delivery source SHA mismatch')
+          for p in m.get('parts',[]):
+              f=Path('delivery')/p['name']
+              if not f.exists(): raise SystemExit(f'missing delivery part: {f}')
+              if f.stat().st_size>450*1024*1024: raise SystemExit(f'delivery part too large: {f}')
+              if hashlib.sha256(f.read_bytes()).hexdigest()!=p['sha256']: raise SystemExit(f'part SHA mismatch: {f}')
+          print(json.dumps({'DELIVERY_LINEAGE':'PASS','parts':len(m.get('parts',[])),'selected_members':m.get('selected_member_count')},ensure_ascii=False))
           PY
       - name: Upload normalized archive
         uses: actions/upload-artifact@v4
@@ -115,3 +119,38 @@ jobs:
           path: assembled/Human_Archive.zip
           retention-days: 7
           if-no-files-found: error
+      - name: Upload delivery manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-delivery-manifest
+          path: delivery/Delivery_Manifest.json
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload delivery part 01
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-delivery-part-01
+          path: delivery/금호타이어_환경자료_2020-2026_part_01.zip
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Upload delivery part 02
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-delivery-part-02
+          path: delivery/금호타이어_환경자료_2020-2026_part_02.zip
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Upload delivery part 03
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-delivery-part-03
+          path: delivery/금호타이어_환경자료_2020-2026_part_03.zip
+          retention-days: 14
+          if-no-files-found: ignore
+      - name: Upload delivery part 04
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-delivery-part-04
+          path: delivery/금호타이어_환경자료_2020-2026_part_04.zip
+          retention-days: 14
+          if-no-files-found: ignore
