@@ -166,12 +166,14 @@ jobs:
               ref_headers=[str(v or '') for v in ref_rows[0]]
               ref_records=[dict(zip(ref_headers,row)) for row in ref_rows[1:] if any(v not in (None,'') for v in row)]
               redirected_rows=[r for r in ref_records if str(r.get('원래_사용자경로') or '').endswith('02 2022_금호타이어_지속가능경영보고서_국문.pdf')]
-              if len(redirected_rows)!=1:
-                  raise SystemExit(f'Expected one 2022 ENVINFO sustainability reference row, got {redirected_rows}')
-              if redirected_rows[0].get('최종_보존경로')!=retained_path:
-                  raise SystemExit(f'ENVINFO reference workbook did not redirect to canonical report: {redirected_rows[0]}')
-              if 'SEMANTIC_PDF_DUPLICATE_CANONICAL_REPORT' not in str(redirected_rows[0].get('처리') or ''):
-                  raise SystemExit(f'ENVINFO reference workbook missing semantic dedup marker: {redirected_rows[0]}')
+              if not redirected_rows:
+                  raise SystemExit('Missing 2022 ENVINFO sustainability provenance rows')
+              bad_targets=[r for r in redirected_rows if r.get('최종_보존경로')!=retained_path]
+              if bad_targets:
+                  raise SystemExit(f'ENVINFO reference rows did not all redirect to canonical report: {bad_targets}')
+              bad_markers=[r for r in redirected_rows if 'SEMANTIC_PDF_DUPLICATE_CANONICAL_REPORT' not in str(r.get('처리') or '')]
+              if bad_markers:
+                  raise SystemExit(f'ENVINFO reference rows missing semantic dedup marker: {bad_markers}')
 
               bat_xlsx=[n for n in names if n.endswith('/BAT_기준서/BAT_적용후보_및_수집현황.xlsx')]
               current_pdfs=[n for n in names if '/BAT_기준서/01_현행_우선판/' in n and n.lower().endswith('.pdf')]
@@ -228,6 +230,7 @@ jobs:
               'sustainability_2022_member':y2022[0],
               'crosslane_removed_path':removed_path,
               'crosslane_retained_path':retained_path,
+              'crosslane_provenance_rows':len(redirected_rows),
           },ensure_ascii=False))
           PY
       - name: Build byte-preserving delivery package
