@@ -1,3 +1,4 @@
+# Regression trigger: validates current/preferred matching plus superseded revision archival on the latest BAT catalog.
 import csv, json, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
