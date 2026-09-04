@@ -16,33 +16,42 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe dedicated IEPS BAT search
+      - name: Resolve common boiler BAT official PDF
         run: |
           python - <<'PY'
-          import json,re,requests,time
+          import hashlib,json,re,requests
           from bs4 import BeautifulSoup
           from urllib.parse import urljoin
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (BATCatalogDiscovery/1.0)'
-          terms=['철강','비철금속','유기화학','석유정제','무기화학','정밀화학','비료','펄프','전자부품','반도체','섬유염색']
-          out=[]
-          for term in terms:
-              found=[]
-              for method in ('get','post'):
-                  data={'CERT_TYP':'6','pMENUMST_ID':'95','tab':'seven','searchType':'ALL','searchWord':term}
-                  try:
-                      r=s.request(method,'https://ieps.nier.go.kr/web/board/5/',params=data if method=='get' else None,data=data if method=='post' else None,timeout=(15,60)); r.raise_for_status(); soup=BeautifulSoup(r.text,'html.parser')
-                      links=[]
-                      for a in soup.find_all('a'):
-                          href=str(a.get('href') or ''); label=' '.join(a.stripped_strings); m=re.search(r'/web/board/5/(\d+)/?',href)
-                          if m: links.append({'id':m.group(1),'href':urljoin(r.url,href),'label':label})
-                      found.append({'method':method,'status':r.status_code,'url':r.url,'links':links})
-                      print(term,method,[(x['id'],x['label']) for x in links])
-                      if links: break
-                  except Exception as e:
-                      found.append({'method':method,'error':repr(e)}); print(term,method,'ERR',repr(e))
-                  time.sleep(.2)
-              out.append({'term':term,'attempts':found})
-          open('bat_probe.json','w',encoding='utf-8').write(json.dumps({'queries':out},ensure_ascii=False,indent=2))
+          page='https://ieps.nier.go.kr/web/board/5/1358/?pMENUMST_ID=95'
+          r=s.get(page,timeout=(15,60)); r.raise_for_status(); soup=BeautifulSoup(r.text,'html.parser')
+          candidates=[]
+          for a in soup.find_all('a'):
+              label=' '.join(a.stripped_strings); vals=[]
+              for attr in ('href','onclick','data-url','data-href','data-file','data-download'):
+                  raw=a.get(attr)
+                  if not raw: continue
+                  if attr=='onclick': vals.extend(re.findall(r"['\"]([^'\"]+)['\"]",str(raw)))
+                  else: vals.append(str(raw))
+              for raw in vals:
+                  if raw.lower().startswith('javascript:'): continue
+                  url=urljoin(r.url,raw)
+                  score=(4 if '.pdf' in url.lower() else 0)+(4 if '.pdf' in label.lower() else 0)+(2 if '기준서' in label else 0)+(1 if 'download' in url.lower() or 'file' in url.lower() else 0)
+                  if score: candidates.append({'score':score,'url':url,'label':label})
+          candidates=sorted(candidates,key=lambda x:(-x['score'],x['url']))
+          verified=[]
+          for item in candidates[:12]:
+              try:
+                  rr=s.get(item['url'],timeout=(15,90),allow_redirects=True); rr.raise_for_status()
+                  if rr.content.lstrip().startswith(b'%PDF-'):
+                      verified.append({**item,'final_url':rr.url,'bytes':len(rr.content),'sha256':hashlib.sha256(rr.content).hexdigest()})
+                      break
+              except Exception as e:
+                  item['error']=repr(e)
+          payload={'page_status':r.status_code,'page_url':r.url,'candidates':candidates,'verified':verified}
+          open('bat_probe.json','w',encoding='utf-8').write(json.dumps(payload,ensure_ascii=False,indent=2))
+          print(json.dumps(payload,ensure_ascii=False,indent=2))
+          if not verified: raise SystemExit('No verified common-boiler BAT PDF')
           PY
       - uses: actions/upload-artifact@v4
         with:
