@@ -1,0 +1,43 @@
+name: Patch rubber BAT reference kind
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/patch-rubber-bat-reference-kind.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - name: Patch catalog
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('orchestrator/bat_master_catalog.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          found=False
+          for entry in data.get('entries',[]):
+              if entry.get('catalog_id')=='KBREF_RUBBER_PRODUCTS_PENDING_2029':
+                  entry['reference_kind']='INDUSTRY_OR_SECONDARY_PROCESS'
+                  note=str(entry.get('notes') or '')
+                  extra='가황·정련 등 site-specific 진단 공정 근거가 있을 때만 SECONDARY_PROCESS 후보를 허용한다.'
+                  if extra not in note:
+                      entry['notes']=(note+' '+extra).strip()
+                  found=True
+          if not found:
+              raise SystemExit('rubber catalog entry not found')
+          p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Commit patch and remove temporary workflow
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add orchestrator/bat_master_catalog.json
+          git rm .github/workflows/patch-rubber-bat-reference-kind.yml
+          git commit -m "Allow diagnostic rubber process BAT matching"
+          git push origin HEAD:run/control-plane
