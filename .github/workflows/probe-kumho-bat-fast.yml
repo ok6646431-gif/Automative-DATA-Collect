@@ -1,0 +1,86 @@
+name: Probe Kumho BAT resolver fast
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/probe-kumho-bat-fast.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Bootstrap Kumho profile
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download retained stable artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33735414258
+          github-token: ${{ github.token }}
+          pattern: stable-*
+          path: collected/stable
+          merge-multiple: true
+      - name: Download retained ICIS artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33735414258
+          github-token: ${{ github.token }}
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+      - name: Build identity-only package and run BAT
+        env:
+          PYTHONPATH: orchestrator
+        run: |
+          python - <<'PY'
+          import csv,json,shutil
+          from pathlib import Path
+          import package_run_core as core
+          from postprocess import run_integration
+          from bat_resolver import resolve
+          from bat_collector import collect
+
+          stable=Path('collected/stable'); icis=Path('collected/icis'); out=Path('fast'); output=out/'output'
+          output.mkdir(parents=True,exist_ok=True)
+          for source in ['ENVINFO','CLEANSYS_AIR','SOOSIRO_WATER','CORP_DOCS']:
+              core.copy_source(stable,output,source) or core.copy_source(stable/'output',output,source)
+          chosen,_=core.choose_icis(icis)
+          if not chosen: raise SystemExit('No ICIS source package')
+          for source in ['PRTR','CHEM_STATS']:
+              core.copy_source(chosen,output,source)
+          profile=Path('requests/runtime/company_profile.generated.json')
+          shutil.copy2(profile,out/'Company_Profile.json')
+          run_integration(output,profile,out)
+          plan=resolve(out)
+          status=collect(out)
+          rows=[]
+          with (out/'BAT_Applicability_Candidates.csv').open(encoding='utf-8-sig',newline='') as f: rows=list(csv.DictReader(f))
+          docs=[]
+          with (out/'output'/'BAT_REFERENCES'/'document_index.csv').open(encoding='utf-8-sig',newline='') as f: docs=list(csv.DictReader(f))
+          print(json.dumps({
+              'candidate_count':len(rows),
+              'candidates':[{k:r.get(k,'') for k in ['site_name','catalog_id','catalog_family','revision_generation','candidate_role','applicability_state','collection_action','evidence_basis']} for r in rows],
+              'collection_status':status,
+              'documents':[{k:r.get(k,'') for k in ['catalog_id','catalog_family','revision_generation','revision_status','preferred_for_matching','collection_status','stored_path']} for r in docs],
+          },ensure_ascii=False,indent=2))
+          Path('fast_result.json').write_text(json.dumps({'plan':plan,'status':status,'candidates':rows,'documents':docs},ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kumho-bat-fast-probe
+          path: fast_result.json
+          retention-days: 3
