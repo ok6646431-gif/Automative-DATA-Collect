@@ -12,6 +12,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 import archive_builder
+from archive_acceptance import assert_pass, validate_archive_tree
 
 
 MACHINE_REVIEW_SUFFIXES = {".html", ".json", ".jsonl", ".md"}
@@ -112,7 +113,7 @@ def _refresh_user_indexes(archive_root: Path) -> int:
     return len(rows)
 
 
-def normalize_user_archive(archive_root: str | Path) -> dict[str, int]:
+def normalize_user_archive(archive_root: str | Path) -> dict[str, object]:
     root = Path(archive_root)
     user = root / archive_builder.USER_ROOT
     converted = _render_corporate_html(user)
@@ -122,9 +123,14 @@ def normalize_user_archive(archive_root: str | Path) -> dict[str, int]:
     if leaked:
         raise RuntimeError("machine-readable implementation artifacts leaked into user layer: " + ", ".join(leaked[:10]))
 
+    # This is the product boundary that was previously missing.  A normalizer is not
+    # considered successful merely because it removed HTML/JSON: required XLSX exports,
+    # PDF file integrity and the shallow sustainability-report layout must all pass.
+    acceptance = assert_pass(validate_archive_tree(root), "human user layer")
     user_files = _refresh_user_indexes(root)
     return {
         "corporate_html_rendered_to_pdf": converted,
         "review_machine_variants_removed": removed,
         "user_files": user_files,
+        "acceptance": acceptance,
     }
