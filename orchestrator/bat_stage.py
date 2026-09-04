@@ -3,6 +3,7 @@ from pathlib import Path
 
 from bat_resolver import CATALOG_PATH, resolve
 from bat_collector import collect
+from requested_scope import _selected_address_counts, _candidate_matches
 
 
 def _read_csv(path):
@@ -13,13 +14,7 @@ def _read_csv(path):
 
 
 def _bridge_into_corp_docs(package):
-    """Expose downloaded BAT references to the existing semantic layer without moving files.
-
-    The authoritative BAT copy stays under output/BAT_REFERENCES.  The CORP_DOCS index
-    receives metadata rows only so the already-tested document_semantics/cross-layer
-    pipeline can read the PDF by stored_path.  Archive stage later refreshes the company
-    document lane independently, so this bridge never rewrites retained source evidence.
-    """
+    """Expose downloaded BAT references to the existing semantic layer without moving files."""
     package=Path(package)
     corp=package/'output'/'CORP_DOCS'/'document_index.csv'
     bat=package/'output'/'BAT_REFERENCES'/'document_index.csv'
@@ -50,18 +45,76 @@ def _bridge_into_corp_docs(package):
     return len(added)
 
 
+def _canonical_candidate_map(package):
+    package=Path(package)
+    profile=json.loads((package/'Company_Profile.json').read_text(encoding='utf-8')) if (package/'Company_Profile.json').exists() else {}
+    candidates=[c for c in profile.get('site_candidates',[]) or [] if isinstance(c,dict)]
+    scope_ids=set((profile.get('requested_scope') or {}).get('candidate_ids',[]) or [])
+    selected=[c for c in candidates if not scope_ids or str(c.get('candidate_id') or '') in scope_ids]
+    address_counts=_selected_address_counts(selected)
+    sites,_=_read_csv(package/'Site_Master.csv')
+    inverse={}
+    for candidate in selected:
+        candidate_id=str(candidate.get('candidate_id') or '')
+        if not candidate_id: continue
+        for site in sites:
+            if site.get('identity_status')!='CONFIRMED': continue
+            if _candidate_matches(candidate,site.get('canonical_site_name'),site.get('canonical_address_key'),profile,address_counts):
+                cid=str(site.get('canonical_site_id') or '')
+                if cid: inverse.setdefault(cid,[]).append(candidate_id)
+    return profile,inverse
+
+
+def _write_auto_applicability(package):
+    """Convert strong resolver matches into cross-layer reference applicability.
+
+    VERIFIED here means only that the reference is applicable context for the selected
+    site; it explicitly does not mean the company has adopted the BAT technique.
+    """
+    package=Path(package); profile,inverse=_canonical_candidate_map(package)
+    candidates,_=_read_csv(package/'BAT_Applicability_Candidates.csv')
+    docs,_=_read_csv(package/'output'/'BAT_REFERENCES'/'document_index.csv')
+    by_catalog={}
+    for row in candidates: by_catalog.setdefault(row.get('catalog_id',''),[]).append(row)
+    refs=[]
+    for doc in docs:
+        if doc.get('collection_status')!='DOWNLOADED': continue
+        group=by_catalog.get(doc.get('catalog_id',''),[])
+        strong=[r for r in group if r.get('applicability_state')=='STRONG_CANDIDATE']
+        canonical=sorted({r.get('canonical_site_id','') for r in strong if r.get('canonical_site_id')})
+        candidate_ids=[]
+        for cid in canonical: candidate_ids.extend(inverse.get(cid,[]))
+        candidate_ids=sorted(set(candidate_ids))
+        refs.append({
+            'document_id':doc.get('document_id',''),
+            'applicability_state':'VERIFIED' if canonical and candidate_ids else 'REVIEW_REQUIRED',
+            'candidate_ids':candidate_ids,
+            'reference_domains':[x for x in str(doc.get('reference_domains') or '').split('|') if x],
+            'basis':' | '.join(sorted({r.get('evidence_basis','') for r in strong if r.get('evidence_basis')})),
+            'source_locator':doc.get('source_locator',''),
+            'interpretation_boundary':'Verified reference applicability only; no inference that the company has adopted or operates the BAT technique.'
+        })
+    payload={'schema_version':'1.0','request_id':profile.get('request_id',''),'references':refs}
+    path=package/'BAT_Industry_Reference_Applicability.json'
+    path.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
+    return path,refs
+
+
 def run(package,catalog_path=CATALOG_PATH,as_of=None):
     package=Path(package)
     plan=resolve(package,catalog_path,as_of)
     status=collect(package,catalog_path)
     bridged=_bridge_into_corp_docs(package)
+    applicability_path,refs=_write_auto_applicability(package)
     summary={
-        'schema_version':'1.1',
+        'schema_version':'1.2',
         'candidate_count':plan.get('candidate_count',0),
         'site_count':plan.get('site_count',0),
         'collect_catalog_ids':plan.get('collect_catalog_ids',[]),
         'collection_status':status,
         'semantic_bridge_documents':bridged,
+        'verified_reference_applicability':sum(r.get('applicability_state')=='VERIFIED' for r in refs),
+        'applicability_path':str(applicability_path),
         'principle':'Many-to-many site/BAT candidates; current legal applicability, future applicability and technical relevance remain separate. A candidate or downloaded reference never proves company adoption.'
     }
     (package/'BAT_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
