@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install archive test dependencies
+        run: python -m pip install --disable-pip-version-check xlsxwriter beautifulsoup4
       - name: Apply archive format patch
         run: python scripts/patch_user_archive_formats.py
       - name: Validate archive builder
