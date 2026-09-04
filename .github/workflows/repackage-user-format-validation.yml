@@ -30,6 +30,8 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      PYTHONPATH: orchestrator
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -90,8 +92,6 @@ jobs:
           --stable collected/stable
           --documents requests/document_evidence.json
       - name: Validate exact final Human Archive ZIP
-        env:
-          PYTHONPATH: orchestrator
         run: |
           python - <<'PY'
           import csv,json,zipfile,io,tempfile
