@@ -1,13 +1,37 @@
 """Compatibility wrapper for the archive stage with BAT reference delivery.
 
-The stable archive implementation is preserved in ``archive_stage_core``.  This
+The stable archive implementation is preserved in ``archive_stage_core``. This
 wrapper adds only the BAT human-delivery hook after the normal archive tree is built
-and before normalization/final acceptance.  A downloaded BAT remains a technical
+and before normalization/final acceptance. A downloaded BAT remains a technical
 reference; candidate mapping never proves company adoption.
+
+The user-archive dedup stage performs strict PDF render-structure comparison for
+same-year sustainability-report copies. ``pypdf`` is therefore an archive-stage
+runtime dependency. Legacy collection workflows did not install it explicitly, so
+this compatibility wrapper bootstraps the dependency before importing the stable
+archive core. Installation failure is fatal rather than silently disabling semantic
+deduplication.
 """
 
+import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
+
+
+def _ensure_pdf_semantic_runtime():
+    if importlib.util.find_spec('pypdf') is not None:
+        return
+    subprocess.run(
+        [sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'pypdf'],
+        check=True,
+    )
+    if importlib.util.find_spec('pypdf') is None:
+        raise RuntimeError('pypdf installation completed but module is still unavailable')
+
+
+_ensure_pdf_semantic_runtime()
 
 import archive_stage_core as _core
 from archive_stage_core import *  # preserve public helper contract
