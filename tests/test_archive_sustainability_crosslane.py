@@ -42,16 +42,17 @@ class ArchiveSustainabilityCrosslaneTests(unittest.TestCase):
             write_blank_pdf(other_year, 595, 842, {'/Title': 'Same rendering different year'})
             (system/'raw_2022_report.pdf').write_bytes(attachment.read_bytes())
 
-            self.assertNotEqual(
-                hashlib.sha256(official.read_bytes()).hexdigest(),
-                hashlib.sha256(attachment.read_bytes()).hexdigest(),
-            )
+            official_digest = hashlib.sha256(official.read_bytes()).hexdigest()
+            attachment_digest = hashlib.sha256(attachment.read_bytes()).hexdigest()
+            distinct_digest = hashlib.sha256(distinct.read_bytes()).hexdigest()
+            other_year_digest = hashlib.sha256(other_year.read_bytes()).hexdigest()
+            self.assertNotEqual(official_digest, attachment_digest)
 
             prior = canonicalize_user_envinfo(root)
             central = root/'01_사용자자료'/'03_환경정보공개시스템'/'첨부자료_원문'
-            report_copy = next(p for p in central.iterdir() if '2022_지속가능경영보고서' in p.name)
-            distinct_copy = next(p for p in central.iterdir() if '2022_다른자료' in p.name)
-            other_year_copy = next(p for p in central.iterdir() if '2021_지속가능경영보고서' in p.name)
+            report_copy = next(p for p in central.iterdir() if p.name.startswith(attachment_digest[:12] + '_'))
+            distinct_copy = next(p for p in central.iterdir() if p.name.startswith(distinct_digest[:12] + '_'))
+            other_year_copy = next(p for p in central.iterdir() if p.name.startswith(other_year_digest[:12] + '_'))
             removed_rel = report_copy.relative_to(root).as_posix()
             official_rel = official.relative_to(root).as_posix()
 
