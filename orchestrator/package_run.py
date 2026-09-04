@@ -20,9 +20,6 @@ from package_run_core import *  # preserve public helper contract
 import requested_scope as _scope
 from bat_stage import run as _run_bat_stage
 
-# An empty audit stream is valid only when the collector status explicitly declares
-# the corresponding attempt count as zero. Both historical/current audit filenames
-# are supported because the semantic counter, not the filename spelling, is decisive.
 for _audit_name in ("source_id_backfill_attempts.jsonl", "source_id_backfill_audit.jsonl"):
     _core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})[_audit_name] = "source_id_backfill_attempts"
 
@@ -49,7 +46,6 @@ def _demote_out_of_scope_identity_reviews(package_root, scope_summary):
     root = Path(package_root)
     if str(scope_summary.get("mode") or "").upper() != "SITE_SET":
         return 0
-
     profile = json.loads((root / "Company_Profile.json").read_text(encoding="utf-8"))
     selected, _ = _scope.selected_candidates(profile)
     address_counts = _scope._selected_address_counts(selected)
@@ -57,7 +53,6 @@ def _demote_out_of_scope_identity_reviews(package_root, scope_summary):
         source: {str(v) for v in values}
         for source, values in (scope_summary.get("target_source_ids") or {}).items()
     }
-
     identities = _read_csv(root / "Source_Identity.csv")
     out_of_scope = set()
     for row in identities:
@@ -77,10 +72,8 @@ def _demote_out_of_scope_identity_reviews(package_root, scope_summary):
         )
         if not could_be_requested:
             out_of_scope.add(f"{source}:{sid}")
-
     if not out_of_scope:
         return 0
-
     queue_path = root / "Validation_Queue.csv"
     queue = _read_csv(queue_path)
     changed = set()
@@ -98,7 +91,6 @@ def _demote_out_of_scope_identity_reviews(package_root, scope_summary):
         changed.add(row.get("validation_id"))
     if queue:
         _write_csv(queue_path, queue, list(queue[0].keys()))
-
     review_path = root / "REVIEW_REQUIRED.json"
     review = json.loads(review_path.read_text(encoding="utf-8")) if review_path.exists() else []
     review = [
@@ -120,9 +112,13 @@ def apply_requested_scope(package_root):
     return summary
 
 
-def _cross_layer_review_with_bat(package_root, semantic_path=None, applicability_path=None):
+def _cross_layer_review_with_bat(package_root, semantic_path=None, protocol_path=None, applicability_path=None):
     bat_summary = _run_bat_stage(package_root)
-    result = _BASE_RUN_CROSS_LAYER_REVIEW(package_root, semantic_path, applicability_path)
+    auto_applicability = Path(str(bat_summary.get('applicability_path') or ''))
+    chosen_applicability = applicability_path
+    if chosen_applicability is None and auto_applicability.exists():
+        chosen_applicability = auto_applicability
+    result = _BASE_RUN_CROSS_LAYER_REVIEW(package_root, semantic_path, protocol_path, chosen_applicability)
     if isinstance(result, dict):
         result['bat_reference_stage'] = bat_summary
     return result
