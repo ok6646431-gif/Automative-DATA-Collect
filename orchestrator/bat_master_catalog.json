@@ -26,11 +26,32 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/146/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["35113", "35119", "353"],
-      "industry_terms": ["화력 발전업", "기타 발전업", "증기, 냉온수 및 공기조절 공급업", "전기 및 증기 생산시설", "발전업", "증기공급"],
-      "process_terms": ["연소", "발전", "증기 생산"],
+      "ksic_prefixes": [
+        "35113",
+        "35119",
+        "353"
+      ],
+      "industry_terms": [
+        "화력 발전업",
+        "기타 발전업",
+        "증기, 냉온수 및 공기조절 공급업",
+        "전기 및 증기 생산시설",
+        "발전업",
+        "증기공급"
+      ],
+      "process_terms": [
+        "연소",
+        "발전",
+        "증기 생산"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -54,11 +75,31 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/1898/",
       "official_pdf_url": "https://ieps.nier.go.kr/jfile/readDownloadFile.do?fileId=18556eef00760&fileSeq=2&useSecurity=&uploadMode=db",
       "official_pdf_sha256": "600da16cd5e9ad9554cc954305aace523668ef0c7916ef5797ede2ded8c2da85",
-      "ksic_prefixes": ["35113", "35119", "353"],
-      "industry_terms": ["화력 발전업", "기타 발전업", "증기, 냉온수 및 공기조절 공급업", "전기 및 증기 생산시설", "발전업", "증기공급"],
-      "process_terms": ["발전", "증기 생산"],
+      "ksic_prefixes": [
+        "35113",
+        "35119",
+        "353"
+      ],
+      "industry_terms": [
+        "화력 발전업",
+        "기타 발전업",
+        "증기, 냉온수 및 공기조절 공급업",
+        "전기 및 증기 생산시설",
+        "발전업",
+        "증기공급"
+      ],
+      "process_terms": [
+        "발전",
+        "증기 생산"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -83,10 +124,22 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["폐기물 소각"],
-      "process_terms": ["폐기물 소각", "소각시설", "소각로"],
+      "industry_terms": [
+        "폐기물 소각"
+      ],
+      "process_terms": [
+        "폐기물 소각",
+        "소각시설",
+        "소각로"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -111,10 +164,23 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["폐기물 소각", "폐기물 처리업"],
-      "process_terms": ["폐기물 소각", "소각시설", "소각로"],
+      "industry_terms": [
+        "폐기물 소각",
+        "폐기물 처리업"
+      ],
+      "process_terms": [
+        "폐기물 소각",
+        "소각시설",
+        "소각로"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "SECONDARY_PROCESS",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -136,18 +202,33 @@
       "effective_from": "",
       "official_source_locator": "https://ieps.nier.go.kr/web/board/5/1358/",
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/1358/",
-      "official_pdf_url": "",
-      "official_pdf_sha256": "",
+      "official_pdf_url": "https://www.korea.kr/common/download.do?fileId=196628937&tblKey=EDN",
+      "official_pdf_sha256": "4bf5aaccd52f963fe7468f97f2d04bcbe9f0c5e3e1626d0bba1f90d6bc64df78",
       "ksic_prefixes": [],
       "industry_terms": [],
       "process_terms": [],
-      "utility_terms": ["보일러", "스팀", "증기", "연료 사용", "연료사용", "저NOx 버너", "저녹스 버너", "버너"],
-      "domains": ["AIR", "GHG_ENERGY"],
+      "utility_terms": [
+        "보일러",
+        "스팀",
+        "증기",
+        "연료 사용",
+        "연료사용",
+        "저NOx 버너",
+        "저녹스 버너",
+        "버너"
+      ],
+      "domains": [
+        "AIR",
+        "GHG_ENERGY"
+      ],
       "default_role": "COMMON_UTILITY",
       "industry_match_role": "COMMON_UTILITY",
       "process_match_role": "COMMON_UTILITY",
       "collection_policy": "COLLECT_WHEN_MATCHED",
-      "notes": "2021년 산업용 보일러 업종공통 기준서. 업종 기준서와 수평적으로 함께 적용 가능한 참고기준서이며 실제 보일러/연료사용 근거가 있을 때만 매칭한다."
+      "notes": "2021년 산업용 보일러 업종공통 기준서. 업종 기준서와 수평적으로 함께 적용 가능한 참고기준서이며 실제 보일러/연료사용 근거가 있을 때만 매칭한다. 정책브리핑 공식 PDF endpoint는 2026-09-04 byte 검증(57,516,066 bytes, SHA-256 고정).",
+      "official_fallback_pages": [
+        "https://www.korea.kr/archive/expDocView.do?docId=39763"
+      ]
     },
     {
       "catalog_id": "KBREF_WASTE_TREATMENT_2022",
@@ -166,11 +247,34 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/1789/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["3821", "3822", "382"],
-      "industry_terms": ["폐기물처리업", "지정외 폐기물 처리업", "지정 폐기물 처리업"],
-      "process_terms": ["중간처분", "재활용시설", "최종처분", "매립시설", "음식물자원화", "재활용선별", "연료화시설", "하·폐수슬러지 처리"],
+      "ksic_prefixes": [
+        "3821",
+        "3822",
+        "382"
+      ],
+      "industry_terms": [
+        "폐기물처리업",
+        "지정외 폐기물 처리업",
+        "지정 폐기물 처리업"
+      ],
+      "process_terms": [
+        "중간처분",
+        "재활용시설",
+        "최종처분",
+        "매립시설",
+        "음식물자원화",
+        "재활용선별",
+        "연료화시설",
+        "하·폐수슬러지 처리"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "SECONDARY_PROCESS",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -194,11 +298,26 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/2184/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["23311"],
-      "industry_terms": ["시멘트 제조업", "시멘트"],
-      "process_terms": ["소성로", "킬른", "클링커"],
+      "ksic_prefixes": [
+        "23311"
+      ],
+      "industry_terms": [
+        "시멘트 제조업",
+        "시멘트"
+      ],
+      "process_terms": [
+        "소성로",
+        "킬른",
+        "클링커"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -222,11 +341,29 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/402/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["241"],
-      "industry_terms": ["1차 철강 제조업", "철강 제조업", "철강"],
-      "process_terms": ["제선", "제강", "압연", "소결", "코크스"],
+      "ksic_prefixes": [
+        "241"
+      ],
+      "industry_terms": [
+        "1차 철강 제조업",
+        "철강 제조업",
+        "철강"
+      ],
+      "process_terms": [
+        "제선",
+        "제강",
+        "압연",
+        "소결",
+        "코크스"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -250,11 +387,29 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["241"],
-      "industry_terms": ["1차 철강 제조업", "철강 제조업", "철강"],
-      "process_terms": ["제선", "제강", "압연", "소결", "코크스"],
+      "ksic_prefixes": [
+        "241"
+      ],
+      "industry_terms": [
+        "1차 철강 제조업",
+        "철강 제조업",
+        "철강"
+      ],
+      "process_terms": [
+        "제선",
+        "제강",
+        "압연",
+        "소결",
+        "코크스"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -278,11 +433,28 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/404/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["242"],
-      "industry_terms": ["1차 비철금속 제조업", "비철금속 제조업", "비철금속"],
-      "process_terms": ["제련", "정련", "용해", "주조"],
+      "ksic_prefixes": [
+        "242"
+      ],
+      "industry_terms": [
+        "1차 비철금속 제조업",
+        "비철금속 제조업",
+        "비철금속"
+      ],
+      "process_terms": [
+        "제련",
+        "정련",
+        "용해",
+        "주조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -306,11 +478,28 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["242"],
-      "industry_terms": ["1차 비철금속 제조업", "비철금속 제조업", "비철금속"],
-      "process_terms": ["제련", "정련", "용해", "주조"],
+      "ksic_prefixes": [
+        "242"
+      ],
+      "industry_terms": [
+        "1차 비철금속 제조업",
+        "비철금속 제조업",
+        "비철금속"
+      ],
+      "process_terms": [
+        "제련",
+        "정련",
+        "용해",
+        "주조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -334,11 +523,35 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/407/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["20111", "20119", "20201", "20202"],
-      "industry_terms": ["석유화학계 기초화학물질 제조업", "기초 유기 화학물질 제조업", "합성고무 제조업", "합성수지 및 기타 플라스틱 물질 제조업", "유기화학산업"],
-      "process_terms": ["분해", "증류", "중합", "합성", "반응", "정제"],
+      "ksic_prefixes": [
+        "20111",
+        "20119",
+        "20201",
+        "20202"
+      ],
+      "industry_terms": [
+        "석유화학계 기초화학물질 제조업",
+        "기초 유기 화학물질 제조업",
+        "합성고무 제조업",
+        "합성수지 및 기타 플라스틱 물질 제조업",
+        "유기화학산업"
+      ],
+      "process_terms": [
+        "분해",
+        "증류",
+        "중합",
+        "합성",
+        "반응",
+        "정제"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -362,11 +575,35 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["20111", "20119", "20201", "20202"],
-      "industry_terms": ["석유화학계 기초화학물질 제조업", "기초 유기 화학물질 제조업", "합성고무 제조업", "합성수지 및 기타 플라스틱 물질 제조업", "유기화학산업"],
-      "process_terms": ["분해", "증류", "중합", "합성", "반응", "정제"],
+      "ksic_prefixes": [
+        "20111",
+        "20119",
+        "20201",
+        "20202"
+      ],
+      "industry_terms": [
+        "석유화학계 기초화학물질 제조업",
+        "기초 유기 화학물질 제조업",
+        "합성고무 제조업",
+        "합성수지 및 기타 플라스틱 물질 제조업",
+        "유기화학산업"
+      ],
+      "process_terms": [
+        "분해",
+        "증류",
+        "중합",
+        "합성",
+        "반응",
+        "정제"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -390,11 +627,29 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/537/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["192"],
-      "industry_terms": ["석유 정제품 제조업", "석유정제산업", "정유"],
-      "process_terms": ["상압증류", "감압증류", "탈황", "개질", "분해"],
+      "ksic_prefixes": [
+        "192"
+      ],
+      "industry_terms": [
+        "석유 정제품 제조업",
+        "석유정제산업",
+        "정유"
+      ],
+      "process_terms": [
+        "상압증류",
+        "감압증류",
+        "탈황",
+        "개질",
+        "분해"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -418,11 +673,29 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["192"],
-      "industry_terms": ["석유 정제품 제조업", "석유정제산업", "정유"],
-      "process_terms": ["상압증류", "감압증류", "탈황", "개질", "분해"],
+      "ksic_prefixes": [
+        "192"
+      ],
+      "industry_terms": [
+        "석유 정제품 제조업",
+        "석유정제산업",
+        "정유"
+      ],
+      "process_terms": [
+        "상압증류",
+        "감압증류",
+        "탈황",
+        "개질",
+        "분해"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -446,11 +719,30 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/538/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["20129", "20131"],
-      "industry_terms": ["기타 기초 무기 화학물질 제조업", "무기안료용 금속 산화물 및 관련 제품 제조업", "무기화학산업"],
-      "process_terms": ["반응", "소성", "용해", "결정화", "건조"],
+      "ksic_prefixes": [
+        "20129",
+        "20131"
+      ],
+      "industry_terms": [
+        "기타 기초 무기 화학물질 제조업",
+        "무기안료용 금속 산화물 및 관련 제품 제조업",
+        "무기화학산업"
+      ],
+      "process_terms": [
+        "반응",
+        "소성",
+        "용해",
+        "결정화",
+        "건조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -474,11 +766,30 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["20129", "20131"],
-      "industry_terms": ["기타 기초 무기 화학물질 제조업", "무기안료용 금속 산화물 및 관련 제품 제조업", "무기화학산업"],
-      "process_terms": ["반응", "소성", "용해", "결정화", "건조"],
+      "ksic_prefixes": [
+        "20129",
+        "20131"
+      ],
+      "industry_terms": [
+        "기타 기초 무기 화학물질 제조업",
+        "무기안료용 금속 산화물 및 관련 제품 제조업",
+        "무기화학산업"
+      ],
+      "process_terms": [
+        "반응",
+        "소성",
+        "용해",
+        "결정화",
+        "건조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -502,11 +813,29 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/540/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["202"],
-      "industry_terms": ["비료 및 질소화합물 제조업", "비료 제조업", "질소화합물"],
-      "process_terms": ["암모니아", "요소", "비료 생산", "중화", "과립"],
+      "ksic_prefixes": [
+        "202"
+      ],
+      "industry_terms": [
+        "비료 및 질소화합물 제조업",
+        "비료 제조업",
+        "질소화합물"
+      ],
+      "process_terms": [
+        "암모니아",
+        "요소",
+        "비료 생산",
+        "중화",
+        "과립"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -530,11 +859,29 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["202"],
-      "industry_terms": ["비료 및 질소화합물 제조업", "비료 제조업", "질소화합물"],
-      "process_terms": ["암모니아", "요소", "비료 생산", "중화", "과립"],
+      "ksic_prefixes": [
+        "202"
+      ],
+      "industry_terms": [
+        "비료 및 질소화합물 제조업",
+        "비료 제조업",
+        "질소화합물"
+      ],
+      "process_terms": [
+        "암모니아",
+        "요소",
+        "비료 생산",
+        "중화",
+        "과립"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -558,11 +905,32 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/539/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["204"],
-      "industry_terms": ["기타 화학제품 제조업", "정밀화학산업", "도료 제조업", "계면활성제 제조업", "화장품 제조업", "세제 제조업"],
-      "process_terms": ["배합", "혼합", "반응", "증류", "건조"],
+      "ksic_prefixes": [
+        "204"
+      ],
+      "industry_terms": [
+        "기타 화학제품 제조업",
+        "정밀화학산업",
+        "도료 제조업",
+        "계면활성제 제조업",
+        "화장품 제조업",
+        "세제 제조업"
+      ],
+      "process_terms": [
+        "배합",
+        "혼합",
+        "반응",
+        "증류",
+        "건조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -586,11 +954,30 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/662/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["171", "179"],
-      "industry_terms": ["펄프, 종이 및 판지 제조업", "기타 종이 및 판지 제품 제조업", "펄프 제조업", "제지"],
-      "process_terms": ["펄핑", "표백", "초지", "건조"],
+      "ksic_prefixes": [
+        "171",
+        "179"
+      ],
+      "industry_terms": [
+        "펄프, 종이 및 판지 제조업",
+        "기타 종이 및 판지 제품 제조업",
+        "펄프 제조업",
+        "제지"
+      ],
+      "process_terms": [
+        "펄핑",
+        "표백",
+        "초지",
+        "건조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -614,11 +1001,30 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["171", "179"],
-      "industry_terms": ["펄프, 종이 및 판지 제조업", "기타 종이 및 판지 제품 제조업", "펄프 제조업", "제지"],
-      "process_terms": ["펄핑", "표백", "초지", "건조"],
+      "ksic_prefixes": [
+        "171",
+        "179"
+      ],
+      "industry_terms": [
+        "펄프, 종이 및 판지 제조업",
+        "기타 종이 및 판지 제품 제조업",
+        "펄프 제조업",
+        "제지"
+      ],
+      "process_terms": [
+        "펄핑",
+        "표백",
+        "초지",
+        "건조"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -642,11 +1048,30 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/663/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["262"],
-      "industry_terms": ["전자부품 제조업", "평판 디스플레이 제조업", "인쇄회로기판 제조업", "전자축전기 제조업"],
-      "process_terms": ["도금", "식각", "세정", "현상", "증착"],
+      "ksic_prefixes": [
+        "262"
+      ],
+      "industry_terms": [
+        "전자부품 제조업",
+        "평판 디스플레이 제조업",
+        "인쇄회로기판 제조업",
+        "전자축전기 제조업"
+      ],
+      "process_terms": [
+        "도금",
+        "식각",
+        "세정",
+        "현상",
+        "증착"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -670,11 +1095,30 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["262"],
-      "industry_terms": ["전자부품 제조업", "평판 디스플레이 제조업", "인쇄회로기판 제조업", "전자축전기 제조업"],
-      "process_terms": ["도금", "식각", "세정", "현상", "증착"],
+      "ksic_prefixes": [
+        "262"
+      ],
+      "industry_terms": [
+        "전자부품 제조업",
+        "평판 디스플레이 제조업",
+        "인쇄회로기판 제조업",
+        "전자축전기 제조업"
+      ],
+      "process_terms": [
+        "도금",
+        "식각",
+        "세정",
+        "현상",
+        "증착"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -698,11 +1142,31 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/664/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["261"],
-      "industry_terms": ["반도체 제조업", "전자집적회로 제조업", "웨이퍼", "반도체"],
-      "process_terms": ["식각", "세정", "증착", "포토", "확산", "POU 스크러버"],
+      "ksic_prefixes": [
+        "261"
+      ],
+      "industry_terms": [
+        "반도체 제조업",
+        "전자집적회로 제조업",
+        "웨이퍼",
+        "반도체"
+      ],
+      "process_terms": [
+        "식각",
+        "세정",
+        "증착",
+        "포토",
+        "확산",
+        "POU 스크러버"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -726,11 +1190,31 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["261"],
-      "industry_terms": ["반도체 제조업", "전자집적회로 제조업", "웨이퍼", "반도체"],
-      "process_terms": ["식각", "세정", "증착", "포토", "확산", "POU 스크러버"],
+      "ksic_prefixes": [
+        "261"
+      ],
+      "industry_terms": [
+        "반도체 제조업",
+        "전자집적회로 제조업",
+        "웨이퍼",
+        "반도체"
+      ],
+      "process_terms": [
+        "식각",
+        "세정",
+        "증착",
+        "포토",
+        "확산",
+        "POU 스크러버"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -754,11 +1238,30 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/666/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["134"],
-      "industry_terms": ["섬유제품 염색, 정리 및 마무리 가공업", "섬유염색 가공업", "염색가공"],
-      "process_terms": ["염색", "정련", "표백", "수세", "건조", "텐터"],
+      "ksic_prefixes": [
+        "134"
+      ],
+      "industry_terms": [
+        "섬유제품 염색, 정리 및 마무리 가공업",
+        "섬유염색 가공업",
+        "염색가공"
+      ],
+      "process_terms": [
+        "염색",
+        "정련",
+        "표백",
+        "수세",
+        "건조",
+        "텐터"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -782,11 +1285,30 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["134"],
-      "industry_terms": ["섬유제품 염색, 정리 및 마무리 가공업", "섬유염색 가공업", "염색가공"],
-      "process_terms": ["염색", "정련", "표백", "수세", "건조", "텐터"],
+      "ksic_prefixes": [
+        "134"
+      ],
+      "industry_terms": [
+        "섬유제품 염색, 정리 및 마무리 가공업",
+        "섬유염색 가공업",
+        "염색가공"
+      ],
+      "process_terms": [
+        "염색",
+        "정련",
+        "표백",
+        "수세",
+        "건조",
+        "텐터"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -810,11 +1332,28 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/886/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["111"],
-      "industry_terms": ["알코올음료 제조업", "알콜음료 제조업", "주류 제조업"],
-      "process_terms": ["발효", "증류", "여과", "세척"],
+      "ksic_prefixes": [
+        "111"
+      ],
+      "industry_terms": [
+        "알코올음료 제조업",
+        "알콜음료 제조업",
+        "주류 제조업"
+      ],
+      "process_terms": [
+        "발효",
+        "증류",
+        "여과",
+        "세척"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -838,11 +1377,27 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/887/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["222"],
-      "industry_terms": ["플라스틱제품 제조업", "플라스틱 제품"],
-      "process_terms": ["압출", "사출", "성형", "가공"],
+      "ksic_prefixes": [
+        "222"
+      ],
+      "industry_terms": [
+        "플라스틱제품 제조업",
+        "플라스틱 제품"
+      ],
+      "process_terms": [
+        "압출",
+        "사출",
+        "성형",
+        "가공"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -866,11 +1421,28 @@
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/888/",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["303"],
-      "industry_terms": ["자동차 부품 제조업", "자동차부품 제조업"],
-      "process_terms": ["도장", "표면처리", "세척", "열처리", "조립"],
+      "ksic_prefixes": [
+        "303"
+      ],
+      "industry_terms": [
+        "자동차 부품 제조업",
+        "자동차부품 제조업"
+      ],
+      "process_terms": [
+        "도장",
+        "표면처리",
+        "세척",
+        "열처리",
+        "조립"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -894,11 +1466,29 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["101"],
-      "industry_terms": ["도축, 육류 가공 및 저장 처리업", "도축", "육류 가공"],
-      "process_terms": ["도축", "세척", "가공", "냉장", "냉동"],
+      "ksic_prefixes": [
+        "101"
+      ],
+      "industry_terms": [
+        "도축, 육류 가공 및 저장 처리업",
+        "도축",
+        "육류 가공"
+      ],
+      "process_terms": [
+        "도축",
+        "세척",
+        "가공",
+        "냉장",
+        "냉동"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -922,11 +1512,27 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["112"],
-      "industry_terms": ["비알코올 음료 및 얼음 제조업", "비알코올 음료", "얼음 제조업"],
-      "process_terms": ["혼합", "살균", "충전"],
+      "ksic_prefixes": [
+        "112"
+      ],
+      "industry_terms": [
+        "비알코올 음료 및 얼음 제조업",
+        "비알코올 음료",
+        "얼음 제조업"
+      ],
+      "process_terms": [
+        "혼합",
+        "살균",
+        "충전"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -951,10 +1557,26 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["동·식물성 유지 및 낙농제품 제조업", "동물성 유지", "식물성 유지", "낙농제품"],
-      "process_terms": ["추출", "정제", "살균", "농축"],
+      "industry_terms": [
+        "동·식물성 유지 및 낙농제품 제조업",
+        "동물성 유지",
+        "식물성 유지",
+        "낙농제품"
+      ],
+      "process_terms": [
+        "추출",
+        "정제",
+        "살균",
+        "농축"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -979,10 +1601,23 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["기타 식품 제조업"],
-      "process_terms": ["혼합", "가열", "건조", "세척"],
+      "industry_terms": [
+        "기타 식품 제조업"
+      ],
+      "process_terms": [
+        "혼합",
+        "가열",
+        "건조",
+        "세척"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -1007,10 +1642,26 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["자동차용 엔진 및 자동차 제조업", "자동차 제조업", "완성차"],
-      "process_terms": ["도장", "차체", "프레스", "조립", "엔진"],
+      "industry_terms": [
+        "자동차용 엔진 및 자동차 제조업",
+        "자동차 제조업",
+        "완성차"
+      ],
+      "process_terms": [
+        "도장",
+        "차체",
+        "프레스",
+        "조립",
+        "엔진"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -1035,10 +1686,28 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["일차전지 및 이차전지 제조업", "이차전지 제조업", "배터리 제조업", "축전지 제조업"],
-      "process_terms": ["전극", "혼합", "코팅", "건조", "조립", "화성"],
+      "industry_terms": [
+        "일차전지 및 이차전지 제조업",
+        "이차전지 제조업",
+        "배터리 제조업",
+        "축전지 제조업"
+      ],
+      "process_terms": [
+        "전극",
+        "혼합",
+        "코팅",
+        "건조",
+        "조립",
+        "화성"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -1063,10 +1732,23 @@
       "official_pdf_url": "",
       "official_pdf_sha256": "",
       "ksic_prefixes": [],
-      "industry_terms": ["판유리 제조업", "판유리"],
-      "process_terms": ["용융", "성형", "소둔"],
+      "industry_terms": [
+        "판유리 제조업",
+        "판유리"
+      ],
+      "process_terms": [
+        "용융",
+        "성형",
+        "소둔"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
@@ -1090,11 +1772,31 @@
       "official_document_page": "",
       "official_pdf_url": "",
       "official_pdf_sha256": "",
-      "ksic_prefixes": ["221"],
-      "industry_terms": ["고무제품 제조업", "타이어 및 튜브 제조업", "타이어", "고무제품"],
-      "process_terms": ["배합", "혼합", "정련", "압출", "성형", "가황"],
+      "ksic_prefixes": [
+        "221"
+      ],
+      "industry_terms": [
+        "고무제품 제조업",
+        "타이어 및 튜브 제조업",
+        "타이어",
+        "고무제품"
+      ],
+      "process_terms": [
+        "배합",
+        "혼합",
+        "정련",
+        "압출",
+        "성형",
+        "가황"
+      ],
       "utility_terms": [],
-      "domains": ["AIR", "WATER", "CHEMICALS", "WASTE", "GHG_ENERGY"],
+      "domains": [
+        "AIR",
+        "WATER",
+        "CHEMICALS",
+        "WASTE",
+        "GHG_ENERGY"
+      ],
       "default_role": "PRIMARY",
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
