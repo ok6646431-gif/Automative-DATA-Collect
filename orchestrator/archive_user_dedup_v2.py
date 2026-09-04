@@ -1,14 +1,16 @@
 """Canonicalize ENV-INFO user attachments before final archive ZIP deduplication.
 
 The collector may expose the same attachment in several site/year disclosure rows and
-promote the same bytes into sustainability/policy folders.  The human archive should
-not physically carry every exact copy.  This stage keeps one byte-identical canonical
+promote the same bytes into sustainability/policy folders. The human archive should
+not physically carry every exact copy. This stage keeps one byte-identical canonical
 copy, records every original user-facing occurrence in an XLSX reference table, then
-runs the existing system-vs-user ZIP deduplication.
+removes proven same-year sustainability-report duplicates whose rendered PDF structure
+is identical even when document metadata makes the raw file SHA-256 differ.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -23,8 +25,16 @@ try:
 except Exception:
     xlsxwriter = None
 
+try:
+    from pypdf import PdfReader
+    from pypdf.generic import IndirectObject
+except Exception:
+    PdfReader = None
+    IndirectObject = None
+
 USER_ROOT = "01_사용자자료"
 ENVINFO_ROOT = "03_환경정보공개시스템"
+SUSTAINABILITY_ROOT = "04_지속가능경영보고서"
 CENTRAL_FOLDER = "첨부자료_원문"
 REFERENCE_XLSX = "ENVINFO_첨부자료_참조표.xlsx"
 
@@ -52,9 +62,22 @@ def _is_envinfo_generated_copy(rel: str) -> bool:
     )
 
 
+def _is_sustainability_pdf(rel: str) -> bool:
+    p = Path(rel)
+    return (
+        rel.startswith(f"{USER_ROOT}/{SUSTAINABILITY_ROOT}/")
+        and p.suffix.lower() == ".pdf"
+    )
+
+
+def _year_from_name(name: str) -> str:
+    match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", name)
+    return match.group(1) if match else ""
+
+
 def _canonical_rank(rel: str):
     """Prefer canonical company-document locations over generated ENV-INFO copies."""
-    if rel.startswith(f"{USER_ROOT}/04_지속가능경영보고서/"):
+    if rel.startswith(f"{USER_ROOT}/{SUSTAINABILITY_ROOT}/") and not _is_envinfo_generated_copy(rel):
         return (0, len(rel), rel)
     if rel.startswith(f"{USER_ROOT}/06_회사환경정책/") and "ENVINFO_공개근거" not in Path(rel).parts:
         return (1, len(rel), rel)
@@ -76,8 +99,7 @@ def _neutral_attachment_name(path: Path, digest: str) -> str:
 def _source_context(rel: str) -> tuple[str, str]:
     parts = Path(rel).parts
     site = parts[2] if len(parts) >= 5 and parts[0] == USER_ROOT and parts[1] == ENVINFO_ROOT else ""
-    match = re.match(r"((?:19|20)\d{2})_", Path(rel).name)
-    return site, match.group(1) if match else ""
+    return site, _year_from_name(Path(rel).name)
 
 
 def _write_reference_xlsx(path: Path, rows: list[dict]) -> None:
@@ -96,18 +118,182 @@ def _write_reference_xlsx(path: Path, rows: list[dict]) -> None:
             ws.write(r_idx, c, row.get(field, ""), text)
     ws.freeze_panes(1, 0)
     ws.autofilter(0, 0, max(1, len(rows)), len(fields) - 1)
-    widths = [24, 12, 78, 78, 52, 16, 68, 34]
+    widths = [24, 12, 78, 78, 52, 16, 68, 42]
     for c, width in enumerate(widths):
         ws.set_column(c, c, width)
     wb.close()
 
 
 def _remove_empty_dirs(root: Path) -> None:
+    if not root.exists():
+        return
     for d in sorted([p for p in root.rglob("*") if p.is_dir()], key=lambda p: len(p.parts), reverse=True):
         try:
             d.rmdir()
         except OSError:
             pass
+
+
+def _feed_pdf_object(hasher, obj, seen: set[int], depth: int = 0) -> None:
+    """Hash a dereferenced PDF object without object ids or volatile stream lengths."""
+    if depth > 24:
+        hasher.update(b"<MAXDEPTH>")
+        return
+    if IndirectObject is not None and isinstance(obj, IndirectObject):
+        try:
+            obj = obj.get_object()
+        except Exception as exc:
+            hasher.update(f"<BADREF:{type(exc).__name__}>".encode())
+            return
+
+    track = isinstance(obj, (dict, list, tuple)) or hasattr(obj, "get_data")
+    oid = id(obj)
+    if track:
+        if oid in seen:
+            hasher.update(b"<CYCLE>")
+            return
+        seen.add(oid)
+    try:
+        if hasattr(obj, "get_data") and isinstance(obj, dict):
+            hasher.update(b"S")
+            for key in sorted(obj.keys(), key=str):
+                if str(key) == "/Length":
+                    continue
+                hasher.update(str(key).encode("utf-8", "replace"))
+                _feed_pdf_object(hasher, obj[key], seen, depth + 1)
+            try:
+                hasher.update(obj.get_data())
+            except Exception as exc:
+                hasher.update(f"<DATAERR:{type(exc).__name__}>".encode())
+        elif isinstance(obj, dict):
+            hasher.update(b"D")
+            for key in sorted(obj.keys(), key=str):
+                if str(key) == "/Length":
+                    continue
+                hasher.update(str(key).encode("utf-8", "replace"))
+                _feed_pdf_object(hasher, obj[key], seen, depth + 1)
+        elif isinstance(obj, (list, tuple)):
+            hasher.update(b"A")
+            for value in obj:
+                _feed_pdf_object(hasher, value, seen, depth + 1)
+        elif obj is None:
+            hasher.update(b"N")
+        else:
+            hasher.update((type(obj).__name__ + ":" + str(obj)).encode("utf-8", "replace"))
+    finally:
+        if track:
+            seen.discard(oid)
+
+
+def _pdf_render_semantic_sha256(path: Path) -> str:
+    """Fingerprint page-visible PDF structure while ignoring document-level metadata.
+
+    The comparison deliberately hashes page geometry, page content streams and all
+    dereferenced page resources. It therefore does not equate PDFs merely because
+    extracted text or filenames are similar. If pypdf cannot parse a candidate, the
+    caller keeps both files rather than guessing.
+    """
+    if PdfReader is None:
+        raise RuntimeError("pypdf is required for sustainability semantic deduplication")
+    reader = PdfReader(str(path), strict=False)
+    hasher = hashlib.sha256()
+    hasher.update(f"pages={len(reader.pages)}".encode())
+    for page in reader.pages:
+        box = page.mediabox
+        hasher.update(
+            (
+                f"{float(box.left):.4f},{float(box.bottom):.4f},"
+                f"{float(box.right):.4f},{float(box.top):.4f};"
+                f"rotate={page.get('/Rotate', 0)}"
+            ).encode()
+        )
+        _feed_pdf_object(hasher, page.get("/Contents"), set())
+        _feed_pdf_object(hasher, page.get("/Resources"), set())
+    return hasher.hexdigest()
+
+
+def _semantic_sustainability_dedup(user: Path, archive_root: Path, refs: list[dict]) -> dict:
+    """Remove only proven same-year ENV-INFO copies of canonical annual reports."""
+    reports = [
+        p for p in sorted((user / SUSTAINABILITY_ROOT).glob("*.pdf"))
+        if p.is_file()
+    ]
+    official_by_year: dict[str, list[Path]] = {}
+    generated_by_year: dict[str, list[Path]] = {}
+    for p in reports:
+        rel = _rel(p, archive_root)
+        year = _year_from_name(p.name)
+        if not year:
+            continue
+        if _is_envinfo_generated_copy(rel):
+            generated_by_year.setdefault(year, []).append(p)
+        else:
+            official_by_year.setdefault(year, []).append(p)
+
+    candidate_years = sorted(set(official_by_year) & set(generated_by_year))
+    if candidate_years and PdfReader is None:
+        raise RuntimeError(
+            "pypdf is unavailable while same-year official and ENV-INFO sustainability PDFs require semantic comparison"
+        )
+
+    signature_cache: dict[Path, str] = {}
+    comparisons = 0
+    failures: list[dict] = []
+    removed = 0
+    removed_bytes = 0
+
+    def signature(path: Path) -> str:
+        if path not in signature_cache:
+            signature_cache[path] = _pdf_render_semantic_sha256(path)
+        return signature_cache[path]
+
+    for year in candidate_years:
+        official = sorted(official_by_year[year], key=lambda p: _canonical_rank(_rel(p, archive_root)))
+        for generated in sorted(generated_by_year[year]):
+            matched = None
+            generated_sig = ""
+            try:
+                generated_sig = signature(generated)
+                for canonical in official:
+                    comparisons += 1
+                    if generated_sig == signature(canonical):
+                        matched = canonical
+                        break
+            except Exception as exc:
+                failures.append({
+                    "year": year,
+                    "generated_path": _rel(generated, archive_root),
+                    "error": f"{type(exc).__name__}: {exc}",
+                })
+                continue
+            if matched is None:
+                continue
+
+            rel_generated = _rel(generated, archive_root)
+            rel_matched = _rel(matched, archive_root)
+            size = generated.stat().st_size
+            refs.append({
+                "사업장": "",
+                "공개연도": year,
+                "원래_사용자경로": rel_generated,
+                "최종_보존경로": rel_matched,
+                "파일명": generated.name,
+                "용량_bytes": size,
+                "SHA256": core.sha256(generated),
+                "처리": f"SEMANTIC_PDF_DUPLICATE_CANONICAL_REPORT:{generated_sig}",
+            })
+            generated.unlink()
+            removed += 1
+            removed_bytes += size
+
+    return {
+        "sustainability_semantic_candidate_years": candidate_years,
+        "sustainability_semantic_comparisons": comparisons,
+        "sustainability_semantic_duplicate_files_removed": removed,
+        "sustainability_semantic_duplicate_bytes_saved": removed_bytes,
+        "sustainability_semantic_failures": failures,
+        "sustainability_semantic_engine": "PYPDF_PAGE_RENDER_STRUCTURE_SHA256_V1",
+    }
 
 
 def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
@@ -121,6 +307,12 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
             "envinfo_attachment_duplicate_bytes_saved": 0,
             "envinfo_generated_crossfolder_files_removed": 0,
             "envinfo_generated_crossfolder_bytes_saved": 0,
+            "sustainability_semantic_candidate_years": [],
+            "sustainability_semantic_comparisons": 0,
+            "sustainability_semantic_duplicate_files_removed": 0,
+            "sustainability_semantic_duplicate_bytes_saved": 0,
+            "sustainability_semantic_failures": [],
+            "sustainability_semantic_engine": "PYPDF_PAGE_RENDER_STRUCTURE_SHA256_V1",
             "envinfo_attachment_reference_file": "",
         }
 
@@ -170,7 +362,7 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
     _remove_empty_dirs(user / ENVINFO_ROOT)
 
     # Remove exact generated ENV-INFO copies that are also present in a more canonical
-    # company-document location.  Never deduplicate arbitrary corporate documents;
+    # company-document location. Never deduplicate arbitrary corporate documents;
     # at least one member of the hash group must be an ENV-INFO generated copy.
     all_user_files = [p for p in sorted(user.rglob("*")) if p.is_file()]
     global_hash: dict[str, list[Path]] = {}
@@ -219,6 +411,8 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
                 current = path_redirects[current]
             row["최종_보존경로"] = current
 
+    semantic_stats = _semantic_sustainability_dedup(user, archive_root, refs)
+
     _remove_empty_dirs(user)
     refs.sort(key=lambda r: (str(r["사업장"]), str(r["공개연도"]), str(r["원래_사용자경로"])))
     ref_path = archive_root / "00_자료목록" / REFERENCE_XLSX
@@ -230,9 +424,15 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
         text = readme.read_text(encoding="utf-8")
         note = (
             "\n6) ENV-INFO 첨부 원문은 내용 SHA-256 기준으로 1회만 보존합니다. "
-            f"사업장/연도별 원래 위치와 최종 보존경로는 {REFERENCE_XLSX}에서 확인하십시오.\n"
+            "공식 연차 지속가능경영보고서와 같은 연도의 ENV-INFO 승격 PDF는 "
+            "페이지 표시 구조까지 동일한 경우에만 공식 연차본으로 통합합니다. "
+            f"원래 위치와 최종 보존경로는 {REFERENCE_XLSX}에서 확인하십시오.\n"
         )
-        if REFERENCE_XLSX not in text:
+        marker = "6) ENV-INFO 첨부 원문은"
+        if marker in text:
+            text = re.sub(r"\n6\) ENV-INFO 첨부 원문은.*?(?=\n\d+\)|\Z)", note.rstrip(), text, flags=re.S)
+            readme.write_text(text.rstrip() + "\n", encoding="utf-8")
+        elif REFERENCE_XLSX not in text:
             readme.write_text(text.rstrip() + note, encoding="utf-8")
 
     stats = {
@@ -242,6 +442,7 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
         "envinfo_attachment_duplicate_bytes_saved": duplicate_bytes,
         "envinfo_generated_crossfolder_files_removed": cross_files,
         "envinfo_generated_crossfolder_bytes_saved": cross_bytes,
+        **semantic_stats,
         "envinfo_attachment_reference_file": str(ref_path.relative_to(archive_root)) if refs else "",
     }
 
