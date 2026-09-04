@@ -1,9 +1,9 @@
 """Compatibility layer for final package validation semantics.
 
-The previous packager is preserved in ``package_run_core``. This layer adds two
-strictly bounded rules: collector-declared empty audit streams are not corruption,
-and identity reviews that demonstrably do not belong to a requested SITE_SET remain
-in the audit queue but do not block delivery.
+The previous packager is preserved in ``package_run_core``. This layer adds bounded
+rules for declared empty audit streams, requested-scope identity demotion, and the
+site-level BAT reference stage. BAT candidates are evidence-backed references only;
+they never become claims that a company applies a BAT automatically.
 """
 
 import csv
@@ -18,6 +18,7 @@ if _THIS_DIR not in sys.path:
 import package_run_core as _core
 from package_run_core import *  # preserve public helper contract
 import requested_scope as _scope
+from bat_stage import run as _run_bat_stage
 
 # An empty audit stream is valid only when the collector status explicitly declares
 # the corresponding attempt count as zero. Both historical/current audit filenames
@@ -26,6 +27,7 @@ for _audit_name in ("source_id_backfill_attempts.jsonl", "source_id_backfill_aud
     _core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})[_audit_name] = "source_id_backfill_attempts"
 
 _BASE_APPLY_REQUESTED_SCOPE = _core.apply_requested_scope
+_BASE_RUN_CROSS_LAYER_REVIEW = _core.run_cross_layer_review
 
 
 def _read_csv(path):
@@ -63,9 +65,6 @@ def _demote_out_of_scope_identity_reviews(package_root, scope_summary):
         sid = str(row.get("source_site_id") or "")
         if not source or not sid or sid in target_ids.get(source, set()):
             continue
-        # Keep a weak identity blocking if it could still be one of the explicitly
-        # requested sites. Only demonstrably non-matching company-wide raw evidence is
-        # demoted.
         could_be_requested = any(
             _scope._candidate_matches(
                 candidate,
@@ -121,7 +120,16 @@ def apply_requested_scope(package_root):
     return summary
 
 
+def _cross_layer_review_with_bat(package_root, semantic_path=None, applicability_path=None):
+    bat_summary = _run_bat_stage(package_root)
+    result = _BASE_RUN_CROSS_LAYER_REVIEW(package_root, semantic_path, applicability_path)
+    if isinstance(result, dict):
+        result['bat_reference_stage'] = bat_summary
+    return result
+
+
 _core.apply_requested_scope = apply_requested_scope
+_core.run_cross_layer_review = _cross_layer_review_with_bat
 
 
 def main():
