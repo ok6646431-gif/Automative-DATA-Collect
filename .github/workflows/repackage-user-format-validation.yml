@@ -1,0 +1,117 @@
+name: Validate strict user archive formats on Kumho artifacts
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/repackage-user-format-validation.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Install Korean fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-nanum
+          sudo fc-cache -f
+      - name: Bootstrap current Discovery
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download retained stable artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33735414258
+          github-token: ${{ github.token }}
+          pattern: stable-*
+          path: collected/stable
+          merge-multiple: true
+      - name: Download retained ICIS artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33735414258
+          github-token: ${{ github.token }}
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+      - name: Assemble package
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Build normalized Human Archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
+      - name: Verify user-facing formats
+        run: |
+          python - <<'PY'
+          import json, zipfile
+          from pathlib import PurePosixPath
+          z=zipfile.ZipFile('assembled/Human_Archive.zip')
+          names=[n for n in z.namelist() if not n.endswith('/')]
+          user=[n for n in names if '/01_사용자자료/' in n]
+          leaked=[n for n in user if PurePosixPath(n).suffix.lower() in {'.html','.json','.jsonl'}]
+          if leaked:
+              raise SystemExit('machine-readable files leaked into user layer: '+str(leaked[:10]))
+          required=[
+              'CleanSYS_대기TMS_정리.xlsx',
+              'SOOSIRO_수질TMS_정리.xlsx',
+              'PRTR_화학물질배출이동량_정리.xlsx',
+              '화학물질통계_정리.xlsx',
+          ]
+          missing=[x for x in required if not any(n.endswith('/'+x) for n in user)]
+          if missing:
+              raise SystemExit('missing user XLSX: '+str(missing))
+          env_pdf=[n for n in user if '/03_환경정보공개시스템/' in n and '/환경정보공개_' in n and n.endswith('.pdf')]
+          if len(env_pdf)!=15:
+              raise SystemExit(f'expected 15 ENVINFO PDFs, got {len(env_pdf)}')
+          policies=[n for n in user if '/06_회사환경정책/기타_공식자료/' in n]
+          if len(policies)<4 or any(not n.endswith('.pdf') for n in policies):
+              raise SystemExit('corporate policy pages were not normalized to PDF: '+str(policies))
+          sustainability=[n for n in user if '/04_지속가능경영보고서/' in n and n.endswith('.pdf')]
+          bad_subfolder=[]
+          for n in sustainability:
+              tail=n.split('/04_지속가능경영보고서/',1)[1]
+              if '/' in tail: bad_subfolder.append(n)
+          if bad_subfolder:
+              raise SystemExit('sustainability year subfolders remain: '+str(bad_subfolder))
+          summary=json.load(open('assembled/Archive_Summary.json',encoding='utf-8'))
+          norm=summary.get('user_format_normalization') or {}
+          print(json.dumps({
+              'USER_FORMAT_VALIDATION':'PASS',
+              'user_files':len(user),
+              'envinfo_pdfs':len(env_pdf),
+              'corporate_policy_pdfs':len(policies),
+              'sustainability_pdfs':len(sustainability),
+              'normalization':norm,
+          },ensure_ascii=False))
+          PY
+      - name: Upload normalized archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-normalized-human-archive
+          path: assembled/Human_Archive.zip
+          retention-days: 7
+          if-no-files-found: error
