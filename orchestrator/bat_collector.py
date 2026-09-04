@@ -1,11 +1,16 @@
-import csv, hashlib, json, re
+import csv, hashlib, json, re, time
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse, parse_qsl, urlencode, urlunparse
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 
-from bat_resolver import CATALOG_PATH, read_json, read_csv
+try:
+    from .bat_resolver import CATALOG_PATH, read_json, read_csv
+except ImportError:
+    from bat_resolver import CATALOG_PATH, read_json, read_csv
 
 INDEX_FIELDS=[
     'document_id','catalog_id','document_type','title','report_year','source_url','source_locator','stored_path',
@@ -26,6 +31,22 @@ def write_csv(path,rows,fields):
 
 
 def sha256_bytes(data): return hashlib.sha256(data).hexdigest()
+
+
+def _session():
+    retry=Retry(
+        total=4, connect=4, read=3, status=3,
+        backoff_factor=1.2,
+        status_forcelist=(408,425,429,500,502,503,504),
+        allowed_methods=frozenset({'GET'}),
+        raise_on_status=False,
+        respect_retry_after_header=True,
+    )
+    s=requests.Session()
+    s.headers.update({'User-Agent':'Mozilla/5.0 (compatible; EnvironmentalDataCollector/1.0; official-public-reference)'})
+    s.mount('https://',HTTPAdapter(max_retries=retry))
+    s.mount('http://',HTTPAdapter(max_retries=retry))
+    return s
 
 
 def _quoted_urls(text):
@@ -64,21 +85,47 @@ def attachment_candidates(page_url,html):
     return ranked
 
 
-def fetch_pdf_from_official_page(page_url,timeout=60):
-    headers={'User-Agent':'Mozilla/5.0 (compatible; EnvironmentalDataCollector/1.0; official-public-reference)'}
-    r=requests.get(page_url,headers=headers,timeout=timeout)
+def _page_variants(page_url):
+    """Return official URL variants only; never leave the verified authority host."""
+    values=[page_url]
+    parsed=urlparse(page_url)
+    query=dict(parse_qsl(parsed.query,keep_blank_values=True))
+    if parsed.hostname=='ieps.nier.go.kr' and 'pMENUMST_ID' not in query:
+        query['pMENUMST_ID']='95'
+        values.append(urlunparse(parsed._replace(query=urlencode(query))))
+    return list(dict.fromkeys(values))
+
+
+def _get(session,url,timeout=(20,90)):
+    r=session.get(url,timeout=timeout,allow_redirects=True)
     r.raise_for_status()
-    if r.content.lstrip().startswith(b'%PDF-'):
-        return r.url,r.content,'DIRECT_PDF_PAGE'
-    for _,url,label in attachment_candidates(page_url,r.text):
+    return r
+
+
+def fetch_pdf_from_official_page(page_url):
+    session=_session(); errors=[]
+    for page in _page_variants(page_url):
         try:
-            rr=requests.get(url,headers=headers,timeout=timeout,allow_redirects=True)
-            rr.raise_for_status()
-        except requests.RequestException:
+            r=_get(session,page)
+        except requests.RequestException as exc:
+            errors.append(f'page:{page}:{type(exc).__name__}:{exc}')
             continue
-        if rr.content.lstrip().startswith(b'%PDF-'):
-            return rr.url,rr.content,f'OFFICIAL_PAGE_ATTACHMENT:{label[:100]}'
-    raise RuntimeError('No PDF attachment could be resolved and byte-verified from the official document page')
+        if r.content.lstrip().startswith(b'%PDF-'):
+            return r.url,r.content,'DIRECT_PDF_PAGE'
+        candidates=attachment_candidates(r.url,r.text)
+        for _,url,label in candidates:
+            # Attachment candidates must stay on the same official host or an explicit
+            # government redirect reached from that official page.
+            try:
+                rr=_get(session,url)
+            except requests.RequestException as exc:
+                errors.append(f'attachment:{url}:{type(exc).__name__}:{exc}')
+                continue
+            if rr.content.lstrip().startswith(b'%PDF-'):
+                return rr.url,rr.content,f'OFFICIAL_PAGE_ATTACHMENT:{label[:100]}'
+            errors.append(f'attachment_not_pdf:{rr.url}')
+    detail=' | '.join(errors[-8:]) if errors else 'no attachment candidates'
+    raise RuntimeError('No PDF attachment could be resolved and byte-verified from the official document page; '+detail)
 
 
 def collect(package,catalog_path=CATALOG_PATH):
@@ -130,10 +177,14 @@ def collect(package,catalog_path=CATALOG_PATH):
             failed+=1
 
     write_csv(out/'document_index.csv',rows,INDEX_FIELDS)
+    if downloaded and failed: state='PARTIAL'
+    elif downloaded: state='DATA_FOUND'
+    elif failed: state='PARTIAL'
+    else: state='NO_PUBLISHED_MATCH'
     status={
-        'source_key':'BAT_REFERENCES','status':'DATA_FOUND' if downloaded else ('PARTIAL' if failed else 'NO_PUBLISHED_MATCH'),
+        'source_key':'BAT_REFERENCES','status':state,
         'candidate_documents':len(rows),'downloaded':downloaded,'failed':failed,'pending_publication':pending,
-        'policy':'Only official government/NIER pages are accepted; candidate applicability is not company BAT adoption proof.'
+        'policy':'Only official government/NIER pages are accepted; transient official-site failure remains explicit and never becomes fabricated reference evidence.'
     }
     (out/'status.json').write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding='utf-8')
     return status
