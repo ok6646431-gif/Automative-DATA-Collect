@@ -13,6 +13,7 @@ on:
       - 'orchestrator/package_run.py'
       - 'orchestrator/archive_stage.py'
       - 'tests/test_bat_resolver.py'
+      - 'tests/test_bat_revision_collection.py'
       - '.github/workflows/validate-bat-resolution.yml'
   workflow_dispatch:
 
@@ -31,8 +32,8 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
-      - name: Run BAT resolver regressions
-        run: python -m unittest tests.test_bat_resolver -v
+      - name: Run BAT regressions
+        run: python -m unittest tests.test_bat_resolver tests.test_bat_revision_collection -v
       - name: Bootstrap current Kumho Discovery
         run: >-
           python orchestrator/bootstrap_inputs.py
@@ -71,7 +72,8 @@ jobs:
           with open('assembled/BAT_Applicability_Candidates.csv',encoding='utf-8-sig',newline='') as f:
               rows=list(csv.DictReader(f))
           rubber=[r for r in rows if r['catalog_id']=='KBREF_RUBBER_PRODUCTS_PENDING_2029']
-          steam=[r for r in rows if r['catalog_id']=='KBREF_ELECTRIC_STEAM_II_2022']
+          boiler=[r for r in rows if r['catalog_id']=='KBREF_COMMON_BOILER_2021']
+          electric=[r for r in rows if r.get('catalog_family')=='KBREF_FAMILY_ELECTRIC_STEAM']
           expected_rubber={'금호타이어 광주공장','금호타이어 곡성공장','금호타이어 평택공장'}
           actual_rubber={r['site_name'] for r in rubber}
           if not expected_rubber.issubset(actual_rubber):
@@ -80,18 +82,30 @@ jobs:
               raise SystemExit('Rubber industry candidates must remain future primary candidates')
           if any(r['collection_action']!='WAIT_FOR_PUBLICATION' for r in rubber):
               raise SystemExit('Unpublished rubber BAT must remain WAIT_FOR_PUBLICATION')
-          if not steam or not any(r['candidate_role']=='COMMON_UTILITY' and r['applicability_state']=='STRONG_CANDIDATE' for r in steam):
-              raise SystemExit('Expected evidence-backed common-utility BAT candidate was not resolved')
+          if not boiler or not any(r['candidate_role']=='COMMON_UTILITY' and r['applicability_state'] in {'STRONG_CANDIDATE','SUPPORTING_CANDIDATE'} for r in boiler):
+              raise SystemExit('Expected evidence-backed common boiler BAT candidate was not resolved')
+          if electric:
+              raise SystemExit(f'General tire-factory boiler evidence must not resolve the electric/steam industry BAT: {electric}')
           status=json.load(open('assembled/output/BAT_REFERENCES/status.json',encoding='utf-8'))
           summary=json.load(open('assembled/BAT_Summary.json',encoding='utf-8'))
-          if int(status.get('failed') or 0)!=0 or int(status.get('downloaded') or 0)<1:
-              raise SystemExit(f'Published official BAT reference was not collected successfully: {status}')
+          if int(status.get('current_failed') or 0)!=0 or int(status.get('current_downloaded') or 0)<1:
+              raise SystemExit(f'Current published official BAT reference was not collected successfully: {status}')
+          with open('assembled/output/BAT_REFERENCES/document_index.csv',encoding='utf-8-sig',newline='') as f:
+              docs=list(csv.DictReader(f))
+          current_boiler=[r for r in docs if r['catalog_id']=='KBREF_COMMON_BOILER_2021' and r['collection_status']=='DOWNLOADED']
+          if not current_boiler or any(r.get('preferred_for_matching')!='true' for r in current_boiler):
+              raise SystemExit(f'Current boiler BAT document is missing or misclassified: {current_boiler}')
+          if any(r.get('revision_status')=='SUPERSEDED_ARCHIVE_ONLY' and r.get('preferred_for_matching')!='false' for r in docs):
+              raise SystemExit('Superseded archive documents must never be preferred for matching')
           print(json.dumps({
               'BAT_VALIDATION':'PASS',
               'candidate_count':len(rows),
               'rubber_sites':sorted(actual_rubber),
-              'candidates':[{k:r[k] for k in ['site_name','catalog_id','candidate_role','candidate_state','applicability_state','collection_action','evidence_basis']} for r in rows],
+              'boiler_sites':sorted({r['site_name'] for r in boiler}),
+              'electric_steam_candidate_count':len(electric),
+              'candidates':[{k:r[k] for k in ['site_name','catalog_id','catalog_family','revision_generation','candidate_role','candidate_state','applicability_state','collection_action','evidence_basis']} for r in rows],
               'collection_status':status,
+              'document_revisions':[{k:r.get(k,'') for k in ['catalog_id','catalog_family','revision_generation','publication_year','revision_status','preferred_for_matching','collection_status','stored_path']} for r in docs],
               'bat_summary':summary,
           },ensure_ascii=False,indent=2))
           PY
