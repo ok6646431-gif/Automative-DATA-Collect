@@ -4,7 +4,7 @@ from pathlib import Path
 import archive_builder
 from archive_builder import build_archive, archive_file_index, write_csv, sha256
 from user_archive_format import normalize_user_archive
-from archive_zip_dedup import run as deduplicate_archive_zip
+from archive_user_dedup_v2 import run as deduplicate_archive_zip
 from requested_scope import source_id_scope as requested_source_id_scope
 from postprocess import stable_id
 from scope_quality import (
@@ -181,8 +181,7 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
     if zip_path.exists(): zip_path.unlink()
     zip_path=Path(shutil.make_archive(str(root/"Human_Archive"),"zip",root_dir=root/"Human_Archive",base_dir=archive.name)).resolve()
     final={**archive_summary,"archive_files":len(file_rows),"zip_path":str(zip_path.relative_to(root)),"zip_bytes":zip_path.stat().st_size,"zip_sha256":sha256(zip_path)}
-    root.joinpath("Archive_Summary.json").write_text(json.dumps(final,ensure_ascii=False,indent=2),encoding="utf-8")
-    return final
+    root.joinpath("Archive_Summary.json").write_text(json.dumps(final,ensure_ascii=False,indent=2),encoding="utf-8"); return final
 
 
 def run(package_root,stable,evidence=None):
