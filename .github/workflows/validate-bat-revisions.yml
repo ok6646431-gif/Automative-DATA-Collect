@@ -1,0 +1,27 @@
+name: Validate BAT revision archive
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_resolver.py'
+      - 'orchestrator/bat_collector.py'
+      - 'orchestrator/bat_archive.py'
+      - 'tests/test_bat_resolver.py'
+      - 'tests/test_bat_revision_collection.py'
+      - '.github/workflows/validate-bat-revisions.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run BAT revision tests
+        run: python -m unittest tests.test_bat_resolver tests.test_bat_revision_collection -v
+      - name: Compile BAT modules
+        run: python -m py_compile orchestrator/bat_resolver.py orchestrator/bat_collector.py orchestrator/bat_archive.py
