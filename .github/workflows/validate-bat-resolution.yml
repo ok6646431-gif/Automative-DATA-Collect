@@ -1,0 +1,100 @@
+name: Validate site-level BAT resolution on Kumho
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_resolver.py'
+      - 'orchestrator/bat_collector.py'
+      - 'orchestrator/bat_stage.py'
+      - 'orchestrator/package_run.py'
+      - 'tests/test_bat_resolver.py'
+      - '.github/workflows/validate-bat-resolution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Run BAT resolver regressions
+        run: python -m unittest tests.test_bat_resolver -v
+      - name: Bootstrap current Kumho Discovery
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download retained stable artifacts
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33735414258
+          github-token: ${{ github.token }}
+          pattern: stable-*
+          path: collected/stable
+          merge-multiple: true
+      - name: Download retained ICIS artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33735414258
+          github-token: ${{ github.token }}
+          pattern: icis-attempt-*
+          path: collected/icis
+          merge-multiple: false
+      - name: Assemble with BAT stage
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Verify BAT resolution semantics
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          rows=list(csv.DictReader(open('assembled/BAT_Applicability_Candidates.csv',encoding='utf-8-sig')))
+          rubber=[r for r in rows if r['catalog_id']=='KBREF_RUBBER_PRODUCTS_PENDING_2029']
+          if not rubber:
+              raise SystemExit('No evidence-backed rubber BAT future candidate was resolved for Kumho')
+          if any(r['candidate_state']!='FUTURE_PRIMARY_CANDIDATE' for r in rubber):
+              raise SystemExit('Rubber candidate was incorrectly treated as current primary BAT')
+          if any(r['collection_action']!='WAIT_FOR_PUBLICATION' for r in rubber):
+              raise SystemExit('Unpublished rubber BAT must remain WAIT_FOR_PUBLICATION')
+          status=json.load(open('assembled/output/BAT_REFERENCES/status.json',encoding='utf-8'))
+          summary=json.load(open('assembled/BAT_Summary.json',encoding='utf-8'))
+          print(json.dumps({
+              'BAT_VALIDATION':'PASS',
+              'candidate_count':len(rows),
+              'rubber_sites':[r['site_name'] for r in rubber],
+              'candidates':[{k:r[k] for k in ['site_name','catalog_id','candidate_role','candidate_state','applicability_state','collection_action','evidence_basis']} for r in rows],
+              'collection_status':status,
+              'bat_summary':summary,
+          },ensure_ascii=False,indent=2))
+          PY
+      - name: Upload BAT validation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-bat-validation
+          path: |
+            assembled/BAT_Applicability_Candidates.csv
+            assembled/BAT_Collection_Plan.json
+            assembled/BAT_Industry_Reference_Applicability.json
+            assembled/BAT_Summary.json
+            assembled/output/BAT_REFERENCES
+          retention-days: 14
+          if-no-files-found: error
