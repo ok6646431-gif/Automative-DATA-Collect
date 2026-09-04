@@ -3,6 +3,7 @@ from pathlib import Path
 
 import archive_builder
 from archive_builder import build_archive, archive_file_index, write_csv, sha256
+from user_archive_format import normalize_user_archive
 from archive_zip_dedup import run as deduplicate_archive_zip
 from requested_scope import source_id_scope as requested_source_id_scope
 from postprocess import stable_id
@@ -191,6 +192,9 @@ def run(package_root,stable,evidence=None):
     count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,env_scope,gap_state,count)
     archive_builder.source_id_scope=requested_source_id_scope
     summary=build_archive(root)
+    normalization=normalize_user_archive(root/'Human_Archive'/summary['archive_root'])
+    summary['user_files']=normalization['user_files']
+    summary['user_format_normalization']=normalization
     summary=classify_archive_summary(root,summary)
     final=finalize_archive_manifest(root,manifest,summary)
     deduplicate_archive_zip(root)
