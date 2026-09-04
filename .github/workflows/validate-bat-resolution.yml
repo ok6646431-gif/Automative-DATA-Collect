@@ -9,7 +9,9 @@ on:
       - 'orchestrator/bat_resolver.py'
       - 'orchestrator/bat_collector.py'
       - 'orchestrator/bat_stage.py'
+      - 'orchestrator/bat_archive.py'
       - 'orchestrator/package_run.py'
+      - 'orchestrator/archive_stage.py'
       - 'tests/test_bat_resolver.py'
       - '.github/workflows/validate-bat-resolution.yml'
   workflow_dispatch:
@@ -21,7 +23,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -62,31 +64,39 @@ jobs:
           --icis collected/icis
           --profile requests/runtime/company_profile.generated.json
           --out assembled
-      - name: Verify BAT resolution semantics
+      - name: Verify BAT resolution and official collection
         run: |
           python - <<'PY'
           import csv,json
-          from pathlib import Path
-          rows=list(csv.DictReader(open('assembled/BAT_Applicability_Candidates.csv',encoding='utf-8-sig')))
+          with open('assembled/BAT_Applicability_Candidates.csv',encoding='utf-8-sig',newline='') as f:
+              rows=list(csv.DictReader(f))
           rubber=[r for r in rows if r['catalog_id']=='KBREF_RUBBER_PRODUCTS_PENDING_2029']
-          if not rubber:
-              raise SystemExit('No evidence-backed rubber BAT future candidate was resolved for Kumho')
-          if any(r['candidate_state']!='FUTURE_PRIMARY_CANDIDATE' for r in rubber):
-              raise SystemExit('Rubber candidate was incorrectly treated as current primary BAT')
+          steam=[r for r in rows if r['catalog_id']=='KBREF_ELECTRIC_STEAM_II_2022']
+          expected_rubber={'금호타이어 광주공장','금호타이어 곡성공장','금호타이어 평택공장'}
+          actual_rubber={r['site_name'] for r in rubber}
+          if not expected_rubber.issubset(actual_rubber):
+              raise SystemExit(f'Missing direct industry-grounded rubber candidates: expected={sorted(expected_rubber)} actual={sorted(actual_rubber)}')
+          if any(r['candidate_role']!='PRIMARY' or r['candidate_state']!='FUTURE_PRIMARY_CANDIDATE' for r in rubber if r['site_name'] in expected_rubber):
+              raise SystemExit('Rubber industry candidates must remain future primary candidates')
           if any(r['collection_action']!='WAIT_FOR_PUBLICATION' for r in rubber):
               raise SystemExit('Unpublished rubber BAT must remain WAIT_FOR_PUBLICATION')
+          if not steam or not any(r['candidate_role']=='COMMON_UTILITY' and r['applicability_state']=='STRONG_CANDIDATE' for r in steam):
+              raise SystemExit('Expected evidence-backed common-utility BAT candidate was not resolved')
           status=json.load(open('assembled/output/BAT_REFERENCES/status.json',encoding='utf-8'))
           summary=json.load(open('assembled/BAT_Summary.json',encoding='utf-8'))
+          if int(status.get('failed') or 0)!=0 or int(status.get('downloaded') or 0)<1:
+              raise SystemExit(f'Published official BAT reference was not collected successfully: {status}')
           print(json.dumps({
               'BAT_VALIDATION':'PASS',
               'candidate_count':len(rows),
-              'rubber_sites':[r['site_name'] for r in rubber],
+              'rubber_sites':sorted(actual_rubber),
               'candidates':[{k:r[k] for k in ['site_name','catalog_id','candidate_role','candidate_state','applicability_state','collection_action','evidence_basis']} for r in rows],
               'collection_status':status,
               'bat_summary':summary,
           },ensure_ascii=False,indent=2))
           PY
       - name: Upload BAT validation artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: kumho-bat-validation
@@ -97,4 +107,4 @@ jobs:
             assembled/BAT_Summary.json
             assembled/output/BAT_REFERENCES
           retention-days: 14
-          if-no-files-found: error
+          if-no-files-found: warn
