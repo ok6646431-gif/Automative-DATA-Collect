@@ -1,0 +1,44 @@
+name: Apply verified common boiler BAT direct cache
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/apply-boiler-direct-cache.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch verified official direct PDF
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('orchestrator/bat_master_catalog.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          found=False
+          for e in d.get('entries',[]):
+              if e.get('catalog_id')=='KBREF_COMMON_BOILER_2021':
+                  e['official_pdf_url']='https://www.korea.kr/common/download.do?fileId=196628937&tblKey=EDN'
+                  e['official_pdf_sha256']='4bf5aaccd52f963fe7468f97f2d04bcbe9f0c5e3e1626d0bba1f90d6bc64df78'
+                  e['official_fallback_pages']=['https://www.korea.kr/archive/expDocView.do?docId=39763']
+                  note=str(e.get('notes') or '')
+                  add='정책브리핑 공식 PDF endpoint는 2026-09-04 byte 검증(57,516,066 bytes, SHA-256 고정).'
+                  if add not in note: e['notes']=(note+' '+add).strip()
+                  found=True
+          if not found: raise SystemExit('KBREF_COMMON_BOILER_2021 missing')
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Commit catalog cache
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add orchestrator/bat_master_catalog.json
+          git diff --cached --quiet && exit 0
+          git commit -m 'Cache verified common boiler BAT PDF'
+          git push origin HEAD:run/control-plane
