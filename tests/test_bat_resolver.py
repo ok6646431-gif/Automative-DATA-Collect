@@ -52,7 +52,7 @@ class BATResolverTests(unittest.TestCase):
             self.assertIn('타이어 및 튜브 제조업',rubber[0]['matched_industry_terms'])
             self.assertEqual(len(boiler),1)
             self.assertEqual(boiler[0]['candidate_role'],'COMMON_UTILITY')
-            self.assertIn(boiler[0]['collection_action'],{'COLLECT','REVIEW_BEFORE_COLLECTION'})
+            self.assertEqual(boiler[0]['collection_action'],'REVIEW_BEFORE_COLLECTION')
             self.assertEqual(electric_steam,[])
             self.assertGreaterEqual(plan['candidate_count'],2)
 
@@ -66,7 +66,7 @@ class BATResolverTests(unittest.TestCase):
             rows=read_rows(p/'BAT_Applicability_Candidates.csv')
             self.assertFalse(any(r['catalog_id']=='KBREF_RUBBER_PRODUCTS_PENDING_2029' for r in rows))
 
-    def test_process_only_future_reference_is_not_labeled_current(self):
+    def test_diagnostic_rubber_process_can_create_future_secondary_candidate(self):
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)/'assembled'; p.mkdir()
             write_csv(p/'Site_Master.csv',[{'canonical_site_id':'SITE_A','canonical_site_name':'테스트 공장','identity_status':'CONFIRMED'}],['canonical_site_id','canonical_site_name','identity_status'])
@@ -81,6 +81,44 @@ class BATResolverTests(unittest.TestCase):
             self.assertEqual(len(rubber),1)
             self.assertEqual(rubber[0]['candidate_role'],'SECONDARY_PROCESS')
             self.assertEqual(rubber[0]['candidate_state'],'FUTURE_TECHNICAL_CANDIDATE')
+            self.assertEqual(rubber[0]['collection_action'],'WAIT_FOR_PUBLICATION')
+
+    def test_pure_industry_reference_rejects_process_only_generic_term(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)/'assembled'; p.mkdir()
+            write_csv(p/'Site_Master.csv',[{'canonical_site_id':'SITE_A','canonical_site_name':'타이어 테스트 공장','identity_status':'CONFIRMED'}],['canonical_site_id','canonical_site_name','identity_status'])
+            write_csv(p/'Source_Identity.csv',[],['source_key','source_site_id','canonical_site_id','match_status'])
+            write_csv(p/'Management_Action_Ledger.csv',[{
+                'canonical_site_id':'SITE_A','action_name':'발전 설비 점검','description':'자가발전 설비 정기점검','disclosed_effect':'','domain':'GHG_ENERGY'
+            }],['canonical_site_id','action_name','description','disclosed_effect','domain'])
+            (p/'Company_Profile.json').write_text(json.dumps({'request_id':'x'}),encoding='utf-8')
+            resolve(p,as_of=date(2026,9,4))
+            rows=read_rows(p/'BAT_Applicability_Candidates.csv')
+            self.assertFalse(any(r['catalog_family']=='KBREF_FAMILY_ELECTRIC_STEAM' for r in rows))
+
+    def test_single_channel_secondary_process_requires_review_before_collection(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)/'assembled'; p.mkdir()
+            write_csv(p/'Site_Master.csv',[{'canonical_site_id':'SITE_A','canonical_site_name':'테스트 공장','identity_status':'CONFIRMED'}],['canonical_site_id','canonical_site_name','identity_status'])
+            write_csv(p/'Source_Identity.csv',[],['source_key','source_site_id','canonical_site_id','match_status'])
+            write_csv(p/'Management_Action_Ledger.csv',[{
+                'canonical_site_id':'SITE_A','action_name':'소각로 개선','description':'사업장 자체 소각로 운전 개선','disclosed_effect':'','domain':'AIR'
+            }],['canonical_site_id','action_name','description','disclosed_effect','domain'])
+            (p/'Company_Profile.json').write_text(json.dumps({'request_id':'x'}),encoding='utf-8')
+            catalog=Path(td)/'catalog.json'
+            catalog.write_text(json.dumps({'entries':[{
+                'catalog_id':'TEST_INCINERATION','catalog_family':'TEST_FAMILY','preferred':True,'revision_generation':'1',
+                'reference_kind':'INDUSTRY_OR_SECONDARY_PROCESS','publication_status':'PUBLISHED','legal_status':'PUBLISHED_REFERENCE',
+                'industry_terms':['폐기물 소각업'],'process_terms':['소각로'],'utility_terms':[],
+                'default_role':'SECONDARY_PROCESS','industry_match_role':'PRIMARY','process_match_role':'SECONDARY_PROCESS',
+                'collection_policy':'COLLECT_WHEN_MATCHED','official_source_locator':'https://example.invalid/test.pdf'
+            }]},ensure_ascii=False),encoding='utf-8')
+            resolve(p,catalog_path=catalog,as_of=date(2026,9,4))
+            rows=read_rows(p/'BAT_Applicability_Candidates.csv')
+            self.assertEqual(len(rows),1)
+            self.assertEqual(rows[0]['candidate_role'],'SECONDARY_PROCESS')
+            self.assertEqual(rows[0]['applicability_state'],'SUPPORTING_CANDIDATE')
+            self.assertEqual(rows[0]['collection_action'],'REVIEW_BEFORE_COLLECTION')
 
     def test_superseded_family_revision_never_becomes_candidate(self):
         with tempfile.TemporaryDirectory() as td:
