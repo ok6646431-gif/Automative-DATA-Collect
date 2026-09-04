@@ -52,9 +52,15 @@ def first_value(row, keys):
 
 
 def _identity_maps(pkg):
+    """Resolve source-native site IDs only through confirmed identity rows.
+
+    Source_Identity.csv uses ``match_status`` in the canonical integration schema.
+    ``identity_status`` is accepted only for compatibility with older/test fixtures.
+    """
     source_map={}; site_names={}
     for row in read_csv(Path(pkg)/'Source_Identity.csv'):
-        if str(row.get('identity_status') or '').upper()!='CONFIRMED': continue
+        status=str(row.get('match_status') or row.get('identity_status') or '').upper()
+        if status!='CONFIRMED': continue
         source=str(row.get('source_key') or '')
         sid=str(row.get('source_site_id') or '')
         cid=str(row.get('canonical_site_id') or '')
@@ -200,8 +206,10 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
                 role='SECONDARY_PROCESS'
 
             future=_effective_is_future(entry.get('effective_from'),as_of) or str(entry.get('legal_status') or '').startswith('PROPOSED_')
-            if role=='PRIMARY' and future:
+            if future and role=='PRIMARY':
                 state='FUTURE_PRIMARY_CANDIDATE'
+            elif future:
+                state='FUTURE_TECHNICAL_CANDIDATE'
             elif role=='PRIMARY':
                 state='PRIMARY_CANDIDATE'
             else:
@@ -244,7 +252,7 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
 
     selected_catalog=sorted({r['catalog_id'] for r in rows if r['collection_action']=='COLLECT'})
     plan={
-        'schema_version':'1.0','as_of':as_of.isoformat(),'policy':'MULTI_BAT_SITE_LEVEL_FAIL_CLOSED',
+        'schema_version':'1.1','as_of':as_of.isoformat(),'policy':'MULTI_BAT_SITE_LEVEL_FAIL_CLOSED',
         'candidate_count':len(rows),'site_count':len({r['canonical_site_id'] for r in rows}),
         'collect_catalog_ids':selected_catalog,
         'candidates':rows,
