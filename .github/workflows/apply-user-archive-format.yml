@@ -1,0 +1,40 @@
+name: Apply strict user archive formats
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - requests/user_archive_format.marker
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check beautifulsoup4 xlsxwriter
+      - name: Apply archive-stage patch
+        run: python tools/patch_user_archive_format.py
+      - name: Compile and test
+        run: |
+          python -m py_compile orchestrator/user_archive_format.py orchestrator/archive_stage.py
+          python -m unittest -v tests/test_user_archive_format.py
+      - name: Commit archive-stage integration
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/archive_stage.py
+          if git diff --cached --quiet; then
+            echo 'No patch changes required'
+            exit 0
+          fi
+          git commit -m 'Enforce readable formats in user archive'
+          git push origin HEAD:run/control-plane
