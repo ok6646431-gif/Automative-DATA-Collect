@@ -1762,7 +1762,7 @@
       "revision_generation": "FUTURE",
       "publication_year": 2029,
       "document_type": "BAT_REFERENCE",
-      "reference_kind": "INDUSTRY",
+      "reference_kind": "INDUSTRY_OR_SECONDARY_PROCESS",
       "title": "고무제품 제조업 최적가용기법 기준서",
       "authority": "국립환경과학원",
       "publication_status": "UNDER_DEVELOPMENT",
@@ -1801,7 +1801,7 @@
       "industry_match_role": "PRIMARY",
       "process_match_role": "SECONDARY_PROCESS",
       "collection_policy": "WAIT_FOR_PUBLICATION",
-      "notes": "2026-08-26 입법예고안의 신규 통합환경관리 대상 업종. 확정 법령이 아니며 발간 전 기준서로 취급하지 않는다."
+      "notes": "2026-08-26 입법예고안의 신규 통합환경관리 대상 업종. 확정 법령이 아니며 발간 전 기준서로 취급하지 않는다. 가황·정련 등 site-specific 진단 공정 근거가 있을 때만 SECONDARY_PROCESS 후보를 허용한다."
     }
   ]
 }
