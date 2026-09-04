@@ -1,0 +1,69 @@
+name: Export validated user layer once
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/export-user-layer-once.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Download validated package artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 33759679648
+          github-token: ${{ github.token }}
+          name: repackage-validation-final
+          path: retained
+      - name: Extract validated Human Archive user layer
+        run: |
+          set -euo pipefail
+          test -f retained/Human_Archive.zip
+          mkdir -p human
+          unzip -q retained/Human_Archive.zip -d human
+          ROOT="$(find human -mindepth 1 -maxdepth 1 -type d | head -n1)"
+          test -n "$ROOT"
+          mkdir -p export
+          cp -a "$ROOT/00_자료목록" export/
+          cp -a "$ROOT/01_사용자자료" export/
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+          base=Path('export')
+          out=Path('금호타이어_환경자료_2020-2026_사용자용.zip')
+          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+              for p in sorted(base.rglob('*')):
+                  if p.is_file(): z.write(p,p.relative_to(base))
+          print('USER_FILES',sum(1 for p in base.rglob('*') if p.is_file()))
+          print('ZIP_BYTES',out.stat().st_size)
+          PY
+      - name: Validate user-facing formats
+        run: |
+          set -euo pipefail
+          find export -type f | sort > /tmp/files.txt
+          grep -q 'PRTR_화학물질배출이동량_정리.xlsx' /tmp/files.txt
+          grep -q '화학물질통계_정리.xlsx' /tmp/files.txt
+          grep -q 'CleanSYS_대기TMS_정리.xlsx' /tmp/files.txt
+          grep -q 'SOOSIRO_수질TMS_정리.xlsx' /tmp/files.txt
+          test "$(grep -c '환경정보공개_.*\.pdf$' /tmp/files.txt)" -ge 15
+          test "$(grep -c '지속가능경영보고서_20.*\.pdf$' /tmp/files.txt)" -ge 6
+          if find export/01_사용자자료 -type f \( -name '*.json' -o -name '*.jsonl' \) | grep -q .; then
+            echo 'Unexpected JSON/JSONL in user-facing layer' >&2
+            exit 1
+          fi
+      - name: Upload user package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-user-facing-2020-2026
+          path: 금호타이어_환경자료_2020-2026_사용자용.zip
+          retention-days: 14
+          if-no-files-found: error
