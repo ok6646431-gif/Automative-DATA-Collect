@@ -92,9 +92,21 @@ def _profile_structured_evidence(profile):
     walk(profile); return industry,process
 
 
+def _new_evidence():
+    return {'industry':[],'process':[],'channels':set(),'ksic_codes':set(),'process_by_channel':defaultdict(list)}
+
+
+def _add_process(evidence, cid, channel, values):
+    vals=[str(v) for v in values if str(v or '').strip()]
+    if not vals: return
+    evidence[cid]['process'].extend(vals)
+    evidence[cid]['channels'].add(channel)
+    evidence[cid]['process_by_channel'][channel].extend(vals)
+
+
 def collect_evidence(pkg):
     pkg=Path(pkg); source_map,site_names=_identity_maps(pkg)
-    evidence=defaultdict(lambda:{'industry':[],'process':[],'channels':set(),'ksic_codes':set()})
+    evidence=defaultdict(_new_evidence)
     for source,(filename,id_keys) in SOURCE_SPECS.items():
         for row in read_csv(pkg/'output'/source/filename):
             sid=first_value(row,id_keys); cid=source_map.get((source,sid),'')
@@ -103,28 +115,27 @@ def collect_evidence(pkg):
             if inds:
                 evidence[cid]['industry'].extend(inds); evidence[cid]['channels'].add(f'{source}:{filename}:industry')
                 for text in inds: evidence[cid]['ksic_codes'].update(re.findall(r'(?<!\d)\d{2,5}(?!\d)',str(text)))
-            if procs:
-                evidence[cid]['process'].extend(procs); evidence[cid]['channels'].add(f'{source}:{filename}:process')
+            _add_process(evidence,cid,f'{source}:{filename}:process',procs)
     for row in read_csv(pkg/'output'/'ENVINFO'/'attachment_index.csv'):
         sid=first_value(row,['compId','comp_id','source_site_id']); cid=source_map.get(('ENVINFO',sid),'')
         if not cid: continue
         text=' '.join(str(row.get(k) or '') for k in ['section_title','document_category','original_filename','title','attachment_name'])
-        if text.strip(): evidence[cid]['process'].append(text); evidence[cid]['channels'].add('ENVINFO:attachment_index')
+        _add_process(evidence,cid,'ENVINFO:attachment_index',[text])
     for row in read_csv(pkg/'Management_Action_Ledger.csv'):
         cid=str(row.get('canonical_site_id') or '')
         if not cid: continue
         text=' '.join(str(row.get(k) or '') for k in ['action_name','description','disclosed_effect','domain'])
-        if text.strip(): evidence[cid]['process'].append(text); evidence[cid]['channels'].add('Management_Action_Ledger')
+        _add_process(evidence,cid,'Management_Action_Ledger',[text])
     profile=read_json(pkg/'Company_Profile.json',{}) or {}; p_industry,p_process=_profile_structured_evidence(profile)
     if p_industry or p_process:
-        evidence['COMPANY']['industry'].extend(p_industry); evidence['COMPANY']['process'].extend(p_process)
+        evidence['COMPANY']['industry'].extend(p_industry)
         if p_industry: evidence['COMPANY']['channels'].add('Company_Profile:industry')
-        if p_process: evidence['COMPANY']['channels'].add('Company_Profile:process')
+        _add_process(evidence,'COMPANY','Company_Profile:process',p_process)
         for text in p_industry: evidence['COMPANY']['ksic_codes'].update(re.findall(r'(?<!\d)\d{2,5}(?!\d)',str(text)))
     for row in read_csv(pkg/'Document_Semantic_Candidates.csv'):
         if str(row.get('semantic_state') or '')!='PAGE_GROUNDED_EXTRACT': continue
         text=' '.join(str(row.get(k) or '') for k in ['statement','title','domain'])
-        if text.strip(): evidence['COMPANY']['process'].append(text); evidence['COMPANY']['channels'].add('Document_Semantic_Candidates')
+        _add_process(evidence,'COMPANY','Document_Semantic_Candidates',[text])
     return evidence,site_names
 
 
@@ -134,6 +145,14 @@ def _term_hits(terms,text):
 
 def _ksic_hits(prefixes,codes):
     return [prefix for prefix in prefixes if any(str(code).startswith(str(prefix)) for code in codes)]
+
+
+def _matching_process_channels(site, terms):
+    hits=[]
+    for channel,values in (site.get('process_by_channel') or {}).items():
+        if _term_hits(terms,' | '.join(values)):
+            hits.append(channel)
+    return sorted(set(hits))
 
 
 def _effective_is_future(value,as_of):
@@ -177,8 +196,11 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
             site=evidence[cid]; company=evidence.get('COMPANY',{})
             industry_text=' | '.join(site.get('industry',[])); process_text=' | '.join(site.get('process',[]))
             company_industry=' | '.join(company.get('industry',[]))
+            process_terms=entry.get('process_terms',[]); utility_terms=entry.get('utility_terms',[])
             ksic=_ksic_hits(entry.get('ksic_prefixes',[]),site.get('ksic_codes',set())); ind=_term_hits(entry.get('industry_terms',[]),industry_text)
-            proc=_term_hits(entry.get('process_terms',[]),process_text); util=_term_hits(entry.get('utility_terms',[]),process_text)
+            proc=_term_hits(process_terms,process_text); util=_term_hits(utility_terms,process_text)
+            proc_channels=_matching_process_channels(site,process_terms) if proc else []
+            util_channels=_matching_process_channels(site,utility_terms) if util else []
             company_ind=_term_hits(entry.get('industry_terms',[]),company_industry)
             direct_industry=bool(ksic or ind); inherited_industry=not direct_industry and bool(company_ind)
             role=_match_role(entry,direct_industry,inherited_industry,bool(proc),bool(util))
@@ -190,11 +212,11 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
             elif role=='PRIMARY': state='PRIMARY_CANDIDATE'
             else: state='TECHNICAL_CANDIDATE'
 
-            direct_channels=sorted(site.get('channels',set()))
             technical_only=not direct_industry and not inherited_industry
+            matching_channels=util_channels if role=='COMMON_UTILITY' else proc_channels if technical_only else []
             if direct_industry:
                 applicability='STRONG_CANDIDATE'
-            elif technical_only and len(direct_channels)>=2:
+            elif technical_only and len(matching_channels)>=2:
                 applicability='STRONG_CANDIDATE'
             elif technical_only:
                 applicability='SUPPORTING_CANDIDATE'
@@ -220,13 +242,13 @@ def resolve(pkg,catalog_path=CATALOG_PATH,as_of=None):
                 'revision_generation':entry.get('revision_generation',''),'canonical_site_id':cid,'site_name':site_names.get(cid,''),'candidate_role':role,'candidate_state':state,
                 'applicability_state':applicability,'publication_status':pub,'legal_status':entry.get('legal_status',''),'effective_from':entry.get('effective_from',''),
                 'matched_ksic_prefixes':'|'.join(ksic),'matched_industry_terms':'|'.join(ind),'matched_process_terms':'|'.join(proc),'matched_utility_terms':'|'.join(util),
-                'evidence_channels':'|'.join(direct_channels),'evidence_basis':'; '.join(evidence_bits),'collection_action':action,'official_source_locator':entry.get('official_source_locator','')
+                'evidence_channels':'|'.join(matching_channels if technical_only else sorted(site.get('channels',set()))),'evidence_basis':'; '.join(evidence_bits),'collection_action':action,'official_source_locator':entry.get('official_source_locator','')
             })
     rows.sort(key=lambda r:(r['site_name'],r['candidate_role'],r['catalog_family']))
     write_csv(pkg/'BAT_Applicability_Candidates.csv',rows,CANDIDATE_FIELDS)
     selected_catalog=sorted({r['catalog_id'] for r in rows if r['collection_action']=='COLLECT'})
     plan={'schema_version':'1.3','as_of':as_of.isoformat(),'policy':'MULTI_BAT_SITE_LEVEL_FAIL_CLOSED','candidate_count':len(rows),'site_count':len({r['canonical_site_id'] for r in rows}),'collect_catalog_ids':selected_catalog,'candidates':rows,
-          'boundaries':['A BAT candidate is not proof that the company applies that BAT.','Pure INDUSTRY references require KSIC or industry evidence; generic process words alone never create an industry BAT candidate.','Only INDUSTRY_OR_SECONDARY_PROCESS references may use site-specific process-only evidence.','COMMON_FACILITY references require site-specific utility/facility evidence.','Single-channel technical evidence is REVIEW_BEFORE_COLLECTION rather than automatic collection.','Primary industry, secondary process and common utility references may coexist for one site.','Future/proposed legal applicability is kept distinct from current legal applicability.','Superseded revisions never compete with the preferred/current family revision.','A known newer publication without a verified official locator is WAIT_FOR_LATEST_LOCATOR; an older edition is not silently substituted.','Unpublished references are WAIT_FOR_PUBLICATION and never represented by a fake file.']}
+          'boundaries':['A BAT candidate is not proof that the company applies that BAT.','Pure INDUSTRY references require KSIC or industry evidence; generic process words alone never create an industry BAT candidate.','Only INDUSTRY_OR_SECONDARY_PROCESS references may use site-specific process-only evidence.','COMMON_FACILITY references require site-specific utility/facility evidence.','Single-channel technical evidence is REVIEW_BEFORE_COLLECTION rather than automatic collection.','Technical confidence counts only channels where the matched BAT term actually appears; unrelated source channels do not raise confidence.','Primary industry, secondary process and common utility references may coexist for one site.','Future/proposed legal applicability is kept distinct from current legal applicability.','Superseded revisions never compete with the preferred/current family revision.','A known newer publication without a verified official locator is WAIT_FOR_LATEST_LOCATOR; an older edition is not silently substituted.','Unpublished references are WAIT_FOR_PUBLICATION and never represented by a fake file.']}
     (pkg/'BAT_Collection_Plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2),encoding='utf-8'); return plan
 
 if __name__=='__main__':
