@@ -1,16 +1,15 @@
 """Compatibility wrapper for the archive stage with BAT reference delivery.
 
 The stable archive implementation is preserved in ``archive_stage_core``. This
-wrapper adds only the BAT human-delivery hook after the normal archive tree is built
-and before normalization/final acceptance. A downloaded BAT remains a technical
-reference; candidate mapping never proves company adoption.
+wrapper adds the BAT human-delivery hook after the normal archive tree is built and
+routes the final user-facing dedup through an ordered pipeline.
 
-The user-archive dedup stage performs strict PDF render-structure comparison for
-same-year sustainability-report copies. ``pypdf`` is therefore an archive-stage
-runtime dependency. Legacy collection workflows did not install it explicitly, so
-this compatibility wrapper bootstraps the dependency before importing the stable
-archive core. Installation failure is fatal rather than silently disabling semantic
-deduplication.
+The dedup pipeline performs strict PDF render-structure comparison for same-year
+sustainability-report copies, including ENV-INFO attachments. ``pypdf`` and
+``openpyxl`` are therefore archive-stage runtime dependencies. Legacy collection
+workflows did not install them explicitly, so this compatibility wrapper bootstraps
+missing dependencies before importing the stable archive core. Installation failure
+is fatal rather than silently disabling semantic deduplication or provenance updates.
 """
 
 import importlib.util
@@ -20,22 +19,32 @@ import sys
 from pathlib import Path
 
 
-def _ensure_pdf_semantic_runtime():
-    if importlib.util.find_spec('pypdf') is not None:
-        return
-    subprocess.run(
-        [sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'pypdf'],
-        check=True,
-    )
-    if importlib.util.find_spec('pypdf') is None:
-        raise RuntimeError('pypdf installation completed but module is still unavailable')
+def _ensure_archive_semantic_runtime():
+    required = {
+        'pypdf': 'pypdf',
+        'openpyxl': 'openpyxl',
+    }
+    missing = [package for module, package in required.items() if importlib.util.find_spec(module) is None]
+    if missing:
+        subprocess.run(
+            [sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', *missing],
+            check=True,
+        )
+    unresolved = [module for module in required if importlib.util.find_spec(module) is None]
+    if unresolved:
+        raise RuntimeError(f'archive semantic runtime unavailable after installation: {unresolved}')
 
 
-_ensure_pdf_semantic_runtime()
+_ensure_archive_semantic_runtime()
 
 import archive_stage_core as _core
 from archive_stage_core import *  # preserve public helper contract
+from archive_user_dedup_pipeline import run as _deduplicate_user_archive
 from bat_archive import expose as _expose_bat_references
+
+# The stable core imported the legacy dedup function at module import time. Replace
+# that function object with the ordered pipeline before ``_core.run`` is invoked.
+_core.deduplicate_archive_zip = _deduplicate_user_archive
 
 _BASE_BUILD_ARCHIVE = _core.build_archive
 
