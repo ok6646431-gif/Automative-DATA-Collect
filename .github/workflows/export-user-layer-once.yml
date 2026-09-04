@@ -24,46 +24,114 @@ jobs:
           github-token: ${{ github.token }}
           name: repackage-validation-final
           path: retained
-      - name: Extract validated Human Archive user layer
+
+      - name: Extract and normalize human-facing layer
         run: |
           set -euo pipefail
           test -f retained/Human_Archive.zip
-          mkdir -p human
+          mkdir -p human work
           unzip -q retained/Human_Archive.zip -d human
           ROOT="$(find human -mindepth 1 -maxdepth 1 -type d | head -n1)"
           test -n "$ROOT"
-          mkdir -p export
-          cp -a "$ROOT/00_자료목록" export/
-          cp -a "$ROOT/01_사용자자료" export/
+          cp -a "$ROOT/01_사용자자료" work/01_사용자자료
+          BROWSER="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$BROWSER"
+          export BROWSER
           python - <<'PY'
           from pathlib import Path
-          import zipfile
-          base=Path('export')
-          out=Path('금호타이어_환경자료_2020-2026_사용자용.zip')
-          with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
-              for p in sorted(base.rglob('*')):
-                  if p.is_file(): z.write(p,p.relative_to(base))
-          print('USER_FILES',sum(1 for p in base.rglob('*') if p.is_file()))
-          print('ZIP_BYTES',out.stat().st_size)
+          import os, subprocess, shutil, zipfile
+
+          user=Path('work/01_사용자자료')
+          browser=os.environ['BROWSER']
+
+          # Keep machine-readable traceability in the system/raw archive only.
+          for p in list(user.rglob('*')):
+              if not p.is_file():
+                  continue
+              suf=p.suffix.lower()
+              if suf in {'.json','.jsonl'}:
+                  p.unlink()
+                  continue
+              if suf in {'.html','.htm'}:
+                  # Automated review already has PDF/XLSX companions; drop its HTML.
+                  if '00_환경관리검토' in p.parts:
+                      p.unlink()
+                      continue
+                  pdf=p.with_suffix('.pdf')
+                  cmd=[browser,'--headless=new','--disable-gpu','--no-sandbox','--allow-file-access-from-files','--no-pdf-header-footer',f'--print-to-pdf={pdf.resolve()}',p.resolve().as_uri()]
+                  cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60,check=False)
+                  if not pdf.exists() or pdf.stat().st_size < 1000 or not pdf.read_bytes()[:5].startswith(b'%PDF-'):
+                      raise SystemExit(f'HTML to PDF failed: {p}: {cp.stderr.decode(errors="replace")[-500:]}')
+                  p.unlink()
+
+          # Remove empty directories left by machine-readable companions.
+          for d in sorted([p for p in user.rglob('*') if p.is_dir()], reverse=True):
+              try: d.rmdir()
+              except OSError: pass
+
+          readme=Path('work/README_먼저읽기.txt')
+          readme.write_text(
+              '금호타이어 환경자료 2020-2026 사용자용 정정본\n\n'
+              '1) ENV-INFO 사업장 상세는 PDF로 제공합니다.\n'
+              '2) PRTR, 화학물질통계, CleanSYS, SOOSIRO는 Excel 정리본으로 제공합니다.\n'
+              '3) 지속가능경영보고서는 연도별 하위폴더 없이 한 폴더에 PDF로 배치합니다.\n'
+              '4) 회사 공식 웹페이지는 PDF로 변환합니다.\n'
+              '5) HTML/JSON/JSONL은 사용자 패키지에서 제외하며 시스템 원본에만 보존합니다.\n'
+              '6) 2021 지속가능경영보고서는 공식 목록 기준 미발간입니다.\n',
+              encoding='utf-8')
+
+          files=[p for p in sorted(user.rglob('*')) if p.is_file()]
+          Path('work/파일목록.txt').write_text('\n'.join(str(p.relative_to(user)) for p in files)+'\n',encoding='utf-8')
+
+          core=Path('금호타이어_환경자료_2020-2026_핵심자료.zip')
+          attachments=Path('금호타이어_ENVINFO_첨부자료_2020-2024.zip')
+          with zipfile.ZipFile(core,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+              z.write(readme,readme.name); z.write(Path('work/파일목록.txt'),'파일목록.txt')
+              for p in files:
+                  rel=p.relative_to(user)
+                  if '첨부자료' in rel.parts:
+                      continue
+                  z.write(p,Path('금호타이어_환경자료_2020-2026')/rel)
+          with zipfile.ZipFile(attachments,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
+              for p in files:
+                  rel=p.relative_to(user)
+                  if '첨부자료' not in rel.parts:
+                      continue
+                  z.write(p,Path('금호타이어_ENVINFO_첨부자료_2020-2024')/rel)
+          print('USER_FILES',len(files))
+          print('CORE_BYTES',core.stat().st_size)
+          print('ATTACHMENT_BYTES',attachments.stat().st_size)
           PY
-      - name: Validate user-facing formats
+
+      - name: Validate strict user-facing formats
         run: |
           set -euo pipefail
-          find export -type f | sort > /tmp/files.txt
+          find work/01_사용자자료 -type f | sort > /tmp/files.txt
           grep -q 'PRTR_화학물질배출이동량_정리.xlsx' /tmp/files.txt
           grep -q '화학물질통계_정리.xlsx' /tmp/files.txt
           grep -q 'CleanSYS_대기TMS_정리.xlsx' /tmp/files.txt
           grep -q 'SOOSIRO_수질TMS_정리.xlsx' /tmp/files.txt
           test "$(grep -c '환경정보공개_.*\.pdf$' /tmp/files.txt)" -ge 15
           test "$(grep -c '지속가능경영보고서_20.*\.pdf$' /tmp/files.txt)" -ge 6
-          if find export/01_사용자자료 -type f \( -name '*.json' -o -name '*.jsonl' \) | grep -q .; then
-            echo 'Unexpected JSON/JSONL in user-facing layer' >&2
+          if find work/01_사용자자료 -type f \( -name '*.html' -o -name '*.htm' -o -name '*.json' -o -name '*.jsonl' \) | grep -q .; then
+            echo 'Machine-readable files remain in user-facing layer' >&2
             exit 1
           fi
-      - name: Upload user package
+          test "$(stat -c%s '금호타이어_환경자료_2020-2026_핵심자료.zip')" -lt 536870912
+          test "$(stat -c%s '금호타이어_ENVINFO_첨부자료_2020-2024.zip')" -lt 536870912
+
+      - name: Upload core user package
         uses: actions/upload-artifact@v4
         with:
-          name: kumho-user-facing-2020-2026
-          path: 금호타이어_환경자료_2020-2026_사용자용.zip
+          name: kumho-core-user-facing-2020-2026
+          path: 금호타이어_환경자료_2020-2026_핵심자료.zip
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Upload ENVINFO attachments package
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-envinfo-attachments-2020-2024
+          path: 금호타이어_ENVINFO_첨부자료_2020-2024.zip
           retention-days: 14
           if-no-files-found: error
