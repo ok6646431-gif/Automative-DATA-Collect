@@ -10,9 +10,13 @@ on:
       - 'orchestrator/archive_acceptance.py'
       - 'orchestrator/archive_contract.json'
       - 'orchestrator/archive_stage.py'
+      - 'orchestrator/archive_zip_dedup.py'
+      - 'orchestrator/archive_user_dedup_v2.py'
       - 'orchestrator/user_archive_format.py'
       - 'tools/prepare_human_archive_delivery.py'
       - 'tests/test_archive_delivery_contract.py'
+      - 'tests/test_archive_user_dedup_v2.py'
+      - 'tests/test_archive_zip_dedup.py'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +35,12 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
       - name: Run archive and delivery contract tests
-        run: python -m unittest tests.test_archive_delivery_contract -v
+        run: >-
+          python -m unittest
+          tests.test_archive_delivery_contract
+          tests.test_archive_user_dedup_v2
+          tests.test_archive_zip_dedup
+          -v
       - name: Install Korean fonts
         run: |
           sudo apt-get update
@@ -83,11 +92,16 @@ jobs:
           from archive_acceptance import assert_pass, validate_archive_zip
           report=assert_pass(validate_archive_zip('assembled/Human_Archive.zip', expected_env_pdf_count=15), 'Kumho final Human Archive')
           summary=json.load(open('assembled/Archive_Summary.json',encoding='utf-8'))
+          dedup=summary.get('envinfo_user_attachment_dedup') or {}
+          if int(dedup.get('envinfo_attachment_occurrences') or 0) <= 0:
+              raise SystemExit('ENVINFO user attachment dedup metadata missing')
           print(json.dumps({
               'FINAL_ARCHIVE_ACCEPTANCE':'PASS',
+              'zip_bytes':summary.get('zip_bytes'),
               'zip_sha256':summary.get('zip_sha256'),
               'checks':report['checks'],
               'normalization':summary.get('user_format_normalization'),
+              'envinfo_user_attachment_dedup':dedup,
           },ensure_ascii=False))
           PY
       - name: Build byte-preserving delivery package
@@ -96,7 +110,7 @@ jobs:
           --source assembled/Human_Archive.zip
           --out-dir delivery
           --prefix '금호타이어_환경자료_2020-2026'
-          --max-mib 450
+          --max-mib 500
       - name: Verify delivery lineage manifest
         run: |
           python - <<'PY'
@@ -109,7 +123,7 @@ jobs:
           for p in m.get('parts',[]):
               f=Path('delivery')/p['name']
               if not f.exists(): raise SystemExit(f'missing delivery part: {f}')
-              if f.stat().st_size>450*1024*1024: raise SystemExit(f'delivery part too large: {f}')
+              if f.stat().st_size>500*1024*1024: raise SystemExit(f'delivery part too large: {f}')
               if hashlib.sha256(f.read_bytes()).hexdigest()!=p['sha256']: raise SystemExit(f'part SHA mismatch: {f}')
           print(json.dumps({'DELIVERY_LINEAGE':'PASS','parts':len(m.get('parts',[])),'selected_members':m.get('selected_member_count')},ensure_ascii=False))
           PY
