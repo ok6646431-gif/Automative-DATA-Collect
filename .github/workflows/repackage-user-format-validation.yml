@@ -13,10 +13,13 @@ on:
       - 'orchestrator/archive_zip_dedup.py'
       - 'orchestrator/archive_user_dedup_v2.py'
       - 'orchestrator/user_archive_format.py'
+      - 'orchestrator/bat*.py'
+      - 'orchestrator/bat*.json'
       - 'tools/prepare_human_archive_delivery.py'
       - 'tests/test_archive_delivery_contract.py'
       - 'tests/test_archive_user_dedup_v2.py'
       - 'tests/test_archive_zip_dedup.py'
+      - 'tests/test_bat*.py'
   workflow_dispatch:
 
 permissions:
@@ -40,6 +43,7 @@ jobs:
           tests.test_archive_delivery_contract
           tests.test_archive_user_dedup_v2
           tests.test_archive_zip_dedup
+          tests.test_bat_resolver
           -v
       - name: Install Korean fonts
         run: |
@@ -70,7 +74,7 @@ jobs:
           pattern: icis-attempt-*
           path: collected/icis
           merge-multiple: false
-      - name: Assemble package
+      - name: Assemble package with BAT resolution
         run: >-
           python orchestrator/package_run.py
           --stable collected/stable
@@ -88,13 +92,37 @@ jobs:
           PYTHONPATH: orchestrator
         run: |
           python - <<'PY'
-          import json
+          import json, zipfile
           from archive_acceptance import assert_pass, validate_archive_zip
+
           report=assert_pass(validate_archive_zip('assembled/Human_Archive.zip', expected_env_pdf_count=15), 'Kumho final Human Archive')
           summary=json.load(open('assembled/Archive_Summary.json',encoding='utf-8'))
           dedup=summary.get('envinfo_user_attachment_dedup') or {}
           if int(dedup.get('envinfo_attachment_occurrences') or 0) <= 0:
               raise SystemExit('ENVINFO user attachment dedup metadata missing')
+
+          bat=summary.get('bat_archive') or {}
+          if int(bat.get('bat_archive_candidate_count') or 0) != 5:
+              raise SystemExit(f"Expected 5 Kumho site/BAT candidates, got {bat.get('bat_archive_candidate_count')}")
+          if int(bat.get('bat_archive_pdf_count') or 0) < 1:
+              raise SystemExit('Published matched official BAT PDF missing from Human Archive')
+          if bat.get('bat_archive_failures'):
+              raise SystemExit(f"BAT archive failures: {bat.get('bat_archive_failures')}")
+
+          with zipfile.ZipFile('assembled/Human_Archive.zip') as z:
+              names=z.namelist()
+              bat_xlsx=[n for n in names if n.endswith('/BAT_기준서/BAT_적용후보_및_수집현황.xlsx')]
+              bat_pdfs=[n for n in names if '/BAT_기준서/' in n and n.lower().endswith('.pdf')]
+              if len(bat_xlsx)!=1:
+                  raise SystemExit(f'Expected one BAT applicability XLSX, got {bat_xlsx}')
+              if len(bat_pdfs)<1:
+                  raise SystemExit('No BAT PDF in final Human Archive ZIP')
+              if any('고무제품' in n and n.lower().endswith('.pdf') for n in names):
+                  raise SystemExit('Unpublished rubber-products BAT must not appear as a PDF')
+              forbidden=[n for n in names if '/01_사용자자료/' in n and n.lower().endswith(('.html','.htm','.json','.jsonl'))]
+              if forbidden:
+                  raise SystemExit(f'Forbidden machine-readable files in user archive: {forbidden[:10]}')
+
           print(json.dumps({
               'FINAL_ARCHIVE_ACCEPTANCE':'PASS',
               'zip_bytes':summary.get('zip_bytes'),
@@ -102,6 +130,9 @@ jobs:
               'checks':report['checks'],
               'normalization':summary.get('user_format_normalization'),
               'envinfo_user_attachment_dedup':dedup,
+              'bat_archive':bat,
+              'bat_pdf_members':bat_pdfs,
+              'bat_xlsx_members':bat_xlsx,
           },ensure_ascii=False))
           PY
       - name: Build byte-preserving delivery package
