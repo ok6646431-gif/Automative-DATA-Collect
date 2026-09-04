@@ -104,10 +104,11 @@ jobs:
           dedup=summary.get('envinfo_user_attachment_dedup') or {}
           if int(dedup.get('envinfo_attachment_occurrences') or 0) <= 0:
               raise SystemExit('ENVINFO user attachment dedup metadata missing')
-          if dedup.get('sustainability_semantic_candidate_years') != ['2022']:
-              raise SystemExit(f"Expected only 2022 to require sustainability semantic comparison: {dedup}")
-          if int(dedup.get('sustainability_semantic_duplicate_files_removed') or 0) != 1:
-              raise SystemExit(f"Expected one proven 2022 sustainability semantic duplicate removal: {dedup}")
+          semantic_years=dedup.get('sustainability_semantic_candidate_years') or []
+          if semantic_years not in ([], ['2022']):
+              raise SystemExit(f"Unexpected sustainability semantic comparison years: {dedup}")
+          if semantic_years==['2022'] and int(dedup.get('sustainability_semantic_duplicate_files_removed') or 0) != 1:
+              raise SystemExit(f"2022 semantic comparison ran but did not remove the proven duplicate: {dedup}")
           if dedup.get('sustainability_semantic_failures'):
               raise SystemExit(f"Sustainability semantic dedup failures: {dedup.get('sustainability_semantic_failures')}")
 
@@ -136,6 +137,9 @@ jobs:
                   sustainability_years.add(matches[0])
               if len(sustainability)!=6 or sustainability_years!=expected_sustainability_years:
                   raise SystemExit(f'Expected exactly six canonical annual sustainability PDFs: files={sustainability} years={sorted(sustainability_years)}')
+              y2022=[n for n in sustainability if '2022' in Path(n).name]
+              if len(y2022)!=1:
+                  raise SystemExit(f'Expected one canonical 2022 sustainability report, got {y2022}')
 
               bat_xlsx=[n for n in names if n.endswith('/BAT_기준서/BAT_적용후보_및_수집현황.xlsx')]
               current_pdfs=[n for n in names if '/BAT_기준서/01_현행_우선판/' in n and n.lower().endswith('.pdf')]
@@ -189,6 +193,7 @@ jobs:
               'bat_workbook_candidate_rows':len(records),
               'sustainability_members':sustainability,
               'sustainability_years':sorted(sustainability_years),
+              'sustainability_2022_member':y2022[0],
           },ensure_ascii=False))
           PY
       - name: Build byte-preserving delivery package
