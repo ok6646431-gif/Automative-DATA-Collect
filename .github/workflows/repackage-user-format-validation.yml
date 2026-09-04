@@ -45,6 +45,7 @@ jobs:
           tests.test_archive_zip_dedup
           tests.test_bat_resolver
           tests.test_bat_revision_collection
+          tests.test_bat_archive
           -v
       - name: Install Korean fonts
         run: |
