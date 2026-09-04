@@ -15,43 +15,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Resolve common boiler BAT official PDF
+      - run: python -m pip install --disable-pip-version-check requests
+      - name: Verify common boiler BAT government direct PDF
         run: |
           python - <<'PY'
-          import hashlib,json,re,requests
-          from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
+          import hashlib,json,requests
+          url='https://www.korea.kr/common/download.do?fileId=196628937&tblKey=EDN'
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (BATCatalogDiscovery/1.0)'
-          page='https://ieps.nier.go.kr/web/board/5/1358/?pMENUMST_ID=95'
-          r=s.get(page,timeout=(15,60)); r.raise_for_status(); soup=BeautifulSoup(r.text,'html.parser')
-          candidates=[]
-          for a in soup.find_all('a'):
-              label=' '.join(a.stripped_strings); vals=[]
-              for attr in ('href','onclick','data-url','data-href','data-file','data-download'):
-                  raw=a.get(attr)
-                  if not raw: continue
-                  if attr=='onclick': vals.extend(re.findall(r"['\"]([^'\"]+)['\"]",str(raw)))
-                  else: vals.append(str(raw))
-              for raw in vals:
-                  if raw.lower().startswith('javascript:'): continue
-                  url=urljoin(r.url,raw)
-                  score=(4 if '.pdf' in url.lower() else 0)+(4 if '.pdf' in label.lower() else 0)+(2 if '기준서' in label else 0)+(1 if 'download' in url.lower() or 'file' in url.lower() else 0)
-                  if score: candidates.append({'score':score,'url':url,'label':label})
-          candidates=sorted(candidates,key=lambda x:(-x['score'],x['url']))
-          verified=[]
-          for item in candidates[:12]:
-              try:
-                  rr=s.get(item['url'],timeout=(15,90),allow_redirects=True); rr.raise_for_status()
-                  if rr.content.lstrip().startswith(b'%PDF-'):
-                      verified.append({**item,'final_url':rr.url,'bytes':len(rr.content),'sha256':hashlib.sha256(rr.content).hexdigest()})
-                      break
-              except Exception as e:
-                  item['error']=repr(e)
-          payload={'page_status':r.status_code,'page_url':r.url,'candidates':candidates,'verified':verified}
-          open('bat_probe.json','w',encoding='utf-8').write(json.dumps(payload,ensure_ascii=False,indent=2))
+          r=s.get(url,timeout=(15,90),allow_redirects=True); r.raise_for_status()
+          payload={'requested_url':url,'final_url':r.url,'status':r.status_code,'bytes':len(r.content),'content_type':r.headers.get('content-type',''),'is_pdf':r.content.lstrip().startswith(b'%PDF-'),'sha256':hashlib.sha256(r.content).hexdigest()}
           print(json.dumps(payload,ensure_ascii=False,indent=2))
-          if not verified: raise SystemExit('No verified common-boiler BAT PDF')
+          open('bat_probe.json','w',encoding='utf-8').write(json.dumps(payload,ensure_ascii=False,indent=2))
+          if not payload['is_pdf']: raise SystemExit('Government direct endpoint did not return PDF bytes')
           PY
       - uses: actions/upload-artifact@v4
         with:
