@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl
       - name: Run archive and delivery contract tests
         run: >-
           python -m unittest
@@ -93,7 +93,9 @@ jobs:
           PYTHONPATH: orchestrator
         run: |
           python - <<'PY'
-          import csv,json,zipfile,io
+          import csv,json,zipfile,io,tempfile
+          from pathlib import Path
+          from openpyxl import load_workbook
           from archive_acceptance import assert_pass, validate_archive_zip
 
           report=assert_pass(validate_archive_zip('assembled/Human_Archive.zip', expected_env_pdf_count=15), 'Kumho final Human Archive')
@@ -105,8 +107,10 @@ jobs:
           bat=summary.get('bat_archive') or {}
           if int(bat.get('bat_archive_candidate_count') or 0) != 5:
               raise SystemExit(f"Expected 5 Kumho site/BAT candidates, got {bat.get('bat_archive_candidate_count')}")
-          if int(bat.get('bat_archive_current_pdf_count') or 0) < 1:
-              raise SystemExit('Published matched current official BAT PDF missing from Human Archive')
+          if int(bat.get('bat_archive_current_pdf_count') or 0) != 0:
+              raise SystemExit(f"Review/pending Kumho BAT candidates must not expose current PDFs: {bat}")
+          if int(bat.get('bat_archive_superseded_pdf_count') or 0) != 0:
+              raise SystemExit(f"No BAT family cleared the collection gate, so superseded PDFs must also be absent: {bat}")
           if bat.get('bat_archive_failures'):
               raise SystemExit(f"BAT archive failures: {bat.get('bat_archive_failures')}")
 
@@ -119,24 +123,36 @@ jobs:
               misplaced=[n for n in all_bat_pdfs if '/01_현행_우선판/' not in n and '/02_구판_아카이브/' not in n]
               if len(bat_xlsx)!=1:
                   raise SystemExit(f'Expected one BAT applicability XLSX, got {bat_xlsx}')
-              if not current_pdfs:
-                  raise SystemExit('No current/preferred BAT PDF in final Human Archive ZIP')
+              if current_pdfs or old_pdfs or all_bat_pdfs:
+                  raise SystemExit(f'No Kumho BAT candidate cleared collection; no BAT PDF may be exposed: current={current_pdfs} old={old_pdfs}')
               if misplaced:
                   raise SystemExit(f'BAT PDFs outside revision folders: {misplaced}')
-              if any('고무제품' in n for n in all_bat_pdfs):
-                  raise SystemExit('Unpublished rubber-products BAT must not appear as a PDF')
-              if any('전기 및 증기' in n or '전기_및_증기' in n for n in all_bat_pdfs):
-                  raise SystemExit('Electric/steam industry BAT must not be exposed for Kumho boiler evidence')
-              if not any('업종공통' in n or '보일러' in n for n in current_pdfs):
-                  raise SystemExit(f'Current common-boiler BAT PDF not found: {current_pdfs}')
               forbidden=[n for n in names if '/01_사용자자료/' in n and n.lower().endswith(('.html','.htm','.json','.jsonl'))]
               if forbidden:
                   raise SystemExit(f'Forbidden machine-readable files in user archive: {forbidden[:10]}')
 
-              # The workbook is part of the delivery contract; inspect its ZIP signature without needing openpyxl.
               xlsx_bytes=z.read(bat_xlsx[0])
               if not xlsx_bytes.startswith(b'PK'):
                   raise SystemExit('BAT applicability workbook is not a valid XLSX container')
+              with tempfile.NamedTemporaryFile(suffix='.xlsx') as tmp:
+                  tmp.write(xlsx_bytes); tmp.flush()
+                  wb=load_workbook(tmp.name,read_only=True,data_only=True)
+                  ws=wb.active
+                  rows=list(ws.iter_rows(values_only=True))
+              if len(rows)<6:
+                  raise SystemExit(f'BAT workbook must contain header plus five Kumho candidates: rows={len(rows)}')
+              headers=[str(v or '') for v in rows[0]]
+              records=[dict(zip(headers,row)) for row in rows[1:] if any(v not in (None,'') for v in row)]
+              if len(records)!=5:
+                  raise SystemExit(f'BAT workbook candidate row count changed: {len(records)}')
+              flattened='\n'.join(' | '.join(str(v or '') for v in r.values()) for r in records)
+              for site in ['금호타이어 광주공장','금호타이어 곡성공장','금호타이어 평택공장']:
+                  if site not in flattened:
+                      raise SystemExit(f'Missing expected rubber candidate site in BAT workbook: {site}')
+              if 'REVIEW_BEFORE_COLLECTION' not in flattened or 'WAIT_FOR_PUBLICATION' not in flattened:
+                  raise SystemExit('BAT workbook must expose both review-before-collection and wait-for-publication states')
+              if 'KBREF_FAMILY_ELECTRIC_STEAM' in flattened or '전기 및 증기' in flattened:
+                  raise SystemExit('Electric/steam false-positive BAT leaked into user workbook')
 
           print(json.dumps({
               'FINAL_ARCHIVE_ACCEPTANCE':'PASS',
@@ -149,6 +165,7 @@ jobs:
               'current_bat_pdf_members':current_pdfs,
               'superseded_bat_pdf_members':old_pdfs,
               'bat_xlsx_members':bat_xlsx,
+              'bat_workbook_candidate_rows':len(records),
           },ensure_ascii=False))
           PY
       - name: Build byte-preserving delivery package
