@@ -74,13 +74,13 @@
       "official_source_locator": "https://ieps.nier.go.kr/web/board/5/1789/",
       "official_document_page": "https://ieps.nier.go.kr/web/board/5/1789/",
       "ksic_prefixes": ["38"],
-      "industry_terms": ["폐기물처리업", "폐기물 처리"],
-      "process_terms": ["소각", "매립", "폐기물 처리", "폐기물 재활용"],
+      "industry_terms": ["폐기물처리업"],
+      "process_terms": ["소각시설", "폐기물 소각", "매립시설", "폐기물 매립"],
       "utility_terms": [],
       "domains": ["AIR", "WATER", "WASTE", "GHG_ENERGY"],
       "default_role": "SECONDARY_PROCESS",
       "collection_policy": "COLLECT_WHEN_MATCHED",
-      "notes": "사업장 자체 폐기물 처리공정이 실제 존재한다는 근거가 있을 때만 보조 후보로 사용한다. 단순 폐기물 발생은 매칭 근거가 아니다."
+      "notes": "사업장 자체 폐기물 소각·매립 공정 또는 폐기물처리업 업종 근거가 확인될 때만 보조 후보로 사용한다. 단순 폐기물 발생·위탁처리는 매칭 근거가 아니다."
     }
   ]
 }
