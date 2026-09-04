@@ -16,49 +16,35 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe IEPS board
+      - name: Inspect IEPS board filters
         run: |
           python - <<'PY'
-          import json,re,requests
+          import json,requests
           from bs4 import BeautifulSoup
-          from urllib.parse import urljoin
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0'
-          out=[]; details={}
-          for page in range(1,31):
-              url=f'https://ieps.nier.go.kr/web/board/5/?pMENUMST_ID=95&page={page}'
-              try:
-                  r=s.get(url,timeout=(10,30)); status=r.status_code; text=r.text
-              except Exception as e:
-                  out.append({'page':page,'error':repr(e)}); continue
-              soup=BeautifulSoup(text,'html.parser')
-              links=[]
-              for a in soup.find_all('a'):
-                  href=str(a.get('href') or '')
-                  label=' '.join(a.stripped_strings)
-                  m=re.search(r'/web/board/5/(\d+)/?',href)
-                  if m:
-                      links.append({'id':m.group(1),'href':urljoin(r.url,href),'label':label})
-              out.append({'page':page,'status':status,'url':r.url,'bytes':len(r.content),'title':soup.title.get_text(' ',strip=True) if soup.title else '', 'links':links[:50], 'text_head':' '.join(soup.stripped_strings)[:500]})
-              for item in links:
-                  details[item['id']]=item
-          # Fetch unique detail pages and keep BAT-classified items.
-          bat=[]
-          for bid,item in sorted(details.items(), key=lambda kv:int(kv[0]), reverse=True):
-              try:
-                  r=s.get(item['href'],timeout=(10,30)); soup=BeautifulSoup(r.text,'html.parser'); txt=' '.join(soup.stripped_strings)
-              except Exception as e:
-                  continue
-              if '최적가용기법 기준서' not in txt and '최적가용기법기준서' not in txt:
-                  continue
-              title=''
-              # Prefer visible board title cell/text; fallback anchor label.
-              for tag in soup.find_all(['h1','h2','h3','h4','strong','td','th','dt','dd']):
-                  t=' '.join(tag.stripped_strings)
-                  if '최적가용기법' in t and len(t)<250:
-                      title=t; break
-              bat.append({'id':bid,'detail_url':r.url,'list_label':item['label'],'title_guess':title,'text_head':txt[:1200]})
-          open('bat_probe.json','w',encoding='utf-8').write(json.dumps({'pages':out,'detail_count':len(details),'bat_count':len(bat),'bat':bat},ensure_ascii=False,indent=2))
-          print(json.dumps({'pages':len(out),'detail_count':len(details),'bat_count':len(bat),'bat_ids':[x['id'] for x in bat[:30]]},ensure_ascii=False))
+          url='https://ieps.nier.go.kr/web/board/5/?pMENUMST_ID=95'
+          r=s.get(url,timeout=(10,30)); r.raise_for_status(); soup=BeautifulSoup(r.text,'html.parser')
+          forms=[]
+          for f in soup.find_all('form'):
+              item={'action':f.get('action'),'method':f.get('method'),'id':f.get('id'),'name':f.get('name'),'controls':[]}
+              for x in f.find_all(['input','select','button']):
+                  c={'tag':x.name,'name':x.get('name'),'id':x.get('id'),'type':x.get('type'),'value':x.get('value')}
+                  if x.name=='select': c['options']=[{'value':o.get('value'),'text':' '.join(o.stripped_strings),'selected':o.has_attr('selected')} for o in x.find_all('option')]
+                  if x.name=='button': c['text']=' '.join(x.stripped_strings)
+                  item['controls'].append(c)
+              forms.append(item)
+          # Also capture all selects outside forms and script fragments mentioning the filter names.
+          selects=[]
+          for x in soup.find_all('select'):
+              selects.append({'name':x.get('name'),'id':x.get('id'),'options':[{'value':o.get('value'),'text':' '.join(o.stripped_strings)} for o in x.find_all('option')]})
+          scripts=[]
+          for sc in soup.find_all('script'):
+              txt=sc.get_text('\n',strip=True)
+              if 'gubunList' in txt or 'batIndutyCd' in txt or '/web/board/5/' in txt:
+                  scripts.append(txt[:12000])
+          payload={'status':r.status_code,'url':r.url,'forms':forms,'selects':selects,'scripts':scripts}
+          open('bat_probe.json','w',encoding='utf-8').write(json.dumps(payload,ensure_ascii=False,indent=2))
+          print(json.dumps({'selects':selects,'form_count':len(forms),'script_count':len(scripts)},ensure_ascii=False))
           PY
       - uses: actions/upload-artifact@v4
         with:
