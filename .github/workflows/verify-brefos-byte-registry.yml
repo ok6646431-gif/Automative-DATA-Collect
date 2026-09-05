@@ -11,6 +11,7 @@ on:
       - 'orchestrator/bat_master_catalog.json'
       - 'orchestrator/bat_catalog_effective.py'
       - 'orchestrator/bat_catalog_status_overrides.json'
+      - 'tests/test_brefos_catalog_reconcile.py'
       - '.github/workflows/verify-brefos-byte-registry.yml'
 
 concurrency:
@@ -30,6 +31,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Test BREFOS reconciliation rules
+        run: python -m unittest tests.test_brefos_catalog_reconcile -v
       - name: Stream and hash every BREFOS PDF
         run: python orchestrator/brefos_byte_registry.py --out BREFOS_Byte_Registry.json
       - name: Reconcile verified BREFOS documents with preferred master entries
