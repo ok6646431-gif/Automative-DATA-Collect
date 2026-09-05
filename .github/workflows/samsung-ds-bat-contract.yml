@@ -1,0 +1,38 @@
+name: Samsung DS BAT contract
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/samsung-ds-bat-contract.yml'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_resolver.py'
+      - 'tests/test_samsung_ds_bat_contract.py'
+      - 'tests/regression_cases/samsung_ds/company_discovery.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: samsung-ds-bat-contract-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline five-site BAT contract
+        run: python -m unittest tests.test_samsung_ds_bat_contract -v
+      - name: Compile contract path
+        run: python -m py_compile orchestrator/bat_catalog_effective.py orchestrator/bat_resolver.py tests/test_samsung_ds_bat_contract.py
