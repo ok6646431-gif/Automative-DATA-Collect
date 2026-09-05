@@ -1,4 +1,4 @@
-"""Byte-verify every document exposed by the current BREFOS standard-document feed.
+"""Byte-verify documents exposed by the current BREFOS standard-document feed.
 
 The registry is deliberately metadata-only: PDFs are streamed, hashed, and discarded.
 It separates source reachability from integrity failures and never mutates the BAT master
@@ -8,6 +8,9 @@ Verification uses a small bounded worker pool. If live BREFOS *discovery* is tem
 SOURCE_UNREACHABLE, a recent repository-persisted last-known-good discovery snapshot may
 supply document identities/URLs. A contradictory live response is never overridden by the
 snapshot, and stale snapshots fail closed.
+
+The caller may select specific atchFileIds. This supports a fast priority lane for current
+revisions while a complete historical byte registry remains a separate completeness task.
 """
 from __future__ import annotations
 
@@ -18,7 +21,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Iterable
 
 try:
     from .brefos_catalog_discovery import discover
@@ -38,7 +41,7 @@ def _session():
                 allowed_methods=frozenset({'GET'}),raise_on_status=False,
                 respect_retry_after_header=True)
     s=requests.Session()
-    s.headers.update({'User-Agent':'Mozilla/5.0 (BREFOSByteRegistry/1.2; official-public-reference)'})
+    s.headers.update({'User-Agent':'Mozilla/5.0 (BREFOSByteRegistry/1.3; official-public-reference)'})
     s.mount('https://',HTTPAdapter(max_retries=retry,pool_connections=2,pool_maxsize=2))
     return s
 
@@ -100,61 +103,58 @@ def _snapshot_age_days(snapshot: Dict[str,Any]) -> float | None:
 
 def _choose_discovery(live: Dict[str,Any], snapshot_path: Path, max_snapshot_age_days: int) -> tuple[Dict[str,Any],Dict[str,Any]]:
     if live.get('status')=='PASS':
-        return live,{
-            'basis':'LIVE_BREFOS_DISCOVERY',
-            'live_status':'PASS',
-            'snapshot_used':False,
-        }
-    # Fail closed for parse/content contradictions. Snapshot fallback is allowed only for
-    # transport-level unreachability, never because live content disagrees with expectations.
+        return live,{'basis':'LIVE_BREFOS_DISCOVERY','live_status':'PASS','snapshot_used':False}
     if live.get('status')!='SOURCE_UNREACHABLE':
-        return live,{
-            'basis':'LIVE_BREFOS_DISCOVERY_FAILED_CLOSED',
-            'live_status':live.get('status'),
-            'snapshot_used':False,
-        }
+        return live,{'basis':'LIVE_BREFOS_DISCOVERY_FAILED_CLOSED','live_status':live.get('status'),'snapshot_used':False}
     try:
         snapshot=json.loads(Path(snapshot_path).read_text(encoding='utf-8'))
     except Exception as exc:
-        return live,{
-            'basis':'SNAPSHOT_UNAVAILABLE',
-            'live_status':live.get('status'),
-            'snapshot_used':False,
-            'snapshot_error':f'{type(exc).__name__}: {exc}',
-        }
+        return live,{'basis':'SNAPSHOT_UNAVAILABLE','live_status':live.get('status'),'snapshot_used':False,'snapshot_error':f'{type(exc).__name__}: {exc}'}
     age=_snapshot_age_days(snapshot)
     if snapshot.get('status')!='PASS' or not snapshot.get('documents') or age is None or age>max_snapshot_age_days:
         return live,{
-            'basis':'SNAPSHOT_REJECTED',
-            'live_status':live.get('status'),
-            'snapshot_used':False,
-            'snapshot_status':snapshot.get('status'),
-            'snapshot_checked_at':snapshot.get('checked_at'),
-            'snapshot_age_days':age,
-            'max_snapshot_age_days':max_snapshot_age_days,
+            'basis':'SNAPSHOT_REJECTED','live_status':live.get('status'),'snapshot_used':False,
+            'snapshot_status':snapshot.get('status'),'snapshot_checked_at':snapshot.get('checked_at'),
+            'snapshot_age_days':age,'max_snapshot_age_days':max_snapshot_age_days,
         }
     return snapshot,{
-        'basis':'LAST_VERIFIED_SNAPSHOT_FALLBACK',
-        'live_status':live.get('status'),
-        'snapshot_used':True,
-        'snapshot_checked_at':snapshot.get('checked_at'),
-        'snapshot_age_days':age,
-        'max_snapshot_age_days':max_snapshot_age_days,
+        'basis':'LAST_VERIFIED_SNAPSHOT_FALLBACK','live_status':live.get('status'),'snapshot_used':True,
+        'snapshot_checked_at':snapshot.get('checked_at'),'snapshot_age_days':age,'max_snapshot_age_days':max_snapshot_age_days,
     }
 
 
+def _select_documents(documents: Iterable[Dict[str,Any]], requested_ids: Iterable[str] | None) -> tuple[list[Dict[str,Any]],list[str]]:
+    docs=list(documents or [])
+    wanted=[str(x).strip() for x in (requested_ids or []) if str(x).strip()]
+    if not wanted:
+        return docs,[]
+    wanted_set=set(wanted)
+    selected=[d for d in docs if str(d.get('atch_file_id') or '') in wanted_set]
+    found={str(d.get('atch_file_id') or '') for d in selected}
+    missing=[x for x in wanted if x not in found]
+    return selected,missing
+
+
 def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4,
-                   snapshot_path: Path=DEFAULT_SNAPSHOT, max_snapshot_age_days: int=14) -> Dict[str, Any]:
+                   snapshot_path: Path=DEFAULT_SNAPSHOT, max_snapshot_age_days: int=14,
+                   requested_ids: Iterable[str] | None=None) -> Dict[str, Any]:
     live=discover(max_pages=max_pages)
     snapshot,basis=_choose_discovery(live,Path(snapshot_path),max_snapshot_age_days)
+    all_docs=list(snapshot.get('documents',[]) or []) if snapshot.get('status')=='PASS' else []
+    docs,missing_requested=_select_documents(all_docs,requested_ids)
+    requested=[str(x).strip() for x in (requested_ids or []) if str(x).strip()]
     payload={
-        'schema_version':'1.2',
+        'schema_version':'1.3',
         'checked_at':datetime.now(timezone.utc).isoformat(),
         'source_url':snapshot.get('source_url') or live.get('source_url'),
         'discovery_status':snapshot.get('status'),
         'discovery_basis':basis,
         'advertised_total_records':snapshot.get('advertised_total_records'),
         'discovered_document_count':snapshot.get('discovered_document_count',0),
+        'selection_mode':'ATCH_FILE_ID_SET' if requested else 'ALL_DISCOVERED_DOCUMENTS',
+        'requested_atc_file_ids':requested,
+        'selected_document_count':len(docs),
+        'missing_requested_atc_file_ids':missing_requested,
         'max_workers':max(1,min(int(max_workers),6)),
         'documents':[],
     }
@@ -162,8 +162,10 @@ def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4,
         payload['status']='DISCOVERY_NOT_COMPLETE'
         payload['live_discovery_attempts']=live.get('attempts',[])
         return payload
+    if missing_requested:
+        payload['status']='SELECTION_INCOMPLETE'
+        return payload
 
-    docs=list(snapshot.get('documents',[]) or [])
     ordered=[None]*len(docs)
     counts={}
     workers=max(1,min(int(max_workers),6))
@@ -186,7 +188,7 @@ def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4,
     payload['documents']=[r for r in ordered if r is not None]
     payload['status_counts']=counts
     payload['verified_pdf_count']=counts.get('VERIFIED_PDF',0)
-    payload['status']='PASS' if payload['verified_pdf_count']==payload['discovered_document_count'] else 'PARTIAL'
+    payload['status']='PASS' if payload['verified_pdf_count']==len(docs) else 'PARTIAL'
     payload['principle']='Only VERIFIED_PDF rows are eligible for BAT catalog URL/SHA promotion. SOURCE_UNREACHABLE is not treated as a content failure. Snapshot fallback can supply identities only when live discovery is unreachable.'
     return payload
 
@@ -200,11 +202,13 @@ def main():
     ap.add_argument('--workers',type=int,default=4)
     ap.add_argument('--snapshot',default=str(DEFAULT_SNAPSHOT))
     ap.add_argument('--max-snapshot-age-days',type=int,default=14)
+    ap.add_argument('--atch-file-ids',default='',help='Comma-separated BREFOS atchFileIds; empty means all discovered documents')
     args=ap.parse_args()
-    payload=build_registry(args.max_pages,(args.connect_timeout,args.read_timeout),args.workers,Path(args.snapshot),args.max_snapshot_age_days)
+    requested=[x.strip() for x in args.atch_file_ids.split(',') if x.strip()]
+    payload=build_registry(args.max_pages,(args.connect_timeout,args.read_timeout),args.workers,Path(args.snapshot),args.max_snapshot_age_days,requested)
     Path(args.out).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    print(json.dumps({'status':payload.get('status'),'discovery_status':payload.get('discovery_status'),'discovery_basis':payload.get('discovery_basis'),'discovered':payload.get('discovered_document_count'),'verified':payload.get('verified_pdf_count',0),'status_counts':payload.get('status_counts',{})},ensure_ascii=False,indent=2))
-    if payload.get('status')=='DISCOVERY_NOT_COMPLETE': raise SystemExit(1)
+    print(json.dumps({'status':payload.get('status'),'discovery_status':payload.get('discovery_status'),'discovery_basis':payload.get('discovery_basis'),'catalog_discovered':payload.get('discovered_document_count'),'selected':payload.get('selected_document_count'),'verified':payload.get('verified_pdf_count',0),'missing_requested':payload.get('missing_requested_atc_file_ids'),'status_counts':payload.get('status_counts',{})},ensure_ascii=False,indent=2))
+    if payload.get('status') in {'DISCOVERY_NOT_COMPLETE','SELECTION_INCOMPLETE'}: raise SystemExit(1)
     if any(k in (payload.get('status_counts') or {}) for k in ('RESPONDED_NOT_PDF','EMPTY_PDF_RESPONSE')): raise SystemExit(2)
 
 
