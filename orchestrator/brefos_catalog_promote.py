@@ -12,7 +12,7 @@ import copy
 import json
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 BREFOS_LIST='https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do'
 
@@ -38,21 +38,33 @@ def build_candidate(master: Dict[str,Any], registry: Dict[str,Any], reconcile: D
     entries={str(e.get('catalog_id')):e for e in candidate.get('entries',[]) or []}
     verified=_verified_by_id(registry)
     report={
-        'schema_version':'1.0',
+        'schema_version':'1.1',
         'status':'PASS',
         'registry_status':registry.get('status'),
+        'registry_selection_mode':registry.get('selection_mode'),
         'promoted':[],
         'skipped':[],
         'blocked':[],
         'principles':[
             'Only reconciliation AUTO_MATCH rows are considered.',
             'Every promoted document must independently be VERIFIED_PDF in the byte registry.',
+            'A targeted ATCH_FILE_ID_SET registry must be fully PASS before any promotion is allowed.',
             'Existing conflicting URL or SHA values are never overwritten automatically.',
             'Historical entries remain in the master catalog; this builder only hydrates matched current entries.',
         ],
     }
-    if registry.get('status') not in {'PASS','PARTIAL'}:
-        report['status']='BLOCKED'; report['blocked'].append({'reason':'REGISTRY_NOT_USABLE','registry_status':registry.get('status')})
+    status=registry.get('status')
+    targeted=registry.get('selection_mode')=='ATCH_FILE_ID_SET'
+    if status not in {'PASS','PARTIAL'} or (targeted and status!='PASS'):
+        report['status']='BLOCKED'
+        report['blocked'].append({
+            'reason':'REGISTRY_NOT_USABLE_FOR_PROMOTION',
+            'registry_status':status,
+            'selection_mode':registry.get('selection_mode'),
+            'selected_document_count':registry.get('selected_document_count'),
+            'verified_pdf_count':registry.get('verified_pdf_count'),
+            'missing_requested_atc_file_ids':registry.get('missing_requested_atc_file_ids'),
+        })
         return candidate,report
 
     for match in reconcile.get('master_matches',[]) or []:
@@ -133,6 +145,7 @@ def build_candidate(master: Dict[str,Any], registry: Dict[str,Any], reconcile: D
         'verified_list_item_count':registry.get('discovered_document_count'),
         'verified_on':str(date.today()),
         'registry_status':registry.get('status'),
+        'registry_selection_mode':registry.get('selection_mode'),
     })
     return candidate,report
 
