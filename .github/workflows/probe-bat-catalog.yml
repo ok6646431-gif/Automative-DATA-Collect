@@ -20,13 +20,21 @@ jobs:
         run: |
           python - <<'PY'
           import hashlib,json,requests
-          url='https://www.korea.kr/common/download.do?fileId=196628937&tblKey=EDN'
+          from pathlib import Path
+          catalog=json.loads(Path('orchestrator/bat_master_catalog.json').read_text(encoding='utf-8'))
+          entry=next(e for e in catalog['entries'] if e.get('catalog_id')=='KBREF_COMMON_BOILER_2021')
+          url=entry.get('official_pdf_url') or ''
+          expected=entry.get('official_pdf_sha256') or ''
+          if not url or not expected:
+              raise SystemExit('Common boiler catalog entry lacks verified official PDF URL/SHA')
           s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (BATCatalogDiscovery/1.0)'
           r=s.get(url,timeout=(15,90),allow_redirects=True); r.raise_for_status()
-          payload={'requested_url':url,'final_url':r.url,'status':r.status_code,'bytes':len(r.content),'content_type':r.headers.get('content-type',''),'is_pdf':r.content.lstrip().startswith(b'%PDF-'),'sha256':hashlib.sha256(r.content).hexdigest()}
+          payload={'requested_url':url,'final_url':r.url,'status':r.status_code,'bytes':len(r.content),'content_type':r.headers.get('content-type',''),'is_pdf':r.content.lstrip().startswith(b'%PDF-'),'sha256':hashlib.sha256(r.content).hexdigest(),'expected_sha256':expected}
+          payload['sha256_match']=payload['sha256']==expected
           print(json.dumps(payload,ensure_ascii=False,indent=2))
           open('bat_probe.json','w',encoding='utf-8').write(json.dumps(payload,ensure_ascii=False,indent=2))
           if not payload['is_pdf']: raise SystemExit('Government direct endpoint did not return PDF bytes')
+          if not payload['sha256_match']: raise SystemExit(f"Government direct PDF SHA changed: expected={expected} actual={payload['sha256']}")
           PY
       - uses: actions/upload-artifact@v4
         with:
