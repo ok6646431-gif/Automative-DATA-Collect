@@ -1,12 +1,11 @@
 """Recover annual reports exposed by generic same-host JavaScript download controls.
 
-The narrow scripted adapter supports a ``fileDownload(token)`` contract. Corporate
-report libraries also use arbitrary function names, multiple literal arguments,
-conditional URL construction, icon-only download controls, and direct ``window.open``
-links. This adapter resolves only statically inspectable contracts:
+Corporate report libraries use arbitrary function names, multiple literal arguments,
+conditional URL construction, icon-only controls, direct ``window.open`` links, and
+multi-year accordion pages. This adapter resolves only statically inspectable contracts:
 
-* a report-semantic DOM block supplies a year and a download control;
-* the control invokes a JavaScript function with literal arguments or a literal target;
+* a report-semantic DOM block supplies local annual context;
+* literal function arguments/direct targets may supply a stronger local year;
 * function definitions come only from inline or same-host scripts;
 * URL expressions built from literals and function parameters are reconstructed; and
 * the reconstructed same-host target must return real PDF bytes.
@@ -29,6 +28,7 @@ from orchestrator import zero_touch_discovery as base
 
 CALL_RE = re.compile(r"(?P<name>[A-Za-z_$][\w$]*)\s*\((?P<args>.*?)\)", re.S)
 QUOTED_RE = re.compile(r"^\s*(['\"])(?P<value>(?:\\.|(?!\1).)*)\1\s*$", re.S)
+YEAR_RE = re.compile(r"(?<!\d)(20\d{2})(?!\d)")
 URLISH_LITERAL_RE = re.compile(r"(?:https?://|/|\.pdf(?:\?|$)|download|file|attach|viewer)", re.I)
 DIRECT_TARGET_RE = re.compile(
     r"(?:window\.)?(?:open|location(?:\.href)?|location\.replace)\s*"
@@ -133,27 +133,56 @@ def extract_direct_literal_targets(raw: str) -> List[str]:
     return _dedupe(out)
 
 
-def _report_context(tag: Any) -> str:
-    parts: List[str] = [" ".join(getattr(tag, "stripped_strings", []) or [])]
+def _eligible_years(value: str, start_year: int, current_year: int) -> List[int]:
+    return sorted({
+        int(m.group(1)) for m in YEAR_RE.finditer(str(value or ""))
+        if start_year <= int(m.group(1)) <= current_year
+    })
+
+
+def _local_report_context(tag: Any, start_year: int, current_year: int) -> Tuple[str, int | None]:
+    """Use the nearest single-year report-semantic container, never a broad first year.
+
+    Multi-year archive wrappers commonly contain every report year. Choosing the first
+    year from such a wrapper silently re-labels deeper controls. We therefore walk from
+    the control outward and accept a DOM-derived year only from the nearest container
+    that contains report semantics and exactly one eligible year. A multi-year ancestor
+    remains usable as semantic context when a literal JS argument/target supplies the
+    year, but it is never itself a year selector.
+    """
+    fallback = ""
     node = tag
-    for _ in range(5):
-        node = getattr(node, "parent", None)
+    for _ in range(7):
         if node is None:
             break
         text = " ".join(getattr(node, "stripped_strings", []) or []).strip()
         if text:
-            parts.append(text[:1200])
             low = text.casefold()
-            if base._year_from(text) and any(token in low for token in REPORT_TOKENS):
-                break
-    return " ".join(_dedupe(parts))
+            if any(token in low for token in REPORT_TOKENS):
+                years = _eligible_years(text, start_year, current_year)
+                if len(years) == 1:
+                    return text[:1200], years[0]
+                if not fallback:
+                    fallback = text[:1200]
+        node = getattr(node, "parent", None)
+    return fallback, None
+
+
+def _control_literal_year(raw_values: Sequence[str], start_year: int, current_year: int) -> int | None:
+    """Prefer an unambiguous year encoded in the control's own literal contract."""
+    years: set[int] = set()
+    for raw in raw_values:
+        for _, args in extract_literal_calls(raw):
+            for arg in args:
+                years.update(_eligible_years(arg, start_year, current_year))
+        for target in extract_direct_literal_targets(raw):
+            years.update(_eligible_years(target, start_year, current_year))
+    return next(iter(years)) if len(years) == 1 else None
 
 
 def _has_download_signal(tag: Any, label: str, attr_text: str) -> bool:
     if any(token in label or token in attr_text for token in DOWNLOAD_TOKENS):
         return True
-    # Some report libraries render controls as just "KOR"/"ENG" and put the only
-    # download signal on a descendant icon class such as ``icon-download``.
     for child in getattr(tag, "find_all", lambda *a, **k: [])(True):
         attrs = getattr(child, "attrs", {}) or {}
         descendant_attrs = " ".join(str(v) for v in attrs.values()).casefold()
@@ -172,13 +201,7 @@ def extract_report_controls(html: str, start_year: int, current_year: int) -> Li
         attr_text = " ".join(str(v) for v in attrs.values()).casefold()
         if not _has_download_signal(tag, label, attr_text):
             continue
-        context = _report_context(tag)
-        low = context.casefold()
-        year = base._year_from(context)
-        if not year or year < start_year or year > current_year:
-            continue
-        if not any(token in low for token in REPORT_TOKENS):
-            continue
+
         raw_values: List[str] = []
         for key, value in attrs.items():
             key_low = str(key).casefold()
@@ -190,11 +213,23 @@ def extract_report_controls(html: str, start_year: int, current_year: int) -> Li
                     raw_values.extend(str(x) for x in value)
                 else:
                     raw_values.append(str(value))
+        if not raw_values:
+            continue
+
+        context, dom_year = _local_report_context(tag, start_year, current_year)
+        if not context or not any(token in context.casefold() for token in REPORT_TOKENS):
+            continue
+        literal_year = _control_literal_year(raw_values, start_year, current_year)
+        year = literal_year or dom_year
+        if not year:
+            continue
+
         for raw in raw_values:
             direct_targets = extract_direct_literal_targets(raw)
             for target in direct_targets:
                 out.append({
                     "year": int(year),
+                    "year_evidence": "CONTROL_LITERAL" if literal_year else "LOCAL_DOM",
                     "function": "",
                     "args": [],
                     "direct_targets": [target],
@@ -206,6 +241,7 @@ def extract_report_controls(html: str, start_year: int, current_year: int) -> Li
                     continue
                 out.append({
                     "year": int(year),
+                    "year_evidence": "CONTROL_LITERAL" if literal_year else "LOCAL_DOM",
                     "function": name,
                     "args": args,
                     "direct_targets": [],
@@ -216,9 +252,7 @@ def extract_report_controls(html: str, start_year: int, current_year: int) -> Li
     seen: set[Tuple[int, str, Tuple[str, ...], Tuple[str, ...]]] = set()
     for item in out:
         key = (
-            item["year"],
-            item["function"],
-            tuple(item["args"]),
+            item["year"], item["function"], tuple(item["args"]),
             tuple(item.get("direct_targets") or []),
         )
         if key not in seen:
@@ -248,7 +282,6 @@ def _script_texts(http: Any, page_url: str, html: str) -> List[Tuple[str, str]]:
 
 
 def _balanced_function_body(text: str, brace_index: int, max_chars: int = 16000) -> str | None:
-    """Return a nested-brace function body without executing JavaScript."""
     depth = 0
     quote_char = ""
     escape = False
@@ -286,8 +319,7 @@ def _balanced_function_body(text: str, brace_index: int, max_chars: int = 16000)
             continue
         if ch == "{":
             depth += 1
-            continue
-        if ch == "}":
+        elif ch == "}":
             depth -= 1
             if depth == 0:
                 return text[brace_index + 1:i]
@@ -296,15 +328,13 @@ def _balanced_function_body(text: str, brace_index: int, max_chars: int = 16000)
 
 def _function_definition(name: str, scripts: Sequence[Tuple[str, str]]) -> Tuple[List[str], str, str] | None:
     header = re.compile(
-        rf"function\s+{re.escape(name)}\s*\((?P<params>[^)]*)\)\s*\{{",
-        re.I | re.S,
+        rf"function\s+{re.escape(name)}\s*\((?P<params>[^)]*)\)\s*\{{", re.I | re.S
     )
     for source, text in scripts:
         match = header.search(text)
         if not match:
             continue
-        brace_index = match.end() - 1
-        body = _balanced_function_body(text, brace_index)
+        body = _balanced_function_body(text, match.end() - 1)
         if body is None:
             continue
         params = [part.strip() for part in match.group("params").split(",") if part.strip()]
@@ -320,30 +350,20 @@ def _split_concat(expr: str) -> List[str]:
     depth = 0
     for ch in str(expr or ""):
         if escape:
-            buf.append(ch)
-            escape = False
-            continue
+            buf.append(ch); escape = False; continue
         if ch == "\\" and quote_char:
-            buf.append(ch)
-            escape = True
-            continue
+            buf.append(ch); escape = True; continue
         if quote_char:
             buf.append(ch)
             if ch == quote_char:
                 quote_char = ""
             continue
         if ch in {"'", '"'}:
-            quote_char = ch
-            buf.append(ch)
-            continue
-        if ch == "(":
-            depth += 1
-        elif ch == ")":
-            depth = max(0, depth - 1)
+            quote_char = ch; buf.append(ch); continue
+        if ch == "(": depth += 1
+        elif ch == ")": depth = max(0, depth - 1)
         if ch == "+" and depth == 0:
-            parts.append("".join(buf).strip())
-            buf = []
-            continue
+            parts.append("".join(buf).strip()); buf = []; continue
         buf.append(ch)
     if buf:
         parts.append("".join(buf).strip())
@@ -355,22 +375,18 @@ def _eval_concat(expr: str, env: Mapping[str, str]) -> str | None:
     for token in _split_concat(str(expr or "").strip().rstrip(";")):
         literal = _literal_arg(token)
         if literal is not None:
-            out.append(literal)
-            continue
+            out.append(literal); continue
         name = token.strip()
         if name in env:
-            out.append(str(env[name]))
-            continue
+            out.append(str(env[name])); continue
         encoded = re.fullmatch(r"(?:encodeURIComponent|encodeURI)\s*\(\s*([A-Za-z_$][\w$]*)\s*\)", name)
         if encoded and encoded.group(1) in env:
-            out.append(quote(str(env[encoded.group(1)]), safe=""))
-            continue
+            out.append(quote(str(env[encoded.group(1)]), safe="")); continue
         return None
     return "".join(out)
 
 
 def reconstruct_targets(page_url: str, params: Sequence[str], args: Sequence[str], body: str) -> List[str]:
-    """Reconstruct simple URL expressions from a function body without executing JS."""
     if len(params) != len(args):
         return []
     env = dict(zip(params, args))
@@ -382,7 +398,7 @@ def reconstruct_targets(page_url: str, params: Sequence[str], args: Sequence[str
         r"(?:var\s+|let\s+|const\s+)?(?:url|action)\s*[:=]\s*(?P<expr>[^,;\n]{1,1200})",
     )
     for pattern in patterns:
-        expressions.extend(match.group("expr") for match in re.finditer(pattern, body, re.I))
+        expressions.extend(m.group("expr") for m in re.finditer(pattern, body, re.I))
     targets: List[str] = []
     for expr in expressions:
         value = _eval_concat(expr, env)
@@ -390,20 +406,13 @@ def reconstruct_targets(page_url: str, params: Sequence[str], args: Sequence[str
             continue
         target = urljoin(page_url, value)
         parsed = urlparse(target)
-        if parsed.scheme not in {"http", "https"}:
-            continue
-        if not base._same_org_host(target, page_url):
-            continue
-        targets.append(target)
+        if parsed.scheme in {"http", "https"} and base._same_org_host(target, page_url):
+            targets.append(target)
     return _dedupe(targets)
 
 
 def candidates_from_generic_js_page(
-    http: Any,
-    page_url: str,
-    html: str,
-    start_year: int,
-    current_year: int,
+    http: Any, page_url: str, html: str, start_year: int, current_year: int,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     controls = extract_report_controls(html, start_year, current_year)
     if not controls:
@@ -416,11 +425,7 @@ def candidates_from_generic_js_page(
         function_name = str(control.get("function") or "")
         definition = _function_definition(function_name, scripts) if function_name else None
         direct_targets = [urljoin(page_url, x) for x in (control.get("direct_targets") or [])]
-        diagnostic = {
-            **control,
-            "function_definition_found": bool(definition),
-            "candidate_targets": list(direct_targets),
-        }
+        diagnostic = {**control, "function_definition_found": bool(definition), "candidate_targets": list(direct_targets)}
         diagnostics.append(diagnostic)
         targets = list(direct_targets)
         if definition:
@@ -440,12 +445,9 @@ def candidates_from_generic_js_page(
             if not strict.strong_report_semantics(context, final_url, page_url):
                 continue
             found.append({
-                "year": control["year"],
-                "label": context[:180],
-                "url": final_url,
-                "source_locator": page_url,
-                "score": 105,
-                "content_type": content_type,
+                "year": control["year"], "label": context[:180], "url": final_url,
+                "source_locator": page_url, "score": 105, "content_type": content_type,
+                "year_evidence": control.get("year_evidence"),
                 "download_contract": (
                     "VERIFIED_DIRECT_SAME_HOST_JS_TARGET"
                     if direct_targets and target in direct_targets
@@ -469,15 +471,12 @@ def _report_pages(audit: Dict[str, Any]) -> List[str]:
 
 
 def _existing_report_blocks_recovery(discovery: Dict[str, Any], doc: Dict[str, Any]) -> bool:
-    """Only a plausible full report may suppress a stronger byte-verified recovery."""
     title = str(doc.get("title") or "")
     url = str(doc.get("source_url") or "")
     if entity_policy.is_summary_representation(title, url):
         return False
     alignment, _ = entity_policy.entity_alignment(discovery, title, url)
-    if alignment == "CONFLICT":
-        return False
-    return True
+    return alignment != "CONFLICT"
 
 
 def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
@@ -500,17 +499,13 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
         recovered.extend(candidates)
         diagnostics.extend(page_diagnostics)
 
-    # Weak/incorrect annual candidates are preserved for the later entity policy but
-    # do not occupy the year slot and suppress a byte-verified JS/PDF recovery.
     supporting: List[Dict[str, Any]] = []
     annual_by_year: Dict[int, Dict[str, Any]] = {}
     for d in documents.get("documents", []) or []:
         if d.get("document_type") != "SUSTAINABILITY_REPORT":
-            supporting.append(d)
-            continue
+            supporting.append(d); continue
         if not _existing_report_blocks_recovery(discovery, d):
-            supporting.append(d)
-            continue
+            supporting.append(d); continue
         if d.get("report_year"):
             annual_by_year[int(d["report_year"])] = d
         else:
@@ -523,14 +518,11 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
         annual_by_year[year] = {
             "document_id": f"AUTO_SUSTAINABILITY_{year}",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": candidate["label"],
-            "report_year": year,
-            "source_url": candidate["url"],
-            "source_locator": candidate["source_locator"],
-            "expected_extension": "pdf",
-            "verification_status": "SOURCE_VERIFIED",
+            "title": candidate["label"], "report_year": year,
+            "source_url": candidate["url"], "source_locator": candidate["source_locator"],
+            "expected_extension": "pdf", "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Annual-report DOM semantics + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+            "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
         }
 
     found_years = set(annual_by_year)
@@ -544,14 +536,10 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
         if year in found_years:
             continue
         gaps.append(old_gaps.get(year) or {
-            "gap_id": f"AUTO_SUSTAINABILITY_{year}_UNRESOLVED",
-            "source_key": "CORP_DOCS",
-            "document_type": "SUSTAINABILITY_REPORT",
-            "year": year,
-            "verification_status": "UNVERIFIED",
-            "status": "DISCOVERY_GAP",
-            "severity": "MEDIUM",
-            "blocking": True,
+            "gap_id": f"AUTO_SUSTAINABILITY_{year}_UNRESOLVED", "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT", "year": year,
+            "verification_status": "UNVERIFIED", "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM", "blocking": True,
             "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
             "source_locator": source_locator,
         })
@@ -560,8 +548,7 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
     documents["gaps"] = gaps
     documents["discovery_status"] = (
         "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE"
-        if not any(g.get("blocking") for g in gaps)
-        else "PARTIAL"
+        if not any(g.get("blocking") for g in gaps) else "PARTIAL"
     )
     audit.setdefault("stages", {})["generic_js_report_recovery"] = {
         "visited_pages": _dedupe(visited),
