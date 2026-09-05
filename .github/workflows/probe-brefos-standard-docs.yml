@@ -25,14 +25,19 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Inspect BREFOS standard-document UI
-        run: python orchestrator/brefos_discovery_probe.py --out-dir brefos-probe
+      - name: Inspect BREFOS and byte-verify semiconductor II viewer PDF
+        run: python orchestrator/brefos_discovery_probe.py --out-dir brefos-probe --verify-ids 1501
       - name: Print discovered controls
         run: |
           python - <<'PY'
           import json
           d=json.load(open('brefos-probe/BREFOS_Probe.json',encoding='utf-8'))
-          print(json.dumps({'status':d.get('status'),'final_url':d.get('final_url'),'forms':d.get('forms'),'links':d.get('links'),'script_endpoints':d.get('script_endpoints')},ensure_ascii=False,indent=2))
+          print(json.dumps({'status':d.get('status'),'final_url':d.get('final_url'),'forms':d.get('forms'),'documents':d.get('documents'),'script_endpoints':d.get('script_endpoints')},ensure_ascii=False,indent=2))
+          semi=[x for x in d.get('documents',[]) if x.get('atch_file_id')=='1501']
+          if not semi: raise SystemExit('BREFOS semiconductor II list entry 1501 disappeared')
+          state=(semi[0].get('byte_verification') or {}).get('status')
+          if state=='RESPONDED_NOT_PDF': raise SystemExit(f'BREFOS semiconductor II viewer endpoint responded with non-PDF bytes: {semi[0]}')
+          if state=='SOURCE_UNREACHABLE': print('::warning::BREFOS semiconductor II PDF endpoint was temporarily unreachable')
           PY
       - name: Upload BREFOS probe
         if: always()
