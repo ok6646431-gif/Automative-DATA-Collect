@@ -1,0 +1,53 @@
+name: Discover complete BREFOS BAT catalog
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/brefos_catalog_discovery.py'
+      - 'tests/test_brefos_catalog_discovery.py'
+      - '.github/workflows/discover-brefos-catalog.yml'
+
+concurrency:
+  group: brefos-catalog-discovery
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Run BREFOS parser unit tests
+        run: python -m unittest tests.test_brefos_catalog_discovery -v
+      - name: Discover every advertised BREFOS standard document
+        run: python orchestrator/brefos_catalog_discovery.py --out BREFOS_Catalog_Discovery.json
+      - name: Verify current catalog completeness contract
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('BREFOS_Catalog_Discovery.json',encoding='utf-8'))
+          print(json.dumps({'status':d.get('status'),'advertised_total_records':d.get('advertised_total_records'),'advertised_total_pages':d.get('advertised_total_pages'),'discovered_document_count':d.get('discovered_document_count')},ensure_ascii=False,indent=2))
+          if d.get('status')=='SOURCE_UNREACHABLE':
+              print('::warning::BREFOS was temporarily unreachable; no completeness conclusion made')
+          elif d.get('status')!='PASS':
+              raise SystemExit(f'BREFOS discovery incomplete: {d.get("status")}')
+          PY
+      - name: Upload BREFOS catalog snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brefos-catalog-discovery
+          path: BREFOS_Catalog_Discovery.json
+          if-no-files-found: warn
+          retention-days: 14
