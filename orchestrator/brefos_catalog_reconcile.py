@@ -10,7 +10,7 @@ import json
 import re
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 try:
     from .bat_catalog_effective import CATALOG_PATH, build_effective_catalog
@@ -19,8 +19,9 @@ except ImportError:
 
 COMMON_PATTERNS=[
     r'\[[12]기(?:-part\s*\d+)?\]', r'\([ⅠⅡⅢIVX]+\)', r'\bpart\s*\d+\b',
+    r'환경오염의\s*예방과\s*최적관리를\s*위한', r'환경오염\s*예방\s*및\s*통합관리를\s*위한',
     r'환경오염방지', r'통합환경관리', r'통합관리', r'최적가용기법', r'기준서',
-    r'환경오염의 예방과 최적관리를 위한', r'환경오염 예방 및 통합관리를 위한',
+    r'[을를]?\s*위한', r'및',
 ]
 
 
@@ -28,9 +29,9 @@ def core_title(value: str) -> str:
     text=str(value or '').lower()
     for pat in COMMON_PATTERNS:
         text=re.sub(pat,' ',text,flags=re.I)
-    text=re.sub(r'[\s·ㆍ,./()\[\]{}:_\-]+','',text)
-    # possessive particles after industry/facility phrases add no identity value.
+    # Possessive particles after industry/facility phrases add no identity value.
     text=text.replace('제조업의','제조업').replace('산업의','산업').replace('시설의','시설').replace('가공업의','가공업')
+    text=re.sub(r'[\s·ㆍ,./()\[\]{}:_\-]+','',text)
     return text
 
 
