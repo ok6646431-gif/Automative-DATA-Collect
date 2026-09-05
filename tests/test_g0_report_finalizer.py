@@ -33,10 +33,32 @@ class ReportFinalizerTests(unittest.TestCase):
         out = finalizer.finalize(discovery, documents, audit)
         self.assertEqual(out["documents"][0]["document_type"], "SUSTAINABILITY_REPORT")
         self.assertEqual(out["documents"][0]["importance"], "CORE")
+        self.assertEqual(out["documents"][0]["title"], "TEST Sustainability Report 2023 eng")
         self.assertNotIn("coverage_role", out["documents"][0])
         self.assertEqual(out["gaps"], [])
         self.assertEqual(out["discovery_status"], "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE")
         self.assertEqual(len(audit["stages"]["report_finalizer"]["promoted_full_report_pdfs"]), 1)
+        self.assertEqual(len(audit["stages"]["report_finalizer"]["normalized_pdf_titles"]), 1)
+
+    def test_existing_full_report_uses_concrete_year_specific_pdf_title(self):
+        discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
+        documents = {
+            "documents": [{
+                "document_id": "D2021",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "title": "2025 Sustainability Report current catalog heading and many sections",
+                "report_year": 2021,
+                "source_url": "https://example.com/files/TEST_Sustainability_Report_2021_eng.pdf",
+                "expected_extension": "pdf",
+                "importance": "CORE",
+            }],
+            "gaps": [],
+        }
+        audit = {}
+        out = finalizer.finalize(discovery, documents, audit)
+        self.assertEqual(out["documents"][0]["title"], "TEST Sustainability Report 2021 eng")
+        self.assertEqual(out["documents"][0]["report_year"], 2021)
+        self.assertEqual(len(audit["stages"]["report_finalizer"]["normalized_pdf_titles"]), 1)
 
     def test_highlight_filename_remains_supporting_summary(self):
         discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
