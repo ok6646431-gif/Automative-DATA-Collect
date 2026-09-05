@@ -1,0 +1,123 @@
+name: Probe G0 official surface
+
+on:
+  workflow_dispatch:
+    inputs:
+      company_name:
+        description: 'Company name only; optional when requests/zero_touch_request.json exists'
+        required: false
+        type: string
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/probe-g0-official-surface.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install probe dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Probe legal identity, official surface, and site scope
+        env:
+          DISPATCH_COMPANY: ${{ inputs.company_name }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          # Importing the runner installs the same runtime adapters used by live G0.
+          from orchestrator import zero_touch_runner  # noqa: F401
+          from orchestrator import zero_touch_discovery as g0
+          from orchestrator import g0_domestic_site_catalog as site_catalog
+          from orchestrator import g0_official_site_recovery as official_recovery
+
+          company=(os.environ.get('DISPATCH_COMPANY') or '').strip()
+          if not company and Path('requests/zero_touch_request.json').exists():
+              company=str(json.loads(Path('requests/zero_touch_request.json').read_text(encoding='utf-8')).get('company_name') or '').strip()
+          if not company:
+              raise SystemExit('company_name is required')
+
+          http=g0.Http(timeout=(5,15))
+          legal, legal_candidates=g0.resolve_legal_identity(http, company)
+          if not legal:
+              result={
+                  'company': company,
+                  'status': 'LEGAL_IDENTITY_UNRESOLVED',
+                  'legal_candidates': legal_candidates[:10],
+              }
+          else:
+              raw_website=str(legal.get('website') or '').strip()
+              start_url=g0._official_url(raw_website) if raw_website else ''
+              pages=[]
+              links=[]
+              if start_url:
+                  pages, links=g0.crawl_official(http, start_url, company, max_pages=36)
+              sites, scope, unresolved=g0.discover_site_candidates(company, pages, legal)
+              catalog=site_catalog.discover(
+                  str(legal.get('korean_name') or company), pages
+              )
+              if catalog:
+                  catalog_sites, catalog_scope, catalog_unresolved=catalog
+              else:
+                  catalog_sites, catalog_scope, catalog_unresolved=[], None, []
+
+              interesting=[]
+              tokens=('site','location','plant','factory','사업장','제철소','sustainability','esg','report','보고서')
+              for source,label,target in links:
+                  marker=(str(label)+' '+str(target)).casefold()
+                  if any(token.casefold() in marker for token in tokens):
+                      interesting.append({'source':source,'label':label,'target':target})
+                  if len(interesting)>=40:
+                      break
+
+              result={
+                  'company': company,
+                  'status': 'PROBED',
+                  'legal_identity': {
+                      'korean_name': legal.get('korean_name'),
+                      'english_name': legal.get('english_name'),
+                      'establishment_date': legal.get('establishment_date'),
+                      'website': raw_website,
+                      'address': legal.get('address'),
+                  },
+                  'official_start_url': start_url,
+                  'official_recovery': official_recovery.last_recovery,
+                  'page_count': len(pages),
+                  'sample_pages': [p.url for p in pages[:25]],
+                  'link_count': len(links),
+                  'interesting_links': interesting,
+                  'primary_site_resolver': {
+                      'sites': sites,
+                      'scope': scope,
+                      'unresolved': unresolved,
+                  },
+                  'explicit_domestic_catalog': {
+                      'sites': catalog_sites,
+                      'scope': catalog_scope,
+                      'unresolved': catalog_unresolved,
+                  },
+              }
+
+          Path('g0-official-probe.json').write_text(
+              json.dumps(result, ensure_ascii=False, indent=2)+'\n', encoding='utf-8'
+          )
+          print(json.dumps(result, ensure_ascii=False, indent=2))
+          PY
+      - name: Upload probe diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g0-official-surface-${{ github.run_id }}
+          path: g0-official-probe.json
+          if-no-files-found: warn
+          retention-days: 14
