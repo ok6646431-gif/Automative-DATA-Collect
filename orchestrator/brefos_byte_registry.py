@@ -4,8 +4,10 @@ The registry is deliberately metadata-only: PDFs are streamed, hashed, and disca
 It separates source reachability from integrity failures and never mutates the BAT master
 catalog. A later promotion step may use only VERIFIED_PDF rows.
 
-Verification uses a small bounded worker pool. This prevents one slow government-server
-response from serially blocking the entire catalog audit while keeping request pressure low.
+Verification uses a small bounded worker pool. If live BREFOS *discovery* is temporarily
+SOURCE_UNREACHABLE, a recent repository-persisted last-known-good discovery snapshot may
+supply document identities/URLs. A contradictory live response is never overridden by the
+snapshot, and stale snapshots fail closed.
 """
 from __future__ import annotations
 
@@ -24,6 +26,7 @@ except ImportError:
     from brefos_catalog_discovery import discover
 
 _THREAD_LOCAL=threading.local()
+DEFAULT_SNAPSHOT=Path(__file__).with_name('brefos_catalog_last_verified.json')
 
 
 def _session():
@@ -35,7 +38,7 @@ def _session():
                 allowed_methods=frozenset({'GET'}),raise_on_status=False,
                 respect_retry_after_header=True)
     s=requests.Session()
-    s.headers.update({'User-Agent':'Mozilla/5.0 (BREFOSByteRegistry/1.1; official-public-reference)'})
+    s.headers.update({'User-Agent':'Mozilla/5.0 (BREFOSByteRegistry/1.2; official-public-reference)'})
     s.mount('https://',HTTPAdapter(max_retries=retry,pool_connections=2,pool_maxsize=2))
     return s
 
@@ -84,13 +87,72 @@ def _verify_document(index: int, doc: Dict[str,Any], timeout) -> tuple[int,Dict[
     return index,row
 
 
-def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4) -> Dict[str, Any]:
-    snapshot=discover(max_pages=max_pages)
+def _snapshot_age_days(snapshot: Dict[str,Any]) -> float | None:
+    raw=str(snapshot.get('checked_at') or '').strip()
+    if not raw: return None
+    try:
+        dt=datetime.fromisoformat(raw.replace('Z','+00:00'))
+        if dt.tzinfo is None: dt=dt.replace(tzinfo=timezone.utc)
+        return max(0.0,(datetime.now(timezone.utc)-dt.astimezone(timezone.utc)).total_seconds()/86400.0)
+    except Exception:
+        return None
+
+
+def _choose_discovery(live: Dict[str,Any], snapshot_path: Path, max_snapshot_age_days: int) -> tuple[Dict[str,Any],Dict[str,Any]]:
+    if live.get('status')=='PASS':
+        return live,{
+            'basis':'LIVE_BREFOS_DISCOVERY',
+            'live_status':'PASS',
+            'snapshot_used':False,
+        }
+    # Fail closed for parse/content contradictions. Snapshot fallback is allowed only for
+    # transport-level unreachability, never because live content disagrees with expectations.
+    if live.get('status')!='SOURCE_UNREACHABLE':
+        return live,{
+            'basis':'LIVE_BREFOS_DISCOVERY_FAILED_CLOSED',
+            'live_status':live.get('status'),
+            'snapshot_used':False,
+        }
+    try:
+        snapshot=json.loads(Path(snapshot_path).read_text(encoding='utf-8'))
+    except Exception as exc:
+        return live,{
+            'basis':'SNAPSHOT_UNAVAILABLE',
+            'live_status':live.get('status'),
+            'snapshot_used':False,
+            'snapshot_error':f'{type(exc).__name__}: {exc}',
+        }
+    age=_snapshot_age_days(snapshot)
+    if snapshot.get('status')!='PASS' or not snapshot.get('documents') or age is None or age>max_snapshot_age_days:
+        return live,{
+            'basis':'SNAPSHOT_REJECTED',
+            'live_status':live.get('status'),
+            'snapshot_used':False,
+            'snapshot_status':snapshot.get('status'),
+            'snapshot_checked_at':snapshot.get('checked_at'),
+            'snapshot_age_days':age,
+            'max_snapshot_age_days':max_snapshot_age_days,
+        }
+    return snapshot,{
+        'basis':'LAST_VERIFIED_SNAPSHOT_FALLBACK',
+        'live_status':live.get('status'),
+        'snapshot_used':True,
+        'snapshot_checked_at':snapshot.get('checked_at'),
+        'snapshot_age_days':age,
+        'max_snapshot_age_days':max_snapshot_age_days,
+    }
+
+
+def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4,
+                   snapshot_path: Path=DEFAULT_SNAPSHOT, max_snapshot_age_days: int=14) -> Dict[str, Any]:
+    live=discover(max_pages=max_pages)
+    snapshot,basis=_choose_discovery(live,Path(snapshot_path),max_snapshot_age_days)
     payload={
-        'schema_version':'1.1',
+        'schema_version':'1.2',
         'checked_at':datetime.now(timezone.utc).isoformat(),
-        'source_url':snapshot.get('source_url'),
+        'source_url':snapshot.get('source_url') or live.get('source_url'),
         'discovery_status':snapshot.get('status'),
+        'discovery_basis':basis,
         'advertised_total_records':snapshot.get('advertised_total_records'),
         'discovered_document_count':snapshot.get('discovered_document_count',0),
         'max_workers':max(1,min(int(max_workers),6)),
@@ -98,7 +160,7 @@ def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4) -> Dic
     }
     if snapshot.get('status')!='PASS':
         payload['status']='DISCOVERY_NOT_COMPLETE'
-        payload['discovery_attempts']=snapshot.get('attempts',[])
+        payload['live_discovery_attempts']=live.get('attempts',[])
         return payload
 
     docs=list(snapshot.get('documents',[]) or [])
@@ -125,7 +187,7 @@ def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4) -> Dic
     payload['status_counts']=counts
     payload['verified_pdf_count']=counts.get('VERIFIED_PDF',0)
     payload['status']='PASS' if payload['verified_pdf_count']==payload['discovered_document_count'] else 'PARTIAL'
-    payload['principle']='Only VERIFIED_PDF rows are eligible for BAT catalog URL/SHA promotion. SOURCE_UNREACHABLE is not treated as a content failure.'
+    payload['principle']='Only VERIFIED_PDF rows are eligible for BAT catalog URL/SHA promotion. SOURCE_UNREACHABLE is not treated as a content failure. Snapshot fallback can supply identities only when live discovery is unreachable.'
     return payload
 
 
@@ -136,10 +198,12 @@ def main():
     ap.add_argument('--connect-timeout',type=int,default=8)
     ap.add_argument('--read-timeout',type=int,default=45)
     ap.add_argument('--workers',type=int,default=4)
+    ap.add_argument('--snapshot',default=str(DEFAULT_SNAPSHOT))
+    ap.add_argument('--max-snapshot-age-days',type=int,default=14)
     args=ap.parse_args()
-    payload=build_registry(args.max_pages,(args.connect_timeout,args.read_timeout),args.workers)
+    payload=build_registry(args.max_pages,(args.connect_timeout,args.read_timeout),args.workers,Path(args.snapshot),args.max_snapshot_age_days)
     Path(args.out).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-    print(json.dumps({'status':payload.get('status'),'discovery_status':payload.get('discovery_status'),'discovered':payload.get('discovered_document_count'),'verified':payload.get('verified_pdf_count',0),'status_counts':payload.get('status_counts',{})},ensure_ascii=False,indent=2))
+    print(json.dumps({'status':payload.get('status'),'discovery_status':payload.get('discovery_status'),'discovery_basis':payload.get('discovery_basis'),'discovered':payload.get('discovered_document_count'),'verified':payload.get('verified_pdf_count',0),'status_counts':payload.get('status_counts',{})},ensure_ascii=False,indent=2))
     if payload.get('status')=='DISCOVERY_NOT_COMPLETE': raise SystemExit(1)
     if any(k in (payload.get('status_counts') or {}) for k in ('RESPONDED_NOT_PDF','EMPTY_PDF_RESPONSE')): raise SystemExit(2)
 
