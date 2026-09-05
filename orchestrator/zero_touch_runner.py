@@ -25,11 +25,13 @@ from orchestrator import g0_generic_js_report_recovery
 from orchestrator import g0_kind_disclosure_recovery
 from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
+from orchestrator import g0_promotion_policy
 from orchestrator import g0_public_disclosure_enrichment
 from orchestrator import g0_rename_chronology_recovery
 from orchestrator import g0_report_catalog_policy
 from orchestrator import g0_report_enrichment
 from orchestrator import g0_report_entity_policy
+from orchestrator import g0_report_finalizer
 from orchestrator import g0_scripted_report_enrichment
 from orchestrator import g0_scripted_report_navigation
 from orchestrator import g0_staged_official_recovery
@@ -123,6 +125,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
     documents = g0_report_entity_policy.normalize(discovery, documents, audit)
+    documents = g0_report_finalizer.finalize(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
     )
@@ -159,7 +162,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
 
     g0_kind_disclosure_recovery.enforce_historical_continuity_gate(discovery, audit)
     discovery = g0_entity_continuity_policy.normalize(discovery, audit)
-    audit["gate_status"] = "PASS" if not discovery.get("unresolved_items") else "REVIEW_REQUIRED"
+    discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
     return discovery, documents, audit
 
 
