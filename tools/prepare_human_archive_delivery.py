@@ -1,8 +1,15 @@
 """Create chat/download-sized delivery ZIPs from a validated Human Archive.
 
 The output is a byte-preserving subset of the already validated archive, never a
-second ad-hoc packaging implementation.  Every delivered member is verified against
+second ad-hoc packaging implementation. Every delivered member is verified against
 its source member and the manifest records source and part SHA-256 values.
+
+Delivery contains three human-facing areas from the validated source archive:
+- 00_자료목록 human-readable indexes
+- 01_사용자자료 company/public environmental evidence
+- 02_BAT_참고자료 separately packaged BAT reference material
+
+90_시스템원본 remains excluded.
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ sys.path.insert(0, str(ROOT / "orchestrator"))
 from archive_acceptance import assert_pass, validate_archive_zip  # noqa: E402
 
 HUMAN_INDEX_SUFFIXES = {".xlsx", ".xls", ".csv", ".txt", ".pdf"}
+HUMAN_DELIVERY_ROOTS = ("01_사용자자료/", "02_BAT_참고자료/")
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -40,7 +48,7 @@ def _select_members(zf: zipfile.ZipFile, archive_root: str) -> list[zipfile.ZipI
         if info.is_dir():
             continue
         rel = Path(info.filename).relative_to(archive_root).as_posix()
-        if rel.startswith("01_사용자자료/"):
+        if rel.startswith(HUMAN_DELIVERY_ROOTS):
             selected.append(info)
         elif rel.startswith("00_자료목록/") and Path(rel).suffix.lower() in HUMAN_INDEX_SUFFIXES:
             selected.append(info)
@@ -123,15 +131,18 @@ def prepare(source_zip: Path, out_dir: Path, prefix: str, max_bytes: int) -> dic
         extra = sorted(delivered - expected)
         raise RuntimeError(f"delivery union mismatch; missing={missing[:10]}; extra={extra[:10]}")
 
+    bat_members = sorted(name for name in expected if "/02_BAT_참고자료/" in name)
     manifest = {
-        "schema_version": "human-archive-delivery-1.0",
+        "schema_version": "human-archive-delivery-1.1",
         "status": "PASS",
         "policy": "BYTE_PRESERVING_VALIDATED_SUBSET",
         "source_archive": source_zip.name,
         "source_archive_sha256": source_sha,
         "source_archive_acceptance": acceptance,
-        "selection": "01_사용자자료 plus human-readable 00_자료목록 files",
+        "selection": "01_사용자자료 + 02_BAT_참고자료 + human-readable 00_자료목록 files",
         "selected_member_count": len(expected),
+        "bat_reference_member_count": len(bat_members),
+        "bat_reference_members": bat_members,
         "parts": part_rows,
     }
     (out_dir / "Delivery_Manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -146,7 +157,12 @@ def main() -> None:
     ap.add_argument("--max-mib", type=int, default=450)
     args = ap.parse_args()
     manifest = prepare(args.source, args.out_dir, args.prefix, args.max_mib * 1024 * 1024)
-    print(json.dumps({"status": manifest["status"], "parts": len(manifest["parts"]), "source_sha256": manifest["source_archive_sha256"]}, ensure_ascii=False))
+    print(json.dumps({
+        "status": manifest["status"],
+        "parts": len(manifest["parts"]),
+        "source_sha256": manifest["source_archive_sha256"],
+        "bat_reference_members": manifest["bat_reference_member_count"],
+    }, ensure_ascii=False))
 
 
 if __name__ == "__main__":
