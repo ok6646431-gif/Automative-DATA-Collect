@@ -41,6 +41,7 @@ on:
       - 'tests/test_dart_public_resolver.py'
       - 'tests/test_g0_domestic_site_catalog.py'
       - 'tests/test_g0_evidence_enrichment.py'
+      - 'tests/test_g0_generic_js_local_year.py'
       - 'tests/test_g0_kind_disclosure_recovery.py'
       - 'tests/test_g0_live_adapters.py'
       - 'tests/test_g0_official_site_recovery.py'
@@ -81,6 +82,7 @@ jobs:
           python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_domestic_site_catalog -v
           python -m unittest tests.test_g0_evidence_enrichment -v
+          python -m unittest tests.test_g0_generic_js_local_year -v
           python -m unittest tests.test_g0_kind_disclosure_recovery -v
           python -m unittest tests.test_g0_live_adapters -v
           python -m unittest tests.test_g0_official_site_recovery -v
