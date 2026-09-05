@@ -1,13 +1,14 @@
 """Recover annual reports exposed by generic same-host JavaScript download controls.
 
 The narrow scripted adapter supports a ``fileDownload(token)`` contract. Corporate
-report libraries also use arbitrary function names and multiple literal arguments.
-This adapter resolves only simple, statically inspectable contracts:
+report libraries also use arbitrary function names, multiple literal arguments,
+conditional URL construction, icon-only download controls, and direct ``window.open``
+links. This adapter resolves only statically inspectable contracts:
 
-* a report-semantic DOM block supplies a year and a PDF/download control;
-* the control invokes a JavaScript function with literal arguments;
-* the function definition comes only from inline or same-host scripts;
-* a URL expression built from literals and function parameters is reconstructed; and
+* a report-semantic DOM block supplies a year and a download control;
+* the control invokes a JavaScript function with literal arguments or a literal target;
+* function definitions come only from inline or same-host scripts;
+* URL expressions built from literals and function parameters are reconstructed; and
 * the reconstructed same-host target must return real PDF bytes.
 
 No JavaScript is executed and no company-specific function/path is hard-coded.
@@ -26,9 +27,13 @@ from orchestrator import g0_scripted_report_enrichment as scripted
 from orchestrator import zero_touch_discovery as base
 
 CALL_RE = re.compile(r"(?P<name>[A-Za-z_$][\w$]*)\s*\((?P<args>.*?)\)", re.S)
-FUNCTION_RE_TEMPLATE = r"function\s+{name}\s*\((?P<params>[^)]*)\)\s*\{{(?P<body>.{{0,6000}}?)\}}"
 QUOTED_RE = re.compile(r"^\s*(['\"])(?P<value>(?:\\.|(?!\1).)*)\1\s*$", re.S)
 URLISH_LITERAL_RE = re.compile(r"(?:https?://|/|\.pdf(?:\?|$)|download|file|attach|viewer)", re.I)
+DIRECT_TARGET_RE = re.compile(
+    r"(?:window\.)?(?:open|location(?:\.href)?|location\.replace)\s*"
+    r"(?:\(\s*|=\s*)(['\"])(?P<value>(?:\\.|(?!\1).)*)\1",
+    re.I | re.S,
+)
 REPORT_TOKENS = (
     "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서",
     "sustainability report", "integrated report", "esg report",
@@ -112,6 +117,21 @@ def extract_literal_calls(raw: str) -> List[Tuple[str, List[str]]]:
     return out
 
 
+def extract_direct_literal_targets(raw: str) -> List[str]:
+    out: List[str] = []
+    for match in DIRECT_TARGET_RE.finditer(str(raw or "")):
+        value = (
+            match.group("value")
+            .replace(r"\/", "/")
+            .replace(r"\'", "'")
+            .replace(r'\"', '"')
+            .replace(r"\\", "\\")
+        )
+        if URLISH_LITERAL_RE.search(value):
+            out.append(value)
+    return _dedupe(out)
+
+
 def _report_context(tag: Any) -> str:
     parts: List[str] = [" ".join(getattr(tag, "stripped_strings", []) or [])]
     node = tag
@@ -128,15 +148,28 @@ def _report_context(tag: Any) -> str:
     return " ".join(_dedupe(parts))
 
 
+def _has_download_signal(tag: Any, label: str, attr_text: str) -> bool:
+    if any(token in label or token in attr_text for token in DOWNLOAD_TOKENS):
+        return True
+    # Some report libraries render controls as just "KOR"/"ENG" and put the only
+    # download signal on a descendant icon class such as ``icon-download``.
+    for child in getattr(tag, "find_all", lambda *a, **k: [])(True):
+        attrs = getattr(child, "attrs", {}) or {}
+        descendant_attrs = " ".join(str(v) for v in attrs.values()).casefold()
+        if any(token in descendant_attrs for token in DOWNLOAD_TOKENS):
+            return True
+    return False
+
+
 def extract_report_controls(html: str, start_year: int, current_year: int) -> List[Dict[str, Any]]:
-    """Extract literal JS function calls only from annual-report download controls."""
+    """Extract literal JS calls/targets only from annual-report download controls."""
     soup = BeautifulSoup(html or "", "html.parser")
     out: List[Dict[str, Any]] = []
     for tag in soup.find_all(True):
         label = " ".join(getattr(tag, "stripped_strings", []) or []).casefold()
         attrs = getattr(tag, "attrs", {}) or {}
         attr_text = " ".join(str(v) for v in attrs.values()).casefold()
-        if not any(token in label or token in attr_text for token in DOWNLOAD_TOKENS):
+        if not _has_download_signal(tag, label, attr_text):
             continue
         context = _report_context(tag)
         low = context.casefold()
@@ -157,18 +190,38 @@ def extract_report_controls(html: str, start_year: int, current_year: int) -> Li
                 else:
                     raw_values.append(str(value))
         for raw in raw_values:
+            direct_targets = extract_direct_literal_targets(raw)
+            for target in direct_targets:
+                out.append({
+                    "year": int(year),
+                    "function": "",
+                    "args": [],
+                    "direct_targets": [target],
+                    "context": context[:1000],
+                    "raw_control": raw[:1000],
+                })
             for name, args in extract_literal_calls(raw):
+                # Direct built-ins are already handled above and have no local function
+                # definition to resolve.
+                if name.casefold() in {"open", "replace"} and direct_targets:
+                    continue
                 out.append({
                     "year": int(year),
                     "function": name,
                     "args": args,
+                    "direct_targets": [],
                     "context": context[:1000],
                     "raw_control": raw[:1000],
                 })
     unique: List[Dict[str, Any]] = []
-    seen: set[Tuple[int, str, Tuple[str, ...]]] = set()
+    seen: set[Tuple[int, str, Tuple[str, ...], Tuple[str, ...]]] = set()
     for item in out:
-        key = (item["year"], item["function"], tuple(item["args"]))
+        key = (
+            item["year"],
+            item["function"],
+            tuple(item["args"]),
+            tuple(item.get("direct_targets") or []),
+        )
         if key not in seen:
             seen.add(key)
             unique.append(item)
@@ -195,14 +248,68 @@ def _script_texts(http: Any, page_url: str, html: str) -> List[Tuple[str, str]]:
     return out
 
 
+def _balanced_function_body(text: str, brace_index: int, max_chars: int = 16000) -> str | None:
+    """Return a nested-brace function body without executing JavaScript."""
+    depth = 0
+    quote_char = ""
+    escape = False
+    line_comment = False
+    block_comment = False
+    end = min(len(text), brace_index + max_chars)
+    for i in range(brace_index, end):
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < end else ""
+        if line_comment:
+            if ch in "\r\n":
+                line_comment = False
+            continue
+        if block_comment:
+            if ch == "*" and nxt == "/":
+                block_comment = False
+            continue
+        if escape:
+            escape = False
+            continue
+        if quote_char:
+            if ch == "\\":
+                escape = True
+            elif ch == quote_char:
+                quote_char = ""
+            continue
+        if ch in {"'", '"', "`"}:
+            quote_char = ch
+            continue
+        if ch == "/" and nxt == "/":
+            line_comment = True
+            continue
+        if ch == "/" and nxt == "*":
+            block_comment = True
+            continue
+        if ch == "{":
+            depth += 1
+            continue
+        if ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[brace_index + 1:i]
+    return None
+
+
 def _function_definition(name: str, scripts: Sequence[Tuple[str, str]]) -> Tuple[List[str], str, str] | None:
-    pattern = re.compile(FUNCTION_RE_TEMPLATE.format(name=re.escape(name)), re.I | re.S)
+    header = re.compile(
+        rf"function\s+{re.escape(name)}\s*\((?P<params>[^)]*)\)\s*\{{",
+        re.I | re.S,
+    )
     for source, text in scripts:
-        match = pattern.search(text)
+        match = header.search(text)
         if not match:
             continue
+        brace_index = match.end() - 1
+        body = _balanced_function_body(text, brace_index)
+        if body is None:
+            continue
         params = [part.strip() for part in match.group("params").split(",") if part.strip()]
-        return params, match.group("body"), source
+        return params, body, source
     return None
 
 
@@ -273,7 +380,7 @@ def reconstruct_targets(page_url: str, params: Sequence[str], args: Sequence[str
         r"(?:window\.)?location(?:\.href)?\s*=\s*(?P<expr>[^;\n]{1,1200})",
         r"(?:window\.)?open\s*\(\s*(?P<expr>[^,;\n]{1,1200})",
         r"(?:document\.)?location\.replace\s*\(\s*(?P<expr>[^);\n]{1,1200})",
-        r"(?:url|action)\s*[:=]\s*(?P<expr>[^,;\n]{1,1200})",
+        r"(?:var\s+|let\s+|const\s+)?(?:url|action)\s*[:=]\s*(?P<expr>[^,;\n]{1,1200})",
     )
     for pattern in patterns:
         expressions.extend(match.group("expr") for match in re.finditer(pattern, body, re.I))
@@ -307,18 +414,22 @@ def candidates_from_generic_js_page(
     diagnostics: List[Dict[str, Any]] = []
     seen_targets: set[str] = set()
     for control in controls:
-        definition = _function_definition(control["function"], scripts)
+        function_name = str(control.get("function") or "")
+        definition = _function_definition(function_name, scripts) if function_name else None
+        direct_targets = [urljoin(page_url, x) for x in (control.get("direct_targets") or [])]
         diagnostic = {
             **control,
             "function_definition_found": bool(definition),
-            "candidate_targets": [],
+            "candidate_targets": list(direct_targets),
         }
         diagnostics.append(diagnostic)
-        if not definition:
-            continue
-        params, body, script_source = definition
-        targets = reconstruct_targets(page_url, params, control["args"], body)
-        diagnostic["script_source"] = script_source
+        targets = list(direct_targets)
+        script_source = ""
+        if definition:
+            params, body, script_source = definition
+            targets.extend(reconstruct_targets(page_url, params, control["args"], body))
+            diagnostic["script_source"] = script_source
+        targets = _dedupe(targets)
         diagnostic["candidate_targets"] = targets
         for target in targets:
             if target in seen_targets:
@@ -337,7 +448,11 @@ def candidates_from_generic_js_page(
                 "source_locator": page_url,
                 "score": 105,
                 "content_type": content_type,
-                "download_contract": "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION",
+                "download_contract": (
+                    "VERIFIED_DIRECT_SAME_HOST_JS_TARGET"
+                    if direct_targets and target in direct_targets
+                    else "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION"
+                ),
             })
             break
     return found, diagnostics
