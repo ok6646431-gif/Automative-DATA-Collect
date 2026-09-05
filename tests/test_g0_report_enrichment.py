@@ -2,6 +2,7 @@ import unittest
 
 from orchestrator import g0_entity_continuity_policy as continuity
 from orchestrator import g0_entity_window_normalization as entity_window
+from orchestrator import g0_report_catalog_policy as catalog_policy
 from orchestrator import g0_report_entity_policy as report_policy
 from orchestrator.g0_report_enrichment import strong_report_semantics
 
@@ -62,7 +63,7 @@ class ReportEntityRepresentationPolicyTests(unittest.TestCase):
             "https://official.example/POSCO_Sustainability_Report_2022_highlight.pdf",
         ))
 
-    def test_verified_digital_catalog_recovers_annual_years(self):
+    def test_catalog_parser_can_identify_year_mentions_for_later_guarding(self):
         text = (
             "포스코 지속가능경영보고서 아카이브 "
             "2025 지속가능경영보고서 2024 지속가능경영보고서 "
@@ -76,7 +77,100 @@ class ReportEntityRepresentationPolicyTests(unittest.TestCase):
             2026,
         )
         self.assertEqual(set(entries), {2022, 2023, 2024, 2025})
+        # These parser candidates are not final coverage. The catalog guard below
+        # must demote a shared target before the discovery contract is finalized.
         self.assertTrue(all(x["representation"] == "DIGITAL_REPORT" for x in entries.values()))
+
+
+class MultiYearCatalogGuardTests(unittest.TestCase):
+    def _shared_docs(self):
+        return {
+            "documents": [
+                {
+                    "document_id": f"DIGITAL_{year}",
+                    "document_type": "SUSTAINABILITY_REPORT",
+                    "title": f"{year} sustainability report",
+                    "report_year": year,
+                    "source_url": "https://official.example/report-catalog",
+                    "source_locator": "https://official.example/report-catalog",
+                    "expected_extension": "html",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "importance": "CORE",
+                    "representation": "DIGITAL_REPORT",
+                }
+                for year in (2022, 2023, 2024)
+            ],
+            "gaps": [],
+            "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+        }
+
+    def test_one_catalog_target_cannot_satisfy_multiple_annual_years(self):
+        documents = self._shared_docs()
+        audit = {}
+        demoted = catalog_policy._demote_shared_digital_catalogs({}, documents, audit)
+
+        self.assertEqual(len(demoted), 1)
+        self.assertEqual(demoted[0]["years"], [2022, 2023, 2024])
+        annual = [d for d in documents["documents"] if d["document_type"] == "SUSTAINABILITY_REPORT"]
+        self.assertEqual(annual, [])
+        catalog = [d for d in documents["documents"] if d.get("representation") == "REPORT_CATALOG"]
+        self.assertEqual(len(catalog), 1)
+        self.assertEqual(catalog[0]["catalog_years"], [2022, 2023, 2024])
+        self.assertEqual(
+            {g["year"] for g in documents["gaps"]},
+            {2022, 2023, 2024},
+        )
+        self.assertTrue(all(g["blocking"] for g in documents["gaps"]))
+        self.assertTrue(all(g["status"] == "PUBLISHED_DOCUMENT_TARGET_UNRESOLVED" for g in documents["gaps"]))
+        self.assertEqual(documents["discovery_status"], "PARTIAL")
+        self.assertEqual(
+            audit["stages"]["multi_year_catalog_guard"]["status"],
+            "SHARED_MULTI_YEAR_DIGITAL_TARGET_DEMOTED",
+        )
+
+    def test_distinct_year_specific_targets_are_not_demoted(self):
+        documents = {
+            "documents": [
+                {
+                    "document_id": f"DIGITAL_{year}",
+                    "document_type": "SUSTAINABILITY_REPORT",
+                    "title": f"{year} sustainability report",
+                    "report_year": year,
+                    "source_url": f"https://official.example/digital-report?year={year}",
+                    "source_locator": "https://official.example/report-catalog",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "representation": "DIGITAL_REPORT",
+                }
+                for year in (2023, 2024)
+            ],
+            "gaps": [],
+        }
+        audit = {}
+        demoted = catalog_policy._demote_shared_digital_catalogs({}, documents, audit)
+        self.assertEqual(demoted, [])
+        self.assertEqual(len(documents["documents"]), 2)
+        self.assertEqual(documents["gaps"], [])
+
+    def test_real_annual_target_for_same_year_prevents_false_gap(self):
+        documents = self._shared_docs()
+        documents["documents"].append({
+            "document_id": "PDF_2023",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2023 sustainability report PDF",
+            "report_year": 2023,
+            "source_url": "https://official.example/files/report_2023.pdf",
+            "source_locator": "https://official.example/report-catalog",
+            "expected_extension": "pdf",
+            "verification_status": "VERIFIED",
+            "importance": "CORE",
+        })
+        catalog_policy._demote_shared_digital_catalogs({}, documents, {})
+        self.assertEqual(
+            {g["year"] for g in documents["gaps"]},
+            {2022, 2024},
+        )
+        annual = [d for d in documents["documents"] if d["document_type"] == "SUSTAINABILITY_REPORT"]
+        self.assertEqual([d["document_id"] for d in annual], ["PDF_2023"])
 
 
 class EntityContinuityPolicyTests(unittest.TestCase):
