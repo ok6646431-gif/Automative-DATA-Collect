@@ -3,6 +3,11 @@ on:
   push:
     branches: [run/control-plane]
     paths:
+      - 'orchestrator/bat_catalog_audit.py'
+      - 'orchestrator/bat_catalog_discovery.py'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
+      - 'orchestrator/bat_master_catalog.json'
       - '.github/workflows/probe-bat-catalog.yml'
   workflow_dispatch:
 permissions:
@@ -15,7 +20,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m pip install --disable-pip-version-check requests
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Run static BAT catalog inventory
+        run: python orchestrator/bat_catalog_audit.py --out BAT_Catalog_Audit.json
+      - name: Scan authoritative IEPS BAT listing for catalog drift
+        run: |
+          python orchestrator/bat_catalog_discovery.py --out BAT_Catalog_Refresh.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          refresh=json.loads(Path('BAT_Catalog_Refresh.json').read_text(encoding='utf-8'))
+          catalog=json.loads(Path('orchestrator/bat_master_catalog.json').read_text(encoding='utf-8'))
+          status=refresh.get('status')
+          expected=int((catalog.get('discovery') or {}).get('verified_list_item_count') or 0)
+          actual=int(refresh.get('official_ieps_count') or 0)
+          print(json.dumps({'IEPS_DISCOVERY_STATUS':status,'expected_verified_count':expected,'live_count':actual,'unmatched_count':len(refresh.get('unmatched_official_items') or [])},ensure_ascii=False,indent=2))
+          if status=='CATALOG_DRIFT':
+              raise SystemExit('Official IEPS listing contains BAT items missing from the master catalog')
+          if status=='PASS' and expected and actual!=expected:
+              raise SystemExit(f'Official IEPS listing count changed: expected={expected} actual={actual}')
+          if status=='SOURCE_UNREACHABLE':
+              print('::warning::IEPS listing was temporarily unreachable; static catalog audit remains authoritative for this run')
+          PY
       - name: Verify common boiler BAT government direct PDF
         run: |
           python - <<'PY'
@@ -32,12 +58,17 @@ jobs:
           payload={'requested_url':url,'final_url':r.url,'status':r.status_code,'bytes':len(r.content),'content_type':r.headers.get('content-type',''),'is_pdf':r.content.lstrip().startswith(b'%PDF-'),'sha256':hashlib.sha256(r.content).hexdigest(),'expected_sha256':expected}
           payload['sha256_match']=payload['sha256']==expected
           print(json.dumps(payload,ensure_ascii=False,indent=2))
-          open('bat_probe.json','w',encoding='utf-8').write(json.dumps(payload,ensure_ascii=False,indent=2))
+          Path('bat_probe.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
           if not payload['is_pdf']: raise SystemExit('Government direct endpoint did not return PDF bytes')
           if not payload['sha256_match']: raise SystemExit(f"Government direct PDF SHA changed: expected={expected} actual={payload['sha256']}")
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: bat-catalog-probe
-          path: bat_probe.json
-          retention-days: 3
+          path: |
+            BAT_Catalog_Audit.json
+            BAT_Catalog_Refresh.json
+            bat_probe.json
+          if-no-files-found: warn
+          retention-days: 14
