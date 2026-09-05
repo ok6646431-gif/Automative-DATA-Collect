@@ -555,10 +555,11 @@ def apply_requested_scope(package_root):
     """Filter only the analysis view and inherit company-scope event links.
 
     Raw source files, Source_Identity, Site_Master and Event_Registry are never
-    truncated. Analysis rows are kept when their canonical site is targeted or when
-    the source-native ID is a targeted-but-still-review-required site. Rows outside
-    the current legal entity's verified active period are retained for traceability
-    but made ineligible for current-company analysis.
+    truncated. For core environmental sources, a populated source-native ID is the
+    authoritative delivery/analysis boundary; canonical-site membership is only a
+    fallback when the source-native ID is absent. Rows outside the current legal
+    entity's verified active period are retained for traceability but made ineligible
+    for current-company analysis.
     """
     root = Path(package_root)
     profile = read_json(root / "Company_Profile.json", {}) or {}
@@ -594,8 +595,13 @@ def apply_requested_scope(package_root):
         source = row.get("source_key", "")
         sid = str(row.get("source_site_id") or "")
         canonical_id = row.get("canonical_site_id", "")
-        if scope["mode"] == "SITE_SET" and canonical_id not in scope["target_canonical_site_ids"] and sid not in scope["target_source_ids"].get(source, set()):
-            continue
+        if source in CORE_SOURCES:
+            targeted_ids = scope["target_source_ids"].get(source, set())
+            if sid:
+                if sid not in targeted_ids:
+                    continue
+            elif canonical_id not in scope["target_canonical_site_ids"]:
+                continue
 
         if not _time_in_current_entity_period(row.get("time_key"), period):
             temporal_rows_held += 1
