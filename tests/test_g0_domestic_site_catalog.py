@@ -167,6 +167,16 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         self.assertNotIn("https://official.example/company/history", seeds)
         self.assertNotIn("https://official.example/company/about", seeds)
 
+    def test_region_abbreviation_is_same_site_key(self):
+        self.assertEqual(
+            catalog._compact("경상북도 포항시 남구 동해안로 6261"),
+            catalog._compact("경북 포항시 남구 동해안로 6261"),
+        )
+        self.assertNotEqual(
+            catalog._compact("경상북도 포항시 남구 동해안로 6261"),
+            catalog._compact("경상북도 포항시 남구 동해안로 6262"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
