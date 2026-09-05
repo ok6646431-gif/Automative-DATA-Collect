@@ -28,10 +28,12 @@ CATALOG_WORDS = (
     "domestic locations", "domestic plants", "korea locations",
 )
 SITE_NAME_RE = re.compile(
-    r"([A-Za-z0-9가-힣㈜()·&.\- ]{2,70}?(?:공장|연구소|사업장|센터|사무소|본사))\s*$",
+    r"([A-Za-z0-9가-힣㈜()·&.\- ]{2,70}?(?:제철소|공장|연구소|사업장|센터|사무소|본사))\s*$",
     re.I,
 )
-OPERATIONAL_SUFFIXES = ("공장", "연구소", "사업장", "센터", "사무소", "본사")
+# Operational facility vocabulary is industry-agnostic. `제철소` is a facility type,
+# not a company exception, and must behave like 공장/사업장 during site extraction.
+OPERATIONAL_SUFFIXES = ("제철소", "공장", "연구소", "사업장", "센터", "사무소", "본사")
 NAME_CLASS_HINTS = ("name", "title", "site-name", "site_name", "branch-name", "plant-name", "factory-name")
 ADDRESS_CLASS_HINTS = ("addr", "address", "site-addr", "site_addr", "site-address", "location-address")
 
