@@ -26,7 +26,8 @@ jobs:
 
           path = Path('orchestrator/requested_scope.py')
           text = path.read_text(encoding='utf-8')
-          start = text.index('    if mode != "SITE_SET":\n')
+          resolver = text.index('def resolve_requested_scope(')
+          start = text.index('    if mode != "SITE_SET":\n', resolver)
           end = text.index('    address_counts = _selected_address_counts(candidates)\n', start)
           lines = [
               '    if mode != "SITE_SET":',
