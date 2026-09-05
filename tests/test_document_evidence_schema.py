@@ -2,9 +2,16 @@ import json
 import unittest
 from pathlib import Path
 
-import jsonschema
+try:
+    import jsonschema
+except ModuleNotFoundError:
+    jsonschema = None
 
 
+@unittest.skipUnless(
+    jsonschema is not None,
+    "jsonschema is installed in the G0 schema-contract workflow; collector jobs may omit it",
+)
 class DocumentEvidenceSchemaTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
