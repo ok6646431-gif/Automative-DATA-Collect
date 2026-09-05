@@ -25,7 +25,10 @@ from orchestrator import g0_live_adapters as live
 from orchestrator import zero_touch_discovery as base
 
 
-URL_HINTS = ("location", "locations", "plant", "factory", "dome", "domestic", "company", "support")
+# URL hints used only to seed location discovery. Generic `/company/` pages are
+# deliberately excluded: the official root already exposes global navigation, while
+# seeding every company/history page can crowd real location tabs out of a bounded queue.
+LOCATION_URL_HINTS = ("location", "locations", "plant", "factory", "dome", "domestic", "support")
 LOCATION_WORDS = (
     "찾아오시는 길", "오시는 길", "국내사업장", "국내 사업장", "사업장소개", "사업장 소개",
     "사업장 안내", "제철소", "공장", "연구소", "본사", "사무소",
@@ -49,6 +52,7 @@ LOCAL_SITE_NAME_RE = re.compile(
 )
 MAX_NAVIGATION_PAGES = 28
 MAX_DISCOVERY_DEPTH = 2
+MAX_LOCATION_SEEDS = 10
 
 
 def _dedupe(values: Iterable[str]) -> List[str]:
@@ -71,6 +75,27 @@ def _same_org_page(root: str, value: str) -> str:
     return url
 
 
+def _location_seed_urls(
+    root: str,
+    sample_pages: Iterable[str],
+    report_index_pages: Iterable[str],
+) -> List[str]:
+    """Seed from the verified root plus only explicitly location-shaped known pages."""
+    seeds: List[str] = []
+    safe_root = _same_org_page(root, root)
+    if safe_root:
+        seeds.append(safe_root)
+    for raw in list(sample_pages or []) + list(report_index_pages or []):
+        safe = _same_org_page(root, str(raw or ""))
+        if not safe:
+            continue
+        low = safe.casefold()
+        if not any(hint in low for hint in LOCATION_URL_HINTS):
+            continue
+        seeds.append(safe)
+    return _dedupe(seeds)[:MAX_LOCATION_SEEDS]
+
+
 def _location_score(label: str, target: str, ancestor_text: str = "") -> int:
     label_low = str(label or "").casefold()
     target_low = str(target or "").casefold()
@@ -83,7 +108,7 @@ def _location_score(label: str, target: str, ancestor_text: str = "") -> int:
     for word in LOCATION_WORDS:
         if word.casefold() in marker:
             score += 5
-    for hint in URL_HINTS:
+    for hint in LOCATION_URL_HINTS:
         if hint in target_low:
             score += 2
     if any(word.casefold() in context_low for word in STRONG_LOCATION_WORDS):
@@ -129,10 +154,13 @@ def _fetch_location_navigation(
     seed_urls: Iterable[str],
 ) -> Tuple[List[base.Page], List[str]]:
     queue: List[Tuple[int, int, str]] = []
-    for url in _dedupe(seed_urls):
+    for index, url in enumerate(_dedupe(seed_urls)):
         safe = _same_org_page(root, url)
         if safe:
-            queue.append((100, 0, safe))
+            # The verified root owns global navigation. Explicit location-shaped extra
+            # seeds are useful fallbacks but should not outrank semantic links discovered
+            # from the root itself.
+            queue.append((100 if index == 0 else 30, 0, safe))
     seen: set[str] = set()
     pages: List[base.Page] = []
     checked: List[str] = []
@@ -285,9 +313,11 @@ def enrich(
         return discovery, documents, audit
 
     corp_docs = stages.get("corporate_documents") or {}
-    seed_urls = [root]
-    seed_urls.extend(list(official.get("sample_pages") or []))
-    seed_urls.extend(list(corp_docs.get("report_index_pages") or []))
+    seed_urls = _location_seed_urls(
+        root,
+        official.get("sample_pages") or [],
+        corp_docs.get("report_index_pages") or [],
+    )
 
     http = base.Http(timeout=(5, 15))
     fetched, checked = _fetch_location_navigation(http, root, seed_urls)
@@ -302,6 +332,7 @@ def enrich(
             "status": "RECOVERED",
             "contract": "EXPLICIT_DOMESTIC_SITE_CATALOG",
             "site_count": len(sites),
+            "seed_urls": seed_urls,
             "urls_checked": checked,
         }
         audit.setdefault("http_attempts", []).extend(http.audit)
@@ -320,6 +351,7 @@ def enrich(
             "contract": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
             "site_count": len(sites),
             "source_page_count": len(source_pages),
+            "seed_urls": seed_urls,
             "urls_checked": checked,
         }
         audit.setdefault("http_attempts", []).extend(http.audit)
@@ -327,6 +359,7 @@ def enrich(
 
     stages["domestic_site_catalog_enrichment"] = {
         "status": "NO_MULTI_SITE_CATALOG_RESOLVED",
+        "seed_urls": seed_urls,
         "urls_checked": checked,
         "named_site_count": len(aggregate),
         "named_site_source_page_count": len(source_pages),
