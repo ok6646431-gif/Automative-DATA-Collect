@@ -14,6 +14,7 @@ from orchestrator import dart_public_resolver
 from orchestrator import g0_authority_site_recovery
 from orchestrator import g0_data_attr_report_recovery
 from orchestrator import g0_domestic_site_catalog_enrichment
+from orchestrator import g0_entity_window_normalization
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_generic_js_report_recovery
 from orchestrator import g0_kind_disclosure_recovery
@@ -25,6 +26,7 @@ from orchestrator import g0_report_catalog_policy
 from orchestrator import g0_report_enrichment
 from orchestrator import g0_scripted_report_enrichment
 from orchestrator import g0_scripted_report_navigation
+from orchestrator import g0_thin_shell_recovery
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
@@ -53,7 +55,7 @@ def _official_rename_signals(pages, company):
 
 
 def _crawl_official_with_continuity_signal(http, start_url, company, max_pages=90):
-    pages, links = g0_official_site_recovery.crawl_official(
+    pages, links = g0_thin_shell_recovery.crawl_official(
         http, start_url, company, max_pages=max_pages
     )
     g0_official_site_recovery.last_recovery["rename_signals"] = _official_rename_signals(
@@ -121,6 +123,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
     )
+    documents = g0_entity_window_normalization.normalize(discovery, documents, audit)
     g0_report_enrichment.refresh_document_unresolved(discovery, documents, audit)
 
     legal = (((audit.get("stages") or {}).get("legal_identity") or {}).get("resolved") or {})
