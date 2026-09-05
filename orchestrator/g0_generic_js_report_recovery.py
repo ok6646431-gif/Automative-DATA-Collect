@@ -23,6 +23,7 @@ from urllib.parse import quote, urljoin, urlparse
 from bs4 import BeautifulSoup
 
 from orchestrator import g0_report_enrichment as strict
+from orchestrator import g0_report_entity_policy as entity_policy
 from orchestrator import g0_scripted_report_enrichment as scripted
 from orchestrator import zero_touch_discovery as base
 
@@ -201,8 +202,6 @@ def extract_report_controls(html: str, start_year: int, current_year: int) -> Li
                     "raw_control": raw[:1000],
                 })
             for name, args in extract_literal_calls(raw):
-                # Direct built-ins are already handled above and have no local function
-                # definition to resolve.
                 if name.casefold() in {"open", "replace"} and direct_targets:
                     continue
                 out.append({
@@ -424,7 +423,6 @@ def candidates_from_generic_js_page(
         }
         diagnostics.append(diagnostic)
         targets = list(direct_targets)
-        script_source = ""
         if definition:
             params, body, script_source = definition
             targets.extend(reconstruct_targets(page_url, params, control["args"], body))
@@ -470,6 +468,18 @@ def _report_pages(audit: Dict[str, Any]) -> List[str]:
     ])
 
 
+def _existing_report_blocks_recovery(discovery: Dict[str, Any], doc: Dict[str, Any]) -> bool:
+    """Only a plausible full report may suppress a stronger byte-verified recovery."""
+    title = str(doc.get("title") or "")
+    url = str(doc.get("source_url") or "")
+    if entity_policy.is_summary_representation(title, url):
+        return False
+    alignment, _ = entity_policy.entity_alignment(discovery, title, url)
+    if alignment == "CONFLICT":
+        return False
+    return True
+
+
 def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
     policy = discovery.get("collection_policy") or {}
     window = policy.get("requested_history_window") or {}
@@ -490,14 +500,22 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
         recovered.extend(candidates)
         diagnostics.extend(page_diagnostics)
 
-    supporting = [
-        d for d in documents.get("documents", []) or []
-        if d.get("document_type") != "SUSTAINABILITY_REPORT"
-    ]
+    # Weak/incorrect annual candidates are preserved for the later entity policy but
+    # do not occupy the year slot and suppress a byte-verified JS/PDF recovery.
+    supporting: List[Dict[str, Any]] = []
     annual_by_year: Dict[int, Dict[str, Any]] = {}
     for d in documents.get("documents", []) or []:
-        if d.get("document_type") == "SUSTAINABILITY_REPORT" and d.get("report_year"):
+        if d.get("document_type") != "SUSTAINABILITY_REPORT":
+            supporting.append(d)
+            continue
+        if not _existing_report_blocks_recovery(discovery, d):
+            supporting.append(d)
+            continue
+        if d.get("report_year"):
             annual_by_year[int(d["report_year"])] = d
+        else:
+            supporting.append(d)
+
     for candidate in sorted(recovered, key=lambda x: int(x.get("score") or 0), reverse=True):
         year = int(candidate["year"])
         if year in annual_by_year:
