@@ -59,6 +59,35 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
         self.assertEqual(resolved_pages[0].url, deep)
         self.assertEqual(recovery.last_recovery["successful_stage"], "ANCHORED_SEARCH")
 
+    def test_candidate_validation_uses_probe_budget_not_full_discovery_budget(self):
+        start = "https://www.example-corp.com/"
+        shell = Page(start, "", "<html></html>", 200)
+        deep = "https://www.example-corp.com/company/about"
+        pages = [
+            Page(deep, "Example Corp 회사소개 사업분야 지속가능 copyright", "", 200),
+            Page("https://www.example-corp.com/company/location", "Example Corp 사업장", "", 200),
+        ]
+        links = [(deep, "사업장", "https://www.example-corp.com/company/location")]
+        budgets = []
+
+        def crawl(_http, _url, _company, max_pages=90):
+            budgets.append(max_pages)
+            return pages, links
+
+        with patch.object(recovery, "crawl_official", return_value=([shell], [])), \
+             patch.object(thin, "_first_party_bootstrap_candidates", return_value=[deep]), \
+             patch.object(recovery, "BASE_CRAWL", side_effect=crawl), \
+             patch.object(thin, "_anchored_domain_candidates", side_effect=AssertionError("search fallback must be skipped")), \
+             patch.object(recovery, "_locate_candidates", side_effect=AssertionError("replacement fallback must be skipped")):
+            staged.crawl_official(object(), start, "Example Corp", max_pages=90)
+
+        self.assertEqual(budgets, [staged.MAX_CANDIDATE_PROBE_PAGES])
+        self.assertLess(staged.MAX_CANDIDATE_PROBE_PAGES, 90)
+        self.assertEqual(
+            recovery.last_recovery["candidate_probe_page_budget"],
+            staged.MAX_CANDIDATE_PROBE_PAGES,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
