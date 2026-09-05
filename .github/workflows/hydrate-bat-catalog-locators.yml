@@ -1,0 +1,65 @@
+name: Probe BAT catalog locator hydration
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Hydration scope
+        required: false
+        default: locator-pending
+        type: choice
+        options:
+          - locator-pending
+          - unverified-published
+          - all-published
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/bat_catalog_hydration.py'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_collector.py'
+      - 'tests/test_bat_catalog_hydration.py'
+      - '.github/workflows/hydrate-bat-catalog-locators.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Run hydration unit tests
+        run: python -m unittest tests.test_bat_catalog_hydration -v
+      - name: Probe official BAT PDF locators
+        run: >-
+          python orchestrator/bat_catalog_hydration.py
+          --mode '${{ inputs.mode || 'locator-pending' }}'
+          --out BAT_Catalog_Hydration.json
+      - name: Summarize hydration result
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('BAT_Catalog_Hydration.json',encoding='utf-8'))
+          print(json.dumps({'status':d['status'],**d['summary']},ensure_ascii=False,indent=2))
+          for r in d['results']:
+              print(f"{r['status']}\t{r['catalog_id']}\tpart={r['document_part']}\tbytes={r['bytes']}\t{r['verified_pdf_url'] or r['error'][:300]}")
+          PY
+      - name: Upload hydration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bat-catalog-hydration-${{ inputs.mode || 'locator-pending' }}
+          path: BAT_Catalog_Hydration.json
+          if-no-files-found: warn
+          retention-days: 14

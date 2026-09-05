@@ -53,13 +53,21 @@ jobs:
           expected=entry.get('official_pdf_sha256') or ''
           if not url or not expected:
               raise SystemExit('Common boiler catalog entry lacks verified official PDF URL/SHA')
-          s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (BATCatalogDiscovery/1.0)'
-          r=s.get(url,timeout=(15,90),allow_redirects=True); r.raise_for_status()
-          payload={'requested_url':url,'final_url':r.url,'status':r.status_code,'bytes':len(r.content),'content_type':r.headers.get('content-type',''),'is_pdf':r.content.lstrip().startswith(b'%PDF-'),'sha256':hashlib.sha256(r.content).hexdigest(),'expected_sha256':expected}
+          payload={'requested_url':url,'expected_sha256':expected}
+          try:
+              s=requests.Session(); s.headers['User-Agent']='Mozilla/5.0 (BATCatalogDiscovery/1.0)'
+              r=s.get(url,timeout=(15,90),allow_redirects=True); r.raise_for_status()
+          except requests.RequestException as exc:
+              payload.update({'probe_state':'SOURCE_UNREACHABLE','error':f'{type(exc).__name__}: {exc}'})
+              Path('bat_probe.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
+              print('::warning::Common boiler official PDF endpoint is temporarily unreachable; cached URL/SHA remains unchanged')
+              print(json.dumps(payload,ensure_ascii=False,indent=2))
+              raise SystemExit(0)
+          payload.update({'probe_state':'RESPONDED','final_url':r.url,'status':r.status_code,'bytes':len(r.content),'content_type':r.headers.get('content-type',''),'is_pdf':r.content.lstrip().startswith(b'%PDF-'),'sha256':hashlib.sha256(r.content).hexdigest()})
           payload['sha256_match']=payload['sha256']==expected
           print(json.dumps(payload,ensure_ascii=False,indent=2))
           Path('bat_probe.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
-          if not payload['is_pdf']: raise SystemExit('Government direct endpoint did not return PDF bytes')
+          if not payload['is_pdf']: raise SystemExit('Government direct endpoint responded but did not return PDF bytes')
           if not payload['sha256_match']: raise SystemExit(f"Government direct PDF SHA changed: expected={expected} actual={payload['sha256']}")
           PY
       - uses: actions/upload-artifact@v4
