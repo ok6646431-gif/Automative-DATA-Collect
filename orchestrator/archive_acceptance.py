@@ -1,6 +1,6 @@
 """Fail-closed acceptance checks for the final human-facing archive.
 
-Collection/package validation answers whether the evidence is trustworthy.  This
+Collection/package validation answers whether the evidence is trustworthy. This
 module answers a different question: whether the exact artifact a user receives
 still satisfies the human-delivery contract.
 """
@@ -22,6 +22,11 @@ REQUIRED_USER_XLSX = {
 }
 SUSTAINABILITY_FOLDER = "01_사용자자료/04_지속가능경영보고서"
 REVIEW_FOLDER = "01_사용자자료/00_환경관리검토"
+BAT_ROOT = "02_BAT_참고자료"
+BAT_INDEX = f"{BAT_ROOT}/00_BAT_적용후보_및_수집현황.xlsx"
+BAT_DOCUMENT_ROOT = f"{BAT_ROOT}/01_BAT_원문"
+BAT_SITE_MAP_ROOT = f"{BAT_ROOT}/02_사업장별_적용맵"
+LEGACY_BAT_ROOT = "01_사용자자료/07_가이드라인_참고자료/BAT_기준서"
 YEAR_RE = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
 
 
@@ -49,6 +54,109 @@ def _tree_files(root: Path) -> dict[str, Path]:
         for p in root.rglob("*")
         if p.is_file()
     }
+
+
+def _bat_tree_checks(files: dict[str, Path]) -> tuple[dict[str, bool], list[dict[str, str]]]:
+    failures: list[dict[str, str]] = []
+    bat_files = {name: p for name, p in files.items() if name.startswith(BAT_ROOT + "/")}
+    legacy = sorted(name for name in files if name.startswith(LEGACY_BAT_ROOT + "/"))
+    if legacy:
+        failures.append({"check": "LEGACY_BAT_EMBEDDED_ABSENT", "detail": ", ".join(legacy[:20])})
+
+    if not bat_files:
+        return {
+            "bat_reference_area_valid": True,
+            "legacy_bat_embedded_absent": not legacy,
+        }, failures
+
+    index = bat_files.get(BAT_INDEX)
+    if index is None or not _xlsx_bytes_ok(index.read_bytes()):
+        failures.append({"check": "BAT_INDEX_VALID", "detail": BAT_INDEX})
+
+    bad_suffix = sorted(
+        name for name in bat_files
+        if Path(name).suffix.lower() not in {".pdf", ".xlsx"}
+    )
+    if bad_suffix:
+        failures.append({"check": "BAT_HUMAN_FORMATS_ONLY", "detail": ", ".join(bad_suffix[:20])})
+
+    bad_maps = []
+    for name, p in bat_files.items():
+        if name.startswith(BAT_SITE_MAP_ROOT + "/"):
+            if Path(name).suffix.lower() != ".xlsx" or not _xlsx_bytes_ok(p.read_bytes()):
+                bad_maps.append(name)
+    if bad_maps:
+        failures.append({"check": "BAT_SITE_MAPS_VALID", "detail": ", ".join(bad_maps[:20])})
+
+    bad_pdfs = []
+    misplaced_pdfs = []
+    for name, p in bat_files.items():
+        if Path(name).suffix.lower() != ".pdf":
+            continue
+        if not name.startswith(BAT_DOCUMENT_ROOT + "/"):
+            misplaced_pdfs.append(name)
+        if not _pdf_bytes_ok(p.read_bytes()):
+            bad_pdfs.append(name)
+    if misplaced_pdfs:
+        failures.append({"check": "BAT_PDFS_SINGLE_SOURCE_AREA", "detail": ", ".join(misplaced_pdfs[:20])})
+    if bad_pdfs:
+        failures.append({"check": "BAT_PDFS_STRUCTURALLY_VALID", "detail": ", ".join(bad_pdfs[:20])})
+
+    return {
+        "bat_reference_area_valid": not any(f["check"].startswith("BAT_") for f in failures),
+        "legacy_bat_embedded_absent": not legacy,
+    }, failures
+
+
+def _bat_zip_checks(files: dict[str, bytes]) -> tuple[dict[str, bool], list[dict[str, str]]]:
+    failures: list[dict[str, str]] = []
+    bat_files = {name: data for name, data in files.items() if name.startswith(BAT_ROOT + "/")}
+    legacy = sorted(name for name in files if name.startswith(LEGACY_BAT_ROOT + "/"))
+    if legacy:
+        failures.append({"check": "LEGACY_BAT_EMBEDDED_ABSENT", "detail": ", ".join(legacy[:20])})
+
+    if not bat_files:
+        return {
+            "bat_reference_area_valid": True,
+            "legacy_bat_embedded_absent": not legacy,
+        }, failures
+
+    index = bat_files.get(BAT_INDEX)
+    if index is None or not _xlsx_bytes_ok(index):
+        failures.append({"check": "BAT_INDEX_VALID", "detail": BAT_INDEX})
+
+    bad_suffix = sorted(
+        name for name in bat_files
+        if Path(name).suffix.lower() not in {".pdf", ".xlsx"}
+    )
+    if bad_suffix:
+        failures.append({"check": "BAT_HUMAN_FORMATS_ONLY", "detail": ", ".join(bad_suffix[:20])})
+
+    bad_maps = [
+        name for name, data in bat_files.items()
+        if name.startswith(BAT_SITE_MAP_ROOT + "/")
+        and (Path(name).suffix.lower() != ".xlsx" or not _xlsx_bytes_ok(data))
+    ]
+    if bad_maps:
+        failures.append({"check": "BAT_SITE_MAPS_VALID", "detail": ", ".join(bad_maps[:20])})
+
+    misplaced_pdfs = [
+        name for name in bat_files
+        if Path(name).suffix.lower() == ".pdf" and not name.startswith(BAT_DOCUMENT_ROOT + "/")
+    ]
+    if misplaced_pdfs:
+        failures.append({"check": "BAT_PDFS_SINGLE_SOURCE_AREA", "detail": ", ".join(misplaced_pdfs[:20])})
+    bad_pdfs = [
+        name for name, data in bat_files.items()
+        if Path(name).suffix.lower() == ".pdf" and not _pdf_bytes_ok(data)
+    ]
+    if bad_pdfs:
+        failures.append({"check": "BAT_PDFS_STRUCTURALLY_VALID", "detail": ", ".join(bad_pdfs[:20])})
+
+    return {
+        "bat_reference_area_valid": not any(f["check"].startswith("BAT_") for f in failures),
+        "legacy_bat_embedded_absent": not legacy,
+    }, failures
 
 
 def validate_archive_tree(archive_root: str | Path, expected_env_pdf_count: int | None = None) -> dict:
@@ -84,9 +192,12 @@ def validate_archive_tree(archive_root: str | Path, expected_env_pdf_count: int 
     sust_no_year = [name for name in sust_files if not YEAR_RE.search(Path(name).name)]
     if sust_nested or sust_non_pdf or sust_no_year:
         detail = []
-        if sust_nested: detail.append("nested=" + ",".join(sust_nested[:10]))
-        if sust_non_pdf: detail.append("non_pdf=" + ",".join(sust_non_pdf[:10]))
-        if sust_no_year: detail.append("no_year=" + ",".join(sust_no_year[:10]))
+        if sust_nested:
+            detail.append("nested=" + ",".join(sust_nested[:10]))
+        if sust_non_pdf:
+            detail.append("non_pdf=" + ",".join(sust_non_pdf[:10]))
+        if sust_no_year:
+            detail.append("no_year=" + ",".join(sust_no_year[:10]))
         failures.append({"check": "SUSTAINABILITY_SHALLOW_PDF_SERIES", "detail": "; ".join(detail)})
 
     review_files = sorted(name for name in user_files if name.startswith(REVIEW_FOLDER + "/"))
@@ -107,6 +218,9 @@ def validate_archive_tree(archive_root: str | Path, expected_env_pdf_count: int 
             "detail": f"expected>={expected_env_pdf_count}; actual={len(env_detail_pdfs)}",
         })
 
+    bat_checks, bat_failures = _bat_tree_checks(files)
+    failures.extend(bat_failures)
+
     checks = {
         "user_machine_formats_absent": not leaked,
         "structured_user_exports_valid": not invalid_xlsx,
@@ -114,6 +228,7 @@ def validate_archive_tree(archive_root: str | Path, expected_env_pdf_count: int 
         "sustainability_shallow_pdf_series": not (sust_nested or sust_non_pdf or sust_no_year),
         "review_user_formats": not review_bad,
         "envinfo_site_year_pdf_complete": expected_env_pdf_count is None or len(env_detail_pdfs) >= expected_env_pdf_count,
+        **bat_checks,
     }
     return {"status": "PASS" if not failures else "FAIL", "checks": checks, "failures": failures}
 
@@ -152,8 +267,10 @@ def validate_archive_zip(zip_path: str | Path, expected_env_pdf_count: int | Non
     bad_xlsx = []
     for source, rel in REQUIRED_USER_XLSX.items():
         data = files.get(rel)
-        if data is None: bad_xlsx.append(f"{source}:missing:{rel}")
-        elif not _xlsx_bytes_ok(data): bad_xlsx.append(f"{source}:invalid_xlsx:{rel}")
+        if data is None:
+            bad_xlsx.append(f"{source}:missing:{rel}")
+        elif not _xlsx_bytes_ok(data):
+            bad_xlsx.append(f"{source}:invalid_xlsx:{rel}")
     if bad_xlsx:
         failures.append({"check": "STRUCTURED_USER_EXPORTS_VALID", "detail": "; ".join(bad_xlsx)})
 
@@ -182,6 +299,9 @@ def validate_archive_zip(zip_path: str | Path, expected_env_pdf_count: int | Non
     if expected_env_pdf_count is not None and env_count < expected_env_pdf_count:
         failures.append({"check": "ENVINFO_SITE_YEAR_PDF_COMPLETE", "detail": f"expected>={expected_env_pdf_count}; actual={env_count}"})
 
+    bat_checks, bat_failures = _bat_zip_checks(files)
+    failures.extend(bat_failures)
+
     return {
         "status": "PASS" if not failures else "FAIL",
         "archive_root": root_name,
@@ -193,6 +313,7 @@ def validate_archive_zip(zip_path: str | Path, expected_env_pdf_count: int | Non
             "sustainability_shallow_pdf_series": not (nested or non_pdf or no_year),
             "review_user_formats": not review_bad,
             "envinfo_site_year_pdf_complete": expected_env_pdf_count is None or env_count >= expected_env_pdf_count,
+            **bat_checks,
         },
         "failures": failures,
     }
