@@ -18,6 +18,7 @@
           "document_type": {
             "enum": [
               "SUSTAINABILITY_REPORT",
+              "SUSTAINABILITY_REPORT_SUMMARY",
               "ANNUAL_REPORT",
               "ENVIRONMENTAL_DISCLOSURE",
               "PUBLIC_ENVIRONMENTAL_PERFORMANCE_DATA",
