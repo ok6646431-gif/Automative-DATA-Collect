@@ -7,6 +7,10 @@ on:
     paths:
       - 'orchestrator/brefos_catalog_discovery.py'
       - 'orchestrator/brefos_byte_registry.py'
+      - 'orchestrator/brefos_catalog_reconcile.py'
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
       - '.github/workflows/verify-brefos-byte-registry.yml'
 
 concurrency:
@@ -28,6 +32,8 @@ jobs:
       - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
       - name: Stream and hash every BREFOS PDF
         run: python orchestrator/brefos_byte_registry.py --out BREFOS_Byte_Registry.json
+      - name: Reconcile verified BREFOS documents with preferred master entries
+        run: python orchestrator/brefos_catalog_reconcile.py --registry BREFOS_Byte_Registry.json --out BREFOS_Master_Reconcile.json
       - name: Print registry summary
         if: always()
         run: |
@@ -37,12 +43,18 @@ jobs:
           if p.exists():
               d=json.loads(p.read_text(encoding='utf-8'))
               print(json.dumps({'status':d.get('status'),'discovery_status':d.get('discovery_status'),'discovered':d.get('discovered_document_count'),'verified':d.get('verified_pdf_count'),'status_counts':d.get('status_counts')},ensure_ascii=False,indent=2))
+          q=pathlib.Path('BREFOS_Master_Reconcile.json')
+          if q.exists():
+              d=json.loads(q.read_text(encoding='utf-8'))
+              print(json.dumps({'preferred_master':d.get('preferred_published_master_entries'),'match_state_counts':d.get('match_state_counts'),'missing_latest_brefos_families':len(d.get('latest_brefos_families_missing_in_master',[]))},ensure_ascii=False,indent=2))
           PY
-      - name: Upload BREFOS byte registry
+      - name: Upload BREFOS verification and reconciliation
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: brefos-byte-registry
-          path: BREFOS_Byte_Registry.json
+          path: |
+            BREFOS_Byte_Registry.json
+            BREFOS_Master_Reconcile.json
           if-no-files-found: warn
           retention-days: 14
