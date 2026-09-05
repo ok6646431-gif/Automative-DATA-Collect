@@ -409,20 +409,49 @@ def resolve_requested_scope(package_root, profile=None):
     identities = read_csv(root / "Source_Identity.csv")
 
     if mode != "SITE_SET":
-        canonical = {r.get("canonical_site_id", "") for r in sites if r.get("identity_status") == "CONFIRMED" and r.get("canonical_site_id")}
+        # COMPANY means the requested legal entity, not every company returned by a
+        # broad brand-name search. Public registries commonly return subsidiaries or
+        # affiliates whose names begin with the same brand token. Apply the same
+        # source-native legal-entity compatibility gate used by SITE_SET before any
+        # source ID or canonical site becomes part of delivery/analysis scope.
+        canonical = set()
+        excluded_source_ids = []
+        for site in sites:
+            if site.get("identity_status") != "CONFIRMED":
+                continue
+            entity_ok, _ = _source_entity_compatible(
+                site.get("canonical_site_name"), profile, candidates
+            )
+            if entity_ok and site.get("canonical_site_id"):
+                canonical.add(site.get("canonical_site_id"))
+
         source_ids = {s: set() for s in CORE_SOURCES}
         labels = {}
         for row in identities:
             source = row.get("source_key", "")
             sid = str(row.get("source_site_id") or "")
-            if source in source_ids and sid:
-                source_ids[source].add(sid)
-                labels[(source, sid)] = row.get("source_site_name_raw", "")
+            if source not in source_ids or not sid:
+                continue
+            entity_ok, entity_reason = _source_entity_compatible(
+                row.get("source_site_name_raw"), profile, candidates
+            )
+            if not entity_ok:
+                excluded_source_ids.append({
+                    "source_key": source,
+                    "source_site_id": sid,
+                    "source_site_name_raw": row.get("source_site_name_raw", ""),
+                    "reason": entity_reason,
+                })
+                continue
+            source_ids[source].add(sid)
+            labels[(source, sid)] = row.get("source_site_name_raw", "")
+
         return {
             "mode": mode, "label": (profile.get("requested_scope") or {}).get("label", "COMPANY"),
             "target_candidate_ids": [x.get("candidate_id", "") for x in candidates],
             "target_canonical_site_ids": canonical, "target_source_ids": source_ids,
-            "source_labels": labels, "unresolved_candidates": [], "excluded_source_ids": [],
+            "source_labels": labels, "unresolved_candidates": [],
+            "excluded_source_ids": excluded_source_ids,
             "current_legal_entity_active_period": _current_entity_active_period(profile),
         }
 
