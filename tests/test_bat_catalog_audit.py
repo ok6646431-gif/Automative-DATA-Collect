@@ -57,6 +57,55 @@ class BATCatalogAuditTests(unittest.TestCase):
         self.assertEqual(payload['status'], 'PASS')
         self.assertIn('PREFERRED_PUBLISHED_PDF_NOT_BYTE_VERIFIED', {w['code'] for w in payload['warnings']})
 
+    def test_complete_multi_part_revision_counts_as_byte_verified(self):
+        e = self._entry('BAT_MULTI')
+        e['official_documents'] = [
+            {
+                'document_part': f'PART_{i}',
+                'title': f'part {i}',
+                'official_pdf_url': f'https://example.invalid/part-{i}.pdf',
+                'official_pdf_sha256': chr(96+i) * 64,
+            }
+            for i in range(1, 5)
+        ]
+        payload = self._audit([e])
+        codes = {w['code'] for w in payload['warnings']}
+        self.assertEqual(payload['status'], 'PASS', payload['errors'])
+        self.assertNotIn('PREFERRED_PUBLISHED_PDF_NOT_BYTE_VERIFIED', codes)
+        self.assertEqual(payload['summary']['effective_byte_verified_preferred_count'], 1)
+
+    def test_incomplete_multi_part_revision_remains_visible(self):
+        e = self._entry('BAT_MULTI')
+        e['official_documents'] = [
+            {
+                'document_part': 'PART_1',
+                'official_pdf_url': 'https://example.invalid/part-1.pdf',
+                'official_pdf_sha256': 'a' * 64,
+            },
+            {
+                'document_part': 'PART_2',
+                'official_pdf_url': 'https://example.invalid/part-2.pdf',
+                'official_pdf_sha256': '',
+            },
+        ]
+        payload = self._audit([e])
+        codes = {w['code'] for w in payload['warnings']}
+        self.assertEqual(payload['status'], 'PASS')
+        self.assertIn('PDF_URL_NOT_BYTE_VERIFIED', codes)
+        self.assertIn('PREFERRED_PUBLISHED_PDF_NOT_BYTE_VERIFIED', codes)
+        self.assertEqual(payload['summary']['effective_byte_verified_preferred_count'], 0)
+
+    def test_invalid_sha_inside_multi_part_revision_is_hard_error(self):
+        e = self._entry('BAT_MULTI')
+        e['official_documents'] = [{
+            'document_part': 'PART_1',
+            'official_pdf_url': 'https://example.invalid/part-1.pdf',
+            'official_pdf_sha256': 'not-a-sha',
+        }]
+        payload = self._audit([e])
+        self.assertEqual(payload['status'], 'FAIL')
+        self.assertIn('INVALID_PDF_SHA256', {x['code'] for x in payload['errors']})
+
 
 if __name__ == '__main__':
     unittest.main()
