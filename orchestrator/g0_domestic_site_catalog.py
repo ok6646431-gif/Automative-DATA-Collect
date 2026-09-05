@@ -36,10 +36,26 @@ SITE_NAME_RE = re.compile(
 OPERATIONAL_SUFFIXES = ("제철소", "공장", "연구소", "사업장", "센터", "사무소", "본사")
 NAME_CLASS_HINTS = ("name", "title", "site-name", "site_name", "branch-name", "plant-name", "factory-name")
 ADDRESS_CLASS_HINTS = ("addr", "address", "site-addr", "site_addr", "site-address", "location-address")
+REGION_PREFIX_CANONICAL = (
+    ("서울특별시", "서울"), ("부산광역시", "부산"), ("대구광역시", "대구"),
+    ("인천광역시", "인천"), ("광주광역시", "광주"), ("대전광역시", "대전"),
+    ("울산광역시", "울산"), ("세종특별자치시", "세종"),
+    ("경기도", "경기"), ("강원특별자치도", "강원"), ("강원도", "강원"),
+    ("충청북도", "충북"), ("충청남도", "충남"),
+    ("전북특별자치도", "전북"), ("전라북도", "전북"), ("전라남도", "전남"),
+    ("경상북도", "경북"), ("경상남도", "경남"),
+    ("제주특별자치도", "제주"), ("제주도", "제주"),
+)
 
 
 def _compact(value: str) -> str:
-    return re.sub(r"[^0-9가-힣]+", "", str(value or ""))
+    """Return a stable Korean road-address key across common region spellings."""
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    for long_name, short_name in REGION_PREFIX_CANONICAL:
+        if text == long_name or text.startswith(long_name + " "):
+            text = short_name + text[len(long_name):]
+            break
+    return re.sub(r"[^0-9가-힣]+", "", text)
 
 
 def _class_tokens(tag: Any) -> List[str]:
