@@ -30,6 +30,7 @@ on:
       - 'orchestrator/g0_report_enrichment.py'
       - 'orchestrator/g0_scripted_report_enrichment.py'
       - 'orchestrator/g0_scripted_report_navigation.py'
+      - 'orchestrator/g0_staged_official_recovery.py'
       - 'orchestrator/g0_thin_shell_recovery.py'
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_zero_touch_discovery.py'
@@ -44,6 +45,7 @@ on:
       - 'tests/test_g0_report_enrichment.py'
       - 'tests/test_g0_scripted_report_enrichment.py'
       - 'tests/test_g0_scripted_report_navigation.py'
+      - 'tests/test_g0_staged_official_recovery.py'
       - '.github/workflows/zero-touch-discovery.yml'
 
 permissions:
@@ -69,7 +71,7 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_authority_site_recovery.py orchestrator/g0_data_attr_report_recovery.py orchestrator/g0_domestic_site_catalog.py orchestrator/g0_domestic_site_catalog_enrichment.py orchestrator/g0_entity_window_normalization.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_generic_js_report_recovery.py orchestrator/g0_kind_disclosure_recovery.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_rename_chronology_recovery.py orchestrator/g0_report_catalog_policy.py orchestrator/g0_report_enrichment.py orchestrator/g0_scripted_report_enrichment.py orchestrator/g0_scripted_report_navigation.py orchestrator/g0_thin_shell_recovery.py orchestrator/zero_touch_runner.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_authority_site_recovery.py orchestrator/g0_data_attr_report_recovery.py orchestrator/g0_domestic_site_catalog.py orchestrator/g0_domestic_site_catalog_enrichment.py orchestrator/g0_entity_window_normalization.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_generic_js_report_recovery.py orchestrator/g0_kind_disclosure_recovery.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_rename_chronology_recovery.py orchestrator/g0_report_catalog_policy.py orchestrator/g0_report_enrichment.py orchestrator/g0_scripted_report_enrichment.py orchestrator/g0_scripted_report_navigation.py orchestrator/g0_staged_official_recovery.py orchestrator/g0_thin_shell_recovery.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_zero_touch_discovery -v
           python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_domestic_site_catalog -v
@@ -82,6 +84,7 @@ jobs:
           python -m unittest tests.test_g0_report_enrichment -v
           python -m unittest tests.test_g0_scripted_report_enrichment -v
           python -m unittest tests.test_g0_scripted_report_navigation -v
+          python -m unittest tests.test_g0_staged_official_recovery -v
           python -m unittest tests.test_company_profile_builder tests.test_bootstrap_inputs tests.test_request_builder tests.test_rename_continuity_contract -v
 
       - name: Determine whether live Discovery was requested
