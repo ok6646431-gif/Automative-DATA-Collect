@@ -26,7 +26,7 @@ from orchestrator import g0_report_catalog_policy
 from orchestrator import g0_report_enrichment
 from orchestrator import g0_scripted_report_enrichment
 from orchestrator import g0_scripted_report_navigation
-from orchestrator import g0_thin_shell_recovery
+from orchestrator import g0_staged_official_recovery
 from orchestrator import zero_touch_discovery
 
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
@@ -55,7 +55,7 @@ def _official_rename_signals(pages, company):
 
 
 def _crawl_official_with_continuity_signal(http, start_url, company, max_pages=90):
-    pages, links = g0_thin_shell_recovery.crawl_official(
+    pages, links = g0_staged_official_recovery.crawl_official(
         http, start_url, company, max_pages=max_pages
     )
     g0_official_site_recovery.last_recovery["rename_signals"] = _official_rename_signals(
