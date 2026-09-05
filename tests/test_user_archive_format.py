@@ -36,8 +36,13 @@ class UserArchiveFormatTests(unittest.TestCase):
             def fake_xlsx(path, _sheets):
                 Path(path).write_bytes(b"PK")
 
+            # This unit test isolates user-layer format normalization. Full archive
+            # acceptance, including required source XLSX exports and PDF structural
+            # validation, is covered separately by archive acceptance/contract tests.
             with patch("user_archive_format.archive_builder.render_html_pdf", side_effect=fake_render), patch(
                 "user_archive_format.archive_builder.dict_rows_to_xlsx", side_effect=fake_xlsx
+            ), patch(
+                "user_archive_format.validate_archive_tree", return_value={"status": "PASS", "failures": []}
             ):
                 result = user_archive_format.normalize_user_archive(root)
 
