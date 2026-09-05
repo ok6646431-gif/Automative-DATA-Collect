@@ -1,0 +1,44 @@
+name: Probe BREFOS standard document endpoints
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/brefos_discovery_probe.py'
+      - '.github/workflows/probe-brefos-standard-docs.yml'
+
+concurrency:
+  group: brefos-standard-doc-probe
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Inspect BREFOS standard-document UI
+        run: python orchestrator/brefos_discovery_probe.py --out-dir brefos-probe
+      - name: Print discovered controls
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('brefos-probe/BREFOS_Probe.json',encoding='utf-8'))
+          print(json.dumps({'status':d.get('status'),'final_url':d.get('final_url'),'forms':d.get('forms'),'links':d.get('links'),'script_endpoints':d.get('script_endpoints')},ensure_ascii=False,indent=2))
+          PY
+      - name: Upload BREFOS probe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brefos-standard-doc-probe
+          path: brefos-probe/
+          if-no-files-found: warn
+          retention-days: 7
