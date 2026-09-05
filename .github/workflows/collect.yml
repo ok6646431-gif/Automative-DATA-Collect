@@ -317,7 +317,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install archive dependencies
-        run: python -m pip install --disable-pip-version-check xlsxwriter
+        run: python -m pip install --disable-pip-version-check xlsxwriter beautifulsoup4 pypdf openpyxl
       - name: Install Korean/CJK fonts for PDF rendering
         run: |
           sudo apt-get update
