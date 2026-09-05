@@ -58,7 +58,7 @@ permissions:
   actions: write
 
 concurrency:
-  group: zero-touch-discovery-${{ github.ref }}
+  group: zero-touch-discovery-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
