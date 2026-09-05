@@ -144,6 +144,29 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         found = enrichment._aggregate_multi_page_sites("예시회사", pages)
         self.assertEqual(len(found), 1)
 
+    def test_location_seed_policy_excludes_generic_company_history_pages(self):
+        root = "https://official.example/home"
+        seeds = enrichment._location_seed_urls(
+            root,
+            [
+                "https://official.example/company/history",
+                "https://official.example/company/about",
+                "https://official.example/support/location-a",
+                "https://official.example/company/domestic-sites",
+            ],
+            ["https://official.example/sustainability/report-index"],
+        )
+        self.assertEqual(
+            seeds,
+            [
+                root,
+                "https://official.example/support/location-a",
+                "https://official.example/company/domestic-sites",
+            ],
+        )
+        self.assertNotIn("https://official.example/company/history", seeds)
+        self.assertNotIn("https://official.example/company/about", seeds)
+
 
 if __name__ == "__main__":
     unittest.main()
