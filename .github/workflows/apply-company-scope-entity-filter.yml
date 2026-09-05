@@ -1,0 +1,103 @@
+name: Apply COMPANY scope entity filter
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/apply-company-scope-entity-filter.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch COMPANY requested-scope identity acceptance
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('orchestrator/requested_scope.py')
+          text = path.read_text(encoding='utf-8')
+          start = text.index('    if mode != "SITE_SET":\n')
+          end = text.index('    address_counts = _selected_address_counts(candidates)\n', start)
+          replacement = '''    if mode != "SITE_SET":
+        # COMPANY means the requested legal entity, not every company returned by a
+        # broad brand-name search. Public registries commonly return subsidiaries or
+        # affiliates whose names begin with the same brand token. Apply the same
+        # source-native legal-entity compatibility gate used by SITE_SET before any
+        # source ID or canonical site becomes part of delivery/analysis scope.
+        canonical = set()
+        excluded_source_ids = []
+        for site in sites:
+            if site.get("identity_status") != "CONFIRMED":
+                continue
+            entity_ok, _ = _source_entity_compatible(
+                site.get("canonical_site_name"), profile, candidates
+            )
+            if entity_ok and site.get("canonical_site_id"):
+                canonical.add(site.get("canonical_site_id"))
+
+        source_ids = {s: set() for s in CORE_SOURCES}
+        labels = {}
+        for row in identities:
+            source = row.get("source_key", "")
+            sid = str(row.get("source_site_id") or "")
+            if source not in source_ids or not sid:
+                continue
+            entity_ok, entity_reason = _source_entity_compatible(
+                row.get("source_site_name_raw"), profile, candidates
+            )
+            if not entity_ok:
+                excluded_source_ids.append({
+                    "source_key": source,
+                    "source_site_id": sid,
+                    "source_site_name_raw": row.get("source_site_name_raw", ""),
+                    "reason": entity_reason,
+                })
+                continue
+            source_ids[source].add(sid)
+            labels[(source, sid)] = row.get("source_site_name_raw", "")
+
+        return {
+            "mode": mode, "label": (profile.get("requested_scope") or {}).get("label", "COMPANY"),
+            "target_candidate_ids": [x.get("candidate_id", "") for x in candidates],
+            "target_canonical_site_ids": canonical, "target_source_ids": source_ids,
+            "source_labels": labels, "unresolved_candidates": [],
+            "excluded_source_ids": excluded_source_ids,
+            "current_legal_entity_active_period": _current_entity_active_period(profile),
+        }
+
+'''
+          patched = text[:start] + replacement + text[end:]
+          if patched == text:
+              raise SystemExit('requested_scope.py was not changed')
+          path.write_text(patched, encoding='utf-8')
+          PY
+      - name: Run requested-scope regressions
+        run: >-
+          python -m unittest
+          tests.test_requested_scope
+          tests.test_requested_scope_subunits
+          tests.test_requested_scope_rename_bridge
+          tests.test_requested_scope_bilingual_bridge
+          tests.test_requested_scope_company_entity_filter
+          -v
+      - name: Commit generic scope fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/requested_scope.py
+          if git diff --cached --quiet; then
+            echo 'No patch needed.'
+          else
+            git commit -m 'Filter COMPANY scope to requested legal entity'
+            git push origin HEAD:run/control-plane
+          fi
