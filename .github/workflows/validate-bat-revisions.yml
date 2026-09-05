@@ -11,6 +11,8 @@ on:
       - 'orchestrator/bat_resolver.py'
       - 'orchestrator/bat_collector.py'
       - 'orchestrator/bat_archive.py'
+      - 'orchestrator/brefos_byte_registry.py'
+      - 'orchestrator/brefos_catalog_last_verified.json'
       - 'orchestrator/brefos_catalog_reconcile.py'
       - 'orchestrator/brefos_catalog_promote.py'
       - 'tests/test_bat_catalog_audit.py'
@@ -19,6 +21,7 @@ on:
       - 'tests/test_bat_resolver.py'
       - 'tests/test_bat_revision_collection.py'
       - 'tests/test_bat_archive.py'
+      - 'tests/test_brefos_byte_registry.py'
       - 'tests/test_brefos_catalog_reconcile.py'
       - 'tests/test_brefos_catalog_promote.py'
       - '.github/workflows/validate-bat-revisions.yml'
@@ -36,7 +39,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check xlsxwriter openpyxl
+        run: python -m pip install --disable-pip-version-check xlsxwriter openpyxl requests beautifulsoup4
       - name: Run BAT revision tests
         run: >-
           python -m unittest
@@ -46,6 +49,7 @@ jobs:
           tests.test_bat_resolver
           tests.test_bat_revision_collection
           tests.test_bat_archive
+          tests.test_brefos_byte_registry
           tests.test_brefos_catalog_reconcile
           tests.test_brefos_catalog_promote
           -v
@@ -60,6 +64,7 @@ jobs:
           orchestrator/bat_resolver.py
           orchestrator/bat_collector.py
           orchestrator/bat_archive.py
+          orchestrator/brefos_byte_registry.py
           orchestrator/brefos_catalog_reconcile.py
           orchestrator/brefos_catalog_promote.py
       - name: Upload BAT catalog audit
