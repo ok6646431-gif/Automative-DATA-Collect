@@ -29,7 +29,7 @@ def xlsx_bytes():
     return bio.getvalue()
 
 
-def build_valid_tree(root: Path):
+def build_valid_tree(root: Path, include_bat: bool = True):
     for rel in archive_acceptance.REQUIRED_USER_XLSX.values():
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -47,6 +47,17 @@ def build_valid_tree(root: Path):
     idx.parent.mkdir(parents=True, exist_ok=True)
     idx.write_text("read me", encoding="utf-8")
 
+    if include_bat:
+        bat_index = root / archive_acceptance.BAT_INDEX
+        bat_index.parent.mkdir(parents=True, exist_ok=True)
+        bat_index.write_bytes(xlsx_bytes())
+        bat_map = root / archive_acceptance.BAT_SITE_MAP_ROOT / "회사 광주공장_BAT_적용맵.xlsx"
+        bat_map.parent.mkdir(parents=True, exist_ok=True)
+        bat_map.write_bytes(xlsx_bytes())
+        bat_pdf = root / archive_acceptance.BAT_DOCUMENT_ROOT / "F_TEST_테스트기준서" / "01_현행_우선판" / "2024_테스트기준서.pdf"
+        bat_pdf.parent.mkdir(parents=True, exist_ok=True)
+        bat_pdf.write_bytes(pdf_bytes(b"bat-reference"))
+
 
 def zip_tree(root: Path, target: Path, archive_name="회사_환경자료"):
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -62,10 +73,13 @@ class ArchiveDeliveryContractTests(unittest.TestCase):
             build_valid_tree(root)
             report = archive_acceptance.validate_archive_tree(root, expected_env_pdf_count=1)
             self.assertEqual(report["status"], "PASS")
+            self.assertTrue(report["checks"]["bat_reference_area_valid"])
+            self.assertTrue(report["checks"]["legacy_bat_embedded_absent"])
             z = Path(td) / "archive.zip"
             zip_tree(root, z)
             zreport = archive_acceptance.validate_archive_zip(z, expected_env_pdf_count=1)
             self.assertEqual(zreport["status"], "PASS")
+            self.assertTrue(zreport["checks"]["bat_reference_area_valid"])
 
     def test_machine_readable_file_in_user_layer_fails(self):
         with tempfile.TemporaryDirectory() as td:
@@ -77,6 +91,17 @@ class ArchiveDeliveryContractTests(unittest.TestCase):
             report = archive_acceptance.validate_archive_tree(root)
             self.assertEqual(report["status"], "FAIL")
             self.assertFalse(report["checks"]["user_machine_formats_absent"])
+
+    def test_legacy_bat_inside_user_area_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "archive"
+            build_valid_tree(root)
+            legacy = root / archive_acceptance.LEGACY_BAT_ROOT / "old.pdf"
+            legacy.parent.mkdir(parents=True, exist_ok=True)
+            legacy.write_bytes(pdf_bytes(b"legacy"))
+            report = archive_acceptance.validate_archive_tree(root)
+            self.assertEqual(report["status"], "FAIL")
+            self.assertFalse(report["checks"]["legacy_bat_embedded_absent"])
 
     def test_sustainability_year_subfolder_fails(self):
         with tempfile.TemporaryDirectory() as td:
@@ -100,7 +125,17 @@ class ArchiveDeliveryContractTests(unittest.TestCase):
             self.assertEqual(report["status"], "FAIL")
             self.assertFalse(report["checks"]["structured_user_exports_valid"])
 
-    def test_delivery_is_byte_preserving_validated_subset(self):
+    def test_invalid_bat_map_fails(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "archive"
+            build_valid_tree(root)
+            bad = root / archive_acceptance.BAT_SITE_MAP_ROOT / "회사 광주공장_BAT_적용맵.xlsx"
+            bad.write_text("not a workbook", encoding="utf-8")
+            report = archive_acceptance.validate_archive_tree(root)
+            self.assertEqual(report["status"], "FAIL")
+            self.assertFalse(report["checks"]["bat_reference_area_valid"])
+
+    def test_delivery_is_byte_preserving_validated_subset_with_bat(self):
         with tempfile.TemporaryDirectory() as td:
             base = Path(td)
             root = base / "archive"
@@ -112,15 +147,20 @@ class ArchiveDeliveryContractTests(unittest.TestCase):
             self.assertEqual(manifest["status"], "PASS")
             self.assertEqual(manifest["source_archive_sha256"], hashlib.sha256(source.read_bytes()).hexdigest())
             self.assertGreaterEqual(len(manifest["parts"]), 1)
+            self.assertGreaterEqual(manifest["bat_reference_member_count"], 3)
             with zipfile.ZipFile(source, "r") as src_zip:
                 source_bytes = {i.filename: src_zip.read(i) for i in src_zip.infolist() if not i.is_dir()}
             delivered = {}
             for part in manifest["parts"]:
                 with zipfile.ZipFile(out / part["name"], "r") as zf:
                     for info in zf.infolist():
-                        if not info.is_dir(): delivered[info.filename] = zf.read(info)
+                        if not info.is_dir():
+                            delivered[info.filename] = zf.read(info)
             for name, data in delivered.items():
                 self.assertEqual(data, source_bytes[name])
+            self.assertTrue(any("/02_BAT_참고자료/00_BAT_적용후보_및_수집현황.xlsx" in name for name in delivered))
+            self.assertTrue(any("/02_BAT_참고자료/02_사업장별_적용맵/" in name for name in delivered))
+            self.assertTrue(any("/02_BAT_참고자료/01_BAT_원문/" in name and name.endswith('.pdf') for name in delivered))
             self.assertTrue(all("90_시스템원본/" not in name for name in delivered))
 
 
