@@ -24,6 +24,8 @@ on:
       - 'tests/test_brefos_byte_registry.py'
       - 'tests/test_brefos_catalog_reconcile.py'
       - 'tests/test_brefos_catalog_promote.py'
+      - 'tests/test_samsung_ds_bat_contract.py'
+      - 'tests/regression_cases/samsung_ds/company_discovery.json'
       - '.github/workflows/validate-bat-revisions.yml'
   workflow_dispatch:
 permissions:
@@ -52,6 +54,7 @@ jobs:
           tests.test_brefos_byte_registry
           tests.test_brefos_catalog_reconcile
           tests.test_brefos_catalog_promote
+          tests.test_samsung_ds_bat_contract
           -v
       - name: Run static BAT catalog integrity audit
         run: python orchestrator/bat_catalog_audit.py --out BAT_Catalog_Audit.json
