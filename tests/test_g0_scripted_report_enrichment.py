@@ -7,7 +7,9 @@ from orchestrator.g0_data_attr_report_recovery import (
 )
 from orchestrator.g0_generic_js_report_recovery import (
     candidates_from_generic_js_page,
+    extract_direct_literal_targets,
     extract_literal_calls,
+    extract_report_controls,
     reconstruct_targets,
 )
 from orchestrator.g0_scripted_report_enrichment import (
@@ -67,6 +69,18 @@ class FakeHttp:
                 url,
                 content=b"%PDF-1.7\ngeneric",
                 content_type="application/octet-stream",
+            )
+        if url.endswith("/files/report_2024_eng.pdf") or url.endswith("/files/report_2024_kor.pdf"):
+            return FakeResponse(
+                url,
+                content=b"%PDF-1.7\nnested-js",
+                content_type="application/pdf",
+            )
+        if url.endswith("/files/report_2020_kor.pdf"):
+            return FakeResponse(
+                url,
+                content=b"%PDF-1.7\ndirect-js",
+                content_type="application/pdf",
             )
         if "/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/2026%20" in url or (
             "/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/" in url
@@ -174,6 +188,67 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
         self.assertEqual(found[0]["year"], 2025)
         self.assertEqual(found[0]["download_contract"], "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION")
         self.assertTrue(diagnostics[0]["function_definition_found"])
+
+    def test_icon_only_control_and_nested_function_recover_year_specific_pdf(self):
+        html = '''
+        <html><body>
+          <article class="annual-report">
+            <h3>2024 지속가능경영보고서</h3>
+            <a href="javascript:void(0)" onclick="mergeAnnual('2024','report_2024','kor')">
+              KOR <i class="icon icon-download"></i>
+            </a>
+          </article>
+          <script>
+          function mergeAnnual(year, pdfNm, lang) {
+            if (lang == "eng") {
+              var url = "../files/report_" + year + "_eng.pdf";
+            } else {
+              var url = "../files/report_" + year + "_kor.pdf";
+            }
+            window.open(url);
+          }
+          </script>
+        </body></html>
+        '''
+        controls = extract_report_controls(html, 2020, 2026)
+        self.assertTrue(any(c["function"] == "mergeAnnual" for c in controls))
+        found, diagnostics = candidates_from_generic_js_page(
+            FakeHttp(),
+            "https://official.example/esg/report/",
+            html,
+            2020,
+            2026,
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["year"], 2024)
+        self.assertIn(found[0]["url"], {
+            "https://official.example/esg/files/report_2024_eng.pdf",
+            "https://official.example/esg/files/report_2024_kor.pdf",
+        })
+        self.assertEqual(found[0]["download_contract"], "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION")
+        self.assertTrue(any(d["function_definition_found"] for d in diagnostics if d["function"] == "mergeAnnual"))
+
+    def test_direct_window_open_literal_is_recovered_without_function_definition(self):
+        raw = "window.open('../files/report_2020_kor.pdf', '_blank')"
+        self.assertEqual(extract_direct_literal_targets(raw), ["../files/report_2020_kor.pdf"])
+        html = '''
+        <html><body>
+          <article class="annual-report">
+            <h3>2020 지속가능경영보고서</h3>
+            <button onclick="window.open('../files/report_2020_kor.pdf', '_blank')">국문</button>
+          </article>
+        </body></html>
+        '''
+        found, _ = candidates_from_generic_js_page(
+            FakeHttp(),
+            "https://official.example/esg/report/",
+            html,
+            2020,
+            2026,
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["url"], "https://official.example/esg/files/report_2020_kor.pdf")
+        self.assertEqual(found[0]["download_contract"], "VERIFIED_DIRECT_SAME_HOST_JS_TARGET")
 
     def _data_attr_html(self):
         return '''
