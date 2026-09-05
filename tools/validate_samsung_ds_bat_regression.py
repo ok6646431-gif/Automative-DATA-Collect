@@ -48,12 +48,23 @@ def main():
     docs=rows(root/'output'/'BAT_REFERENCES'/'document_index.csv')
     semi_docs=[r for r in docs if 'SEMICONDUCT' in ((r.get('catalog_family') or '')+' '+(r.get('catalog_id') or '')).upper()]
     downloaded=[r for r in semi_docs if r.get('collection_status')=='DOWNLOADED']
-    if not downloaded:
-        raise SystemExit(f'No official semiconductor II BAT PDF downloaded: {semi_docs}')
-    if any(r.get('catalog_id')!='KBREF_SEMICONDUCTOR_II_2025' for r in downloaded):
-        raise SystemExit(f'Unexpected semiconductor revision downloaded: {downloaded}')
-    if any((r.get('sha256') or r.get('official_pdf_sha256') or '') not in ('','05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02') for r in downloaded):
-        raise SystemExit(f'Downloaded semiconductor II hash conflicts with verified BREFOS bytes: {downloaded}')
+    current_downloaded=[r for r in downloaded if r.get('catalog_id')=='KBREF_SEMICONDUCTOR_II_2025']
+    superseded_downloaded=[r for r in downloaded if r.get('catalog_id')=='KBREF_SEMICONDUCTOR_2019']
+    unexpected=[r for r in downloaded if r.get('catalog_id') not in {'KBREF_SEMICONDUCTOR_II_2025','KBREF_SEMICONDUCTOR_2019'}]
+    if len(current_downloaded)!=1:
+        raise SystemExit(f'Expected exactly one current semiconductor II PDF, got {current_downloaded}')
+    if current_downloaded[0].get('revision_status')!='CURRENT_VERIFIED_PUBLICATION' or current_downloaded[0].get('preferred_for_matching')!='true':
+        raise SystemExit(f'Current semiconductor II revision metadata is wrong: {current_downloaded}')
+    if current_downloaded[0].get('source_url')!='https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=1501':
+        raise SystemExit(f'Current semiconductor II did not come from the byte-verified BREFOS endpoint: {current_downloaded}')
+    if '05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02' not in (current_downloaded[0].get('notes') or ''):
+        raise SystemExit(f'Current semiconductor II verified SHA is missing from document lineage: {current_downloaded}')
+    if len(superseded_downloaded)!=1:
+        raise SystemExit(f'Expected the verified 2019 edition to be preserved once for historical comparison: {superseded_downloaded}')
+    if superseded_downloaded[0].get('revision_status')!='SUPERSEDED_ARCHIVE_ONLY' or superseded_downloaded[0].get('preferred_for_matching')!='false':
+        raise SystemExit(f'Superseded semiconductor edition became active or lost archive status: {superseded_downloaded}')
+    if unexpected:
+        raise SystemExit(f'Unexpected semiconductor revision downloaded: {unexpected}')
 
     assert_pass(validate_archive_zip(root/'Human_Archive.zip'),'Samsung Human Archive')
     with zipfile.ZipFile(root/'Human_Archive.zip') as z:
@@ -62,7 +73,7 @@ def main():
         semi_pdfs=[n for n in bat_files if n.lower().endswith('.pdf') and ('반도체' in n or 'SEMICONDUCT' in n.upper())]
         legacy=[n for n in names if '/01_사용자자료/07_가이드라인_참고자료/BAT_기준서/' in n]
         maps=[n for n in bat_files if '/02_사업장별_적용맵/' in n and n.endswith('_BAT_적용맵.xlsx')]
-        if not semi_pdfs: raise SystemExit(f'No semiconductor BAT PDF in dedicated BAT area: {bat_files}')
+        if len(semi_pdfs)<2: raise SystemExit(f'Current and superseded semiconductor BAT PDFs were not both archived: {bat_files}')
         if legacy: raise SystemExit(f'Legacy embedded BAT area present: {legacy}')
         if len(maps)<5: raise SystemExit(f'Expected BAT applicability maps for 5 DS sites, got {len(maps)}: {maps}')
 
@@ -76,7 +87,8 @@ def main():
         'bat_candidate_count':len(candidates),
         'semiconductor_candidates':len(semiconductor),
         'semiconductor_revision':'KBREF_SEMICONDUCTOR_II_2025',
-        'semiconductor_downloaded_docs':len(downloaded),
+        'semiconductor_current_downloaded':len(current_downloaded),
+        'semiconductor_superseded_downloaded':len(superseded_downloaded),
         'site_maps':len(maps),
         'bat_files':len(bat_files),
         'scope_removed_candidates':scope.get('removed_out_of_scope_candidates'),
