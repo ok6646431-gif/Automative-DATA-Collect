@@ -13,6 +13,7 @@ on:
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'tests/test_g0_generic_js_local_year.py'
       - 'tests/test_company_profile_builder.py'
       - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
@@ -31,6 +32,7 @@ on:
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'tests/test_g0_generic_js_local_year.py'
       - 'tests/test_company_profile_builder.py'
       - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
@@ -58,6 +60,7 @@ jobs:
       - name: Run capability, identity and requested-scope regressions
         run: >-
           python -m unittest
+          tests.test_g0_generic_js_local_year
           tests.test_capability_regression_corpus
           tests.test_company_profile_builder
           tests.test_request_builder
