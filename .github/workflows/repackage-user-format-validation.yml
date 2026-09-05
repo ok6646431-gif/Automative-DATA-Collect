@@ -122,8 +122,12 @@ jobs:
               raise SystemExit(f'Unexpected cross-lane redirect target: {redirects}')
 
           bat=summary.get('bat_archive') or {}
+          if bat.get('bat_archive_root')!='02_BAT_참고자료':
+              raise SystemExit(f"BAT must be a dedicated top-level reference area: {bat}")
           if int(bat.get('bat_archive_candidate_count') or 0) != 5:
               raise SystemExit(f"Expected 5 Kumho site/BAT candidates, got {bat.get('bat_archive_candidate_count')}")
+          if int(bat.get('bat_archive_site_map_count') or 0) != 3:
+              raise SystemExit(f"Expected three Kumho site BAT maps, got {bat.get('bat_archive_site_map_count')}")
           if int(bat.get('bat_archive_current_pdf_count') or 0) != 0:
               raise SystemExit(f"Review/pending Kumho BAT candidates must not expose current PDFs: {bat}")
           if int(bat.get('bat_archive_superseded_pdf_count') or 0) != 0:
@@ -175,20 +179,29 @@ jobs:
               if bad_markers:
                   raise SystemExit(f'ENVINFO reference rows missing semantic dedup marker: {bad_markers}')
 
-              bat_xlsx=[n for n in names if n.endswith('/BAT_기준서/BAT_적용후보_및_수집현황.xlsx')]
-              current_pdfs=[n for n in names if '/BAT_기준서/01_현행_우선판/' in n and n.lower().endswith('.pdf')]
-              old_pdfs=[n for n in names if '/BAT_기준서/02_구판_아카이브/' in n and n.lower().endswith('.pdf')]
-              all_bat_pdfs=[n for n in names if '/BAT_기준서/' in n and n.lower().endswith('.pdf')]
-              misplaced=[n for n in all_bat_pdfs if '/01_현행_우선판/' not in n and '/02_구판_아카이브/' not in n]
+              legacy_bat=[n for n in names if '/01_사용자자료/07_가이드라인_참고자료/BAT_기준서/' in n]
+              if legacy_bat:
+                  raise SystemExit(f'Legacy embedded BAT area still exists: {legacy_bat}')
+              bat_xlsx=[n for n in names if n.endswith('/02_BAT_참고자료/00_BAT_적용후보_및_수집현황.xlsx')]
+              site_maps=[n for n in names if '/02_BAT_참고자료/02_사업장별_적용맵/' in n and n.endswith('_BAT_적용맵.xlsx')]
+              current_pdfs=[n for n in names if '/02_BAT_참고자료/01_BAT_원문/' in n and '/01_현행_우선판/' in n and n.lower().endswith('.pdf')]
+              old_pdfs=[n for n in names if '/02_BAT_참고자료/01_BAT_원문/' in n and '/02_구판_아카이브/' in n and n.lower().endswith('.pdf')]
+              all_bat_pdfs=[n for n in names if '/02_BAT_참고자료/' in n and n.lower().endswith('.pdf')]
+              misplaced=[n for n in all_bat_pdfs if '/01_BAT_원문/' not in n]
               if len(bat_xlsx)!=1:
-                  raise SystemExit(f'Expected one BAT applicability XLSX, got {bat_xlsx}')
+                  raise SystemExit(f'Expected one global BAT applicability XLSX, got {bat_xlsx}')
+              if len(site_maps)!=3:
+                  raise SystemExit(f'Expected three site BAT maps, got {site_maps}')
+              for site in ['금호타이어 광주공장','금호타이어 곡성공장','금호타이어 평택공장']:
+                  if not any(site in Path(n).name for n in site_maps):
+                      raise SystemExit(f'Missing site BAT map: {site}')
               if current_pdfs or old_pdfs or all_bat_pdfs:
                   raise SystemExit(f'No Kumho BAT candidate cleared collection; no BAT PDF may be exposed: current={current_pdfs} old={old_pdfs}')
               if misplaced:
-                  raise SystemExit(f'BAT PDFs outside revision folders: {misplaced}')
-              forbidden=[n for n in names if '/01_사용자자료/' in n and n.lower().endswith(('.html','.htm','.json','.jsonl'))]
+                  raise SystemExit(f'BAT PDFs outside shared BAT source area: {misplaced}')
+              forbidden=[n for n in names if ('/01_사용자자료/' in n or '/02_BAT_참고자료/' in n) and n.lower().endswith(('.html','.htm','.json','.jsonl'))]
               if forbidden:
-                  raise SystemExit(f'Forbidden machine-readable files in user archive: {forbidden[:10]}')
+                  raise SystemExit(f'Forbidden machine-readable files in human archive: {forbidden[:10]}')
 
               xlsx_bytes=z.read(bat_xlsx[0])
               if not xlsx_bytes.startswith(b'PK'):
@@ -196,7 +209,7 @@ jobs:
               with tempfile.NamedTemporaryFile(suffix='.xlsx') as tmp:
                   tmp.write(xlsx_bytes); tmp.flush()
                   wb=load_workbook(tmp.name,read_only=True,data_only=True)
-                  ws=wb.active
+                  ws=wb['사업장별 현행후보']
                   rows=list(ws.iter_rows(values_only=True))
               if len(rows)<6:
                   raise SystemExit(f'BAT workbook must contain header plus five Kumho candidates: rows={len(rows)}')
@@ -224,6 +237,7 @@ jobs:
               'current_bat_pdf_members':current_pdfs,
               'superseded_bat_pdf_members':old_pdfs,
               'bat_xlsx_members':bat_xlsx,
+              'bat_site_map_members':site_maps,
               'bat_workbook_candidate_rows':len(records),
               'sustainability_members':sustainability,
               'sustainability_years':sorted(sustainability_years),
@@ -249,12 +263,21 @@ jobs:
           if m.get('status')!='PASS': raise SystemExit('delivery manifest did not pass')
           h=hashlib.sha256(Path('assembled/Human_Archive.zip').read_bytes()).hexdigest()
           if m.get('source_archive_sha256')!=h: raise SystemExit('delivery source SHA mismatch')
+          if int(m.get('bat_reference_member_count') or 0)!=4:
+              raise SystemExit(f"Kumho delivery must include global BAT index plus three site maps: {m.get('bat_reference_members')}")
+          if not all('/02_BAT_참고자료/' in p for p in (m.get('bat_reference_members') or [])):
+              raise SystemExit('BAT delivery member escaped dedicated BAT area')
           for p in m.get('parts',[]):
               f=Path('delivery')/p['name']
               if not f.exists(): raise SystemExit(f'missing delivery part: {f}')
               if f.stat().st_size>500*1024*1024: raise SystemExit(f'delivery part too large: {f}')
               if hashlib.sha256(f.read_bytes()).hexdigest()!=p['sha256']: raise SystemExit(f'part SHA mismatch: {f}')
-          print(json.dumps({'DELIVERY_LINEAGE':'PASS','parts':len(m.get('parts',[])),'selected_members':m.get('selected_member_count')},ensure_ascii=False))
+          print(json.dumps({
+              'DELIVERY_LINEAGE':'PASS',
+              'parts':len(m.get('parts',[])),
+              'selected_members':m.get('selected_member_count'),
+              'bat_reference_members':m.get('bat_reference_member_count'),
+          },ensure_ascii=False))
           PY
       - name: Upload normalized archive
         uses: actions/upload-artifact@v4
