@@ -17,7 +17,7 @@ class ArchiveBuilderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
             profile={
-                "company_id":"COMP1","company_display_name":"테스트화학",
+                "company_id":"COMP1","company_display_name":"테스트화학","requested_company_name":"테스트화학",
                 "site_candidates":[{"site_name_raw":"테스트공장","identity_status":"CONFIRMED","verification_state":"VERIFIED"}]
             }
             (root/"Company_Profile.json").write_text(json.dumps(profile,ensure_ascii=False),encoding="utf-8")
@@ -26,7 +26,13 @@ class ArchiveBuilderTests(unittest.TestCase):
                 (root/name).write_text("{}" if name.endswith("Manifest.json") else "[]",encoding="utf-8")
             write_csv(root/"Validation_Queue.csv",[])
             write_csv(root/"Coverage_Status.csv",[{"source_key":"ENVINFO","coverage_status":"MEETS_MINIMUM","collected_start":"2020","collected_end":"2024","next_action":""}])
-            write_csv(root/"Source_Identity.csv",[{"source_key":"ENVINFO","source_site_id":"C1","match_status":"CONFIRMED","canonical_site_id":"SITE1"}])
+            # Source-native identity is part of the scope contract. A canonical site by
+            # itself must never be enough to admit a source ID, because a related legal
+            # entity can share the same physical/canonical site.
+            write_csv(root/"Source_Identity.csv",[{
+                "source_key":"ENVINFO","source_site_id":"C1","match_status":"CONFIRMED","canonical_site_id":"SITE1",
+                "source_site_name_raw":"테스트화학 테스트공장","source_address_raw":""
+            }])
 
             env=root/"output"/"ENVINFO"; (env/"raw_attachments"/"2024"/"C1").mkdir(parents=True)
             att=env/"raw_attachments"/"2024"/"C1"/"조직도.png"; att.write_bytes(b"PNGDATA")
