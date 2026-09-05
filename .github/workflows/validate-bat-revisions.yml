@@ -4,6 +4,7 @@ on:
     branches: [run/control-plane]
     paths:
       - 'orchestrator/bat_catalog_audit.py'
+      - 'orchestrator/bat_catalog_discovery.py'
       - 'orchestrator/bat_catalog_effective.py'
       - 'orchestrator/bat_catalog_status_overrides.json'
       - 'orchestrator/bat_master_catalog.json'
@@ -11,6 +12,7 @@ on:
       - 'orchestrator/bat_collector.py'
       - 'orchestrator/bat_archive.py'
       - 'tests/test_bat_catalog_audit.py'
+      - 'tests/test_bat_catalog_discovery.py'
       - 'tests/test_bat_effective_catalog.py'
       - 'tests/test_bat_resolver.py'
       - 'tests/test_bat_revision_collection.py'
@@ -32,11 +34,11 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --disable-pip-version-check xlsxwriter openpyxl
       - name: Run BAT revision tests
-        run: python -m unittest tests.test_bat_catalog_audit tests.test_bat_effective_catalog tests.test_bat_resolver tests.test_bat_revision_collection tests.test_bat_archive -v
+        run: python -m unittest tests.test_bat_catalog_audit tests.test_bat_catalog_discovery tests.test_bat_effective_catalog tests.test_bat_resolver tests.test_bat_revision_collection tests.test_bat_archive -v
       - name: Run static BAT catalog integrity audit
         run: python orchestrator/bat_catalog_audit.py --out BAT_Catalog_Audit.json
       - name: Compile BAT modules
-        run: python -m py_compile orchestrator/bat_catalog_audit.py orchestrator/bat_catalog_effective.py orchestrator/bat_resolver.py orchestrator/bat_collector.py orchestrator/bat_archive.py
+        run: python -m py_compile orchestrator/bat_catalog_audit.py orchestrator/bat_catalog_discovery.py orchestrator/bat_catalog_effective.py orchestrator/bat_resolver.py orchestrator/bat_collector.py orchestrator/bat_archive.py
       - name: Upload BAT catalog audit
         if: always()
         uses: actions/upload-artifact@v4
