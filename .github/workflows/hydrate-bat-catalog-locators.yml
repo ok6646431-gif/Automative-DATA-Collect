@@ -23,13 +23,17 @@ on:
       - 'tests/test_bat_catalog_hydration.py'
       - '.github/workflows/hydrate-bat-catalog-locators.yml'
 
+concurrency:
+  group: bat-catalog-hydration
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
     env:
       PYTHONPATH: orchestrator
     steps:
