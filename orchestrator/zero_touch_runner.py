@@ -1,4 +1,8 @@
-"""Runtime entry point wiring version-tolerant public adapters into G0."""
+"""Runtime entry point wiring version-tolerant public adapters into G0.
+
+A no-op runner revision also gives the control plane a clean validation run after
+cross-cutting scope-policy changes without altering discovery semantics.
+"""
 
 from __future__ import annotations
 
