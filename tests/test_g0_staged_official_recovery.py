@@ -22,9 +22,13 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
             (deep, "ESG", "https://www.example-corp.com/sustainability"),
         ]
 
-        with patch.object(recovery, "crawl_official", return_value=([shell], [])), \
+        def crawl(_http, url, max_pages):
+            if url == start:
+                return [shell], []
+            return pages, links
+
+        with patch.object(staged, "_crawl_no_search", side_effect=crawl), \
              patch.object(thin, "_first_party_bootstrap_candidates", return_value=[deep]), \
-             patch.object(recovery, "BASE_CRAWL", return_value=(pages, links)), \
              patch.object(thin, "_anchored_domain_candidates", side_effect=AssertionError("search fallback must be skipped")), \
              patch.object(recovery, "_locate_candidates", side_effect=AssertionError("replacement fallback must be skipped")):
             resolved_pages, _ = staged.crawl_official(object(), start, "Example Corp")
@@ -44,15 +48,14 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
         ]
         strong_links = [(deep, "사업장", "https://www.example-corp.com/company/location")]
 
-        def crawl(_http, url, _company, max_pages=90):
-            if url == weak:
+        def crawl(_http, url, max_pages):
+            if url in {start, weak}:
                 return [shell], []
             return strong_pages, strong_links
 
-        with patch.object(recovery, "crawl_official", return_value=([shell], [])), \
+        with patch.object(staged, "_crawl_no_search", side_effect=crawl), \
              patch.object(thin, "_first_party_bootstrap_candidates", return_value=[weak]), \
              patch.object(thin, "_anchored_domain_candidates", return_value=[deep]), \
-             patch.object(recovery, "BASE_CRAWL", side_effect=crawl), \
              patch.object(recovery, "_locate_candidates", return_value=[]):
             resolved_pages, _ = staged.crawl_official(object(), start, "Example Corp")
 
@@ -70,13 +73,14 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
         links = [(deep, "사업장", "https://www.example-corp.com/company/location")]
         budgets = []
 
-        def crawl(_http, _url, _company, max_pages=90):
+        def crawl(_http, url, max_pages):
+            if url == start:
+                return [shell], []
             budgets.append(max_pages)
             return pages, links
 
-        with patch.object(recovery, "crawl_official", return_value=([shell], [])), \
+        with patch.object(staged, "_crawl_no_search", side_effect=crawl), \
              patch.object(thin, "_first_party_bootstrap_candidates", return_value=[deep]), \
-             patch.object(recovery, "BASE_CRAWL", side_effect=crawl), \
              patch.object(thin, "_anchored_domain_candidates", side_effect=AssertionError("search fallback must be skipped")), \
              patch.object(recovery, "_locate_candidates", side_effect=AssertionError("replacement fallback must be skipped")):
             staged.crawl_official(object(), start, "Example Corp", max_pages=90)
@@ -87,6 +91,22 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
             recovery.last_recovery["candidate_probe_page_budget"],
             staged.MAX_CANDIDATE_PROBE_PAGES,
         )
+
+    def test_initial_dart_surface_does_not_call_legacy_search_seeding_crawler(self):
+        start = "https://www.example-corp.com/"
+        page = Page(start, "Example Corp 회사소개 지속가능 copyright", "", 200)
+        links = [
+            (start, "회사소개", "https://www.example-corp.com/company"),
+            (start, "사업장", "https://www.example-corp.com/location"),
+            (start, "ESG", "https://www.example-corp.com/sustainability"),
+        ]
+        with patch.object(staged, "_crawl_no_search", return_value=([page, page], links)), \
+             patch.object(recovery, "crawl_official", side_effect=AssertionError("legacy crawler must not run")), \
+             patch.object(thin, "_first_party_bootstrap_candidates", side_effect=AssertionError("bootstrap not needed")):
+            pages, resolved_links = staged.crawl_official(object(), start, "Example Corp")
+
+        self.assertEqual(len(pages), 2)
+        self.assertEqual(resolved_links, links)
 
 
 if __name__ == "__main__":
