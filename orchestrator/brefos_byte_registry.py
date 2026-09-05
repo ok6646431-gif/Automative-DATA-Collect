@@ -3,12 +3,17 @@
 The registry is deliberately metadata-only: PDFs are streamed, hashed, and discarded.
 It separates source reachability from integrity failures and never mutates the BAT master
 catalog. A later promotion step may use only VERIFIED_PDF rows.
+
+Verification uses a small bounded worker pool. This prevents one slow government-server
+response from serially blocking the entire catalog audit while keeping request pressure low.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
@@ -18,22 +23,31 @@ try:
 except ImportError:
     from brefos_catalog_discovery import discover
 
+_THREAD_LOCAL=threading.local()
+
 
 def _session():
     import requests
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
-    retry=Retry(total=2,connect=2,read=1,status=1,backoff_factor=0.8,
+    retry=Retry(total=1,connect=1,read=1,status=1,backoff_factor=0.8,
                 status_forcelist=(408,425,429,500,502,503,504),
                 allowed_methods=frozenset({'GET'}),raise_on_status=False,
                 respect_retry_after_header=True)
     s=requests.Session()
-    s.headers.update({'User-Agent':'Mozilla/5.0 (BREFOSByteRegistry/1.0; official-public-reference)'})
-    s.mount('https://',HTTPAdapter(max_retries=retry))
+    s.headers.update({'User-Agent':'Mozilla/5.0 (BREFOSByteRegistry/1.1; official-public-reference)'})
+    s.mount('https://',HTTPAdapter(max_retries=retry,pool_connections=2,pool_maxsize=2))
     return s
 
 
-def verify_url(session, url: str, timeout=(10, 75)) -> Dict[str, Any]:
+def _thread_session():
+    s=getattr(_THREAD_LOCAL,'session',None)
+    if s is None:
+        s=_session(); _THREAD_LOCAL.session=s
+    return s
+
+
+def verify_url(session, url: str, timeout=(8, 45)) -> Dict[str, Any]:
     import requests
     result={'url':url,'status':'SOURCE_UNREACHABLE','bytes':0,'sha256':'','content_type':'','http_status':None}
     try:
@@ -64,15 +78,22 @@ def verify_url(session, url: str, timeout=(10, 75)) -> Dict[str, Any]:
     return result
 
 
-def build_registry(max_pages: int=20, timeout=(10,75)) -> Dict[str, Any]:
+def _verify_document(index: int, doc: Dict[str,Any], timeout) -> tuple[int,Dict[str,Any]]:
+    row={k:doc.get(k) for k in ('atch_file_id','stdrdoc_origin_id','ntt_id','title','row_text','viewer_pdf_url')}
+    row.update(verify_url(_thread_session(),str(doc.get('viewer_pdf_url') or ''),timeout=timeout))
+    return index,row
+
+
+def build_registry(max_pages: int=20, timeout=(8,45), max_workers: int=4) -> Dict[str, Any]:
     snapshot=discover(max_pages=max_pages)
     payload={
-        'schema_version':'1.0',
+        'schema_version':'1.1',
         'checked_at':datetime.now(timezone.utc).isoformat(),
         'source_url':snapshot.get('source_url'),
         'discovery_status':snapshot.get('status'),
         'advertised_total_records':snapshot.get('advertised_total_records'),
         'discovered_document_count':snapshot.get('discovered_document_count',0),
+        'max_workers':max(1,min(int(max_workers),6)),
         'documents':[],
     }
     if snapshot.get('status')!='PASS':
@@ -80,13 +101,27 @@ def build_registry(max_pages: int=20, timeout=(10,75)) -> Dict[str, Any]:
         payload['discovery_attempts']=snapshot.get('attempts',[])
         return payload
 
-    s=_session()
+    docs=list(snapshot.get('documents',[]) or [])
+    ordered=[None]*len(docs)
     counts={}
-    for doc in snapshot.get('documents',[]):
-        row={k:doc.get(k) for k in ('atch_file_id','stdrdoc_origin_id','ntt_id','title','row_text','viewer_pdf_url')}
-        row.update(verify_url(s,str(doc.get('viewer_pdf_url') or ''),timeout=timeout))
-        payload['documents'].append(row)
-        counts[row['status']]=counts.get(row['status'],0)+1
+    workers=max(1,min(int(max_workers),6))
+    with ThreadPoolExecutor(max_workers=workers,thread_name_prefix='brefos-byte') as executor:
+        futures={executor.submit(_verify_document,i,doc,timeout):i for i,doc in enumerate(docs)}
+        completed=0
+        for future in as_completed(futures):
+            i=futures[future]
+            try:
+                _,row=future.result()
+            except Exception as exc:
+                doc=docs[i]
+                row={k:doc.get(k) for k in ('atch_file_id','stdrdoc_origin_id','ntt_id','title','row_text','viewer_pdf_url')}
+                row.update({'url':str(doc.get('viewer_pdf_url') or ''),'status':'VERIFY_ERROR','bytes':0,'sha256':'','content_type':'','http_status':None,'error':f'{type(exc).__name__}: {exc}'})
+            ordered[i]=row
+            counts[row['status']]=counts.get(row['status'],0)+1
+            completed+=1
+            print(json.dumps({'completed':completed,'total':len(docs),'atch_file_id':row.get('atch_file_id'),'status':row.get('status'),'bytes':row.get('bytes',0)},ensure_ascii=False),flush=True)
+
+    payload['documents']=[r for r in ordered if r is not None]
     payload['status_counts']=counts
     payload['verified_pdf_count']=counts.get('VERIFIED_PDF',0)
     payload['status']='PASS' if payload['verified_pdf_count']==payload['discovered_document_count'] else 'PARTIAL'
@@ -98,10 +133,11 @@ def main():
     ap=argparse.ArgumentParser()
     ap.add_argument('--out',default='BREFOS_Byte_Registry.json')
     ap.add_argument('--max-pages',type=int,default=20)
-    ap.add_argument('--connect-timeout',type=int,default=10)
-    ap.add_argument('--read-timeout',type=int,default=75)
+    ap.add_argument('--connect-timeout',type=int,default=8)
+    ap.add_argument('--read-timeout',type=int,default=45)
+    ap.add_argument('--workers',type=int,default=4)
     args=ap.parse_args()
-    payload=build_registry(args.max_pages,(args.connect_timeout,args.read_timeout))
+    payload=build_registry(args.max_pages,(args.connect_timeout,args.read_timeout),args.workers)
     Path(args.out).write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print(json.dumps({'status':payload.get('status'),'discovery_status':payload.get('discovery_status'),'discovered':payload.get('discovered_document_count'),'verified':payload.get('verified_pdf_count',0),'status_counts':payload.get('status_counts',{})},ensure_ascii=False,indent=2))
     if payload.get('status')=='DISCOVERY_NOT_COMPLETE': raise SystemExit(1)
