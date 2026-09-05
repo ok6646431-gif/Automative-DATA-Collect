@@ -9,9 +9,10 @@ returns the original thin page when no safer improvement can be verified.
 
 from __future__ import annotations
 
+import html as html_lib
 import re
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
-from urllib.parse import urljoin, urlparse
+from urllib.parse import unquote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -34,6 +35,14 @@ def _dedupe(values: Iterable[str]) -> List[str]:
 
 def _host(url: str) -> str:
     return (urlparse(url).hostname or "").casefold().removeprefix("www.")
+
+
+def _safe_http_url(value: str) -> bool:
+    value = str(value or "").strip()
+    if not value or any(ch.isspace() for ch in value) or "›" in value:
+        return False
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.hostname)
 
 
 def navigation_evidence(
@@ -92,9 +101,36 @@ def _embedded_candidates(start_url: str, pages: Sequence[base.Page]) -> List[str
     return _dedupe(
         url.split("#", 1)[0]
         for url in found
-        if urlparse(url).scheme in {"http", "https"}
+        if _safe_http_url(url)
         and base._same_org_host(start_url, url)
     )
+
+
+def _anchored_urls_from_search_html(start_url: str, source: str) -> List[str]:
+    """Extract literal URLs whose authority is inside the DART-anchored domain.
+
+    Search markup changes frequently. Rather than trusting result-card selectors, decode
+    the HTML and retain only URLs whose hostname is the independently verified DART
+    organization domain or one of its subdomains. The search engine is therefore a
+    locator only, never an identity authority.
+    """
+    host = _host(start_url)
+    if not host:
+        return []
+    decoded = unquote(html_lib.unescape(str(source or "")).replace("\\/", "/"))
+    host_pattern = re.escape(host)
+    pattern = re.compile(
+        rf"(?i)https?://(?:[a-z0-9-]+\.)*{host_pattern}(?::\d+)?(?:/[^\s<>\"'\\]*)?"
+    )
+    found: List[str] = []
+    for raw in pattern.findall(decoded):
+        value = raw.rstrip(".,;:)]}")
+        if not _safe_http_url(value):
+            continue
+        if not base._same_org_host(start_url, value):
+            continue
+        found.append(value.split("#", 1)[0])
+    return _dedupe(found)
 
 
 def _anchored_domain_candidates(http: base.Http, start_url: str, company: str) -> List[str]:
@@ -104,15 +140,47 @@ def _anchored_domain_candidates(http: base.Http, start_url: str, company: str) -
         return []
     found: List[str] = []
     terms = (
-        f'"{company}" 회사소개',
+        f'"{company}" 사이트맵',
+        f'"{company}" 찾아오시는 길',
         f'"{company}" 국내 사업장',
         f'"{company}" 사업장',
+        f'"{company}" 회사소개',
         f'"{company}" 지속가능경영 보고서',
-        f'"{company}" site map',
+        f'"{company}" sitemap',
     )
-    for query in terms:
-        found.extend(base.search_official_domain_links(http, host, query)[:20])
-    return _dedupe(found)
+    for terms_i in terms:
+        query = f"site:{host} {terms_i}"
+        search_urls = (
+            "https://www.google.com/search?q=" + base.quote(query) + "&num=20",
+            "https://www.bing.com/search?q=" + base.quote(query) + "&count=20",
+            "https://html.duckduckgo.com/html/?q=" + base.quote(query),
+        )
+        for search_url in search_urls:
+            response = http.get(search_url)
+            if not response or response.status_code >= 400:
+                continue
+            found.extend(_anchored_urls_from_search_html(start_url, response.text))
+            # Keep the existing parser only after strict URL sanitation and the same-
+            # organization host gate. This can recover direct anchors when the literal
+            # target is absent from serialized result metadata.
+            for value in recovery._search_result_links(search_url, response.text):
+                if _safe_http_url(value) and base._same_org_host(start_url, value):
+                    found.append(value)
+    # Prefer navigation hubs, locations and report catalogs over incidental articles.
+    def priority(url: str) -> int:
+        marker = unquote(url).casefold()
+        score = 0
+        for token, weight in (
+            ("sitemap", 30), ("site-map", 30), ("support", 8),
+            ("location", 20), ("company", 15), ("about", 15),
+            ("sustainability", 20), ("esg", 15), ("report", 10),
+            ("common", 5), ("homepage", 4),
+        ):
+            if token in marker:
+                score += weight
+        return score
+
+    return sorted(_dedupe(found), key=priority, reverse=True)
 
 
 def _is_better(candidate: Dict[str, Any], original: Dict[str, Any]) -> bool:
@@ -148,8 +216,8 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
     ])
     start_host = _host(start_url)
 
-    for candidate in candidates[:30]:
-        if not candidate or recovery._blocked(candidate):
+    for candidate in candidates[:40]:
+        if not _safe_http_url(candidate) or recovery._blocked(candidate):
             continue
         candidate_pages, candidate_links = recovery.BASE_CRAWL(
             http, candidate, company, max_pages=max_pages
