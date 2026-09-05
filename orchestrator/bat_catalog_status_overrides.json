@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "verified_as_of": "2026-09-05",
+  "policy": "A newer revision may deactivate the last verified published matching revision only after final publication is independently verified from an official government/NIER publication page or downloadable original. Planning, consultation, or scheduled-distribution language is not publication proof.",
+  "overrides": [
+    {
+      "catalog_id": "KBREF_SEMICONDUCTOR_2019",
+      "reason_code": "LAST_VERIFIED_PUBLISHED_REVISION_REMAINS_CURRENT",
+      "include_in_effective_catalog": true,
+      "effective_fields": {
+        "preferred": true,
+        "supersession_status": "CURRENT_VERIFIED_PUBLICATION",
+        "collection_policy": "COLLECT_WHEN_MATCHED"
+      },
+      "notes_append": "2026-09-05 재검증: IEPS에 실제 공개된 반도체 기준서 원문은 1기(2019 발간, IEPS 게시 2020-01-02)가 확인된다. 후속 2기의 최종 발간을 공식 원문으로 검증하기 전까지 매칭 기준서로 유지한다.",
+      "evidence": [
+        {
+          "evidence_type": "OFFICIAL_PUBLISHED_DOCUMENT_PAGE",
+          "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
+          "finding": "반도체 제조업 K-BREF 게시 및 PDF 첨부 확인"
+        }
+      ]
+    },
+    {
+      "catalog_id": "KBREF_SEMICONDUCTOR_II_2025",
+      "reason_code": "NEWER_REVISION_PUBLICATION_NOT_VERIFIED",
+      "include_in_effective_catalog": false,
+      "effective_fields": {
+        "preferred": false,
+        "publication_status": "PUBLICATION_NOT_VERIFIED",
+        "supersession_status": "ANNOUNCED_NEWER_REVISION_UNVERIFIED",
+        "collection_policy": "METADATA_ONLY"
+      },
+      "notes_append": "2025-03-25 공식 보도자료는 2기 기준서를 2025년 12월 말 배포할 계획이라고 설명한다. 2026-09-05 현재 별도 공식 최종 발간 페이지 또는 원문 PDF를 검증하지 못했으므로 발간 완료로 간주하지 않는다.",
+      "evidence": [
+        {
+          "evidence_type": "OFFICIAL_REVISION_PLAN",
+          "source_locator": "https://www.me.go.kr/home/web/board/read.do?boardId=1732610&boardMasterId=1",
+          "finding": "2기 기준서 개정 작업 및 2025년 12월 말 배포 계획"
+        }
+      ]
+    }
+  ]
+}

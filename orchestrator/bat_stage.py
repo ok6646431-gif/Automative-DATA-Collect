@@ -1,8 +1,9 @@
 import csv, json
 from pathlib import Path
 
-from bat_resolver import CATALOG_PATH, resolve
+from bat_resolver import CATALOG_PATH, CANDIDATE_FIELDS, resolve
 from bat_collector import collect
+from bat_catalog_effective import materialize_effective_catalog
 from requested_scope import _selected_address_counts, _candidate_matches
 
 
@@ -11,6 +12,12 @@ def _read_csv(path):
     if not p.exists() or p.stat().st_size==0: return [],[]
     with p.open(encoding='utf-8-sig',newline='') as f:
         reader=csv.DictReader(f); return list(reader),list(reader.fieldnames or [])
+
+
+def _write_csv(path,rows,fields):
+    p=Path(path); p.parent.mkdir(parents=True,exist_ok=True)
+    with p.open('w',encoding='utf-8-sig',newline='') as f:
+        w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore'); w.writeheader(); w.writerows(rows)
 
 
 def _bridge_into_corp_docs(package):
@@ -65,6 +72,53 @@ def _canonical_candidate_map(package):
     return profile,inverse
 
 
+def _filter_plan_to_requested_scope(package,plan):
+    """Apply the same verified SITE_SET boundary used by Archive/analysis to BAT candidates.
+
+    Raw environmental collectors remain company-wide, but BAT applicability is a
+    downstream interpretation product. It must never project candidates from an
+    out-of-scope site into a site-scoped application package.
+    """
+    package=Path(package); profile,inverse=_canonical_candidate_map(package)
+    scope=profile.get('requested_scope') or {'mode':'COMPANY'}
+    requested_ids={str(x) for x in scope.get('candidate_ids',[]) or [] if str(x)}
+    mode=str(scope.get('mode') or 'COMPANY').upper()
+    audit={
+        'applied':False,'mode':mode,'requested_candidate_ids':sorted(requested_ids),
+        'allowed_canonical_site_ids':[],'mapped_candidate_ids':[],'unmapped_candidate_ids':[],
+        'candidate_count_before':len(plan.get('candidates',[]) or []),'candidate_count_after':len(plan.get('candidates',[]) or []),
+        'removed_out_of_scope_candidates':0,
+    }
+    if mode!='SITE_SET' or not requested_ids:
+        return plan,audit
+
+    allowed=set(inverse)
+    mapped={candidate_id for values in inverse.values() for candidate_id in values}
+    filtered=[r for r in (plan.get('candidates',[]) or []) if str(r.get('canonical_site_id') or '') in allowed]
+    removed=len(plan.get('candidates',[]) or [])-len(filtered)
+    scoped=dict(plan)
+    scoped['candidates']=filtered
+    scoped['candidate_count']=len(filtered)
+    scoped['site_count']=len({str(r.get('canonical_site_id') or '') for r in filtered if r.get('canonical_site_id')})
+    scoped['collect_catalog_ids']=sorted({str(r.get('catalog_id') or '') for r in filtered if r.get('collection_action')=='COLLECT' and r.get('catalog_id')})
+    boundaries=list(scoped.get('boundaries',[]) or [])
+    note='Requested SITE_SET scope is applied before BAT collection; out-of-scope company sites cannot create BAT applicability candidates.'
+    if note not in boundaries: boundaries.append(note)
+    scoped['boundaries']=boundaries
+    audit.update({
+        'applied':True,
+        'allowed_canonical_site_ids':sorted(allowed),
+        'mapped_candidate_ids':sorted(mapped),
+        'unmapped_candidate_ids':sorted(requested_ids-mapped),
+        'candidate_count_after':len(filtered),
+        'removed_out_of_scope_candidates':removed,
+    })
+    scoped['requested_scope_filter']=audit
+    _write_csv(package/'BAT_Applicability_Candidates.csv',filtered,CANDIDATE_FIELDS)
+    (package/'BAT_Collection_Plan.json').write_text(json.dumps(scoped,ensure_ascii=False,indent=2),encoding='utf-8')
+    return scoped,audit
+
+
 def _write_auto_applicability(package):
     """Convert strong resolver matches into cross-layer reference applicability.
 
@@ -102,12 +156,14 @@ def _write_auto_applicability(package):
 
 def run(package,catalog_path=CATALOG_PATH,as_of=None):
     package=Path(package)
-    plan=resolve(package,catalog_path,as_of)
-    status=collect(package,catalog_path)
+    effective_catalog_path,catalog_advisories=materialize_effective_catalog(package,catalog_path)
+    plan=resolve(package,effective_catalog_path,as_of)
+    plan,scope_filter=_filter_plan_to_requested_scope(package,plan)
+    status=collect(package,effective_catalog_path)
     bridged=_bridge_into_corp_docs(package)
     applicability_path,refs=_write_auto_applicability(package)
     summary={
-        'schema_version':'1.2',
+        'schema_version':'1.3',
         'candidate_count':plan.get('candidate_count',0),
         'site_count':plan.get('site_count',0),
         'collect_catalog_ids':plan.get('collect_catalog_ids',[]),
@@ -115,7 +171,10 @@ def run(package,catalog_path=CATALOG_PATH,as_of=None):
         'semantic_bridge_documents':bridged,
         'verified_reference_applicability':sum(r.get('applicability_state')=='VERIFIED' for r in refs),
         'applicability_path':str(applicability_path),
-        'principle':'Many-to-many site/BAT candidates; current legal applicability, future applicability and technical relevance remain separate. A candidate or downloaded reference never proves company adoption.'
+        'effective_catalog_path':str(effective_catalog_path),
+        'catalog_advisory_count':len(catalog_advisories),
+        'requested_scope_filter':scope_filter,
+        'principle':'Many-to-many site/BAT candidates; current legal applicability, future applicability and technical relevance remain separate. A candidate or downloaded reference never proves company adoption. Newer revision planning does not supersede the last verified published reference until final publication is independently verified.'
     }
     (package/'BAT_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
     return summary

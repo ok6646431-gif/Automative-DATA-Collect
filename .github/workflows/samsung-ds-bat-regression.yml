@@ -7,6 +7,16 @@ on:
       - run/control-plane
     paths:
       - '.github/workflows/samsung-ds-bat-regression.yml'
+      - 'orchestrator/bat_stage.py'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_resolver.py'
+      - 'orchestrator/bat_collector.py'
+      - 'orchestrator/bat_archive.py'
+      - 'tests/test_bat_effective_catalog.py'
+      - 'tests/regression_cases/samsung_ds/**'
+      - 'tools/validate_samsung_ds_bat_regression.py'
 
 permissions:
   contents: read
@@ -30,80 +40,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fonts-noto-cjk fonts-nanum
           sudo fc-cache -f
+      - name: Run BAT regression tests
+        run: python -m unittest tests.test_bat_effective_catalog tests.test_bat_revision_collection tests.test_bat_resolver tests.test_bat_archive -v
       - name: Build isolated Samsung DS fixture
         run: |
           rm -rf samsung-regression output collected samsung-assembled samsung-delivery
           mkdir -p samsung-regression
-          cat > samsung-regression/company_discovery.json <<'JSON'
-          {
-            "schema_version":"1.0",
-            "request_id":"samsung-ds-bat-regression-20260905",
-            "requested_company_name":"삼성전자",
-            "current_legal_name":"삼성전자 주식회사",
-            "current_legal_name_active_period":{"start_year":1969},
-            "company_verification_state":"VERIFIED",
-            "confidence":"HIGH",
-            "requested_scope":{
-              "mode":"SITE_SET",
-              "label":"삼성전자 DS 국내 제조사업장",
-              "candidate_ids":["1-c7f3a885","1-0e507b7d","114-84d48e97","465-9c3bee6a","158-5cd43ef4"],
-              "raw_collection_policy":"PRESERVE_COMPANY_WIDE",
-              "archive_policy":"FILTER_TO_REQUESTED_SCOPE",
-              "analysis_policy":"FILTER_TO_REQUESTED_SCOPE"
-            },
-            "company_aliases":[
-              {"name":"삼성전자","alias_type":"requested_name","verification_state":"VERIFIED","source_locator":"https://www.samsung.com/sec/"},
-              {"name":"Samsung Electronics Co., Ltd.","alias_type":"english_legal_name","verification_state":"VERIFIED","source_locator":"https://www.samsung.com/global/ir/"}
-            ],
-            "historical_legal_names":[],
-            "corporate_restructuring_evidence":[],
-            "domestic_site_candidates":[
-              {"candidate_id":"1-c7f3a885","site_name_raw":"삼성전자 기흥사업장","address_raw":"경기도 용인시 기흥구 삼성로 1","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
-              {"candidate_id":"1-0e507b7d","site_name_raw":"삼성전자 화성사업장","address_raw":"경기도 화성시 삼성전자로 1","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
-              {"candidate_id":"114-84d48e97","site_name_raw":"삼성전자 평택사업장","address_raw":"경기도 평택시 고덕면 삼성로 114","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
-              {"candidate_id":"465-9c3bee6a","site_name_raw":"삼성전자 천안사업장","address_raw":"충청남도 천안시 서북구 번영로 465","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
-              {"candidate_id":"158-5cd43ef4","site_name_raw":"삼성전자 온양사업장","address_raw":"충청남도 아산시 배방읍 배방로 158","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"}
-            ],
-            "identity_evidence":[
-              {"source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","source_value_raw":"Samsung Korea Semiconductor: Giheung, Hwaseong, Pyeongtaek, Cheonan, Onyang","verification_state":"VERIFIED","confidence":"HIGH"}
-            ],
-            "related_entity_exclusions":[],
-            "unresolved_items":[],
-            "event_evidence_references":[],
-            "collection_policy":{
-              "minimum_history_years":5,
-              "requested_history_window":{"start_year":2020,"end_year":2026},
-              "sources":{
-                "ENVINFO":{"requested_window":{"start_year":2020,"end_year":2024},"prefer_full_history":false,"max_details":500},
-                "PRTR":{"requested_window":{"start_year":2020,"end_year":2024},"prefer_full_history":false},
-                "CHEM_STATS":{"requested_survey_rounds":[2020,2022,2024],"available_survey_rounds":[2020,2022,2024],"prefer_full_history":true},
-                "CLEANSYS_AIR":{"requested_window":{"start_year":2020,"end_year":2025},"prefer_full_history":false},
-                "SOOSIRO_WATER":{"requested_window":{"start_year":2020,"end_year":2025},"daily_available_years":[2024],"prefer_full_history":false}
-              }
-            },
-            "legal_entity_active_period":{"start_year":1969}
-          }
-          JSON
-          cat > samsung-regression/document_evidence.json <<'JSON'
-          {
-            "schema_version":"1.0",
-            "discovery_status":"COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
-            "request_id":"samsung-ds-bat-regression-20260905",
-            "documents":[
-              {"document_id":"SAMSUNG_SR_2020","document_type":"SUSTAINABILITY_REPORT","title":"Samsung Electronics Sustainability Report 2020","report_year":2020,"source_url":"https://csr.samsung.com/data/Sustainability_report_2020_en.pdf","source_locator":"https://csr.samsung.com/en/our-vision/global-impact","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_SR_2021","document_type":"SUSTAINABILITY_REPORT","title":"Samsung Electronics Sustainability Report 2021","report_year":2021,"source_url":"https://csr.samsung.com/data/Sustainability_report_2021_en.pdf","source_locator":"https://csr.samsung.com/en/our-vision/global-impact","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_SR_2022","document_type":"SUSTAINABILITY_REPORT","title":"Samsung Electronics Sustainability Report 2022","report_year":2022,"source_url":"https://csr.samsung.com/data/Sustainability_report_2022_en.pdf","source_locator":"https://csr.samsung.com/en/our-vision/global-impact","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_SR_2023","document_type":"SUSTAINABILITY_REPORT","title":"Samsung Electronics Sustainability Report 2023","report_year":2023,"source_url":"https://csr.samsung.com/data/Sustainability_report_2023_en.pdf","source_locator":"https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_SR_2024","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2024","report_year":2024,"source_url":"https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2024_KOR.pdf","source_locator":"https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_SR_2025","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2025","report_year":2025,"source_url":"https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2025_KOR.pdf","source_locator":"https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_SR_2026","document_type":"SUSTAINABILITY_REPORT","title":"삼성전자 지속가능경영보고서 2026","report_year":2026,"source_url":"https://www.samsung.com/sec/sustainability/media/pdf/Samsung_Electronics_Sustainability_Report_2026_KOR.pdf","source_locator":"https://www.samsung.com/sec/sustainability/digital-library/sustainability-report/","expected_extension":"pdf","verification_status":"SOURCE_VERIFIED","importance":"CORE"},
-              {"document_id":"SAMSUNG_ENV_OPERATIONS","document_type":"ENVIRONMENTAL_MANAGEMENT","title":"삼성전자 지속가능한 운영","report_year":2026,"source_url":"https://www.samsung.com/sec/sustainability/planet/sustainable-operations/","source_locator":"https://www.samsung.com/sec/sustainability/planet/sustainable-operations/","expected_extension":"html","verification_status":"SOURCE_VERIFIED","importance":"SUPPORTING"},
-              {"document_id":"SAMSUNG_ENV_DATA","document_type":"ENVIRONMENTAL_MANAGEMENT","title":"삼성전자 환경 데이터","report_year":2026,"source_url":"https://www.samsung.com/sec/sustainability/environment/environment-data/","source_locator":"https://www.samsung.com/sec/sustainability/environment/environment-data/","expected_extension":"html","verification_status":"SOURCE_VERIFIED","importance":"SUPPORTING"}
-            ],
-            "gaps":[],
-            "discovery_scope":{"history_window":{"start_year":2020,"end_year":2026},"annual_series":["SUSTAINABILITY_REPORT"],"current_public_document_categories":["SUSTAINABILITY_REPORT","ENVIRONMENTAL_MANAGEMENT"]}
-          }
-          JSON
+          cp tests/regression_cases/samsung_ds/company_discovery.json samsung-regression/company_discovery.json
+          cp tests/regression_cases/samsung_ds/document_evidence.json samsung-regression/document_evidence.json
       - name: Bootstrap Samsung DS runtime inputs
         run: >-
           python orchestrator/bootstrap_inputs.py
@@ -112,14 +56,16 @@ jobs:
           --profile-out samsung-regression/company_profile.json
           --request-out samsung-regression/request.json
           --summary-out samsung-regression/Discovery_Summary.json
-      - name: Print semiconductor BAT catalog entries
+      - name: Verify effective semiconductor BAT catalog state
         run: |
           python - <<'PY'
           import json
-          d=json.load(open('orchestrator/bat_master_catalog.json',encoding='utf-8'))
-          rows=[e for e in d['entries'] if '반도체' in e.get('title','') or any('반도체' in x for x in e.get('industry_terms',[]))]
-          print(json.dumps(rows,ensure_ascii=False,indent=2))
-          if not rows: raise SystemExit('No semiconductor BAT catalog entry')
+          from orchestrator.bat_catalog_effective import build_effective_catalog
+          d,advisories=build_effective_catalog()
+          rows=[e for e in d['entries'] if e.get('catalog_family')=='KBREF_FAMILY_SEMICONDUCTOR']
+          print(json.dumps({'effective_entries':rows,'advisories':advisories},ensure_ascii=False,indent=2))
+          if {e.get('catalog_id') for e in rows}!={'KBREF_SEMICONDUCTOR_2019'}: raise SystemExit('Effective semiconductor catalog must retain only the last verified published revision')
+          if not rows[0].get('preferred'): raise SystemExit('Verified 2019 semiconductor reference is not active')
           PY
       - name: Collect stable public sources
         run: |
@@ -157,39 +103,7 @@ jobs:
           --stable collected/stable
           --documents samsung-regression/document_evidence.json
       - name: Validate Samsung DS regression and BAT positive path
-        run: |
-          python - <<'PY'
-          import csv,json,zipfile
-          from pathlib import Path
-          from archive_acceptance import assert_pass,validate_archive_zip
-          root=Path('samsung-assembled')
-          integ=json.load(open(root/'Integration_Summary.json',encoding='utf-8'))
-          bat=(integ.get('cross_layer_review') or {}).get('bat_reference_stage') or {}
-          candidates=list(csv.DictReader(open(root/'BAT_Applicability_Candidates.csv',encoding='utf-8-sig')))
-          semiconductor=[r for r in candidates if 'SEMICONDUCT' in (r.get('catalog_family') or '').upper() or '반도체' in (r.get('catalog_title') or '') or '반도체' in (r.get('title') or '')]
-          if not semiconductor:
-              raise SystemExit(f'No semiconductor BAT candidate: candidates={candidates}')
-          unrelated=[r for r in candidates if any(x in ((r.get('catalog_family') or '')+' '+(r.get('catalog_id') or '')).upper() for x in ['PLASTIC','ALCOHOL','RUBBER'])]
-          if unrelated:
-              raise SystemExit(f'Unrelated industry BAT candidates leaked: {unrelated}')
-          idx=root/'output'/'BAT_REFERENCES'/'document_index.csv'
-          docs=list(csv.DictReader(open(idx,encoding='utf-8-sig'))) if idx.exists() else []
-          semi_docs=[r for r in docs if 'SEMICONDUCT' in (r.get('catalog_family') or '').upper() or '반도체' in (r.get('title') or '')]
-          downloaded=[r for r in semi_docs if r.get('collection_status')=='DOWNLOADED']
-          if not downloaded:
-              raise SystemExit(f'Semiconductor BAT candidate exists but no official BAT PDF was downloaded: {semi_docs}')
-          assert_pass(validate_archive_zip(root/'Human_Archive.zip'),'Samsung Human Archive')
-          with zipfile.ZipFile(root/'Human_Archive.zip') as z:
-              names=[i.filename for i in z.infolist() if not i.is_dir()]
-              bat_files=[n for n in names if '/02_BAT_참고자료/' in n]
-              semi_pdfs=[n for n in bat_files if n.lower().endswith('.pdf') and ('반도체' in n or 'SEMICONDUCT' in n.upper())]
-              legacy=[n for n in names if '/01_사용자자료/07_가이드라인_참고자료/BAT_기준서/' in n]
-              maps=[n for n in bat_files if '/02_사업장별_적용맵/' in n and n.endswith('_BAT_적용맵.xlsx')]
-              if not semi_pdfs: raise SystemExit(f'No semiconductor BAT PDF in dedicated BAT area: {bat_files}')
-              if legacy: raise SystemExit(f'Legacy embedded BAT area present: {legacy}')
-              if not maps: raise SystemExit('No site BAT applicability maps')
-          print(json.dumps({'SAMSUNG_DS_REGRESSION':'PASS','site_scope':5,'bat_candidate_count':len(candidates),'semiconductor_candidates':len(semiconductor),'semiconductor_downloaded_docs':len(downloaded),'site_maps':len(maps),'bat_files':len(bat_files),'source_statuses':{s:json.load(open(root/'output'/s/'status.json',encoding='utf-8')).get('status') if (root/'output'/s/'status.json').exists() else None for s in ['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER','CORP_DOCS','BAT_REFERENCES']}},ensure_ascii=False))
-          PY
+        run: python tools/validate_samsung_ds_bat_regression.py samsung-assembled
       - name: Build byte-preserving Samsung delivery
         run: >-
           python tools/prepare_human_archive_delivery.py

@@ -1,0 +1,48 @@
+{
+  "schema_version":"1.0",
+  "request_id":"samsung-ds-bat-regression-20260905",
+  "requested_company_name":"삼성전자",
+  "current_legal_name":"삼성전자 주식회사",
+  "current_legal_name_active_period":{"start_year":1969},
+  "company_verification_state":"VERIFIED",
+  "confidence":"HIGH",
+  "requested_scope":{
+    "mode":"SITE_SET",
+    "label":"삼성전자 DS 국내 제조사업장",
+    "candidate_ids":["1-c7f3a885","1-0e507b7d","114-84d48e97","465-9c3bee6a","158-5cd43ef4"],
+    "raw_collection_policy":"PRESERVE_COMPANY_WIDE",
+    "archive_policy":"FILTER_TO_REQUESTED_SCOPE",
+    "analysis_policy":"FILTER_TO_REQUESTED_SCOPE"
+  },
+  "company_aliases":[
+    {"name":"삼성전자","alias_type":"requested_name","verification_state":"VERIFIED","source_locator":"https://www.samsung.com/sec/"},
+    {"name":"Samsung Electronics Co., Ltd.","alias_type":"english_legal_name","verification_state":"VERIFIED","source_locator":"https://www.samsung.com/global/ir/"}
+  ],
+  "historical_legal_names":[],
+  "corporate_restructuring_evidence":[],
+  "domestic_site_candidates":[
+    {"candidate_id":"1-c7f3a885","site_name_raw":"삼성전자 기흥사업장","address_raw":"경기도 용인시 기흥구 삼성로 1","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+    {"candidate_id":"1-0e507b7d","site_name_raw":"삼성전자 화성사업장","address_raw":"경기도 화성시 삼성전자로 1","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+    {"candidate_id":"114-84d48e97","site_name_raw":"삼성전자 평택사업장","address_raw":"경기도 평택시 고덕면 삼성로 114","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+    {"candidate_id":"465-9c3bee6a","site_name_raw":"삼성전자 천안사업장","address_raw":"충청남도 천안시 서북구 번영로 465","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"},
+    {"candidate_id":"158-5cd43ef4","site_name_raw":"삼성전자 온양사업장","address_raw":"충청남도 아산시 배방읍 배방로 158","business_unit_raw":"DS","source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","identity_status":"CONFIRMED","verification_state":"VERIFIED"}
+  ],
+  "identity_evidence":[
+    {"source_locator":"https://semiconductor.samsung.com/kr/about-us/locations/","source_value_raw":"Samsung Korea Semiconductor: Giheung, Hwaseong, Pyeongtaek, Cheonan, Onyang","verification_state":"VERIFIED","confidence":"HIGH"}
+  ],
+  "related_entity_exclusions":[],
+  "unresolved_items":[],
+  "event_evidence_references":[],
+  "collection_policy":{
+    "minimum_history_years":5,
+    "requested_history_window":{"start_year":2020,"end_year":2026},
+    "sources":{
+      "ENVINFO":{"requested_window":{"start_year":2020,"end_year":2024},"prefer_full_history":false,"max_details":500},
+      "PRTR":{"requested_window":{"start_year":2020,"end_year":2024},"prefer_full_history":false},
+      "CHEM_STATS":{"requested_survey_rounds":[2020,2022,2024],"available_survey_rounds":[2020,2022,2024],"prefer_full_history":true},
+      "CLEANSYS_AIR":{"requested_window":{"start_year":2020,"end_year":2025},"prefer_full_history":false},
+      "SOOSIRO_WATER":{"requested_window":{"start_year":2020,"end_year":2025},"daily_available_years":[2024],"prefer_full_history":false}
+    }
+  },
+  "legal_entity_active_period":{"start_year":1969}
+}
