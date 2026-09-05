@@ -1,0 +1,83 @@
+name: Verify priority BREFOS current revisions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/brefos_byte_registry.py'
+      - 'orchestrator/brefos_catalog_last_verified.json'
+      - 'orchestrator/brefos_catalog_reconcile.py'
+      - 'orchestrator/brefos_catalog_promote.py'
+      - 'orchestrator/bat_master_catalog.json'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
+      - '.github/workflows/verify-brefos-priority.yml'
+
+concurrency:
+  group: brefos-priority-current-revisions
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Test BREFOS reconciliation rules
+        run: python -m unittest tests.test_brefos_catalog_reconcile -v
+      - name: Byte-verify priority current revisions
+        run: >-
+          python orchestrator/brefos_byte_registry.py
+          --out BREFOS_Priority_Byte_Registry.json
+          --workers 4
+          --atch-file-ids 1502,1499,1500,601,600,598,597,596,551,550,549,548,198
+      - name: Reconcile priority verified documents
+        run: >-
+          python orchestrator/brefos_catalog_reconcile.py
+          --registry BREFOS_Priority_Byte_Registry.json
+          --out BREFOS_Priority_Reconcile.json
+      - name: Build guarded master-catalog promotion candidate
+        run: >-
+          python orchestrator/brefos_catalog_promote.py
+          --catalog orchestrator/bat_master_catalog.json
+          --registry BREFOS_Priority_Byte_Registry.json
+          --reconcile BREFOS_Priority_Reconcile.json
+          --out-catalog BAT_Master_Catalog_Proposed.json
+          --out-report BREFOS_Promotion_Report.json
+      - name: Print priority summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          for name in ['BREFOS_Priority_Byte_Registry.json','BREFOS_Priority_Reconcile.json','BREFOS_Promotion_Report.json']:
+              p=pathlib.Path(name)
+              if not p.exists(): continue
+              d=json.loads(p.read_text(encoding='utf-8'))
+              if 'Byte_Registry' in name:
+                  out={'status':d.get('status'),'basis':d.get('discovery_basis'),'selected':d.get('selected_document_count'),'verified':d.get('verified_pdf_count'),'status_counts':d.get('status_counts')}
+              elif 'Reconcile' in name:
+                  out={'match_state_counts':d.get('match_state_counts'),'missing_latest_brefos_families':len(d.get('latest_brefos_families_missing_in_master',[]))}
+              else:
+                  out={'status':d.get('status'),'promoted':[x.get('catalog_id') for x in d.get('promoted',[])],'blocked':d.get('blocked',[])}
+              print(name, json.dumps(out,ensure_ascii=False,indent=2))
+          PY
+      - name: Upload priority verification package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brefos-priority-verification
+          path: |
+            BREFOS_Priority_Byte_Registry.json
+            BREFOS_Priority_Reconcile.json
+            BREFOS_Promotion_Report.json
+            BAT_Master_Catalog_Proposed.json
+          if-no-files-found: warn
+          retention-days: 14
