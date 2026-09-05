@@ -63,9 +63,16 @@ jobs:
           from orchestrator.bat_catalog_effective import build_effective_catalog
           d,advisories=build_effective_catalog()
           rows=[e for e in d['entries'] if e.get('catalog_family')=='KBREF_FAMILY_SEMICONDUCTOR']
+          preferred=[e for e in rows if e.get('preferred')]
           print(json.dumps({'effective_entries':rows,'advisories':advisories},ensure_ascii=False,indent=2))
-          if {e.get('catalog_id') for e in rows}!={'KBREF_SEMICONDUCTOR_2019'}: raise SystemExit('Effective semiconductor catalog must retain only the last verified published revision')
-          if not rows[0].get('preferred'): raise SystemExit('Verified 2019 semiconductor reference is not active')
+          if {e.get('catalog_id') for e in preferred}!={'KBREF_SEMICONDUCTOR_II_2025'}:
+              raise SystemExit(f'BREFOS byte-verified semiconductor II must be the sole preferred revision: {preferred}')
+          current=preferred[0]
+          if current.get('official_pdf_sha256')!='05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02':
+              raise SystemExit(f'Semiconductor II verified SHA missing from effective catalog: {current}')
+          old=[e for e in rows if e.get('catalog_id')=='KBREF_SEMICONDUCTOR_2019']
+          if not old or old[0].get('preferred') or old[0].get('collection_policy')!='AUDIT_ONLY_SUPERSEDED':
+              raise SystemExit(f'Semiconductor 2019 must remain archive-only: {old}')
           PY
       - name: Collect stable public sources
         run: |

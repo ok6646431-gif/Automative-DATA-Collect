@@ -1,42 +1,52 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "verified_as_of": "2026-09-05",
-  "policy": "A newer revision may deactivate the last verified published matching revision only after final publication is independently verified from an official government/NIER publication page or downloadable original. Planning, consultation, or scheduled-distribution language is not publication proof.",
+  "policy": "A newer revision may deactivate the last verified published matching revision only after final publication is independently verified from an official government/NIER publication page or downloadable original. BREFOS official listing plus byte-verified original PDF is sufficient publication authority. Planning, consultation, or scheduled-distribution language alone is not publication proof.",
   "overrides": [
     {
       "catalog_id": "KBREF_SEMICONDUCTOR_2019",
-      "reason_code": "LAST_VERIFIED_PUBLISHED_REVISION_REMAINS_CURRENT",
+      "reason_code": "SUPERSEDED_BY_BREFOS_VERIFIED_REVISION_II",
       "include_in_effective_catalog": true,
       "effective_fields": {
-        "preferred": true,
-        "supersession_status": "CURRENT_VERIFIED_PUBLICATION",
-        "collection_policy": "COLLECT_WHEN_MATCHED"
+        "preferred": false,
+        "supersession_status": "SUPERSEDED_ARCHIVE_ONLY",
+        "collection_policy": "AUDIT_ONLY_SUPERSEDED"
       },
-      "notes_append": "2026-09-05 재검증: IEPS에 실제 공개된 반도체 기준서 원문은 1기(2019 발간, IEPS 게시 2020-01-02)가 확인된다. 후속 2기의 최종 발간을 공식 원문으로 검증하기 전까지 매칭 기준서로 유지한다.",
+      "notes_append": "2026-09-05 재검증: BREFOS 현행 기준서 목록에서 반도체 제조업 2기 기준서가 확인되고 원문 PDF까지 byte 검증되어 1기는 이력 보존용으로 전환한다.",
       "evidence": [
         {
-          "evidence_type": "OFFICIAL_PUBLISHED_DOCUMENT_PAGE",
-          "source_locator": "https://ieps.nier.go.kr/web/board/5/664/?pMENUMST_ID=95&page=1",
-          "finding": "반도체 제조업 K-BREF 게시 및 PDF 첨부 확인"
+          "evidence_type": "OFFICIAL_CURRENT_DOCUMENT_SYSTEM",
+          "source_locator": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+          "finding": "BREFOS에 [2기] 반도체 제조업 기준서가 atchFileId=1501, nttId=211로 공개"
         }
       ]
     },
     {
       "catalog_id": "KBREF_SEMICONDUCTOR_II_2025",
-      "reason_code": "NEWER_REVISION_PUBLICATION_NOT_VERIFIED",
-      "include_in_effective_catalog": false,
+      "reason_code": "BREFOS_PUBLISHED_REVISION_BYTE_VERIFIED",
+      "include_in_effective_catalog": true,
       "effective_fields": {
-        "preferred": false,
-        "publication_status": "PUBLICATION_NOT_VERIFIED",
-        "supersession_status": "ANNOUNCED_NEWER_REVISION_UNVERIFIED",
-        "collection_policy": "METADATA_ONLY"
+        "preferred": true,
+        "publication_status": "PUBLISHED",
+        "legal_status": "PUBLISHED_REFERENCE",
+        "supersession_status": "CURRENT_VERIFIED_PUBLICATION",
+        "collection_policy": "COLLECT_WHEN_MATCHED",
+        "official_source_locator": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+        "official_document_page": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+        "official_pdf_url": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=1501",
+        "official_pdf_sha256": "05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02"
       },
-      "notes_append": "2025-03-25 공식 보도자료는 2기 기준서를 2025년 12월 말 배포할 계획이라고 설명한다. 2026-09-05 현재 별도 공식 최종 발간 페이지 또는 원문 PDF를 검증하지 못했으므로 발간 완료로 간주하지 않는다.",
+      "notes_append": "2026-09-05 BREFOS 공식 목록(atFileId=1501, nttId=211) 및 viewer 원문 PDF 7,272,718 bytes를 검증했다. SHA-256=05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02.",
       "evidence": [
         {
-          "evidence_type": "OFFICIAL_REVISION_PLAN",
-          "source_locator": "https://www.me.go.kr/home/web/board/read.do?boardId=1732610&boardMasterId=1",
-          "finding": "2기 기준서 개정 작업 및 2025년 12월 말 배포 계획"
+          "evidence_type": "OFFICIAL_CURRENT_DOCUMENT_SYSTEM",
+          "source_locator": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+          "finding": "[2기] 반도체 제조업의 환경오염방지 및 통합환경관리를 위한 최적가용기법 기준서 공개, atchFileId=1501, nttId=211"
+        },
+        {
+          "evidence_type": "OFFICIAL_PDF_BYTE_VERIFICATION",
+          "source_locator": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=1501",
+          "finding": "HTTP 200 PDF, 7,272,718 bytes, SHA-256 05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02"
         }
       ]
     }

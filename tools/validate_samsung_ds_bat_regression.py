@@ -20,10 +20,10 @@ def main():
     semiconductor=[r for r in candidates if 'SEMICONDUCT' in ((r.get('catalog_family') or '')+' '+(r.get('catalog_id') or '')).upper()]
     if len(semiconductor)!=5:
         raise SystemExit(f'Expected one semiconductor BAT candidate for each of 5 DS sites, got {len(semiconductor)}: {semiconductor}')
-    if {r.get('catalog_id') for r in semiconductor}!={'KBREF_SEMICONDUCTOR_2019'}:
-        raise SystemExit(f'Unverified newer semiconductor revision became active: {semiconductor}')
+    if {r.get('catalog_id') for r in semiconductor}!={'KBREF_SEMICONDUCTOR_II_2025'}:
+        raise SystemExit(f'BREFOS byte-verified semiconductor II is not the active site candidate: {semiconductor}')
     if any(r.get('collection_action')!='COLLECT' for r in semiconductor):
-        raise SystemExit(f'Verified published semiconductor BAT is not collectable: {semiconductor}')
+        raise SystemExit(f'Verified published semiconductor II BAT is not collectable: {semiconductor}')
 
     unrelated=[r for r in candidates if any(x in ((r.get('catalog_family') or '')+' '+(r.get('catalog_id') or '')).upper() for x in ['PLASTIC','ALCOHOL','RUBBER'])]
     if unrelated:
@@ -38,17 +38,22 @@ def main():
 
     advisory=json.loads((root/'BAT_Catalog_Advisories.json').read_text(encoding='utf-8'))
     by_id={a.get('catalog_id'):a for a in advisory.get('advisories',[])}
-    newer=by_id.get('KBREF_SEMICONDUCTOR_II_2025') or {}
-    if newer.get('reason_code')!='NEWER_REVISION_PUBLICATION_NOT_VERIFIED' or newer.get('include_in_effective_catalog') is not False:
-        raise SystemExit(f'Newer revision publication advisory missing: {newer}')
+    current=by_id.get('KBREF_SEMICONDUCTOR_II_2025') or {}
+    if current.get('reason_code')!='BREFOS_PUBLISHED_REVISION_BYTE_VERIFIED' or current.get('include_in_effective_catalog') is not True:
+        raise SystemExit(f'Semiconductor II publication authority advisory missing: {current}')
+    old=by_id.get('KBREF_SEMICONDUCTOR_2019') or {}
+    if old.get('reason_code')!='SUPERSEDED_BY_BREFOS_VERIFIED_REVISION_II':
+        raise SystemExit(f'Semiconductor 2019 supersession advisory missing: {old}')
 
     docs=rows(root/'output'/'BAT_REFERENCES'/'document_index.csv')
     semi_docs=[r for r in docs if 'SEMICONDUCT' in ((r.get('catalog_family') or '')+' '+(r.get('catalog_id') or '')).upper()]
     downloaded=[r for r in semi_docs if r.get('collection_status')=='DOWNLOADED']
     if not downloaded:
-        raise SystemExit(f'No official semiconductor BAT PDF downloaded: {semi_docs}')
-    if any(r.get('catalog_id')!='KBREF_SEMICONDUCTOR_2019' for r in downloaded):
+        raise SystemExit(f'No official semiconductor II BAT PDF downloaded: {semi_docs}')
+    if any(r.get('catalog_id')!='KBREF_SEMICONDUCTOR_II_2025' for r in downloaded):
         raise SystemExit(f'Unexpected semiconductor revision downloaded: {downloaded}')
+    if any((r.get('sha256') or r.get('official_pdf_sha256') or '') not in ('','05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02') for r in downloaded):
+        raise SystemExit(f'Downloaded semiconductor II hash conflicts with verified BREFOS bytes: {downloaded}')
 
     assert_pass(validate_archive_zip(root/'Human_Archive.zip'),'Samsung Human Archive')
     with zipfile.ZipFile(root/'Human_Archive.zip') as z:
@@ -70,6 +75,7 @@ def main():
         'site_scope':5,
         'bat_candidate_count':len(candidates),
         'semiconductor_candidates':len(semiconductor),
+        'semiconductor_revision':'KBREF_SEMICONDUCTOR_II_2025',
         'semiconductor_downloaded_docs':len(downloaded),
         'site_maps':len(maps),
         'bat_files':len(bat_files),

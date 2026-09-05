@@ -11,18 +11,29 @@ import bat_stage
 
 
 class BATEffectiveCatalogTests(unittest.TestCase):
-    def test_unverified_newer_revision_does_not_supersede_last_verified_publication(self):
+    def test_byte_verified_brefos_revision_supersedes_semiconductor_2019(self):
         catalog,advisories=build_effective_catalog()
         entries={e.get('catalog_id'):e for e in catalog.get('entries',[])}
         self.assertIn('KBREF_SEMICONDUCTOR_2019',entries)
-        self.assertNotIn('KBREF_SEMICONDUCTOR_II_2025',entries)
-        current=entries['KBREF_SEMICONDUCTOR_2019']
+        self.assertIn('KBREF_SEMICONDUCTOR_II_2025',entries)
+
+        old=entries['KBREF_SEMICONDUCTOR_2019']
+        self.assertFalse(old.get('preferred'))
+        self.assertEqual(old.get('supersession_status'),'SUPERSEDED_ARCHIVE_ONLY')
+        self.assertEqual(old.get('collection_policy'),'AUDIT_ONLY_SUPERSEDED')
+
+        current=entries['KBREF_SEMICONDUCTOR_II_2025']
         self.assertTrue(current.get('preferred'))
+        self.assertEqual(current.get('publication_status'),'PUBLISHED')
         self.assertEqual(current.get('supersession_status'),'CURRENT_VERIFIED_PUBLICATION')
         self.assertEqual(current.get('collection_policy'),'COLLECT_WHEN_MATCHED')
+        self.assertEqual(current.get('official_pdf_url'),'https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=1501')
+        self.assertEqual(current.get('official_pdf_sha256'),'05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02')
+
         by_id={a.get('catalog_id'):a for a in advisories}
-        self.assertEqual(by_id['KBREF_SEMICONDUCTOR_II_2025']['reason_code'],'NEWER_REVISION_PUBLICATION_NOT_VERIFIED')
-        self.assertFalse(by_id['KBREF_SEMICONDUCTOR_II_2025']['include_in_effective_catalog'])
+        self.assertEqual(by_id['KBREF_SEMICONDUCTOR_II_2025']['reason_code'],'BREFOS_PUBLISHED_REVISION_BYTE_VERIFIED')
+        self.assertTrue(by_id['KBREF_SEMICONDUCTOR_II_2025']['include_in_effective_catalog'])
+        self.assertEqual(by_id['KBREF_SEMICONDUCTOR_2019']['reason_code'],'SUPERSEDED_BY_BREFOS_VERIFIED_REVISION_II')
 
     def test_site_set_scope_removes_out_of_scope_bat_candidates_before_collection(self):
         plan={
