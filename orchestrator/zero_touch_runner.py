@@ -14,6 +14,7 @@ from orchestrator import dart_public_resolver
 from orchestrator import g0_authority_site_recovery
 from orchestrator import g0_data_attr_report_recovery
 from orchestrator import g0_domestic_site_catalog_enrichment
+from orchestrator import g0_entity_continuity_policy
 from orchestrator import g0_entity_window_normalization
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_generic_js_report_recovery
@@ -24,6 +25,7 @@ from orchestrator import g0_public_disclosure_enrichment
 from orchestrator import g0_rename_chronology_recovery
 from orchestrator import g0_report_catalog_policy
 from orchestrator import g0_report_enrichment
+from orchestrator import g0_report_entity_policy
 from orchestrator import g0_scripted_report_enrichment
 from orchestrator import g0_scripted_report_navigation
 from orchestrator import g0_staged_official_recovery
@@ -115,11 +117,8 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
     documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
-    # Some first-party report libraries bind a shared click handler to a CSS class and
-    # derive the PDF viewer URL from data-* metadata instead of placing a function call
-    # on each link. Reconstruct only a statically inspectable same-host handler and
-    # require real PDF bytes before promotion.
     documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
+    documents = g0_report_entity_policy.normalize(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
     )
@@ -155,6 +154,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
                     alias["active_period"] = {"start_year": int(rename_year)}
 
     g0_kind_disclosure_recovery.enforce_historical_continuity_gate(discovery, audit)
+    discovery = g0_entity_continuity_policy.normalize(discovery, audit)
     audit["gate_status"] = "PASS" if not discovery.get("unresolved_items") else "REVIEW_REQUIRED"
     return discovery, documents, audit
 
