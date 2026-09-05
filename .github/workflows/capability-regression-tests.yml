@@ -68,5 +68,6 @@ jobs:
           tests.test_requested_scope_subunits
           tests.test_requested_scope_rename_bridge
           tests.test_requested_scope_bilingual_bridge
+          tests.test_requested_scope_company_entity_filter
           tests.test_collection_completeness
           -v
