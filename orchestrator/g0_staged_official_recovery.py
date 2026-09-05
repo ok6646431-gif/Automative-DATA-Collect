@@ -4,15 +4,23 @@ The thin-shell adapter can discover candidates from first-party bootstrap resour
 DART-domain search, and replacement-host search. This wrapper evaluates those sources
 in trust order instead of eagerly querying every fallback before testing a strong
 first-party candidate.
+
+Candidate evaluation is a probe, not the full official-site crawl. A bounded probe
+prevents one weak sitemap/search candidate from consuming the same 90-page budget that
+is reserved for the actual discovery surface.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, Sequence
 
 from orchestrator import g0_official_site_recovery as recovery
 from orchestrator import g0_thin_shell_recovery as thin
 from orchestrator import zero_touch_discovery as base
+
+
+MAX_CANDIDATE_PROBE_PAGES = 18
+MAX_CANDIDATES_PER_STAGE = 12
 
 
 def _try_candidates(
@@ -25,11 +33,12 @@ def _try_candidates(
     max_pages: int,
 ):
     start_host = thin._host(start_url)
-    for candidate in list(candidates)[:40]:
+    probe_pages = max(1, min(int(max_pages or 1), MAX_CANDIDATE_PROBE_PAGES))
+    for candidate in list(candidates)[:MAX_CANDIDATES_PER_STAGE]:
         if not thin._safe_http_url(candidate) or recovery._blocked(candidate):
             continue
         candidate_pages, candidate_links = recovery.BASE_CRAWL(
-            http, candidate, company, max_pages=max_pages
+            http, candidate, company, max_pages=probe_pages
         )
         evidence = thin.navigation_evidence(candidate_pages, candidate_links)
         candidate_host = thin._host(candidate)
@@ -61,6 +70,7 @@ def _try_candidates(
             "stage": stage,
             "verified": verified,
             "verification_method": method,
+            "probe_page_budget": probe_pages,
             **evidence,
         })
         if not verified:
@@ -72,6 +82,7 @@ def _try_candidates(
             "method": method,
             "thin_surface": original_evidence,
             "successful_stage": stage,
+            "candidate_probe_page_budget": probe_pages,
         })
         return candidate_pages, candidate_links
     return None
