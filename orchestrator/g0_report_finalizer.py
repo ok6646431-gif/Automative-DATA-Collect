@@ -2,9 +2,10 @@
 
 Earlier stages intentionally inspect broad page context. A full annual-report PDF can
 therefore be demoted to a summary when the surrounding report page contains a section
-named "Highlight". This finalizer uses the concrete document target as the stronger
-representation signal: an explicit full-report PDF filename without summary tokens wins
-over incidental words in surrounding page text.
+named "Highlight". The same broad context can also give a 2021 PDF a misleading title
+that begins with the current catalog year. This finalizer treats the concrete verified
+PDF target as the stronger representation/title signal when its filename itself carries
+full-report semantics and the requested report year.
 
 The rule is company-agnostic and conservative. It never promotes a URL whose filename
 itself says highlight/summary/brief, and it never overrides an explicit issuer conflict.
@@ -12,17 +13,22 @@ itself says highlight/summary/brief, and it never overrides an explicit issuer c
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 from urllib.parse import unquote, urlparse
 
 from orchestrator import g0_report_entity_policy as entity_policy
 
 
-def _pdf_basename(url: str) -> str:
+def _pdf_filename(url: str) -> str:
     try:
-        return unquote(urlparse(str(url or "")).path.rsplit("/", 1)[-1]).casefold()
+        return unquote(urlparse(str(url or "")).path.rsplit("/", 1)[-1])
     except Exception:
-        return str(url or "").casefold()
+        return str(url or "")
+
+
+def _pdf_basename(url: str) -> str:
+    return _pdf_filename(url).casefold()
 
 
 def _explicit_full_report_pdf(doc: Dict[str, Any]) -> bool:
@@ -42,6 +48,23 @@ def _explicit_full_report_pdf(doc: Dict[str, Any]) -> bool:
     )
 
 
+def _concrete_pdf_title(doc: Dict[str, Any]) -> str:
+    """Prefer a readable filename title only when it independently carries the year."""
+    if not _explicit_full_report_pdf(doc):
+        return ""
+    try:
+        year = int(doc.get("report_year"))
+    except (TypeError, ValueError):
+        return ""
+    filename = _pdf_filename(str(doc.get("source_url") or ""))
+    if str(year) not in filename:
+        return ""
+    stem = re.sub(r"(?i)\.pdf$", "", filename)
+    stem = re.sub(r"[_-]+", " ", stem)
+    stem = re.sub(r"\s+", " ", stem).strip()
+    return stem
+
+
 def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
     docs = list(documents.get("documents", []) or [])
     existing_full_years = {
@@ -51,8 +74,24 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
     }
 
     promoted: List[Dict[str, Any]] = []
+    normalized_titles: List[Dict[str, Any]] = []
     out: List[Dict[str, Any]] = []
     for doc in docs:
+        if doc.get("document_type") == "SUSTAINABILITY_REPORT":
+            item = dict(doc)
+            concrete_title = _concrete_pdf_title(item)
+            if concrete_title and concrete_title != str(item.get("title") or ""):
+                normalized_titles.append({
+                    "document_id": item.get("document_id"),
+                    "report_year": item.get("report_year"),
+                    "old_title": item.get("title"),
+                    "new_title": concrete_title,
+                    "reason": "CONCRETE_YEAR_SPECIFIC_FULL_REPORT_PDF_FILENAME",
+                })
+                item["title"] = concrete_title
+            out.append(item)
+            continue
+
         if doc.get("document_type") != "SUSTAINABILITY_REPORT_SUMMARY":
             out.append(doc)
             continue
@@ -78,6 +117,16 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         item["importance"] = "CORE"
         item["entity_alignment"] = alignment
         item.pop("coverage_role", None)
+        concrete_title = _concrete_pdf_title(item)
+        if concrete_title and concrete_title != title:
+            normalized_titles.append({
+                "document_id": item.get("document_id"),
+                "report_year": year,
+                "old_title": title,
+                "new_title": concrete_title,
+                "reason": "CONCRETE_YEAR_SPECIFIC_FULL_REPORT_PDF_FILENAME",
+            })
+            item["title"] = concrete_title
         item["notes"] = (
             str(item.get("notes") or "").rstrip()
             + " Final representation arbitration: explicit full-report PDF target overrides incidental summary/highlight words in surrounding page context."
@@ -115,6 +164,7 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
     )
     audit.setdefault("stages", {})["report_finalizer"] = {
         "promoted_full_report_pdfs": promoted,
+        "normalized_pdf_titles": normalized_titles,
         "removed_resolved_gaps": removed_gaps,
     }
     return documents
