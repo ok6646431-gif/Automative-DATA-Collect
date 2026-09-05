@@ -4,6 +4,10 @@ The master catalog preserves discovery history. Runtime matching uses the effect
 catalog after verified status overrides are applied. This audit distinguishes hard
 structural errors from expected operational warnings such as a newly published
 revision whose direct PDF bytes have not yet been verified.
+
+A BAT revision may be one PDF or a set of official_documents (for example a multi-part
+revision). Entry-level byte verification is complete only when every declared official
+document has both a direct PDF URL and a valid SHA-256.
 """
 
 from __future__ import annotations
@@ -13,7 +17,7 @@ import json
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 try:
     from .bat_catalog_effective import (
@@ -39,11 +43,49 @@ def _revision_key(entry: Dict[str, Any]) -> Tuple[str, str]:
     return (str(entry.get("revision_generation") or ""), str(entry.get("publication_year") or ""))
 
 
+def _official_documents(entry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return document-level records using the multi-part form when declared."""
+    docs = entry.get("official_documents")
+    if isinstance(docs, list) and docs:
+        return [d for d in docs if isinstance(d, dict)]
+    url = str(entry.get("official_pdf_url") or "").strip()
+    sha = str(entry.get("official_pdf_sha256") or "").strip()
+    if url or sha:
+        return [{
+            "document_part": "MAIN",
+            "official_pdf_url": url,
+            "official_pdf_sha256": sha,
+        }]
+    return []
+
+
+def _document_context(doc: Dict[str, Any], index: int) -> Dict[str, Any]:
+    return {
+        "document_index": index,
+        "document_part": str(doc.get("document_part") or doc.get("volume_no") or ""),
+        "document_title": str(doc.get("title") or ""),
+    }
+
+
+def _entry_byte_verified(entry: Dict[str, Any]) -> bool:
+    docs = _official_documents(entry)
+    if not docs:
+        return False
+    for doc in docs:
+        url = str(doc.get("official_pdf_url") or "").strip()
+        sha = str(doc.get("official_pdf_sha256") or "").strip()
+        if not url or not SHA256_RE.fullmatch(sha):
+            return False
+    return True
+
+
 def _has_official_locator(entry: Dict[str, Any]) -> bool:
-    return any(
+    if any(
         str(entry.get(key) or "").strip()
         for key in ("official_source_locator", "official_document_page", "official_pdf_url")
-    )
+    ):
+        return True
+    return any(str(d.get("official_pdf_url") or "").strip() for d in _official_documents(entry))
 
 
 def audit_catalog(
@@ -77,23 +119,34 @@ def audit_catalog(
                     "MISSING_REQUIRED_FIELD", "ERROR", f"Master catalog entry lacks {key}",
                     catalog_id=catalog_id, field=key, index=idx,
                 ))
-        sha = str(entry.get("official_pdf_sha256") or "").strip()
-        url = str(entry.get("official_pdf_url") or "").strip()
-        if sha and not SHA256_RE.fullmatch(sha):
+
+        raw_docs = entry.get("official_documents")
+        if raw_docs is not None and (not isinstance(raw_docs, list) or any(not isinstance(d, dict) for d in raw_docs)):
             errors.append(_issue(
-                "INVALID_PDF_SHA256", "ERROR", "official_pdf_sha256 must be 64 hex characters",
-                catalog_id=catalog_id, sha256=sha,
-            ))
-        if sha and not url:
-            errors.append(_issue(
-                "SHA_WITHOUT_PDF_URL", "ERROR", "Byte hash exists without the PDF URL it verifies",
+                "INVALID_OFFICIAL_DOCUMENTS", "ERROR",
+                "official_documents must be a list of document objects",
                 catalog_id=catalog_id,
             ))
-        if url and not sha:
-            warnings.append(_issue(
-                "PDF_URL_NOT_BYTE_VERIFIED", "WARNING", "Direct PDF URL exists but has no recorded SHA-256",
-                catalog_id=catalog_id, official_pdf_url=url,
-            ))
+
+        for doc_index, doc in enumerate(_official_documents(entry)):
+            sha = str(doc.get("official_pdf_sha256") or "").strip()
+            url = str(doc.get("official_pdf_url") or "").strip()
+            context = _document_context(doc, doc_index)
+            if sha and not SHA256_RE.fullmatch(sha):
+                errors.append(_issue(
+                    "INVALID_PDF_SHA256", "ERROR", "official_pdf_sha256 must be 64 hex characters",
+                    catalog_id=catalog_id, sha256=sha, **context,
+                ))
+            if sha and not url:
+                errors.append(_issue(
+                    "SHA_WITHOUT_PDF_URL", "ERROR", "Byte hash exists without the PDF URL it verifies",
+                    catalog_id=catalog_id, **context,
+                ))
+            if url and not sha:
+                warnings.append(_issue(
+                    "PDF_URL_NOT_BYTE_VERIFIED", "WARNING", "Direct PDF URL exists but has no recorded SHA-256",
+                    catalog_id=catalog_id, official_pdf_url=url, **context,
+                ))
 
     for advisory in advisories:
         if advisory.get("status") == "OVERRIDE_TARGET_NOT_PRESENT":
@@ -157,11 +210,12 @@ def audit_catalog(
                     "Publication is verified but the latest original/download locator remains pending",
                     catalog_id=catalog_id, catalog_family=family,
                 ))
-            if preferred_flag and status == "PUBLISHED" and not str(entry.get("official_pdf_sha256") or "").strip():
+            if preferred_flag and status == "PUBLISHED" and not _entry_byte_verified(entry):
                 warnings.append(_issue(
                     "PREFERRED_PUBLISHED_PDF_NOT_BYTE_VERIFIED", "WARNING",
-                    "Preferred published reference does not yet have a byte-verified direct PDF cache",
+                    "Preferred published reference does not yet have complete byte verification for all declared original PDFs",
                     catalog_id=catalog_id, catalog_family=family,
+                    declared_document_count=len(_official_documents(entry)),
                 ))
             if preferred_flag and status != "PUBLISHED":
                 warnings.append(_issue(
@@ -177,15 +231,15 @@ def audit_catalog(
             "preferred_catalog_ids": [str(e.get("catalog_id") or "") for e in preferred],
             "preferred_revisions": [list(x) for x in preferred_revisions],
             "published_entry_count": sum(str(e.get("publication_status") or "") == "PUBLISHED" for e in entries),
-            "byte_verified_entry_count": sum(bool(str(e.get("official_pdf_sha256") or "").strip()) for e in entries),
+            "byte_verified_entry_count": sum(_entry_byte_verified(e) for e in entries),
         })
 
     preferred_effective = [e for e in effective_entries if e.get("preferred") is True]
     published_preferred = [e for e in preferred_effective if str(e.get("publication_status") or "") == "PUBLISHED"]
-    byte_verified_preferred = [e for e in published_preferred if str(e.get("official_pdf_sha256") or "").strip()]
+    byte_verified_preferred = [e for e in published_preferred if _entry_byte_verified(e)]
 
     payload = {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "catalog_as_of": master.get("catalog_as_of"),
         "effective_catalog_as_of": effective.get("effective_catalog_as_of"),
         "status": "PASS" if not errors else "FAIL",
@@ -207,6 +261,7 @@ def audit_catalog(
         "principles": [
             "Master catalog preserves historical discovery evidence.",
             "Runtime invariants are evaluated after verified status overrides are applied.",
+            "A multi-part revision is byte-verified only when every declared official document has a URL/SHA pair.",
             "Missing byte verification is visible as a warning unless a hash/URL pair is internally inconsistent.",
             "Unpublished or unverified preferred references must remain fail-closed for collection.",
         ],
