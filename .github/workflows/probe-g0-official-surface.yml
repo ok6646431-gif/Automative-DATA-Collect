@@ -39,6 +39,7 @@ jobs:
           from orchestrator import zero_touch_runner  # noqa: F401
           from orchestrator import zero_touch_discovery as g0
           from orchestrator import g0_domestic_site_catalog as site_catalog
+          from orchestrator import g0_domestic_site_catalog_enrichment as site_enrichment
           from orchestrator import g0_official_site_recovery as official_recovery
 
           company=(os.environ.get('DISPATCH_COMPANY') or '').strip()
@@ -70,6 +71,31 @@ jobs:
                   catalog_sites, catalog_scope, catalog_unresolved=catalog
               else:
                   catalog_sites, catalog_scope, catalog_unresolved=[], None, []
+
+              resolved_root=str(official_recovery.last_recovery.get('resolved_url') or start_url)
+              discovery={
+                  'requested_company_name': company,
+                  'current_legal_name': legal.get('korean_name') or company,
+                  'domestic_site_candidates': sites,
+                  'requested_scope': scope,
+                  'unresolved_items': list(unresolved),
+              }
+              audit={
+                  'stages': {
+                      'official_site': {
+                          'resolved_official_root': resolved_root,
+                          'sample_pages': [p.url for p in pages[:30]],
+                      },
+                      'corporate_documents': {'report_index_pages': []},
+                      'site_scope': {
+                          'sites': sites,
+                          'requested_scope': scope,
+                          'unresolved': unresolved,
+                      },
+                  },
+                  'http_attempts': [],
+              }
+              discovery, _, audit=site_enrichment.enrich(discovery, {}, audit)
 
               interesting=[]
               tokens=('site','location','plant','factory','사업장','제철소','sustainability','esg','report','보고서')
@@ -105,6 +131,12 @@ jobs:
                       'sites': catalog_sites,
                       'scope': catalog_scope,
                       'unresolved': catalog_unresolved,
+                  },
+                  'enriched_site_scope': {
+                      'sites': discovery.get('domestic_site_candidates') or [],
+                      'scope': discovery.get('requested_scope'),
+                      'unresolved': discovery.get('unresolved_items') or [],
+                      'audit': (audit.get('stages') or {}).get('domestic_site_catalog_enrichment'),
                   },
               }
 
