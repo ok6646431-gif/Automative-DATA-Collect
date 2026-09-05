@@ -1,0 +1,105 @@
+name: Probe current report catalog
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/probe-current-report-catalog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install probe dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Probe verified report catalog locators
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          from orchestrator import g0_generic_js_report_recovery as generic
+          from orchestrator import g0_report_entity_policy as entity
+          from orchestrator import zero_touch_discovery as base
+
+          discovery = json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
+          documents = json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          window = (discovery.get('collection_policy') or {}).get('requested_history_window') or {}
+          start_year = int(window.get('start_year') or 2020)
+          end_year = int(window.get('end_year') or 2026)
+
+          locators = []
+          for doc in documents.get('documents', []) or []:
+              if doc.get('document_type') in {'SUSTAINABILITY_REPORT', 'SUSTAINABILITY_REPORT_SUMMARY'}:
+                  value = str(doc.get('source_locator') or '').strip()
+                  if value and value not in locators:
+                      locators.append(value)
+          for gap in documents.get('gaps', []) or []:
+              if gap.get('document_type') == 'SUSTAINABILITY_REPORT':
+                  value = str(gap.get('source_locator') or '').strip()
+                  if value and value not in locators:
+                      locators.append(value)
+
+          http = base.Http(timeout=(5, 20))
+          results = []
+          for locator in locators[:12]:
+              response = http.get(locator)
+              if not response or response.status_code >= 400:
+                  results.append({'locator': locator, 'status': 'UNREACHABLE'})
+                  continue
+              candidates, diagnostics = generic.candidates_from_generic_js_page(
+                  http, response.url, response.text, start_year, end_year
+              )
+              checked = []
+              for candidate in candidates:
+                  alignment, issuers = entity.entity_alignment(
+                      discovery, str(candidate.get('label') or ''), str(candidate.get('url') or '')
+                  )
+                  checked.append({
+                      **candidate,
+                      'entity_alignment': alignment,
+                      'explicit_issuers': issuers,
+                  })
+              results.append({
+                  'locator': response.url,
+                  'status': 'OK',
+                  'candidate_count': len(checked),
+                  'candidates': checked,
+                  'diagnostics': diagnostics,
+              })
+
+          payload = {
+              'requested_company_name': discovery.get('requested_company_name'),
+              'start_year': start_year,
+              'end_year': end_year,
+              'locators': locators,
+              'results': results,
+              'http_attempts': http.audit,
+          }
+          Path('report_probe.json').write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps({
+              'company': payload['requested_company_name'],
+              'locators': len(locators),
+              'candidates': [
+                  {'year': c.get('year'), 'url': c.get('url'), 'alignment': c.get('entity_alignment')}
+                  for r in results for c in r.get('candidates', [])
+              ],
+          }, ensure_ascii=False, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-report-catalog-probe
+          path: report_probe.json
+          retention-days: 14
