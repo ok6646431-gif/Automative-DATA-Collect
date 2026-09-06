@@ -15,8 +15,8 @@ import archive_builder
 from archive_acceptance import assert_pass, validate_archive_tree
 
 
-MACHINE_REVIEW_SUFFIXES = {".html", ".json", ".jsonl", ".md"}
-PROHIBITED_USER_SUFFIXES = {".html", ".json", ".jsonl"}
+MACHINE_REVIEW_SUFFIXES = {".html", ".htm", ".json", ".jsonl", ".md"}
+PROHIBITED_USER_SUFFIXES = {".html", ".htm", ".json", ".jsonl"}
 
 
 def _safe_title(value: str) -> str:
@@ -58,17 +58,30 @@ def _unique_pdf_path(directory: Path, stem: str) -> Path:
         n += 1
 
 
-def _render_corporate_html(user_root: Path) -> int:
-    folder = user_root / "06_회사환경정책" / "기타_공식자료"
-    if not folder.exists():
-        return 0
+def _render_user_html(user_root: Path) -> int:
+    """Convert every remaining user-facing HTML page to PDF.
+
+    Collector files can keep web-endpoint suffixes such as ``.do`` until the final
+    copy operation detects their payload and normalizes the user filename to ``.html``.
+    Therefore checking only the collector-side suffix is insufficient: the product
+    boundary must normalize HTML after all user files have been materialized.
+
+    Review-report HTML is handled separately as a machine companion and removed rather
+    than rendered. All other official HTML pages are converted in place while raw HTML
+    remains available under ``90_시스템원본``.
+    """
+    sources = sorted(
+        p for p in user_root.rglob("*")
+        if p.is_file() and p.suffix.lower() in {".html", ".htm"}
+    )
     converted = 0
-    for src in sorted(folder.glob("*.html")):
-        title, static_html = _static_html_for_pdf(src)
-        year_match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", src.name)
-        prefix = f"{year_match.group(1)}_" if year_match else ""
-        target = _unique_pdf_path(folder, prefix + _safe_title(title))
-        temp = folder / f".{src.stem}.user-print.html"
+    for src in sources:
+        rel = src.relative_to(user_root)
+        if rel.parts and rel.parts[0] == "00_환경관리검토":
+            continue
+        _, static_html = _static_html_for_pdf(src)
+        target = _unique_pdf_path(src.parent, src.stem)
+        temp = src.parent / f".{src.stem}.user-print.html"
         temp.write_text(static_html, encoding="utf-8")
         try:
             ok, error = archive_builder.render_html_pdf(temp, target)
@@ -76,7 +89,7 @@ def _render_corporate_html(user_root: Path) -> int:
             temp.unlink(missing_ok=True)
         if not ok:
             target.unlink(missing_ok=True)
-            raise RuntimeError(f"corporate HTML -> PDF failed for {src.name}: {error}")
+            raise RuntimeError(f"user HTML -> PDF failed for {rel.as_posix()}: {error}")
         src.unlink()
         converted += 1
     return converted
@@ -87,7 +100,7 @@ def _remove_review_machine_variants(user_root: Path) -> int:
     if not folder.exists():
         return 0
     removed = 0
-    for p in sorted(folder.iterdir()):
+    for p in sorted(folder.rglob("*")):
         if p.is_file() and p.suffix.lower() in MACHINE_REVIEW_SUFFIXES:
             p.unlink()
             removed += 1
@@ -116,20 +129,25 @@ def _refresh_user_indexes(archive_root: Path) -> int:
 def normalize_user_archive(archive_root: str | Path) -> dict[str, object]:
     root = Path(archive_root)
     user = root / archive_builder.USER_ROOT
-    converted = _render_corporate_html(user)
     removed = _remove_review_machine_variants(user)
+    converted = _render_user_html(user)
 
-    leaked = [str(p.relative_to(root)) for p in user.rglob("*") if p.is_file() and p.suffix.lower() in PROHIBITED_USER_SUFFIXES]
+    leaked = [
+        str(p.relative_to(root))
+        for p in user.rglob("*")
+        if p.is_file() and p.suffix.lower() in PROHIBITED_USER_SUFFIXES
+    ]
     if leaked:
         raise RuntimeError("machine-readable implementation artifacts leaked into user layer: " + ", ".join(leaked[:10]))
 
-    # This is the product boundary that was previously missing.  A normalizer is not
+    # This is the product boundary that was previously missing. A normalizer is not
     # considered successful merely because it removed HTML/JSON: required XLSX exports,
     # PDF file integrity and the shallow sustainability-report layout must all pass.
     acceptance = assert_pass(validate_archive_tree(root), "human user layer")
     user_files = _refresh_user_indexes(root)
     return {
         "corporate_html_rendered_to_pdf": converted,
+        "user_html_rendered_to_pdf": converted,
         "review_machine_variants_removed": removed,
         "user_files": user_files,
         "acceptance": acceptance,
