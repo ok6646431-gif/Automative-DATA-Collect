@@ -88,6 +88,8 @@ class ScopeQualityRegressionTests(unittest.TestCase):
                 "company_display_name": "테스트회사",
                 "legal_entity_active_period": {"start_year": 2022},
             }, ensure_ascii=False), encoding="utf-8")
+            request_path = root / "request.json"
+            request_path.write_text("{}", encoding="utf-8")
             raw_rows = [
                 {
                     "source": "PRTR", "period_kind": "YEAR", "period": "2020", "expected": "Y",
@@ -115,7 +117,9 @@ class ScopeQualityRegressionTests(unittest.TestCase):
             with patch("orchestrator.scope_quality.public_rows", return_value=raw_rows), \
                  patch("orchestrator.scope_quality.document_rows", return_value=[]), \
                  patch("orchestrator.scope_quality.resolve_requested_scope", return_value=scope):
-                summary = audit_collection_for_requested_scope(root, profile_path)
+                summary = audit_collection_for_requested_scope(
+                    root, profile_path, request_path=request_path
+                )
 
             self.assertEqual(summary["status"], "COMPLETE")
             self.assertEqual(summary["incomplete_items"], 0)
