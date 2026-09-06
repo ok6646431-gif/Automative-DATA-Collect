@@ -92,6 +92,44 @@ class ReportFinalizerTests(unittest.TestCase):
         self.assertEqual(out["gaps"], [])
         self.assertEqual(len(audit["stages"]["report_finalizer"]["superseded_digital_reports"]), 1)
 
+    def test_opaque_verified_annual_pdf_supersedes_same_year_digital_report(self):
+        discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
+        documents = {
+            "documents": [
+                {
+                    "document_id": "PLAIN_2025",
+                    "document_type": "SUSTAINABILITY_REPORT",
+                    "title": "2025 sustainability report KOR",
+                    "report_year": 2025,
+                    "source_url": "https://official.example/download.do?fid=REPORT2025",
+                    "source_locator": "https://official.example/report-archive",
+                    "expected_extension": "pdf",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "importance": "CORE",
+                },
+                {
+                    "document_id": "DIGITAL_2025",
+                    "document_type": "SUSTAINABILITY_REPORT",
+                    "title": "2025 sustainability report",
+                    "report_year": 2025,
+                    "source_url": "https://official.example/report/2025",
+                    "source_locator": "https://official.example/report/2025",
+                    "expected_extension": "html",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "importance": "CORE",
+                    "representation": "DIGITAL_REPORT",
+                },
+            ],
+            "gaps": [],
+        }
+        audit = {}
+        out = finalizer.finalize(discovery, documents, audit)
+        annual = [d for d in out["documents"] if d.get("document_type") == "SUSTAINABILITY_REPORT"]
+        self.assertEqual(len(annual), 1)
+        self.assertEqual(annual[0]["source_url"], "https://official.example/download.do?fid=REPORT2025")
+        self.assertEqual(audit["stages"]["report_finalizer"]["verified_annual_pdf_years"], [2025])
+        self.assertEqual(len(audit["stages"]["report_finalizer"]["superseded_digital_reports"]), 1)
+
     def test_existing_full_report_uses_concrete_year_specific_pdf_title(self):
         discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
         documents = {
