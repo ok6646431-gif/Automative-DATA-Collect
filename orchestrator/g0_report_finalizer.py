@@ -7,6 +7,11 @@ that begins with the current catalog year. This finalizer treats the concrete ve
 PDF target as the stronger representation/title signal when its filename itself carries
 full-report semantics and the requested report year.
 
+When a verified digital/HTML representation and a verified full-report PDF exist for the
+same year, the concrete PDF wins annual coverage. The digital record is omitted from the
+annual document set to avoid duplicate same-year coverage; its landing page remains the
+PDF source locator and is still available in discovery audit evidence.
+
 The rule is company-agnostic and conservative. It never promotes a URL whose filename
 itself says highlight/summary/brief, and it never overrides an explicit issuer conflict.
 """
@@ -65,19 +70,66 @@ def _concrete_pdf_title(doc: Dict[str, Any]) -> str:
     return stem
 
 
+def _year(doc: Dict[str, Any]) -> int | None:
+    try:
+        return int(doc.get("report_year"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _promotable_pdf_years(discovery: Dict[str, Any], docs: List[Dict[str, Any]]) -> set[int]:
+    """Years with an explicit full-report PDF currently mislabeled as summary.
+
+    This is computed before the main pass so a broad DIGITAL_REPORT record for the same
+    year cannot pre-empt the more concrete PDF. Explicit issuer conflicts remain blocked.
+    """
+    years: set[int] = set()
+    for doc in docs:
+        if doc.get("document_type") != "SUSTAINABILITY_REPORT_SUMMARY":
+            continue
+        year = _year(doc)
+        if year is None or not _explicit_full_report_pdf(doc):
+            continue
+        alignment, _ = entity_policy.entity_alignment(
+            discovery, str(doc.get("title") or ""), str(doc.get("source_url") or "")
+        )
+        if alignment != "CONFLICT":
+            years.add(year)
+    return years
+
+
 def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
     docs = list(documents.get("documents", []) or [])
+    pdf_override_years = _promotable_pdf_years(discovery, docs)
+
+    # A DIGITAL_REPORT is a valid fallback when no concrete full-report file exists.
+    # It must not prevent a verified PDF for the same year from being promoted.
     existing_full_years = {
         int(d.get("report_year"))
         for d in docs
-        if d.get("document_type") == "SUSTAINABILITY_REPORT" and d.get("report_year")
+        if d.get("document_type") == "SUSTAINABILITY_REPORT"
+        and d.get("report_year")
+        and str(d.get("representation") or "").upper() != "DIGITAL_REPORT"
     }
 
     promoted: List[Dict[str, Any]] = []
     normalized_titles: List[Dict[str, Any]] = []
+    superseded_digital: List[Dict[str, Any]] = []
     out: List[Dict[str, Any]] = []
     for doc in docs:
         if doc.get("document_type") == "SUSTAINABILITY_REPORT":
+            year = _year(doc)
+            if (
+                year in pdf_override_years
+                and str(doc.get("representation") or "").upper() == "DIGITAL_REPORT"
+            ):
+                superseded_digital.append({
+                    "document_id": doc.get("document_id"),
+                    "report_year": year,
+                    "source_url": doc.get("source_url"),
+                    "reason": "CONCRETE_VERIFIED_FULL_REPORT_PDF_PREFERRED_OVER_DIGITAL_REPRESENTATION",
+                })
+                continue
             item = dict(doc)
             concrete_title = _concrete_pdf_title(item)
             if concrete_title and concrete_title != str(item.get("title") or ""):
@@ -95,9 +147,8 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         if doc.get("document_type") != "SUSTAINABILITY_REPORT_SUMMARY":
             out.append(doc)
             continue
-        try:
-            year = int(doc.get("report_year"))
-        except (TypeError, ValueError):
+        year = _year(doc)
+        if year is None:
             out.append(doc)
             continue
         if year in existing_full_years or not _explicit_full_report_pdf(doc):
@@ -164,6 +215,7 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
     )
     audit.setdefault("stages", {})["report_finalizer"] = {
         "promoted_full_report_pdfs": promoted,
+        "superseded_digital_reports": superseded_digital,
         "normalized_pdf_titles": normalized_titles,
         "removed_resolved_gaps": removed_gaps,
     }
