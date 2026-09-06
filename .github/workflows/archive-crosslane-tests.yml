@@ -11,6 +11,7 @@ on:
       - 'orchestrator/archive_user_dedup_pipeline.py'
       - 'orchestrator/archive_sustainability_crosslane.py'
       - 'orchestrator/archive_zip_dedup.py'
+      - 'tests/test_user_archive_format.py'
       - 'tests/test_user_archive_format_html_normalization.py'
       - 'tests/test_archive_user_dedup_v2.py'
       - 'tests/test_archive_sustainability_crosslane.py'
@@ -35,6 +36,7 @@ jobs:
       - name: Run archive cross-lane regression tests
         run: >-
           python -m unittest
+          tests.test_user_archive_format
           tests.test_user_archive_format_html_normalization
           tests.test_archive_user_dedup_v2
           tests.test_archive_sustainability_crosslane
