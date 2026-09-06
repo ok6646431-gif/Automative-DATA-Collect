@@ -43,26 +43,6 @@ jobs:
               raise SystemExit('zero-touch main block no longer matches expected source')
           discovery.write_text(text.replace(old, new, 1), encoding='utf-8')
 
-          workflow = Path('.github/workflows/zero-touch-discovery.yml')
-          text = workflow.read_text(encoding='utf-8')
-          if '    timeout-minutes: 20' not in text:
-              raise SystemExit('zero-touch timeout no longer matches expected source')
-          text = text.replace('    timeout-minutes: 20', '    timeout-minutes: 30', 1)
-          if '          --max-pages 90' not in text:
-              raise SystemExit('zero-touch max-pages no longer matches expected source')
-          text = text.replace('          --max-pages 90', '          --max-pages 60', 1)
-          trigger_anchor = "      - 'tests/test_zero_touch_discovery.py'\n"
-          if "      - 'tests/test_zero_touch_runtime_checkpoint.py'\n" not in text:
-              if trigger_anchor not in text:
-                  raise SystemExit('zero-touch test trigger anchor not found')
-              text = text.replace(trigger_anchor, trigger_anchor + "      - 'tests/test_zero_touch_runtime_checkpoint.py'\n", 1)
-          test_anchor = '          python -m unittest tests.test_zero_touch_discovery -v\n'
-          if '          python -m unittest tests.test_zero_touch_runtime_checkpoint -v\n' not in text:
-              if test_anchor not in text:
-                  raise SystemExit('zero-touch unit-test anchor not found')
-              text = text.replace(test_anchor, test_anchor + '          python -m unittest tests.test_zero_touch_runtime_checkpoint -v\n', 1)
-          workflow.write_text(text, encoding='utf-8')
-
           test = Path('tests/test_zero_touch_runtime_checkpoint.py')
           test.write_text('''import json\nimport sys\nimport tempfile\nimport unittest\nfrom pathlib import Path\nfrom unittest.mock import patch\n\nfrom orchestrator import zero_touch_discovery as discovery\n\n\nclass RuntimeCheckpointTests(unittest.TestCase):\n    def test_checkpoint_survives_discovery_exception(self):\n        with tempfile.TemporaryDirectory() as tmp:\n            out = Path(tmp) / "generated"\n            argv = [\n                "zero_touch_discovery.py",\n                "--company-name", "Example Corp",\n                "--out-dir", str(out),\n                "--start-year", "2020",\n                "--max-pages", "60",\n            ]\n            with patch.object(sys, "argv", argv), patch.object(\n                discovery, "discover", side_effect=RuntimeError("synthetic failure")\n            ):\n                with self.assertRaises(RuntimeError):\n                    discovery.main()\n\n            checkpoint = json.loads(\n                (out / "Discovery_Runtime_Checkpoint.json").read_text(encoding="utf-8")\n            )\n            self.assertEqual(checkpoint["company"], "Example Corp")\n            self.assertEqual(checkpoint["status"], "ERROR")\n            self.assertEqual(checkpoint["runtime_parameters"]["max_pages"], 60)\n            self.assertIn("synthetic failure", checkpoint["error"])\n\n\nif __name__ == "__main__":\n    unittest.main()\n''', encoding='utf-8')
           PY
@@ -79,7 +59,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add orchestrator/zero_touch_discovery.py orchestrator/g0_staged_official_recovery.py tests/test_zero_touch_runtime_checkpoint.py .github/workflows/zero-touch-discovery.yml
+          git add orchestrator/zero_touch_discovery.py orchestrator/g0_staged_official_recovery.py tests/test_zero_touch_runtime_checkpoint.py
           git diff --cached --check
           git commit -m 'Bound G0 discovery runtime and preserve checkpoints'
           git push origin HEAD:run/control-plane
