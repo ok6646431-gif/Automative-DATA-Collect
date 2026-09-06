@@ -245,6 +245,14 @@ jobs:
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
 
+      # Pushes made with the workflow's GITHUB_TOKEN intentionally do not start new
+      # workflows. Explicitly dispatch the master collector once after promotion.
+      - name: Dispatch existing master collection after promotion
+        if: success() && steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate == 'PASS'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run collect.yml --ref "${GITHUB_REF_NAME}"
+
       - name: Stop on unresolved Discovery
         if: steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate != 'PASS'
         run: |
