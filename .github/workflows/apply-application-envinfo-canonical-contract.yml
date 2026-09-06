@@ -31,13 +31,15 @@ jobs:
           python -m unittest \
             tests.test_archive_user_dedup_v2 \
             tests.test_application_material_package \
-            tests.test_application_material_package_validation
+            tests.test_application_material_package_validation \
+            tests.test_application_envinfo_canonical_contract
       - name: Compile changed modules
         run: |
           python -m py_compile \
             orchestrator/archive_user_dedup_v2.py \
             tools/build_application_material_package.py \
-            tools/validate_application_material_package.py
+            tools/validate_application_material_package.py \
+            tests/test_application_envinfo_canonical_contract.py
       - name: Validate patch
         run: git diff --check
       - name: Commit production fix
@@ -52,8 +54,6 @@ jobs:
             orchestrator/archive_user_dedup_v2.py \
             tools/build_application_material_package.py \
             tools/validate_application_material_package.py \
-            tests/test_archive_user_dedup_v2.py \
-            tests/test_application_material_package.py \
-            tests/test_application_material_package_validation.py
+            tests/test_application_envinfo_canonical_contract.py
           git commit -m 'Preserve ENVINFO canonical attachment provenance in application packages'
           git push origin HEAD:run/control-plane
