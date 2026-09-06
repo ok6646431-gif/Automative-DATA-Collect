@@ -4,10 +4,12 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "orchestrator"))
 
 from orchestrator.scope_quality import (
+    audit_collection_for_requested_scope,
     classify_archive_summary,
     is_blocking_document_gap,
     scoped_envinfo_attachment_status,
@@ -76,6 +78,57 @@ class ScopeQualityRegressionTests(unittest.TestCase):
             }
             state = scoped_envinfo_attachment_status(root, {}, scope)
             self.assertEqual(len(state["scoped_failed"]), 1)
+
+    def test_requested_scope_audit_keeps_pre_entity_years_nonblocking(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            profile_path = root / "Company_Profile.json"
+            profile_path.write_text(json.dumps({
+                "company_id": "COMP_TEST",
+                "company_display_name": "테스트회사",
+                "legal_entity_active_period": {"start_year": 2022},
+            }, ensure_ascii=False), encoding="utf-8")
+            raw_rows = [
+                {
+                    "source": "PRTR", "period_kind": "YEAR", "period": "2020", "expected": "Y",
+                    "query_state": "MISSING", "data_present": "N",
+                    "completeness_state": "UNQUERIED_PERIOD", "evidence": "", "user_note": "",
+                },
+                {
+                    "source": "PRTR", "period_kind": "YEAR", "period": "2021", "expected": "Y",
+                    "query_state": "MISSING", "data_present": "N",
+                    "completeness_state": "UNQUERIED_PERIOD", "evidence": "", "user_note": "",
+                },
+                {
+                    "source": "PRTR", "period_kind": "YEAR", "period": "2022", "expected": "Y",
+                    "query_state": "COMPLETE", "data_present": "Y",
+                    "completeness_state": "DATA_PRESENT", "evidence": "", "user_note": "",
+                },
+            ]
+            scope = {
+                "mode": "SITE_SET",
+                "label": "테스트회사 국내 사업장",
+                "target_candidate_ids": ["target"],
+                "target_canonical_site_ids": {"SITE_TARGET"},
+                "target_source_ids": {"ENVINFO": set()},
+            }
+            with patch("orchestrator.scope_quality.public_rows", return_value=raw_rows), \
+                 patch("orchestrator.scope_quality.document_rows", return_value=[]), \
+                 patch("orchestrator.scope_quality.resolve_requested_scope", return_value=scope):
+                summary = audit_collection_for_requested_scope(root, profile_path)
+
+            self.assertEqual(summary["status"], "COMPLETE")
+            self.assertEqual(summary["incomplete_items"], 0)
+            self.assertEqual(summary["outside_current_entity_items"], 2)
+            rows = list(csv.DictReader((root / "Collection_Completeness.csv").open(
+                encoding="utf-8-sig", newline=""
+            )))
+            historical = [r for r in rows if r["period"] in {"2020", "2021"}]
+            self.assertEqual(
+                {r["completeness_state"] for r in historical},
+                {"OUTSIDE_CURRENT_ENTITY_PERIOD"},
+            )
+            self.assertTrue(all(r["expected"] == "N" for r in historical))
 
     def test_context_gap_does_not_block_document_completeness(self):
         self.assertFalse(is_blocking_document_gap({
