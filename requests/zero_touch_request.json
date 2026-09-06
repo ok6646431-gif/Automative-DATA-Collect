@@ -1,4 +1,4 @@
 {
   "company_name": "금호석유화학",
-  "rerun_reason": "generalization matrix test: company-name-only zero-touch run after POSCO full E2E pass"
+  "rerun_reason": "generalization matrix retry after bounded G0 candidate probes and runtime checkpoint patch"
 }
