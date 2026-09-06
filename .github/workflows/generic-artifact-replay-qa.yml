@@ -1,0 +1,216 @@
+name: Generic artifact replay QA
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/generic-artifact-replay-qa.yml'
+      - 'requests/generic_artifact_replay_qa.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: generic-artifact-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf
+      - name: Install Korean/CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-nanum
+          sudo fc-cache -f
+      - name: Read replay configuration
+        id: cfg
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          cfg=json.load(open('requests/generic_artifact_replay_qa.json',encoding='utf-8'))
+          print('source_run_id='+str(cfg['source_run_id']))
+          print('public_artifact_name='+str(cfg.get('public_artifact_name') or 'stable-public-sources'))
+          print('document_artifact_name='+str(cfg.get('document_artifact_name') or 'stable-corporate-documents'))
+          print('icis_pattern='+str(cfg.get('icis_artifact_pattern') or 'icis-attempt-*'))
+          PY
+      - name: Bootstrap current Discovery inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download public-source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.cfg.outputs.public_artifact_name }}
+          path: collected/stable
+          run-id: ${{ steps.cfg.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download corporate-document artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.cfg.outputs.document_artifact_name }}
+          path: collected/stable
+          run-id: ${{ steps.cfg.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download ICIS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ steps.cfg.outputs.icis_pattern }}
+          path: collected/icis
+          merge-multiple: false
+          run-id: ${{ steps.cfg.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Require retained source inputs
+        run: |
+          for required in \
+            collected/stable/ENVINFO/status.json \
+            collected/stable/SOOSIRO_WATER/status.json \
+            collected/stable/CLEANSYS_AIR/status.json \
+            collected/stable/CORP_DOCS/status.json; do
+            test -s "$required" || { echo "Missing replay input: $required" >&2; exit 1; }
+          done
+      - name: Rebuild package with current generic code
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Preserve Discovery summary
+        run: cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
+      - name: Build current Human Archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
+      - name: Validate generic scope, completeness and archive invariants
+        run: |
+          python - <<'PY'
+          import csv,json,re,zipfile
+          from pathlib import Path
+
+          cfg=json.load(open('requests/generic_artifact_replay_qa.json',encoding='utf-8'))
+          scope=json.load(open('assembled/Requested_Scope.json',encoding='utf-8'))
+          completeness=json.load(open('assembled/Collection_Completeness.json',encoding='utf-8'))
+          archive=json.load(open('assembled/Archive_Summary.json',encoding='utf-8'))
+
+          def read_csv(path):
+              p=Path(path)
+              if not p.exists() or p.stat().st_size==0: return []
+              with p.open(encoding='utf-8-sig',newline='') as f: return list(csv.DictReader(f))
+
+          target_sites={str(x) for x in scope.get('target_canonical_site_ids',[]) if str(x)}
+          bat=read_csv('assembled/BAT_Applicability_Candidates.csv')
+          bad_bat=[r for r in bat if str(r.get('canonical_site_id') or '') not in target_sites]
+          if bad_bat:
+              raise SystemExit(f'BAT candidates escaped authoritative requested scope: {bad_bat[:5]}')
+
+          excluded={(str(x.get('source_key') or ''),str(x.get('source_site_id') or '')) for x in scope.get('excluded_source_ids',[]) if isinstance(x,dict)}
+          analysis=read_csv('assembled/Analysis_Ready_Index.csv')
+          leaked=[r for r in analysis if (str(r.get('source_key') or ''),str(r.get('source_site_id') or '')) in excluded]
+          if leaked:
+              raise SystemExit(f'Excluded source IDs re-entered analysis index: {leaked[:5]}')
+
+          period=scope.get('current_legal_entity_active_period') or {}
+          start=period.get('start_year')
+          if start is not None:
+              start=int(start)
+              bad_pre=[]
+              for r in analysis:
+                  if str(r.get('analysis_eligible') or '').strip().lower() not in {'true','1','y','yes'}: continue
+                  m=re.search(r'(?:19|20)\d{2}',str(r.get('time_key') or ''))
+                  if m and int(m.group()) < start: bad_pre.append(r)
+              if bad_pre:
+                  raise SystemExit(f'Pre-entity rows remained analysis eligible: {bad_pre[:5]}')
+
+          if cfg.get('require_collection_complete') and completeness.get('status')!='COMPLETE':
+              raise SystemExit(f"Collection completeness did not pass: {completeness}")
+          if int(completeness.get('incomplete_items') or 0)!=0:
+              raise SystemExit(f"Incomplete collection items remain: {completeness.get('incomplete_keys')}")
+
+          outside=[r for r in read_csv('assembled/Collection_Completeness.csv') if r.get('completeness_state')=='OUTSIDE_CURRENT_ENTITY_PERIOD']
+          if start is not None and not outside:
+              raise SystemExit('Entity-window replay produced no explicit historical-period rows')
+
+          if cfg.get('require_archive_complete') and archive.get('archive_completeness')!='COMPLETE':
+              raise SystemExit(f"Human Archive completeness did not pass: {archive.get('archive_completeness')}")
+          checks=archive.get('acceptance_checks') or {}
+          blocking=archive.get('blocking_acceptance_checks') or {}
+          failed_checks=[k for k,v in blocking.items() if v is False]
+          if failed_checks:
+              raise SystemExit(f'Blocking archive acceptance checks failed: {failed_checks}')
+
+          zpath=Path('assembled/Human_Archive.zip')
+          if not zpath.exists() or zpath.stat().st_size==0: raise SystemExit('Human Archive ZIP missing')
+          with zipfile.ZipFile(zpath) as z:
+              names=z.namelist()
+              forbidden=[n for n in names if ('/01_사용자자료/' in n or '/02_BAT_참고자료/' in n) and n.lower().endswith(('.html','.htm','.json','.jsonl'))]
+              if forbidden: raise SystemExit(f'Forbidden machine files in human-facing areas: {forbidden[:10]}')
+
+          print(json.dumps({
+              'GENERIC_REPLAY_CORE_ACCEPTANCE':'PASS',
+              'target_canonical_site_count':len(target_sites),
+              'bat_candidate_count':len(bat),
+              'excluded_source_id_count':len(excluded),
+              'analysis_row_count':len(analysis),
+              'outside_current_entity_items':len(outside),
+              'collection_completeness':completeness.get('status'),
+              'archive_completeness':archive.get('archive_completeness'),
+              'zip_bytes':zpath.stat().st_size,
+              'acceptance_checks':checks,
+          },ensure_ascii=False))
+          PY
+      - name: Build application materials from accepted archive
+        if: ${{ success() }}
+        run: >-
+          python tools/build_application_material_from_archive.py
+          --input assembled/Human_Archive.zip
+          --output-dir application-delivery
+          --source-run ${{ steps.cfg.outputs.source_run_id }}
+          --summary-out application-delivery/application_package_result.json
+      - name: Validate application delivery
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          cfg=json.load(open('requests/generic_artifact_replay_qa.json',encoding='utf-8'))
+          result=json.load(open('application-delivery/application_package_result.json',encoding='utf-8'))
+          zips=list(Path('application-delivery').glob('*.zip'))
+          if cfg.get('require_application_materials') and not zips:
+              raise SystemExit(f'Application delivery ZIP missing: {result}')
+          print(json.dumps({'GENERIC_REPLAY_APPLICATION_ACCEPTANCE':'PASS','zip_count':len(zips),'result':result},ensure_ascii=False))
+          PY
+      - name: Upload generic replay result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generic-artifact-replay-qa
+          path: |
+            assembled/Human_Archive.zip
+            assembled/Archive_Summary.json
+            assembled/Collection_Completeness.json
+            assembled/Collection_Completeness.csv
+            assembled/Requested_Scope.json
+            assembled/BAT_Applicability_Candidates.csv
+            assembled/BAT_Summary.json
+            assembled/Master_Manifest.json
+            assembled/Analysis_Ready_Index.csv
+            application-delivery/
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 0
