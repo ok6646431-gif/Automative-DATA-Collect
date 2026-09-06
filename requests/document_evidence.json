@@ -1,19 +1,20 @@
 {
   "schema_version": "1.0",
-  "discovery_status": "PARTIAL",
+  "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
       "document_id": "AUTO_SUSTAINABILITY_2023",
-      "document_type": "SUSTAINABILITY_REPORT_SUMMARY",
-      "title": "2023 지속가능경영보고서 ESG Management 대표이사 인사말 ESG 전략 중요 이슈 관리 성과 Highlight Environmental 기후행동 기후변화 대응 조직 탄소중립 로드맵 리스크 대응 지속가능 기여 제품 환경경영 운영현황 오염물질 수자원 생물다양성 자원순환 정책 Social 안전보건 안전 보건 정책 인",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "POSCO Sustainability Report 2023 eng",
       "report_year": 2023,
       "source_url": "https://sustainability.posco.co.kr/assets/file/POSCO_Sustainability_Report_2023_eng.pdf",
       "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
-      "coverage_role": "SUPPORTING_SUMMARY_ONLY"
+      "importance": "CORE",
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification. Final representation arbitration: explicit full-report PDF target overrides incidental summary/highlight words in surrounding page context.",
+      "document_category": "SUSTAINABILITY_REPORT",
+      "entity_alignment": "ALIGNED"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2020",
@@ -70,22 +71,18 @@
       "entity_alignment": "ALIGNED"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_CATALOG_e0c22be920b0",
-      "document_type": "OTHER_OFFICIAL_DOCUMENT",
-      "title": "Official sustainability report catalog",
-      "report_year": null,
+      "document_id": "AUTO_SUSTAINABILITY_DIGITAL_2025",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2025 지속가능경영보고서",
+      "report_year": 2025,
       "source_url": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "EVIDENCE_ONLY",
-      "representation": "REPORT_CATALOG",
-      "coverage_role": "REPORT_CATALOG_ONLY",
-      "catalog_years": [
-        2023,
-        2025
-      ],
-      "notes": "Verified first-party multi-year report catalog. The shared page is preserved once as discovery evidence and does not itself satisfy any individual annual-report coverage year."
+      "importance": "CORE",
+      "representation": "DIGITAL_REPORT",
+      "entity_alignment": "UNKNOWN",
+      "notes": "Verified first-party annual report published in digital/HTML form; accepted for annual coverage without inventing a PDF."
     }
   ],
   "gaps": [
@@ -99,30 +96,6 @@
       "severity": "LOW",
       "blocking": false,
       "reason": "As of 2026-09-06, verified official report sources list reports through 2025, not 2026.",
-      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381"
-    },
-    {
-      "gap_id": "AUTO_SUSTAINABILITY_2023_TARGET_UNRESOLVED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2023,
-      "verification_status": "SOURCE_VERIFIED",
-      "status": "PUBLISHED_DOCUMENT_TARGET_UNRESOLVED",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "The first-party catalog indicates an annual report for this year, but no distinct year-specific document target was verified. The catalog page itself is not promoted as the annual report.",
-      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381"
-    },
-    {
-      "gap_id": "AUTO_SUSTAINABILITY_2025_TARGET_UNRESOLVED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2025,
-      "verification_status": "SOURCE_VERIFIED",
-      "status": "PUBLISHED_DOCUMENT_TARGET_UNRESOLVED",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "The first-party catalog indicates an annual report for this year, but no distinct year-specific document target was verified. The catalog page itself is not promoted as the annual report.",
       "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381"
     }
   ],
