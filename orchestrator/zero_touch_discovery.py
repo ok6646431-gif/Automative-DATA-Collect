@@ -748,7 +748,30 @@ def main() -> int:
     if not company:
         raise DiscoveryError("company_name is required")
     out = Path(args.out_dir)
-    discovery, docs, audit = discover(company, start_year=args.start_year, max_pages=args.max_pages)
+    checkpoint = {
+        "schema_version": "1.0",
+        "company": company,
+        "status": "RUNNING",
+        "started_at": datetime.now(KST).isoformat(),
+        "runtime_parameters": {
+            "start_year": args.start_year,
+            "max_pages": args.max_pages,
+        },
+    }
+    _write_json(out / "Discovery_Runtime_Checkpoint.json", checkpoint)
+    try:
+        discovery, docs, audit = discover(company, start_year=args.start_year, max_pages=args.max_pages)
+    except Exception as exc:
+        checkpoint["status"] = "ERROR"
+        checkpoint["finished_at"] = datetime.now(KST).isoformat()
+        checkpoint["error"] = f"{type(exc).__name__}: {exc}"
+        _write_json(out / "Discovery_Runtime_Checkpoint.json", checkpoint)
+        raise
+    checkpoint["status"] = "COMPLETED"
+    checkpoint["finished_at"] = datetime.now(KST).isoformat()
+    checkpoint["gate_status"] = audit.get("gate_status")
+    checkpoint["http_attempt_count"] = len(audit.get("http_attempts", []))
+    _write_json(out / "Discovery_Runtime_Checkpoint.json", checkpoint)
     _write_json(out / "company_discovery.json", discovery)
     _write_json(out / "document_evidence.json", docs)
     _write_json(out / "event_evidence.json", {"schema_version": "1.0", "request_id": discovery["request_id"], "discovery_status": "NOT_RUN", "events": []})

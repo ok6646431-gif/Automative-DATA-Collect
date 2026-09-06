@@ -28,8 +28,8 @@ from orchestrator import g0_thin_shell_recovery as thin
 from orchestrator import zero_touch_discovery as base
 
 
-MAX_CANDIDATE_PROBE_PAGES = 18
-MAX_CANDIDATES_PER_STAGE = 12
+MAX_CANDIDATE_PROBE_PAGES = 10
+MAX_CANDIDATES_PER_STAGE = 6
 
 
 def _crawl_no_search(
