@@ -1,0 +1,11 @@
+{
+  "source_run_id": 34017113524,
+  "public_artifact_name": "stable-public-sources",
+  "document_artifact_name": "stable-corporate-documents",
+  "icis_artifact_pattern": "icis-attempt-*",
+  "require_collection_complete": true,
+  "require_archive_complete": true,
+  "require_application_materials": true,
+  "purpose": "Replay the latest fully collected company artifacts through current generic scope, BAT, completeness, archive, and application-delivery code without recollecting public sources.",
+  "replay_token": "generic-current-code-replay-20260906-scope-completeness-v1"
+}
