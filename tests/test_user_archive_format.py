@@ -48,9 +48,12 @@ class UserArchiveFormatTests(unittest.TestCase):
 
             self.assertEqual(result["corporate_html_rendered_to_pdf"], 1)
             self.assertEqual(result["review_machine_variants_removed"], 4)
-            self.assertTrue((policy / "2026_환경경영 전략.pdf").exists())
+            # Product-boundary HTML normalization preserves the materialized user
+            # filename stem and changes only the representation to PDF. The HTML
+            # document title remains content, not a second source of filename truth.
+            self.assertTrue((policy / "2026_policy.pdf").exists())
             self.assertFalse(any(policy.glob("*.html")))
-            self.assertFalse(any(p.suffix.lower() in {".html", ".json", ".jsonl"} for p in (root / "01_사용자자료").rglob("*")))
+            self.assertFalse(any(p.suffix.lower() in {".html", ".htm", ".json", ".jsonl"} for p in (root / "01_사용자자료").rglob("*")))
             self.assertTrue((index / "사용자자료_목록.csv").exists())
             self.assertTrue((index / "전체자료목록.xlsx").exists())
 
