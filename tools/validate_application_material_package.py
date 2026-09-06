@@ -13,6 +13,7 @@ from typing import Iterable
 from xml.etree import ElementTree as ET
 
 ENVINFO_PREFIX = "02_환경인허가_ENVINFO/"
+ENVINFO_CENTRAL_FOLDER = "첨부자료_원문"
 WEB_ENDPOINT_EXTENSIONS = {".do", ".jsp", ".action", ".cgi", ".php", ".aspx"}
 SOURCE_PREFIXES = {
     "ENVINFO": ENVINFO_PREFIX,
@@ -135,6 +136,17 @@ def _site_core(value: object) -> str:
         if text.endswith(suffix):
             text = text[:-len(suffix)]
     return text
+
+
+def _is_envinfo_attachment_storage(path: str) -> bool:
+    parts = PurePosixPath(path).parts
+    return (
+        path.startswith(ENVINFO_PREFIX)
+        and (
+            "/첨부자료/" in path
+            or (len(parts) > 2 and parts[0] == ENVINFO_PREFIX.rstrip("/") and parts[1] == ENVINFO_CENTRAL_FOLDER)
+        )
+    )
 
 
 def _site_matches_target(site: str, targets: Iterable[str]) -> bool:
@@ -295,54 +307,71 @@ def validate_package(path: str, expected_company: str | None = None) -> dict[str
         checks.append("ENVINFO_COUNT_CSV")
 
         envinfo_members = [p for p in relative_names if p.startswith(ENVINFO_PREFIX)]
-        if len(envinfo_members) != physical:
+        attachment_storage_members = [p for p in envinfo_members if _is_envinfo_attachment_storage(p)]
+        record_members = [p for p in envinfo_members if not _is_envinfo_attachment_storage(p)]
+        if len(record_members) != disclosure:
             raise RuntimeError(
-                f"ENVINFO physical member mismatch: archive={len(envinfo_members)} summary={physical}"
+                "ENVINFO disclosure member count disagrees with summary: "
+                f"records={len(record_members)}/{disclosure}"
             )
-        attachment_members = [p for p in envinfo_members if "/첨부자료/" in p]
-        record_members = [p for p in envinfo_members if "/첨부자료/" not in p]
-        if len(attachment_members) != unique_attachments or len(record_members) != disclosure:
-            raise RuntimeError(
-                "ENVINFO member classes disagree with summary: "
-                f"records={len(record_members)}/{disclosure}, attachments={len(attachment_members)}/{unique_attachments}"
-            )
-
-        attachment_hashes: dict[str, str] = {}
-        physical_sha_to_path: dict[str, str] = {}
-        for rel in attachment_members:
-            data = z.read(f"{root}/{rel}")
-            digest = sha256_bytes(data)
-            if digest in physical_sha_to_path:
-                raise RuntimeError(
-                    "duplicate ENVINFO physical attachment bytes remain: "
-                    f"{physical_sha_to_path[digest]} and {rel}"
-                )
-            physical_sha_to_path[digest] = rel
-            attachment_hashes[rel] = digest
-        checks.append("ENVINFO_PHYSICAL_SHA_UNIQUE")
 
         ref_rows = _read_csv(z, "/00_자료목록/ENVINFO_첨부자료_참조목록.csv")
         if len(ref_rows) != references:
             raise RuntimeError(
                 f"ENVINFO reference row mismatch: csv={len(ref_rows)} summary={references}"
             )
+        relative_name_set = set(relative_names)
         logical_seen: set[str] = set()
+        attachment_hashes: dict[str, str] = {}
+        physical_sha_to_path: dict[str, str] = {}
+        sites_from_refs: set[str] = set()
         for row in ref_rows:
             logical = row.get("logical_path", "")
             stored = row.get("stored_path", "")
             digest = row.get("sha256", "")
+            site = str(row.get("site") or "")
+            if site:
+                sites_from_refs.add(site)
             if not logical or logical in logical_seen:
                 raise RuntimeError(f"duplicate or empty ENVINFO logical path: {logical!r}")
             logical_seen.add(logical)
-            if stored not in attachment_hashes:
+            if not stored or stored not in relative_name_set:
                 raise RuntimeError(f"ENVINFO reference points to missing attachment: {stored}")
+            if stored not in attachment_hashes:
+                actual = sha256_bytes(z.read(f"{root}/{stored}"))
+                if actual in physical_sha_to_path and physical_sha_to_path[actual] != stored:
+                    raise RuntimeError(
+                        "duplicate ENVINFO referenced physical attachment bytes remain: "
+                        f"{physical_sha_to_path[actual]} and {stored}"
+                    )
+                physical_sha_to_path[actual] = stored
+                attachment_hashes[stored] = actual
             if attachment_hashes[stored] != digest:
                 raise RuntimeError(
                     f"ENVINFO reference digest mismatch: stored={stored} csv={digest} actual={attachment_hashes[stored]}"
                 )
+        if len(physical_sha_to_path) != unique_attachments:
+            raise RuntimeError(
+                "ENVINFO unique attachment count disagrees with references: "
+                f"referenced_unique={len(physical_sha_to_path)} summary={unique_attachments}"
+            )
+        unreferenced_storage = sorted(set(attachment_storage_members) - set(attachment_hashes))
+        if unreferenced_storage:
+            raise RuntimeError(f"unreferenced ENVINFO attachment storage remains: {unreferenced_storage[:5]}")
+        if len(record_members) + len(physical_sha_to_path) != physical:
+            raise RuntimeError(
+                "ENVINFO physical-file identity failed after canonical references: "
+                f"records={len(record_members)} unique_attachments={len(physical_sha_to_path)} summary={physical}"
+            )
+        checks.append("ENVINFO_PHYSICAL_SHA_UNIQUE")
         checks.append("ENVINFO_REFERENCE_INTEGRITY")
 
-        sites = sorted({PurePosixPath(p).parts[1] for p in envinfo_members if len(PurePosixPath(p).parts) > 1})
+        record_sites = {
+            PurePosixPath(p).parts[1]
+            for p in record_members
+            if len(PurePosixPath(p).parts) > 1
+        }
+        sites = sorted(record_sites | sites_from_refs)
         if len(sites) != site_count:
             raise RuntimeError(f"ENVINFO site count mismatch: archive={len(sites)} summary={site_count}")
 

@@ -18,6 +18,8 @@ INDEX_PREFIX = "00_자료목록/"
 WEB_ENDPOINT_EXTENSIONS = {".do", ".jsp", ".action", ".cgi", ".php", ".aspx"}
 ENVINFO_PREFIX = "02_환경인허가_ENVINFO/"
 ENVINFO_ATTACHMENT_MARKER = "/첨부자료/"
+ENVINFO_CENTRAL_FOLDER = "첨부자료_원문"
+HUMAN_ENVINFO_REFERENCE_CSV = "ENVINFO_첨부자료_참조표.csv"
 YEAR_RE = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
 
 MAPPINGS = [
@@ -68,13 +70,29 @@ def map_relative_path(relative: str) -> str | None:
     return None
 
 
+def is_envinfo_canonical_attachment(path: str) -> bool:
+    parts = PurePosixPath(path).parts
+    return (
+        len(parts) > 2
+        and parts[0] == ENVINFO_PREFIX.rstrip("/")
+        and parts[1] == ENVINFO_CENTRAL_FOLDER
+    )
+
+
 def is_envinfo_attachment(path: str) -> bool:
-    return path.startswith(ENVINFO_PREFIX) and ENVINFO_ATTACHMENT_MARKER in path
+    return (
+        path.startswith(ENVINFO_PREFIX)
+        and (ENVINFO_ATTACHMENT_MARKER in path or is_envinfo_canonical_attachment(path))
+    )
 
 
 def envinfo_site(path: str) -> str:
     parts = PurePosixPath(path).parts
-    return parts[1] if len(parts) > 1 and parts[0] == ENVINFO_PREFIX.rstrip("/") else ""
+    if len(parts) <= 1 or parts[0] != ENVINFO_PREFIX.rstrip("/"):
+        return ""
+    if parts[1] == ENVINFO_CENTRAL_FOLDER:
+        return ""
+    return parts[1]
 
 
 def path_year(path: str) -> str:
@@ -192,6 +210,31 @@ def read_prior_envinfo_attachment_references(src: zipfile.ZipFile) -> list[dict[
     return result
 
 
+def read_human_envinfo_attachment_references(src: zipfile.ZipFile) -> list[dict[str, str]]:
+    """Read canonical ENVINFO relations emitted by Human Archive user dedup.
+
+    Only original site-level ENVINFO attachment occurrences are returned. Generated
+    sustainability/policy copies are provenance redirects, not additional source
+    attachment relations.
+    """
+    suffix = f"/00_자료목록/{HUMAN_ENVINFO_REFERENCE_CSV}"
+    matches = [info for info in src.infolist() if not info.is_dir() and info.filename.endswith(suffix)]
+    if not matches:
+        return []
+    if len(matches) != 1:
+        raise RuntimeError(f"expected exactly one {HUMAN_ENVINFO_REFERENCE_CSV}, found {len(matches)}")
+    text = src.read(matches[0]).decode("utf-8-sig")
+    rows = list(csv.DictReader(io.StringIO(text)))
+    result = []
+    prefix = "01_사용자자료/03_환경정보공개시스템/"
+    for row in rows:
+        original = str(row.get("원래_사용자경로") or "")
+        if not original.startswith(prefix) or "/첨부자료/" not in original:
+            continue
+        result.append({key: str(value or "") for key, value in row.items()})
+    return result
+
+
 def build(input_zip: str, output_zip: str, root_name: str, company: str, source_run: str) -> dict[str, object]:
     inventory: list[dict[str, object]] = []
     transform_log: list[dict[str, object]] = []
@@ -213,11 +256,14 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
     envinfo_duplicate_attachment_references = 0
     envinfo_source_duplicate_attachment_references = 0
     envinfo_logical_paths: set[str] = set()
+    source_relative_to_final: dict[str, str] = {}
+    final_path_bytes: dict[str, int] = {}
 
     with zipfile.ZipFile(input_zip, "r") as src, zipfile.ZipFile(
         output_zip, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True
     ) as out:
         prior_envinfo_references = read_prior_envinfo_attachment_references(src)
+        human_envinfo_references = read_human_envinfo_attachment_references(src)
         for info in src.infolist():
             if info.is_dir():
                 continue
@@ -237,6 +283,7 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             final_rel, action = safe_collision_path(mapped, taken, digest)
             retained_path = ""
             attachment = is_envinfo_attachment(final_rel)
+            canonical_attachment = is_envinfo_canonical_attachment(final_rel)
             if action != "SKIPPED_IDENTICAL_PATH_COLLISION" and attachment:
                 retained_path = envinfo_attachment_by_sha.get(digest, "")
                 if retained_path:
@@ -254,33 +301,38 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             )
             if action == "SKIPPED_IDENTICAL_PATH_COLLISION":
                 skipped += 1
+                source_relative_to_final[relative] = final_rel
                 continue
             taken[final_rel] = digest
+            source_relative_to_final[relative] = retained_path or final_rel
+            if not retained_path:
+                final_path_bytes[final_rel] = len(data)
 
             if attachment:
                 site = envinfo_site(final_rel)
                 year = path_year(final_rel)
-                stats = envinfo_site_stats[site]
-                stats["attachment_references"] = int(stats["attachment_references"]) + 1
-                stats["attachment_hashes"].add(digest)
-                if year:
-                    stats["years"].add(year)
                 duplicate_reference = bool(retained_path)
-                envinfo_attachment_references.append(
-                    {
-                        "logical_path": final_rel,
-                        "stored_path": retained_path or final_rel,
-                        "site": site,
-                        "year": year,
-                        "bytes": len(data),
-                        "sha256": digest,
-                        "reference_type": (
-                            "IDENTICAL_SHA256_REFERENCE" if duplicate_reference else "STORED_FILE"
-                        ),
-                        "source_archive_path": info.filename,
-                    }
-                )
-                envinfo_logical_paths.add(final_rel)
+                if not canonical_attachment:
+                    stats = envinfo_site_stats[site]
+                    stats["attachment_references"] = int(stats["attachment_references"]) + 1
+                    stats["attachment_hashes"].add(digest)
+                    if year:
+                        stats["years"].add(year)
+                    envinfo_attachment_references.append(
+                        {
+                            "logical_path": final_rel,
+                            "stored_path": retained_path or final_rel,
+                            "site": site,
+                            "year": year,
+                            "bytes": len(data),
+                            "sha256": digest,
+                            "reference_type": (
+                                "IDENTICAL_SHA256_REFERENCE" if duplicate_reference else "STORED_FILE"
+                            ),
+                            "source_archive_path": info.filename,
+                        }
+                    )
+                    envinfo_logical_paths.add(final_rel)
                 if duplicate_reference:
                     envinfo_duplicate_attachment_references += 1
                     envinfo_duplicate_attachment_bytes_avoided += len(data)
@@ -311,7 +363,56 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                 envinfo_record_documents += 1
                 envinfo_record_bytes += len(data)
 
-        envinfo_source_attachment_paths = len(envinfo_attachment_references)
+        # Human Archive canonicalization moves site attachments to a shared SHA
+        # store and may redirect exact copies to a canonical report/policy file. Restore
+        # the original site/year relationships without creating duplicate bytes.
+        for ref in human_envinfo_references:
+            original = str(ref.get("원래_사용자경로") or "")
+            retained_source = str(ref.get("최종_보존경로") or "")
+            logical_path = map_relative_path(original)
+            if not logical_path or logical_path in envinfo_logical_paths:
+                continue
+            stored_path = source_relative_to_final.get(retained_source, "")
+            if not stored_path:
+                mapped_retained = map_relative_path(retained_source)
+                if mapped_retained and mapped_retained in taken:
+                    stored_path = mapped_retained
+            digest = str(ref.get("SHA256") or "")
+            if not stored_path or stored_path not in taken:
+                raise RuntimeError(
+                    "Human Archive ENVINFO reference points to a file not copied into support package: "
+                    f"{retained_source}"
+                )
+            if not digest or taken[stored_path] != digest:
+                raise RuntimeError(
+                    "Human Archive ENVINFO reference digest mismatch: "
+                    f"stored={stored_path} expected={digest} actual={taken.get(stored_path)}"
+                )
+            if digest not in envinfo_attachment_by_sha:
+                envinfo_attachment_by_sha[digest] = stored_path
+                envinfo_unique_attachment_bytes += final_path_bytes.get(stored_path, 0)
+            site = envinfo_site(logical_path)
+            year = str(ref.get("공개연도") or path_year(logical_path))
+            stats = envinfo_site_stats[site]
+            stats["attachment_references"] = int(stats["attachment_references"]) + 1
+            stats["attachment_hashes"].add(digest)
+            if year:
+                stats["years"].add(year)
+            byte_count = int(str(ref.get("용량_bytes") or "0") or 0)
+            envinfo_attachment_references.append(
+                {
+                    "logical_path": logical_path,
+                    "stored_path": stored_path,
+                    "site": site,
+                    "year": year,
+                    "bytes": byte_count,
+                    "sha256": digest,
+                    "reference_type": "HUMAN_ARCHIVE_CANONICAL_REFERENCE",
+                    "source_archive_path": original,
+                }
+            )
+            envinfo_logical_paths.add(logical_path)
+
         for prior in prior_envinfo_references:
             logical_path = map_relative_path(prior["removed_user_path"])
             retained_mapped_path = map_relative_path(prior["retained_user_path"])
@@ -351,7 +452,16 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
 
         envinfo_attachment_references.sort(key=lambda row: str(row["logical_path"]))
         envinfo_attachment_count = len(envinfo_attachment_references)
-        envinfo_unique_attachment_count = len(envinfo_attachment_by_sha)
+        referenced_digests = {str(row.get("sha256") or "") for row in envinfo_attachment_references if str(row.get("sha256") or "")}
+        envinfo_unique_attachment_count = len(referenced_digests)
+        envinfo_unique_attachment_bytes = sum(
+            final_path_bytes.get(envinfo_attachment_by_sha.get(digest, ""), 0)
+            for digest in referenced_digests
+        )
+        envinfo_duplicate_attachment_references = max(0, envinfo_attachment_count - envinfo_unique_attachment_count)
+        envinfo_source_attachment_paths = max(0, envinfo_attachment_count - envinfo_source_duplicate_attachment_references)
+        relation_bytes = sum(int(row.get("bytes") or 0) for row in envinfo_attachment_references)
+        envinfo_duplicate_attachment_bytes_avoided = max(0, relation_bytes - envinfo_unique_attachment_bytes)
         envinfo_physical_files = envinfo_record_documents + envinfo_unique_attachment_count
         envinfo_physical_bytes = envinfo_record_bytes + envinfo_unique_attachment_bytes
         envinfo_site_count = len([site for site in envinfo_site_stats if site])
@@ -527,11 +637,20 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
             raise RuntimeError("Support-package inventory missing")
         if not any("ENVINFO_첨부자료_참조목록.csv" in name for name in names):
             raise RuntimeError("ENVINFO attachment reference inventory missing")
-        envinfo_physical_members = [name for name in names if f"/{ENVINFO_PREFIX}" in name]
-        if len(envinfo_physical_members) != summary["envinfo_physical_files"]:
+        relative_names = [name[len(root_name) + 1:] for name in names if name.startswith(root_name + "/") and not name.endswith("/")]
+        record_members = [
+            rel for rel in relative_names
+            if rel.startswith(ENVINFO_PREFIX) and not is_envinfo_attachment(rel)
+        ]
+        stored_paths = {str(row.get("stored_path") or "") for row in envinfo_attachment_references if str(row.get("stored_path") or "")}
+        missing_stored = sorted(path for path in stored_paths if f"{root_name}/{path}" not in names)
+        if missing_stored:
+            raise RuntimeError(f"ENVINFO stored attachment paths missing from support package: {missing_stored[:5]}")
+        if len(record_members) + len(stored_paths) != summary["envinfo_physical_files"]:
             raise RuntimeError(
                 "ENVINFO physical-file count mismatch: "
-                f"archive={len(envinfo_physical_members)} summary={summary['envinfo_physical_files']}"
+                f"records={len(record_members)} stored_attachments={len(stored_paths)} "
+                f"summary={summary['envinfo_physical_files']}"
             )
 
     summary["output_zip"] = output_zip

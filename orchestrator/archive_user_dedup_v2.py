@@ -10,6 +10,7 @@ is identical even when document metadata makes the raw file SHA-256 differ.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
@@ -37,6 +38,7 @@ ENVINFO_ROOT = "03_환경정보공개시스템"
 SUSTAINABILITY_ROOT = "04_지속가능경영보고서"
 CENTRAL_FOLDER = "첨부자료_원문"
 REFERENCE_XLSX = "ENVINFO_첨부자료_참조표.xlsx"
+REFERENCE_CSV = "ENVINFO_첨부자료_참조표.csv"
 
 
 def _rel(path: Path, archive_root: Path) -> str:
@@ -122,6 +124,15 @@ def _write_reference_xlsx(path: Path, rows: list[dict]) -> None:
     for c, width in enumerate(widths):
         ws.set_column(c, c, width)
     wb.close()
+
+
+def _write_reference_csv(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fields = ["사업장", "공개연도", "원래_사용자경로", "최종_보존경로", "파일명", "용량_bytes", "SHA256", "처리"]
+    with path.open("w", encoding="utf-8-sig", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def _remove_empty_dirs(root: Path) -> None:
@@ -314,6 +325,7 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
             "sustainability_semantic_failures": [],
             "sustainability_semantic_engine": "PYPDF_PAGE_RENDER_STRUCTURE_SHA256_V1",
             "envinfo_attachment_reference_file": "",
+            "envinfo_attachment_reference_csv": "",
         }
 
     attachment_files = [
@@ -416,8 +428,10 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
     _remove_empty_dirs(user)
     refs.sort(key=lambda r: (str(r["사업장"]), str(r["공개연도"]), str(r["원래_사용자경로"])))
     ref_path = archive_root / "00_자료목록" / REFERENCE_XLSX
+    ref_csv_path = archive_root / "00_자료목록" / REFERENCE_CSV
     if refs:
         _write_reference_xlsx(ref_path, refs)
+        _write_reference_csv(ref_csv_path, refs)
 
     readme = archive_root / "00_자료목록" / "README_먼저읽기.txt"
     if readme.exists():
@@ -444,6 +458,7 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
         "envinfo_generated_crossfolder_bytes_saved": cross_bytes,
         **semantic_stats,
         "envinfo_attachment_reference_file": str(ref_path.relative_to(archive_root)) if refs else "",
+        "envinfo_attachment_reference_csv": str(ref_csv_path.relative_to(archive_root)) if refs else "",
     }
 
     idx_manifest = archive_root / "00_자료목록" / "Archive_Manifest.json"
