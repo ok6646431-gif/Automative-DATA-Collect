@@ -71,18 +71,17 @@
       "entity_alignment": "ALIGNED"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_DIGITAL_2025",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 지속가능경영보고서",
+      "title": "2025 sustainability report KOR",
       "report_year": 2025,
-      "source_url": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
+      "source_url": "https://sustainability.posco.co.kr/S91/S91F10/download.do?fid=260000065&pid=123",
       "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
-      "expected_extension": "html",
+      "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "representation": "DIGITAL_REPORT",
-      "entity_alignment": "UNKNOWN",
-      "notes": "Verified first-party annual report published in digital/HTML form; accepted for annual coverage without inventing a PDF."
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+      "entity_alignment": "UNKNOWN"
     }
   ],
   "gaps": [
