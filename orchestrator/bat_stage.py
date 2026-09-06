@@ -52,6 +52,26 @@ def _bridge_into_corp_docs(package):
     return len(added)
 
 
+def _authoritative_requested_site_ids(package):
+    """Return the central SITE_SET boundary when Requested_Scope is available.
+
+    None means the central resolver has not produced a scope artifact yet and
+    legacy rematching may be used as a compatibility fallback. An empty set is
+    authoritative and must fail closed rather than reopening candidate matching.
+    """
+    package=Path(package)
+    path=package/'Requested_Scope.json'
+    if not path.exists():
+        return None
+    try:
+        scope=json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return None
+    if str(scope.get('mode') or '').upper()!='SITE_SET':
+        return None
+    return {str(x) for x in (scope.get('target_canonical_site_ids') or []) if str(x)}
+
+
 def _canonical_candidate_map(package):
     package=Path(package)
     profile=json.loads((package/'Company_Profile.json').read_text(encoding='utf-8')) if (package/'Company_Profile.json').exists() else {}
@@ -60,17 +80,19 @@ def _canonical_candidate_map(package):
     selected=[c for c in candidates if not scope_ids or str(c.get('candidate_id') or '') in scope_ids]
     address_counts=_selected_address_counts(selected)
     sites,_=_read_csv(package/'Site_Master.csv')
+    authoritative=_authoritative_requested_site_ids(package)
     inverse={}
     for candidate in selected:
         candidate_id=str(candidate.get('candidate_id') or '')
         if not candidate_id: continue
         for site in sites:
             if site.get('identity_status')!='CONFIRMED': continue
+            cid=str(site.get('canonical_site_id') or '')
+            if authoritative is not None and cid not in authoritative:
+                continue
             if _candidate_matches(candidate,site.get('canonical_site_name'),site.get('canonical_address_key'),profile,address_counts):
-                cid=str(site.get('canonical_site_id') or '')
                 if cid: inverse.setdefault(cid,[]).append(candidate_id)
     return profile,inverse
-
 
 def _filter_plan_to_requested_scope(package,plan):
     """Apply the same verified SITE_SET boundary used by Archive/analysis to BAT candidates.
@@ -92,7 +114,8 @@ def _filter_plan_to_requested_scope(package,plan):
     if mode!='SITE_SET' or not requested_ids:
         return plan,audit
 
-    allowed=set(inverse)
+    authoritative=_authoritative_requested_site_ids(package)
+    allowed=set(inverse) if authoritative is None else set(authoritative)
     mapped={candidate_id for values in inverse.values() for candidate_id in values}
     filtered=[r for r in (plan.get('candidates',[]) or []) if str(r.get('canonical_site_id') or '') in allowed]
     removed=len(plan.get('candidates',[]) or [])-len(filtered)

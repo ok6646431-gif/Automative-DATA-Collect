@@ -114,6 +114,47 @@ def years_in(start, end):
     return list(range(a, b + 1)) if a is not None and b is not None and a <= b else []
 
 
+
+def current_entity_period(profile):
+    """Return only a verified legal-entity lifetime boundary.
+
+    A current-name period is intentionally not used: a rename changes a name,
+    not the corporation's birth date. Missing legacy entity metadata therefore
+    fails open rather than deleting valid pre-rename evidence.
+    """
+    for key in ("legal_entity_active_period", "current_legal_entity_active_period"):
+        period=(profile or {}).get(key)
+        if not isinstance(period,dict):
+            continue
+        start=as_year(period.get("start_year")); end=as_year(period.get("end_year"))
+        if start is not None or end is not None:
+            return {"start_year":start,"end_year":end}
+    return {}
+
+
+def apply_current_entity_period(rows, profile):
+    """Mark public-source years outside the current entity as nonblocking history."""
+    period=current_entity_period(profile)
+    if not period:
+        return rows
+    start=period.get("start_year"); end=period.get("end_year")
+    out=[]
+    for item in rows:
+        y=as_year(item.get("period")) if item.get("period_kind")=="YEAR" else None
+        outside=(y is not None and ((start is not None and y < start) or (end is not None and y > end)))
+        if not outside:
+            out.append(item); continue
+        revised=dict(item)
+        raw_state=str(item.get("completeness_state") or "")
+        revised["expected"]="N"
+        revised["completeness_state"]="OUTSIDE_CURRENT_ENTITY_PERIOD"
+        revised["query_state"]="HISTORICAL_REFERENCE" if item.get("data_present")=="Y" else "NOT_REQUIRED_CURRENT_ENTITY"
+        suffix=f"current_legal_entity_period={start or ''}..{end or ''}; raw_state={raw_state}"
+        revised["evidence"]=(str(item.get("evidence") or "")+"; "+suffix).strip("; ")
+        revised["user_note"]="현재 법인 존속기간 밖의 요청연도임. 원자료는 역사 참고자료로 보존하되 현 법인 수집 완결성 요구에서는 제외함"
+        out.append(revised)
+    return out
+
 def row(source, kind, period, state, *, query_state="", data=False, evidence="", note=""):
     return {
         "source": source, "period_kind": kind, "period": str(period), "expected": "Y",
@@ -378,7 +419,7 @@ def document_rows(package, profile, evidence):
 
     requested = (profile or {}).get("requested_history_window") or {}
     start = as_year(requested.get("start_year")); end = as_year(requested.get("end_year"))
-    legal_start = as_year(((profile or {}).get("current_legal_name_active_period") or {}).get("start_year"))
+    legal_start = current_entity_period(profile).get("start_year")
     for dtype in sorted(ANNUAL_DOCUMENT_TYPES):
         declared = {as_year(d.get("report_year")): d for d in strong_docs if str(d.get("document_type") or "").upper() == dtype and as_year(d.get("report_year")) is not None}
         if not declared: continue
@@ -472,12 +513,13 @@ def audit(package_root, profile_path, request_path=None, evidence_path=None):
     request = read_json(request_path, {}) if request_path and Path(request_path).exists() else build_request(profile)
     request = request or {}
     evidence = read_json(evidence_path, {}) if evidence_path and Path(evidence_path).exists() else {}
-    public = public_rows(output, request)
+    public = apply_current_entity_period(public_rows(output, request), profile)
     rows = public + document_rows(package, profile, evidence or {})
     rows += requested_scope_binding_rows(package, public)
     incomplete = [x for x in rows if x["completeness_state"] in INCOMPLETE_STATES]
     no_data = [x for x in rows if x["completeness_state"] == "NO_DATA_CONFIRMED"]
-    complete = [x for x in rows if x["completeness_state"] in {"DATA_PRESENT", "NO_DATA_CONFIRMED"}]
+    complete = [x for x in rows if x["completeness_state"] in {"DATA_PRESENT", "NO_DATA_CONFIRMED", "OUTSIDE_CURRENT_ENTITY_PERIOD"}]
+    outside_entity = [x for x in rows if x["completeness_state"] == "OUTSIDE_CURRENT_ENTITY_PERIOD"]
 
     write_csv(package/"Collection_Completeness.csv", rows)
     write_csv(package/"Collection_No_Data.csv", no_data)
@@ -485,11 +527,13 @@ def audit(package_root, profile_path, request_path=None, evidence_path=None):
         "schema_version": "1.0", "status": "REVIEW_REQUIRED" if incomplete else "COMPLETE",
         "checked_items": len(rows), "complete_items": len(complete), "incomplete_items": len(incomplete),
         "no_data_confirmed_items": len(no_data),
+        "outside_current_entity_items": len(outside_entity),
         "incomplete_keys": [f"{x['source']}:{x['period_kind']}:{x['period']}:{x['completeness_state']}" for x in incomplete],
         "no_data_confirmed": [{"source":x["source"], "period_kind":x["period_kind"], "period":x["period"], "note":x["user_note"]} for x in no_data],
         "principles": [
             "Every selected period must have successful query evidence or an explicit failure state.",
             "A successful query with no disclosed row is NO_DATA_CONFIRMED and is reported separately.",
+            "Years outside a verified current legal-entity active period are preserved as historical references but are not blocking current-entity completeness obligations.",
             "Every strongly verified declared official document must have a real delivered file.",
             "Annual official-document series must cover the full requested history window; latest-N is not sufficient.",
         ],
