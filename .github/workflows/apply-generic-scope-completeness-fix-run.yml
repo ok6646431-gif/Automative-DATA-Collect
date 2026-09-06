@@ -1,0 +1,56 @@
+name: Execute generic scope and completeness fix
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/apply-generic-scope-completeness-fix-run.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Execute reviewed v2 patch payload
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+          workflow=Path('.github/workflows/apply-generic-scope-completeness-fix-v2.yml').read_text(encoding='utf-8')
+          marker="          python - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("\n          PY",start)
+          payload=dedent(workflow[start:end])
+          exec(compile(payload,'generic_scope_completeness_patch','exec'),{})
+          PY
+      - name: Install regression dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf
+      - name: Run focused regressions
+        env:
+          PYTHONPATH: orchestrator
+        run: >-
+          python -m unittest
+          tests.test_bat_requested_scope_authority
+          tests.test_collection_completeness_entity_window
+          tests.test_requested_scope
+          tests.test_requested_scope_analysis_entity_filter
+          tests.test_collection_completeness
+          tests.test_bat_effective_catalog
+          -v
+      - name: Commit generic fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/bat_stage.py orchestrator/collection_completeness.py tests/test_bat_requested_scope_authority.py tests/test_collection_completeness_entity_window.py
+          git commit -m 'Use authoritative scope for BAT and entity-aware completeness'
+          git push origin HEAD:run/control-plane
