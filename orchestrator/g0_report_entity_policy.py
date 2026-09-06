@@ -5,6 +5,12 @@ entity. Likewise, a highlight/brief PDF is supporting material rather than a ful
 report. Modern issuers can also publish an annual report as a verified first-party digital
 report without a monolithic PDF. This layer handles those cases without company-specific
 URLs or names.
+
+A multi-year archive page is discovery evidence, not itself a set of digital annual
+reports. Digital annual coverage is accepted only from a first-party page whose report
+semantics resolve to one annual year in the requested window. This prevents a report
+catalog from surviving as the current year's DIGITAL_REPORT merely because older years
+were later replaced by concrete PDFs.
 """
 
 from __future__ import annotations
@@ -144,6 +150,16 @@ def _digital_report_entries(
     return entries
 
 
+def _dedicated_digital_entries(entries: Dict[int, Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+    """Return digital annual coverage only when the page resolves to one report year.
+
+    A page that exposes two or more annual report years is catalog/archive evidence.
+    It can still be used by the separate catalog policy and by PDF recovery, but it
+    must not itself become one or more DIGITAL_REPORT annual documents.
+    """
+    return dict(entries) if len(entries) == 1 else {}
+
+
 def normalize(
     discovery: Dict[str, Any],
     documents: Dict[str, Any],
@@ -205,8 +221,17 @@ def normalize(
             continue
         text = " ".join(BeautifulSoup(r.text, "html.parser").stripped_strings)
         found = _digital_report_entries(text, r.url, discovery, start_year, end_year)
-        catalog_diagnostics.append({"locator": r.url, "digital_years": sorted(found)})
-        for year, item in found.items():
+        eligible = _dedicated_digital_entries(found)
+        catalog_diagnostics.append({
+            "locator": r.url,
+            "digital_years": sorted(found),
+            "accepted_digital_years": sorted(eligible),
+            "page_role": (
+                "DEDICATED_DIGITAL_REPORT"
+                if eligible else "MULTI_YEAR_REPORT_CATALOG" if len(found) > 1 else "NO_DIGITAL_REPORT"
+            ),
+        })
+        for year, item in eligible.items():
             digital.setdefault(year, item)
 
     annual_by_year: Dict[int, Dict[str, Any]] = {}
@@ -248,7 +273,7 @@ def normalize(
                 "status": "DISCOVERY_GAP",
                 "severity": "MEDIUM",
                 "blocking": True,
-                "reason": "No entity-aligned full annual report or verified digital annual report was resolved.",
+                "reason": "No entity-aligned full annual report or verified dedicated digital annual report was resolved.",
                 "source_locator": trusted_starts[0] if trusted_starts else None,
             })
 
