@@ -292,16 +292,25 @@ def classify_archive_summary(package_root, summary):
     collection = read_json(root / "Collection_Completeness.json", {}) or {}
 
     guideline = bool(checks.get("guideline_reference_present"))
-    blocking = {
-        key: bool(value)
-        for key, value in checks.items()
-        if key != "guideline_reference_present"
-    }
+    coverage_contract_present = "sustainability_coverage_sufficient" in checks
+    legacy_observability = {}
+    blocking = {}
+    for key, value in checks.items():
+        if key == "guideline_reference_present":
+            continue
+        if key == "sustainability_minimum_5" and coverage_contract_present:
+            # Legacy physical-file heuristic. Once annual coverage has been explicitly
+            # resolved, a verified NOT_PUBLISHED/NO_PUBLIC_DOCUMENT year needs no fake
+            # fifth file and must not make the archive incomplete.
+            legacy_observability[key] = bool(value)
+            continue
+        blocking[key] = bool(value)
     blocking["collection_completeness_complete"] = collection.get("status") == "COMPLETE"
     study = {"guideline_reference_present": guideline}
 
-    result["acceptance_checks"] = {**blocking, **study}
+    result["acceptance_checks"] = {**blocking, **legacy_observability, **study}
     result["blocking_acceptance_checks"] = blocking
+    result["legacy_observability_checks"] = legacy_observability
     result["study_enrichment_checks"] = study
     result["archive_completeness"] = "COMPLETE" if all(blocking.values()) else "INCOMPLETE"
     result["study_enrichment_readiness"] = "READY" if all(study.values()) else "NEEDS_REFERENCE"
