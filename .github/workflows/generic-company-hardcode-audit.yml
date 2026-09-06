@@ -1,0 +1,31 @@
+name: Generic company hardcode audit
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - requests/generic_company_hardcode_audit.token
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit production code for company-specific Kumho tokens
+        run: |
+          set +e
+          git grep -n -i -E '금호석유|금호피앤비|금호미쓰이|금호폴리켐|금호티앤엘|kkpc' -- orchestrator collectors tools/build_application_material_package.py tools/build_application_material_from_archive.py tools/validate_application_material_package.py > /tmp/hits.txt
+          rc=$?
+          cat /tmp/hits.txt
+          count=$(wc -l < /tmp/hits.txt | tr -d ' ')
+          echo "PRODUCTION_KUMHO_TOKEN_HITS=$count"
+          if [ "$count" -ne 0 ]; then
+            echo 'Company-specific Kumho tokens found in current production code.' >&2
+            exit 1
+          fi
+          exit 0
