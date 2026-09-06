@@ -15,6 +15,7 @@ try:
     from .requested_scope import resolve_requested_scope
     from .collection_completeness import (
         INCOMPLETE_STATES,
+        apply_current_entity_period,
         document_rows,
         public_rows,
         validation_for,
@@ -29,6 +30,7 @@ except ImportError:
     from requested_scope import resolve_requested_scope
     from collection_completeness import (
         INCOMPLETE_STATES,
+        apply_current_entity_period,
         document_rows,
         public_rows,
         validation_for,
@@ -138,21 +140,28 @@ def audit_collection_for_requested_scope(package_root, profile_path, request_pat
     ) or {}
 
     scope = resolve_requested_scope(package, profile)
-    rows = public_rows(output, request) + document_rows(package, profile, evidence)
+    public = apply_current_entity_period(public_rows(output, request), profile)
+    rows = public + document_rows(package, profile, evidence)
     env_scope = _reconcile_envinfo_attachment_row(rows, package, profile, scope)
 
     incomplete = [x for x in rows if x.get("completeness_state") in INCOMPLETE_STATES]
     no_data = [x for x in rows if x.get("completeness_state") == "NO_DATA_CONFIRMED"]
+    outside_entity = [
+        x for x in rows
+        if x.get("completeness_state") == "OUTSIDE_CURRENT_ENTITY_PERIOD"
+    ]
     complete = [
         x for x in rows
-        if x.get("completeness_state") in {"DATA_PRESENT", "NO_DATA_CONFIRMED"}
+        if x.get("completeness_state") in {
+            "DATA_PRESENT", "NO_DATA_CONFIRMED", "OUTSIDE_CURRENT_ENTITY_PERIOD"
+        }
     ]
     warnings = [x for x in rows if x.get("completeness_state") == "RAW_SCOPE_WARNING"]
 
     write_csv(package / "Collection_Completeness.csv", rows)
     write_csv(package / "Collection_No_Data.csv", no_data)
     summary = {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "status": "REVIEW_REQUIRED" if incomplete else "COMPLETE",
         "scope_mode": scope.get("mode"),
         "scope_label": scope.get("label"),
@@ -163,6 +172,7 @@ def audit_collection_for_requested_scope(package_root, profile_path, request_pat
         "incomplete_items": len(incomplete),
         "warning_items": len(warnings),
         "no_data_confirmed_items": len(no_data),
+        "outside_current_entity_items": len(outside_entity),
         "incomplete_keys": [
             f"{x['source']}:{x['period_kind']}:{x['period']}:{x['completeness_state']}"
             for x in incomplete
@@ -186,6 +196,15 @@ def audit_collection_for_requested_scope(package_root, profile_path, request_pat
             }
             for x in no_data
         ],
+        "outside_current_entity": [
+            {
+                "source": x.get("source"),
+                "period_kind": x.get("period_kind"),
+                "period": x.get("period"),
+                "note": x.get("user_note"),
+            }
+            for x in outside_entity
+        ],
         "envinfo_attachment_scope": {
             "company_raw_failed": len(env_scope["raw_failed"]),
             "requested_scope_failed": len(env_scope["scoped_failed"]),
@@ -195,6 +214,7 @@ def audit_collection_for_requested_scope(package_root, profile_path, request_pat
             "Company-wide raw collection is preserved independently from requested-scope completeness.",
             "Only failures inside the resolved requested site set can block a SITE_SET completeness decision.",
             "A successful query with no disclosed row is NO_DATA_CONFIRMED and is reported separately.",
+            "Years outside a verified current legal-entity active period are preserved as historical references but are not blocking current-entity completeness obligations.",
             "Every strongly verified declared official document must have a real delivered file.",
             "Annual official-document series must cover the full requested history window; latest-N is not sufficient.",
         ],
