@@ -77,9 +77,32 @@ class ReportEntityRepresentationPolicyTests(unittest.TestCase):
             2026,
         )
         self.assertEqual(set(entries), {2022, 2023, 2024, 2025})
-        # These parser candidates are not final coverage. The catalog guard below
-        # must demote a shared target before the discovery contract is finalized.
         self.assertTrue(all(x["representation"] == "DIGITAL_REPORT" for x in entries.values()))
+
+    def test_multi_year_catalog_is_not_accepted_as_digital_annual_coverage(self):
+        entries = {
+            year: {
+                "document_id": f"DIGITAL_{year}",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "report_year": year,
+                "representation": "DIGITAL_REPORT",
+            }
+            for year in (2023, 2024, 2025)
+        }
+        self.assertEqual(report_policy._dedicated_digital_entries(entries), {})
+
+    def test_single_year_report_page_is_accepted_as_digital_annual_coverage(self):
+        item = {
+            "document_id": "DIGITAL_2025",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "report_year": 2025,
+            "representation": "DIGITAL_REPORT",
+            "source_url": "https://sustainability.official.example/report/index.do",
+        }
+        self.assertEqual(
+            report_policy._dedicated_digital_entries({2025: item}),
+            {2025: item},
+        )
 
 
 class MultiYearCatalogGuardTests(unittest.TestCase):
