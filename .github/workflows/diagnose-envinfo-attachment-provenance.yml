@@ -1,0 +1,58 @@
+name: Diagnose ENVINFO attachment provenance
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - requests/diagnose_envinfo_attachment_provenance.token
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: stable-public-sources
+          path: diag
+          run-id: 34017113524
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Inspect matching ENVINFO provenance
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+
+          needles=['포스코홀딩스','자율26-2','b91e70505dd9']
+          roots=list(Path('diag').rglob('*'))
+          print('MATCHING_FILES')
+          for p in roots:
+              if not p.is_file() or p.suffix.lower() not in {'.csv','.json','.jsonl','.txt'}:
+                  continue
+              try:
+                  text=p.read_text(encoding='utf-8-sig',errors='replace')
+              except Exception:
+                  continue
+              if not any(n in text for n in needles):
+                  continue
+              print('\nFILE',p)
+              if p.suffix.lower()=='.csv':
+                  try:
+                      with p.open(encoding='utf-8-sig',newline='') as f:
+                          for row in csv.DictReader(f):
+                              blob=json.dumps(row,ensure_ascii=False)
+                              if any(n in blob for n in needles):
+                                  print(blob)
+                  except Exception as exc:
+                      print('CSV_ERROR',type(exc).__name__,exc)
+              else:
+                  for line in text.splitlines():
+                      if any(n in line for n in needles):
+                          print(line[:4000])
+          PY
