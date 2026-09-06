@@ -98,12 +98,42 @@ def _promotable_pdf_years(discovery: Dict[str, Any], docs: List[Dict[str, Any]])
     return years
 
 
+def _verified_annual_pdf_years(docs: List[Dict[str, Any]]) -> set[int]:
+    """Years already represented by a verified annual PDF, including opaque endpoints.
+
+    Some official archives expose the real report through an opaque ``download.do`` URL
+    whose path has no ``.pdf`` or issuer name. Upstream recovery is responsible for the
+    annual-report semantics, same-organization boundary and PDF magic-byte verification.
+    Once that evidence has produced a SOURCE_VERIFIED annual PDF record, DIGITAL_REPORT
+    is only a fallback and must not remain as duplicate same-year coverage.
+    """
+    years: set[int] = set()
+    for doc in docs:
+        if doc.get("document_type") != "SUSTAINABILITY_REPORT":
+            continue
+        if str(doc.get("representation") or "").upper() == "DIGITAL_REPORT":
+            continue
+        year = _year(doc)
+        if year is None:
+            continue
+        expected = str(doc.get("expected_extension") or "").casefold()
+        basename = _pdf_basename(str(doc.get("source_url") or ""))
+        if expected != "pdf" and not basename.endswith(".pdf"):
+            continue
+        if str(doc.get("verification_status") or "").upper() not in {"VERIFIED", "SOURCE_VERIFIED"}:
+            continue
+        years.add(year)
+    return years
+
+
 def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
     docs = list(documents.get("documents", []) or [])
     pdf_override_years = _promotable_pdf_years(discovery, docs)
+    verified_annual_pdf_years = _verified_annual_pdf_years(docs)
+    pdf_preferred_years = pdf_override_years | verified_annual_pdf_years
 
     # A DIGITAL_REPORT is a valid fallback when no concrete full-report file exists.
-    # It must not prevent a verified PDF for the same year from being promoted.
+    # It must not prevent a verified PDF for the same year from being promoted or kept.
     existing_full_years = {
         int(d.get("report_year"))
         for d in docs
@@ -120,7 +150,7 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         if doc.get("document_type") == "SUSTAINABILITY_REPORT":
             year = _year(doc)
             if (
-                year in pdf_override_years
+                year in pdf_preferred_years
                 and str(doc.get("representation") or "").upper() == "DIGITAL_REPORT"
             ):
                 superseded_digital.append({
@@ -215,6 +245,7 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
     )
     audit.setdefault("stages", {})["report_finalizer"] = {
         "promoted_full_report_pdfs": promoted,
+        "verified_annual_pdf_years": sorted(verified_annual_pdf_years),
         "superseded_digital_reports": superseded_digital,
         "normalized_pdf_titles": normalized_titles,
         "removed_resolved_gaps": removed_gaps,
