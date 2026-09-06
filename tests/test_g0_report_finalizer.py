@@ -40,6 +40,58 @@ class ReportFinalizerTests(unittest.TestCase):
         self.assertEqual(len(audit["stages"]["report_finalizer"]["promoted_full_report_pdfs"]), 1)
         self.assertEqual(len(audit["stages"]["report_finalizer"]["normalized_pdf_titles"]), 1)
 
+    def test_verified_pdf_supersedes_same_year_digital_report(self):
+        discovery = {
+            "requested_company_name": "테스트",
+            "current_legal_name": "테스트 주식회사",
+            "company_aliases": [{"name": "TEST", "alias_type": "english_legal_name"}],
+        }
+        documents = {
+            "documents": [
+                {
+                    "document_id": "AUTO_SUSTAINABILITY_2023",
+                    "document_type": "SUSTAINABILITY_REPORT_SUMMARY",
+                    "title": "2023 Sustainability Report ESG Highlight",
+                    "report_year": 2023,
+                    "source_url": "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_eng.pdf",
+                    "source_locator": "https://sustainability.example.com/reports",
+                    "expected_extension": "pdf",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "importance": "SUPPORTING",
+                    "coverage_role": "SUPPORTING_SUMMARY_ONLY",
+                },
+                {
+                    "document_id": "AUTO_SUSTAINABILITY_DIGITAL_2023",
+                    "document_type": "SUSTAINABILITY_REPORT",
+                    "title": "2023 Sustainability Report",
+                    "report_year": 2023,
+                    "source_url": "https://sustainability.example.com/reports",
+                    "source_locator": "https://sustainability.example.com/reports",
+                    "expected_extension": "html",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "importance": "CORE",
+                    "representation": "DIGITAL_REPORT",
+                },
+            ],
+            "gaps": [{
+                "gap_id": "AUTO_SUSTAINABILITY_2023_TARGET_UNRESOLVED",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "year": 2023,
+                "blocking": True,
+            }],
+        }
+        audit = {}
+        out = finalizer.finalize(discovery, documents, audit)
+        annual_2023 = [
+            d for d in out["documents"]
+            if d.get("document_type") == "SUSTAINABILITY_REPORT" and d.get("report_year") == 2023
+        ]
+        self.assertEqual(len(annual_2023), 1)
+        self.assertEqual(annual_2023[0]["source_url"], "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_eng.pdf")
+        self.assertEqual(annual_2023[0]["expected_extension"], "pdf")
+        self.assertEqual(out["gaps"], [])
+        self.assertEqual(len(audit["stages"]["report_finalizer"]["superseded_digital_reports"]), 1)
+
     def test_existing_full_report_uses_concrete_year_specific_pdf_title(self):
         discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
         documents = {
