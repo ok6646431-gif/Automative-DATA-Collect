@@ -1,0 +1,245 @@
+name: Apply generic scope and completeness fix v2
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/apply-generic-scope-completeness-fix-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply generic fixes and regressions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+
+          p=Path('orchestrator/bat_stage.py')
+          text=p.read_text(encoding='utf-8')
+          start=text.index('def _canonical_candidate_map(package):')
+          end=text.index('\ndef _filter_plan_to_requested_scope',start)
+          new=dedent('''
+          def _authoritative_requested_site_ids(package):
+              """Return the central SITE_SET boundary when Requested_Scope is available.
+
+              None means the central resolver has not produced a scope artifact yet and
+              legacy rematching may be used as a compatibility fallback. An empty set is
+              authoritative and must fail closed rather than reopening candidate matching.
+              """
+              package=Path(package)
+              path=package/'Requested_Scope.json'
+              if not path.exists():
+                  return None
+              try:
+                  scope=json.loads(path.read_text(encoding='utf-8'))
+              except Exception:
+                  return None
+              if str(scope.get('mode') or '').upper()!='SITE_SET':
+                  return None
+              return {str(x) for x in (scope.get('target_canonical_site_ids') or []) if str(x)}
+
+
+          def _canonical_candidate_map(package):
+              package=Path(package)
+              profile=json.loads((package/'Company_Profile.json').read_text(encoding='utf-8')) if (package/'Company_Profile.json').exists() else {}
+              candidates=[c for c in profile.get('site_candidates',[]) or [] if isinstance(c,dict)]
+              scope_ids=set((profile.get('requested_scope') or {}).get('candidate_ids',[]) or [])
+              selected=[c for c in candidates if not scope_ids or str(c.get('candidate_id') or '') in scope_ids]
+              address_counts=_selected_address_counts(selected)
+              sites,_=_read_csv(package/'Site_Master.csv')
+              authoritative=_authoritative_requested_site_ids(package)
+              inverse={}
+              for candidate in selected:
+                  candidate_id=str(candidate.get('candidate_id') or '')
+                  if not candidate_id: continue
+                  for site in sites:
+                      if site.get('identity_status')!='CONFIRMED': continue
+                      cid=str(site.get('canonical_site_id') or '')
+                      if authoritative is not None and cid not in authoritative:
+                          continue
+                      if _candidate_matches(candidate,site.get('canonical_site_name'),site.get('canonical_address_key'),profile,address_counts):
+                          if cid: inverse.setdefault(cid,[]).append(candidate_id)
+              return profile,inverse
+          ''').lstrip()
+          text=text[:start]+new+text[end:]
+          old="    allowed=set(inverse)\n    mapped={candidate_id for values in inverse.values() for candidate_id in values}\n"
+          new_allowed="    authoritative=_authoritative_requested_site_ids(package)\n    allowed=set(inverse) if authoritative is None else set(authoritative)\n    mapped={candidate_id for values in inverse.values() for candidate_id in values}\n"
+          if old not in text:
+              raise SystemExit('BAT allowed-set anchor not found')
+          text=text.replace(old,new_allowed,1)
+          p.write_text(text,encoding='utf-8')
+
+          p=Path('orchestrator/collection_completeness.py')
+          text=p.read_text(encoding='utf-8')
+          marker='\ndef row(source, kind, period, state, *, query_state="", data=False, evidence="", note=""):'
+          insert_at=text.index(marker,text.index('def years_in('))
+          helper=dedent('''
+
+          def current_entity_period(profile):
+              """Return only a verified legal-entity lifetime boundary.
+
+              A current-name period is intentionally not used: a rename changes a name,
+              not the corporation's birth date. Missing legacy entity metadata therefore
+              fails open rather than deleting valid pre-rename evidence.
+              """
+              for key in ("legal_entity_active_period", "current_legal_entity_active_period"):
+                  period=(profile or {}).get(key)
+                  if not isinstance(period,dict):
+                      continue
+                  start=as_year(period.get("start_year")); end=as_year(period.get("end_year"))
+                  if start is not None or end is not None:
+                      return {"start_year":start,"end_year":end}
+              return {}
+
+
+          def apply_current_entity_period(rows, profile):
+              """Mark public-source years outside the current entity as nonblocking history."""
+              period=current_entity_period(profile)
+              if not period:
+                  return rows
+              start=period.get("start_year"); end=period.get("end_year")
+              out=[]
+              for item in rows:
+                  y=as_year(item.get("period")) if item.get("period_kind")=="YEAR" else None
+                  outside=(y is not None and ((start is not None and y < start) or (end is not None and y > end)))
+                  if not outside:
+                      out.append(item); continue
+                  revised=dict(item)
+                  raw_state=str(item.get("completeness_state") or "")
+                  revised["expected"]="N"
+                  revised["completeness_state"]="OUTSIDE_CURRENT_ENTITY_PERIOD"
+                  revised["query_state"]="HISTORICAL_REFERENCE" if item.get("data_present")=="Y" else "NOT_REQUIRED_CURRENT_ENTITY"
+                  suffix=f"current_legal_entity_period={start or ''}..{end or ''}; raw_state={raw_state}"
+                  revised["evidence"]=(str(item.get("evidence") or "")+"; "+suffix).strip("; ")
+                  revised["user_note"]="현재 법인 존속기간 밖의 요청연도임. 원자료는 역사 참고자료로 보존하되 현 법인 수집 완결성 요구에서는 제외함"
+                  out.append(revised)
+              return out
+          ''')
+          text=text[:insert_at]+helper+text[insert_at:]
+          replacements=[
+              ('    legal_start = as_year(((profile or {}).get("current_legal_name_active_period") or {}).get("start_year"))\n',
+               '    legal_start = current_entity_period(profile).get("start_year")\n'),
+              ('    public = public_rows(output, request)\n',
+               '    public = apply_current_entity_period(public_rows(output, request), profile)\n'),
+              ('    complete = [x for x in rows if x["completeness_state"] in {"DATA_PRESENT", "NO_DATA_CONFIRMED"}]\n',
+               '    complete = [x for x in rows if x["completeness_state"] in {"DATA_PRESENT", "NO_DATA_CONFIRMED", "OUTSIDE_CURRENT_ENTITY_PERIOD"}]\n    outside_entity = [x for x in rows if x["completeness_state"] == "OUTSIDE_CURRENT_ENTITY_PERIOD"]\n'),
+              ('        "no_data_confirmed_items": len(no_data),\n',
+               '        "no_data_confirmed_items": len(no_data),\n        "outside_current_entity_items": len(outside_entity),\n'),
+              ('            "Every strongly verified declared official document must have a real delivered file.",\n',
+               '            "Years outside a verified current legal-entity active period are preserved as historical references but are not blocking current-entity completeness obligations.",\n            "Every strongly verified declared official document must have a real delivered file.",\n'),
+          ]
+          for old,new_text in replacements:
+              if old not in text:
+                  raise SystemExit('Collection completeness anchor not found: '+old[:60])
+              text=text.replace(old,new_text,1)
+          p.write_text(text,encoding='utf-8')
+
+          Path('tests/test_bat_requested_scope_authority.py').write_text(dedent(r'''
+          import csv
+          import json
+          import sys
+          import tempfile
+          import unittest
+          from pathlib import Path
+
+          ROOT=Path(__file__).resolve().parents[1]
+          sys.path.insert(0,str(ROOT/'orchestrator'))
+          from bat_stage import _filter_plan_to_requested_scope
+
+          class BATRequestedScopeAuthorityTests(unittest.TestCase):
+              def test_related_entity_cannot_reenter_bat_through_weak_site_rematch(self):
+                  with tempfile.TemporaryDirectory() as td:
+                      root=Path(td)
+                      profile={
+                          'company_display_name':'테스트스틸 주식회사',
+                          'requested_company_name':'테스트스틸',
+                          'requested_scope':{'mode':'SITE_SET','candidate_ids':['HQ']},
+                          'site_candidates':[{'candidate_id':'HQ','site_name_raw':'테스트스틸 포항본사','address_raw':'경상북도 포항시 남구 동해안로 1','verification_state':'VERIFIED'}],
+                      }
+                      (root/'Company_Profile.json').write_text(json.dumps(profile,ensure_ascii=False),encoding='utf-8')
+                      (root/'Requested_Scope.json').write_text(json.dumps({'mode':'SITE_SET','target_canonical_site_ids':['SITE_TARGET']},ensure_ascii=False),encoding='utf-8')
+                      fields=['canonical_site_id','canonical_site_name','canonical_address_key','identity_status']
+                      with (root/'Site_Master.csv').open('w',encoding='utf-8-sig',newline='') as f:
+                          w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows([
+                              {'canonical_site_id':'SITE_TARGET','canonical_site_name':'테스트스틸 포항본사','canonical_address_key':'경북포항시남구동해안로1','identity_status':'CONFIRMED'},
+                              {'canonical_site_id':'SITE_RELATED','canonical_site_name':'테스트스틸머티리얼즈 포항양극재공장','canonical_address_key':'경북포항시북구해안로929','identity_status':'CONFIRMED'},
+                          ])
+                      plan={'candidates':[
+                          {'canonical_site_id':'SITE_TARGET','catalog_id':'BAT_A','collection_action':'REVIEW_BEFORE_COLLECTION'},
+                          {'canonical_site_id':'SITE_RELATED','catalog_id':'BAT_B','collection_action':'WAIT_FOR_PUBLICATION'},
+                      ]}
+                      scoped,audit=_filter_plan_to_requested_scope(root,plan)
+                      self.assertEqual(['SITE_TARGET'],[r['canonical_site_id'] for r in scoped['candidates']])
+                      self.assertEqual(['SITE_TARGET'],audit['allowed_canonical_site_ids'])
+                      self.assertEqual(1,audit['removed_out_of_scope_candidates'])
+
+          if __name__=='__main__': unittest.main()
+          ''').lstrip(),encoding='utf-8')
+
+          Path('tests/test_collection_completeness_entity_window.py').write_text(dedent(r'''
+          import sys
+          import unittest
+          from pathlib import Path
+
+          ROOT=Path(__file__).resolve().parents[1]
+          sys.path.insert(0,str(ROOT/'orchestrator'))
+          from collection_completeness import apply_current_entity_period, query_row
+
+          class CollectionCompletenessEntityWindowTests(unittest.TestCase):
+              def test_pre_entity_years_are_historical_not_blocking_gaps(self):
+                  rows=[
+                      query_row('PRTR',2020,False,False,False,'terms=0'),
+                      query_row('PRTR',2021,False,False,True,'terms=0'),
+                      query_row('PRTR',2022,True,False,True,'terms=2'),
+                  ]
+                  got=apply_current_entity_period(rows,{'legal_entity_active_period':{'start_year':2022}})
+                  self.assertEqual('OUTSIDE_CURRENT_ENTITY_PERIOD',got[0]['completeness_state'])
+                  self.assertEqual('N',got[0]['expected'])
+                  self.assertEqual('NOT_REQUIRED_CURRENT_ENTITY',got[0]['query_state'])
+                  self.assertEqual('OUTSIDE_CURRENT_ENTITY_PERIOD',got[1]['completeness_state'])
+                  self.assertEqual('Y',got[1]['data_present'])
+                  self.assertEqual('HISTORICAL_REFERENCE',got[1]['query_state'])
+                  self.assertEqual('DATA_PRESENT',got[2]['completeness_state'])
+                  self.assertEqual('Y',got[2]['expected'])
+
+              def test_without_entity_boundary_existing_semantics_are_unchanged(self):
+                  rows=[query_row('PRTR',2020,False,False,False,'terms=0')]
+                  got=apply_current_entity_period(rows,{})
+                  self.assertEqual('UNQUERIED_PERIOD',got[0]['completeness_state'])
+                  self.assertEqual('Y',got[0]['expected'])
+
+          if __name__=='__main__': unittest.main()
+          ''').lstrip(),encoding='utf-8')
+          PY
+      - name: Run focused regressions
+        env:
+          PYTHONPATH: orchestrator
+        run: >-
+          python -m unittest
+          tests.test_bat_requested_scope_authority
+          tests.test_collection_completeness_entity_window
+          tests.test_requested_scope
+          tests.test_requested_scope_analysis_entity_filter
+          tests.test_collection_completeness
+          tests.test_bat_effective_catalog
+          -v
+      - name: Commit generic fixes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/bat_stage.py orchestrator/collection_completeness.py tests/test_bat_requested_scope_authority.py tests/test_collection_completeness_entity_window.py
+          git commit -m 'Use authoritative scope for BAT and entity-aware completeness'
+          git push origin HEAD:run/control-plane
