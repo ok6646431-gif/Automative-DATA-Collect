@@ -6,10 +6,12 @@ on:
       - run/control-plane
     paths:
       - 'orchestrator/archive_stage.py'
+      - 'orchestrator/user_archive_format.py'
       - 'orchestrator/archive_user_dedup_v2.py'
       - 'orchestrator/archive_user_dedup_pipeline.py'
       - 'orchestrator/archive_sustainability_crosslane.py'
       - 'orchestrator/archive_zip_dedup.py'
+      - 'tests/test_user_archive_format_html_normalization.py'
       - 'tests/test_archive_user_dedup_v2.py'
       - 'tests/test_archive_sustainability_crosslane.py'
       - '.github/workflows/archive-crosslane-tests.yml'
@@ -29,10 +31,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check xlsxwriter pypdf openpyxl
+        run: python -m pip install --disable-pip-version-check xlsxwriter beautifulsoup4 pypdf openpyxl
       - name: Run archive cross-lane regression tests
         run: >-
           python -m unittest
+          tests.test_user_archive_format_html_normalization
           tests.test_archive_user_dedup_v2
           tests.test_archive_sustainability_crosslane
           tests.test_archive_zip_dedup
