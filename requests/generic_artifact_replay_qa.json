@@ -7,5 +7,5 @@
   "require_archive_complete": true,
   "require_application_materials": true,
   "purpose": "Replay the latest fully collected company artifacts through current generic scope, BAT, completeness, archive, and application-delivery code without recollecting public sources.",
-  "replay_token": "generic-current-code-replay-20260906-envinfo-canonical-v3"
+  "replay_token": "generic-current-code-replay-20260906-cross-entity-v4"
 }
