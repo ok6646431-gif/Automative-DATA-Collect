@@ -13,7 +13,11 @@ on:
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'tools/build_application_material_from_archive.py'
       - 'tests/test_g0_generic_js_local_year.py'
+      - 'tests/test_g0_js_form_report_recovery.py'
+      - 'tests/test_g0_report_entity_alignment.py'
+      - 'tests/test_application_material_from_archive.py'
       - 'tests/test_company_profile_builder.py'
       - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
@@ -32,7 +36,11 @@ on:
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'tools/build_application_material_from_archive.py'
       - 'tests/test_g0_generic_js_local_year.py'
+      - 'tests/test_g0_js_form_report_recovery.py'
+      - 'tests/test_g0_report_entity_alignment.py'
+      - 'tests/test_application_material_from_archive.py'
       - 'tests/test_company_profile_builder.py'
       - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
@@ -61,6 +69,9 @@ jobs:
         run: >-
           python -m unittest
           tests.test_g0_generic_js_local_year
+          tests.test_g0_js_form_report_recovery
+          tests.test_g0_report_entity_alignment
+          tests.test_application_material_from_archive
           tests.test_capability_regression_corpus
           tests.test_company_profile_builder
           tests.test_request_builder
