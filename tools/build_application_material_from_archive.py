@@ -129,6 +129,47 @@ def build_from_human_archive(
     }
 
 
+def build_or_skip_from_human_archive(
+    input_zip: str,
+    output_dir: str,
+    source_run: str,
+    package_label: str | None = None,
+) -> dict[str, object]:
+    """Build application materials only from a verified COMPLETE archive.
+
+    An INCOMPLETE/REVIEW_REQUIRED Human Archive is a valid upstream outcome: the
+    evidence archive is still delivered, but application material generation must not
+    run.  Return an explicit non-error skip for that state so workflow orchestration
+    does not confuse evidence incompleteness with a software failure.  Corrupt ZIPs,
+    malformed manifests and inconsistent COMPLETE archives still fail closed.
+    """
+    manifest = read_archive_manifest(input_zip)
+    completeness = str(manifest.get("archive_completeness") or "")
+    if completeness != "COMPLETE":
+        blocking = manifest.get("blocking_acceptance_checks")
+        failed = []
+        if isinstance(blocking, dict):
+            failed = sorted(key for key, value in blocking.items() if value is not True)
+        return {
+            "schema_version": "application-material-from-archive-1.0",
+            "status": "SKIPPED_INCOMPLETE_ARCHIVE",
+            "company": str(manifest.get("company_display_name") or ""),
+            "company_id": str(manifest.get("company_id") or ""),
+            "source_run_id": str(source_run),
+            "source_archive_completeness": completeness,
+            "source_archive_root": str(manifest.get("archive_root") or ""),
+            "failed_blocking_acceptance_checks": failed,
+            "reason": "Application materials require a verified COMPLETE Human Archive.",
+            "output_zip": "",
+        }
+    return build_from_human_archive(
+        input_zip,
+        output_dir,
+        source_run,
+        package_label,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="Verified Human_Archive.zip")
@@ -138,7 +179,7 @@ def main() -> None:
     parser.add_argument("--summary-out", default="")
     args = parser.parse_args()
 
-    result = build_from_human_archive(
+    result = build_or_skip_from_human_archive(
         args.input,
         args.output_dir,
         args.source_run,
