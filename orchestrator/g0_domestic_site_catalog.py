@@ -23,9 +23,14 @@ from orchestrator import g0_live_adapters as live
 from orchestrator import zero_touch_discovery as base
 
 
+# A domestic-site catalog may sit under an explicitly domestic navigation label or a
+# broader global-network page that enumerates both domestic and overseas facilities.
+# The page label only establishes catalog context; Korean road-address parsing and
+# operational-facility extraction still decide which rows are promoted as domestic sites.
 CATALOG_WORDS = (
     "국내사업장", "국내 사업장", "국내 사업장소개", "domestic sites",
     "domestic locations", "domestic plants", "korea locations",
+    "글로벌네트워크", "글로벌 네트워크", "global network", "global locations",
 )
 SITE_NAME_RE = re.compile(
     r"([A-Za-z0-9가-힣㈜()·&.\- ]{2,70}?(?:제철소|공장|연구소|사업장|센터|사무소|본사))\s*$",
