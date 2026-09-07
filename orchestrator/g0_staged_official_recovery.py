@@ -12,12 +12,15 @@ Trust order:
 4. use general search only as a final replacement-host locator.
 
 Candidate validation is also bounded independently from the full G0 crawl budget.
+A wall-clock guard prevents one slow corporate site from consuming the whole Actions
+job before G0 can fail closed and emit its audit contract.
 """
 
 from __future__ import annotations
 
 from collections import deque
 import re
+import time
 from typing import Any, Dict, Sequence, Tuple, List
 from urllib.parse import urljoin, urlparse
 
@@ -30,14 +33,33 @@ from orchestrator import zero_touch_discovery as base
 
 MAX_CANDIDATE_PROBE_PAGES = 10
 MAX_CANDIDATES_PER_STAGE = 6
+MAX_INITIAL_SURFACE_PAGES = 24
+MAX_OFFICIAL_RECOVERY_SECONDS = 420
+
+
+def _deadline_exceeded(deadline: float | None) -> bool:
+    return deadline is not None and time.monotonic() >= deadline
+
+
+def _mark_runtime_guard(stage: str, deadline: float | None) -> None:
+    if not _deadline_exceeded(deadline):
+        return
+    recovery.last_recovery["runtime_guard"] = {
+        "status": "BUDGET_EXHAUSTED",
+        "stage": stage,
+        "budget_seconds": MAX_OFFICIAL_RECOVERY_SECONDS,
+    }
 
 
 def _crawl_no_search(
     http: base.Http,
     start_url: str,
     max_pages: int,
+    deadline: float | None = None,
 ) -> Tuple[List[base.Page], List[Tuple[str, str, str]]]:
     """Crawl an already-trusted URL boundary without invoking any search engine."""
+    if _deadline_exceeded(deadline):
+        return [], []
     first = http.get(start_url)
     if not first or first.status_code >= 400:
         return [], []
@@ -49,6 +71,8 @@ def _crawl_no_search(
     linked: List[Tuple[str, str, str]] = []
 
     while q and len(pages) < max(1, int(max_pages or 1)):
+        if _deadline_exceeded(deadline):
+            break
         best_i = max(range(len(q)), key=lambda i: q[i][0])
         _, url = q[best_i]
         del q[best_i]
@@ -92,6 +116,7 @@ def _initial_dart_surface(
     http: base.Http,
     start_url: str,
     max_pages: int,
+    deadline: float | None = None,
 ):
     """Preserve DART-host/path recovery without triggering search fallback."""
     recovery.last_recovery = {
@@ -101,16 +126,25 @@ def _initial_dart_surface(
         "method": None,
         "candidate_checks": [],
     }
-    pages, links = _crawl_no_search(http, start_url, max_pages=max_pages)
+    initial_budget = max(1, min(int(max_pages or 1), MAX_INITIAL_SURFACE_PAGES))
+    recovery.last_recovery["initial_surface_page_budget"] = initial_budget
+    pages, links = _crawl_no_search(
+        http, start_url, max_pages=initial_budget, deadline=deadline
+    )
     if pages:
         recovery.last_recovery["resolved_url"] = pages[0].url
         return pages, links
 
     parsed_start = urlparse(start_url if "://" in start_url else "https://" + start_url)
     for variant in recovery._origin_variants(start_url):
+        if _deadline_exceeded(deadline):
+            _mark_runtime_guard("DART_HOST_VARIANTS", deadline)
+            break
         if variant == start_url:
             continue
-        pages, links = _crawl_no_search(http, variant, max_pages=max_pages)
+        pages, links = _crawl_no_search(
+            http, variant, max_pages=initial_budget, deadline=deadline
+        )
         if not pages:
             continue
         method = (
@@ -136,14 +170,18 @@ def _try_candidates(
     original_evidence: Dict[str, Any],
     stage: str,
     max_pages: int,
+    deadline: float | None = None,
 ):
     start_host = thin._host(start_url)
     probe_pages = max(1, min(int(max_pages or 1), MAX_CANDIDATE_PROBE_PAGES))
     for candidate in list(candidates)[:MAX_CANDIDATES_PER_STAGE]:
+        if _deadline_exceeded(deadline):
+            _mark_runtime_guard(stage, deadline)
+            break
         if not thin._safe_http_url(candidate) or recovery._blocked(candidate):
             continue
         candidate_pages, candidate_links = _crawl_no_search(
-            http, candidate, max_pages=probe_pages
+            http, candidate, max_pages=probe_pages, deadline=deadline
         )
         evidence = thin.navigation_evidence(candidate_pages, candidate_links)
         candidate_host = thin._host(candidate)
@@ -194,8 +232,9 @@ def _try_candidates(
 
 
 def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int = 90):
+    deadline = time.monotonic() + MAX_OFFICIAL_RECOVERY_SECONDS
     original_pages, original_links = _initial_dart_surface(
-        http, start_url, max_pages=max_pages
+        http, start_url, max_pages=max_pages, deadline=deadline
     )
     original_evidence = thin.navigation_evidence(original_pages, original_links)
     if original_evidence["usable"]:
@@ -208,6 +247,10 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
     )
     recovery.last_recovery["stages_attempted"] = []
 
+    if _deadline_exceeded(deadline):
+        _mark_runtime_guard("INITIAL_SURFACE", deadline)
+        return (original_pages, original_links) if original_pages else ([], [])
+
     first_party = thin._first_party_bootstrap_candidates(http, start_url, original_pages)
     recovery.last_recovery["stages_attempted"].append({
         "stage": "FIRST_PARTY_BOOTSTRAP",
@@ -216,10 +259,13 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
     })
     resolved = _try_candidates(
         http, start_url, company, first_party, original_evidence,
-        "FIRST_PARTY_BOOTSTRAP", max_pages,
+        "FIRST_PARTY_BOOTSTRAP", max_pages, deadline,
     )
     if resolved:
         return resolved
+    if _deadline_exceeded(deadline):
+        _mark_runtime_guard("FIRST_PARTY_BOOTSTRAP", deadline)
+        return (original_pages, original_links) if original_pages else ([], [])
 
     anchored_search = thin._anchored_domain_candidates(http, start_url, company)
     recovery.last_recovery["stages_attempted"].append({
@@ -229,10 +275,13 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
     })
     resolved = _try_candidates(
         http, start_url, company, anchored_search, original_evidence,
-        "ANCHORED_SEARCH", max_pages,
+        "ANCHORED_SEARCH", max_pages, deadline,
     )
     if resolved:
         return resolved
+    if _deadline_exceeded(deadline):
+        _mark_runtime_guard("ANCHORED_SEARCH", deadline)
+        return (original_pages, original_links) if original_pages else ([], [])
 
     replacement = recovery._locate_candidates(http, company)
     recovery.last_recovery["stages_attempted"].append({
@@ -242,7 +291,7 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
     })
     resolved = _try_candidates(
         http, start_url, company, replacement, original_evidence,
-        "REPLACEMENT_SEARCH", max_pages,
+        "REPLACEMENT_SEARCH", max_pages, deadline,
     )
     if resolved:
         return resolved
