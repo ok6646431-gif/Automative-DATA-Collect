@@ -33,6 +33,13 @@ GENERIC_PREFIX_TOKENS = {
     "annual", "esg", "corporate", "citizenship", "report", "reports", "sustainability",
     "integrated", "kor", "eng", "kr", "en", "korean", "english",
 }
+TERMINAL_ENGLISH_LEGAL_SUFFIX_RE = re.compile(
+    r"(?:\s|,|\.)+(?:"
+    r"co(?:mpany)?\.?\s*,?\s*(?:ltd|limited)\.?)"
+    r"|(?:corporation|corp\.?|incorporated|inc\.?|limited|ltd\.?|llc|plc)"
+    r")\s*$",
+    re.I,
+)
 
 
 def _dedupe(values: Iterable[str]) -> List[str]:
@@ -44,6 +51,23 @@ def _dedupe(values: Iterable[str]) -> List[str]:
     return out
 
 
+def _report_identity_core(value: Any) -> str:
+    """Normalize a report issuer while removing only terminal legal-form wording.
+
+    The global company normalizer intentionally remains unchanged.  Report filenames
+    frequently omit a verified issuer's terminal English legal form (for example
+    ``Co.,Ltd``), so this comparison layer removes that suffix only at the end of a
+    name.  A business-unit or affiliate word before the suffix remains part of the
+    identity and therefore cannot collapse into the parent company.
+    """
+    text = unquote(str(value or "")).strip()
+    previous = None
+    while text and text != previous:
+        previous = text
+        text = TERMINAL_ENGLISH_LEGAL_SUFFIX_RE.sub("", text).strip(" ,.")
+    return base.normalize_name(text)
+
+
 def _identity_cores(discovery: Dict[str, Any]) -> Set[str]:
     names = [
         discovery.get("requested_company_name"),
@@ -52,7 +76,12 @@ def _identity_cores(discovery: Dict[str, Any]) -> Set[str]:
     for alias in discovery.get("company_aliases", []) or []:
         if isinstance(alias, dict) and alias.get("alias_type") != "former_legal_name":
             names.append(alias.get("name"))
-    return {base.normalize_name(x) for x in names if base.normalize_name(x)}
+    cores: Set[str] = set()
+    for value in names:
+        for core in (base.normalize_name(value), _report_identity_core(value)):
+            if core:
+                cores.add(core)
+    return cores
 
 
 def _clean_issuer_prefix(prefix: str) -> str:
@@ -64,7 +93,7 @@ def _clean_issuer_prefix(prefix: str) -> str:
         tokens.pop(0)
     while tokens and tokens[-1].casefold() in GENERIC_PREFIX_TOKENS:
         tokens.pop()
-    return base.normalize_name(" ".join(tokens))
+    return _report_identity_core(" ".join(tokens))
 
 
 def _explicit_issuer(value: str) -> str:
