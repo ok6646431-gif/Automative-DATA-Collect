@@ -78,6 +78,28 @@ class _BudgetedHttp(_ORIGINAL_HTTP):
 
 
 zero_touch_discovery.Http = _BudgetedHttp
+
+# Corporate sites commonly publish domestic plants under a broader "global network"
+# navigation hub. Treat that navigation wording as a location signal while the existing
+# Korean road-address and operational-site parsers still decide which entries are
+# domestic sites. This widens navigation discovery without weakening site verification.
+def _extend_tokens(values, *items):
+    return tuple(dict.fromkeys((*values, *items)))
+
+
+g0_domestic_site_catalog_enrichment.LOCATION_URL_HINTS = _extend_tokens(
+    g0_domestic_site_catalog_enrichment.LOCATION_URL_HINTS,
+    "global", "network",
+)
+g0_domestic_site_catalog_enrichment.LOCATION_WORDS = _extend_tokens(
+    g0_domestic_site_catalog_enrichment.LOCATION_WORDS,
+    "글로벌네트워크", "글로벌 네트워크", "global network",
+)
+g0_domestic_site_catalog_enrichment.STRONG_LOCATION_WORDS = _extend_tokens(
+    g0_domestic_site_catalog_enrichment.STRONG_LOCATION_WORDS,
+    "글로벌네트워크", "글로벌 네트워크", "global network",
+)
+
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
 
 
