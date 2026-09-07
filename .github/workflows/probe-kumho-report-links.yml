@@ -27,17 +27,17 @@ jobs:
           r=s.get(landing,timeout=(10,30)); r.raise_for_status()
           text=r.text
           print('LANDING',r.status_code,r.url,'chars',len(text))
-          for needle in ['2020년','2021년','2022년','2023년','Popup_Survey','4017','5173','6252','7019']:
+          for needle in ['2020년','2021년','2022년','2023년','Popup_Survey','function Popup_Survey','fileSeq','frmDownChk','name="seq"','4017','5173','6252','7019']:
               print('\nHTML_NEEDLE',needle)
               positions=[m.start() for m in re.finditer(re.escape(needle),text,re.I)]
               print('count',len(positions))
               for pos in positions[:6]:
-                  snippet=text[max(0,pos-650):min(len(text),pos+1100)]
-                  print(snippet.replace('\n',' ')[:1750])
+                  snippet=text[max(0,pos-800):min(len(text),pos+1800)]
+                  print(snippet.replace('\n',' ')[:2600])
           print('\nDOWNLOAD_CONTROL_LINES')
           for line in text.splitlines():
               low=line.casefold()
-              if any(token in low for token in ['download','popup_survey','btnb.gif','2020','2021','2022','2023']):
+              if any(token in low for token in ['download','popup_survey','fileseq','frmdownchk','btnb.gif','2020','2021','2022','2023']):
                   print(line.strip()[:4000])
 
           urls={
