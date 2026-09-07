@@ -1,15 +1,13 @@
-"""Resolve all domestic operational sites from an explicit first-party site catalog.
+"""Resolve domestic operational sites from explicit first-party site catalogs.
 
 Environmental collection must not collapse a multi-plant company to one arbitrary
 "primary" plant when the official company page explicitly enumerates several domestic
-facilities. This adapter promotes the complete listed set only when one first-party page
-clearly identifies itself as a domestic-site catalog and contains at least two distinct
-operational-site addresses.
+facilities. This adapter promotes the listed set only when a first-party page clearly
+acts as a site catalog and contains at least two distinct operational-site records.
 
-Structured DOM pairs are preferred over flattened-text inference. Corporate site pages
-commonly publish repeated facility cards such as ``name`` + ``addr`` or equivalent
-class/data attributes. When those pairs are available, use the exact first-party label
-and address from the same card. Flattened text remains only as a conservative fallback.
+Structured production tables are the strongest contract because they preserve the
+company's own facility name/address pairing, including distinct units at the same road
+address. Structured DOM cards are next, with flattened text as a conservative fallback.
 """
 
 from __future__ import annotations
@@ -32,8 +30,17 @@ CATALOG_WORDS = (
     "domestic locations", "domestic plants", "korea locations",
     "글로벌네트워크", "글로벌 네트워크", "global network", "global locations",
 )
+PRODUCTION_TABLE_WORDS = (
+    "생산공장", "생산 공장", "생산사업장", "생산 사업장",
+    "production plant", "production plants", "production facility",
+    "manufacturing plant", "manufacturing site", "factory", "factories",
+)
 SITE_NAME_RE = re.compile(
     r"([A-Za-z0-9가-힣㈜()·&.\- ]{2,70}?(?:제철소|공장|연구소|사업장|센터|사무소|본사))\s*$",
+    re.I,
+)
+NEAREST_SITE_TOKEN_RE = re.compile(
+    r"([A-Za-z0-9가-힣㈜()·&.\-]{1,45}(?:제철소|공장|연구소|사업장|센터|사무소|본사))",
     re.I,
 )
 # Operational facility vocabulary is industry-agnostic. `제철소` is a facility type,
@@ -51,6 +58,11 @@ REGION_PREFIX_CANONICAL = (
     ("경상북도", "경북"), ("경상남도", "경남"),
     ("제주특별자치도", "제주"), ("제주도", "제주"),
 )
+GENERIC_CELL_WORDS = {
+    "category", "region", "name", "location", "location & contact", "map",
+    "구분", "지역", "명칭", "이름", "소재지", "주소", "연락처", "대한민국", "korea",
+    "생산공장", "생산 공장", "생산사업장", "생산 사업장",
+}
 
 
 def _compact(value: str) -> str:
@@ -61,6 +73,11 @@ def _compact(value: str) -> str:
             text = short_name + text[len(long_name):]
             break
     return re.sub(r"[^0-9가-힣]+", "", text)
+
+
+def _site_key(name: str, address: str) -> str:
+    """Keep distinct operational units even when they share one road address."""
+    return _compact(address) + "|" + base.normalize_name(name)
 
 
 def _class_tokens(tag: Any) -> List[str]:
@@ -102,6 +119,80 @@ def _validated_address(value: str) -> str:
     return re.sub(r"\s+", " ", match.group(1)).strip()
 
 
+def _clean_cell(value: str) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip(" |:-:：")
+
+
+def _table_name(cells: Sequence[str], address_index: int, address_cell: str) -> str:
+    """Choose the facility-name cell immediately before the address/contact cell."""
+    candidates = list(cells[:address_index])
+    # Some tables repeat the facility name inside the same contact cell before address.
+    address_match = live.FLEX_ROAD_ADDRESS_RE.search(address_cell)
+    if address_match:
+        prefix = _clean_cell(address_cell[:address_match.start()])
+        if prefix:
+            candidates.append(prefix)
+    for raw in reversed(candidates):
+        value = _clean_cell(raw)
+        folded = value.casefold()
+        if not value or folded in GENERIC_CELL_WORDS:
+            continue
+        if any(word.casefold() == folded for word in PRODUCTION_TABLE_WORDS):
+            continue
+        if live.FLEX_ROAD_ADDRESS_RE.search(value):
+            continue
+        if len(value) > 90:
+            continue
+        return value
+    return ""
+
+
+def _structured_table_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
+    """Extract name/address pairs from explicit production/manufacturing tables."""
+    html = str(page.html or "")
+    if not html.strip():
+        return {}
+    soup = BeautifulSoup(html, "html.parser")
+    found: Dict[str, Dict[str, Any]] = {}
+    for table in soup.find_all("table"):
+        marker = " ".join(table.stripped_strings).casefold()
+        if not any(word.casefold() in marker for word in PRODUCTION_TABLE_WORDS):
+            continue
+        for row in table.find_all("tr"):
+            tags = row.find_all(["th", "td"], recursive=False)
+            if not tags:
+                tags = row.find_all(["th", "td"])
+            cells = [_clean_cell(" ".join(tag.stripped_strings)) for tag in tags]
+            if not cells:
+                continue
+            address = ""
+            address_index = -1
+            address_cell = ""
+            for index, cell in enumerate(cells):
+                address = _validated_address(cell)
+                if address:
+                    address_index = index
+                    address_cell = cell
+                    break
+            if not address:
+                continue
+            name = _table_name(cells, address_index, address_cell)
+            if not name:
+                continue
+            # A production-table row is already a strong operational contract. Names
+            # such as "제1에너지" need not end in 공장/사업장 to remain valid facilities.
+            key = _site_key(name, address)
+            if not key:
+                continue
+            found.setdefault(key, {
+                "name": name,
+                "address": address,
+                "source_locator": page.url,
+                "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR",
+            })
+    return found
+
+
 def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
     """Extract exact facility-name/address pairs from repeated first-party DOM cards."""
     html = str(page.html or "")
@@ -116,8 +207,6 @@ def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
         if not address:
             continue
 
-        # Stay inside the nearest repeated card/list item. This prevents a page-level
-        # heading from being paired with a different facility's address.
         container = address_tag
         chosen_container = None
         for _ in range(6):
@@ -154,7 +243,7 @@ def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
         if not name:
             continue
 
-        key = _compact(address)
+        key = _site_key(name, address)
         if not key:
             continue
         found.setdefault(key, {
@@ -166,20 +255,32 @@ def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
     return found
 
 
+def _bounded_site_name(name: str, company: str) -> str:
+    name = re.sub(r"\s+", " ", str(name or "")).strip(" -:：|")
+    company_token = re.sub(r"\s+", "", company)
+    compact_name = re.sub(r"\s+", "", name)
+    idx = compact_name.rfind(company_token)
+    if idx > 0:
+        suffix = next((s for s in OPERATIONAL_SUFFIXES if compact_name.endswith(s)), "사업장")
+        return f"{company} {suffix}"
+    return name
+
+
 def _site_name(text: str, address_start: int, company: str) -> str:
-    before = re.sub(r"\s+", " ", text[max(0, address_start - 180):address_start]).strip()
+    raw_before = str(text[max(0, address_start - 180):address_start])
+    # Prefer the nearest compact facility token. This prevents a flattened page from
+    # absorbing a previous address and earlier facility names into the current name.
+    compact_candidates = NEAREST_SITE_TOKEN_RE.findall(raw_before)
+    if compact_candidates:
+        return _bounded_site_name(compact_candidates[-1], company)
+
+    before = re.sub(r"\s+", " ", raw_before).strip()
     match = SITE_NAME_RE.search(before)
     if match:
         name = re.sub(r"\s+", " ", match.group(1)).strip(" -:：|")
         pieces = re.split(r"[|•·\n\r\t]", name)
         name = pieces[-1].strip() if pieces else name
-        company_token = re.sub(r"\s+", "", company)
-        compact_name = re.sub(r"\s+", "", name)
-        idx = compact_name.rfind(company_token)
-        if idx > 0:
-            suffix = next((s for s in OPERATIONAL_SUFFIXES if compact_name.endswith(s)), "사업장")
-            return f"{company} {suffix}"
-        return name
+        return _bounded_site_name(name, company)
     return f"{company} 사업장"
 
 
@@ -191,10 +292,10 @@ def _flattened_text_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
         context = text[max(0, match.start() - 220): min(len(text), match.end() + 80)]
         if not any(term in context for term in OPERATIONAL_SUFFIXES):
             continue
-        key = _compact(address)
+        name = _site_name(text, match.start(), company)
+        key = _site_key(name, address)
         if not key:
             continue
-        name = _site_name(text, match.start(), company)
         found.setdefault(key, {
             "name": name,
             "address": address,
@@ -214,7 +315,9 @@ def discover(
         if not any(word.casefold() in folded for word in CATALOG_WORDS):
             continue
 
-        found = _structured_dom_sites(company, page)
+        found = _structured_table_sites(company, page)
+        if len(found) < 2:
+            found = _structured_dom_sites(company, page)
         if len(found) < 2:
             found = _flattened_text_sites(company, page)
 
