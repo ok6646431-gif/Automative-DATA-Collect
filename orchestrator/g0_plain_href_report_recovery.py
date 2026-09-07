@@ -20,6 +20,7 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 
 from orchestrator import g0_generic_js_report_recovery as generic
+from orchestrator import g0_js_form_report_recovery
 from orchestrator import g0_report_enrichment as strict
 from orchestrator import g0_scripted_report_enrichment as scripted
 from orchestrator import zero_touch_discovery as base
@@ -187,4 +188,9 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
         "control_diagnostics": diagnostics[:80],
     }
     audit.setdefault("http_attempts", []).extend(http.audit)
-    return documents
+
+    # Historical libraries can expose neighboring years through an inert JavaScript
+    # button that submits a same-page GET form rather than through href/data-* URLs.
+    # Run that contract as a separate audited adapter so plain-href semantics stay
+    # unchanged and the downstream entity/finalizer policies remain the sole arbiters.
+    return g0_js_form_report_recovery.enrich(discovery, documents, audit)
