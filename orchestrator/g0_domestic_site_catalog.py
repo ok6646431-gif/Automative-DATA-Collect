@@ -43,8 +43,6 @@ NEAREST_SITE_TOKEN_RE = re.compile(
     r"([A-Za-z0-9가-힣㈜()·&.\-]{1,45}(?:제철소|공장|연구소|사업장|센터|사무소|본사))",
     re.I,
 )
-# Operational facility vocabulary is industry-agnostic. `제철소` is a facility type,
-# not a company exception, and must behave like 공장/사업장 during site extraction.
 OPERATIONAL_SUFFIXES = ("제철소", "공장", "연구소", "사업장", "센터", "사무소", "본사")
 NAME_CLASS_HINTS = ("name", "title", "site-name", "site_name", "branch-name", "plant-name", "factory-name")
 ADDRESS_CLASS_HINTS = ("addr", "address", "site-addr", "site_addr", "site-address", "location-address")
@@ -76,7 +74,7 @@ def _compact(value: str) -> str:
 
 
 def _site_key(name: str, address: str) -> str:
-    """Keep distinct operational units even when they share one road address."""
+    """Keep distinct structured production units even at one road address."""
     return _compact(address) + "|" + base.normalize_name(name)
 
 
@@ -104,8 +102,6 @@ def _operational_name(value: str, company: str) -> str:
         return ""
     company_norm = base.normalize_name(company)
     name_norm = base.normalize_name(name)
-    # An explicit domestic-site catalog can use a brand rather than the legal suffix,
-    # but it should still identify the requested company when a company name is present.
     if company_norm and name_norm and company_norm not in name_norm and name_norm not in company_norm:
         return ""
     return name
@@ -126,7 +122,6 @@ def _clean_cell(value: str) -> str:
 def _table_name(cells: Sequence[str], address_index: int, address_cell: str) -> str:
     """Choose the facility-name cell immediately before the address/contact cell."""
     candidates = list(cells[:address_index])
-    # Some tables repeat the facility name inside the same contact cell before address.
     address_match = live.FLEX_ROAD_ADDRESS_RE.search(address_cell)
     if address_match:
         prefix = _clean_cell(address_cell[:address_match.start()])
@@ -179,8 +174,6 @@ def _structured_table_sites(company: str, page: base.Page) -> Dict[str, Dict[str
             name = _table_name(cells, address_index, address_cell)
             if not name:
                 continue
-            # A production-table row is already a strong operational contract. Names
-            # such as "제1에너지" need not end in 공장/사업장 to remain valid facilities.
             key = _site_key(name, address)
             if not key:
                 continue
@@ -206,7 +199,6 @@ def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
         address = _validated_address(" ".join(address_tag.stripped_strings))
         if not address:
             continue
-
         container = address_tag
         chosen_container = None
         for _ in range(6):
@@ -242,8 +234,10 @@ def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
                 break
         if not name:
             continue
-
-        key = _site_key(name, address)
+        # Legacy DOM-card discovery intentionally deduplicates repeated representations
+        # of one physical location by address. Same-address distinct units are preserved
+        # only by the stronger structured production-table contract above.
+        key = _compact(address)
         if not key:
             continue
         found.setdefault(key, {
@@ -268,8 +262,6 @@ def _bounded_site_name(name: str, company: str) -> str:
 
 def _site_name(text: str, address_start: int, company: str) -> str:
     raw_before = str(text[max(0, address_start - 180):address_start])
-    # Prefer the nearest compact facility token. This prevents a flattened page from
-    # absorbing a previous address and earlier facility names into the current name.
     compact_candidates = NEAREST_SITE_TOKEN_RE.findall(raw_before)
     if compact_candidates:
         return _bounded_site_name(compact_candidates[-1], company)
@@ -293,7 +285,7 @@ def _flattened_text_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
         if not any(term in context for term in OPERATIONAL_SUFFIXES):
             continue
         name = _site_name(text, match.start(), company)
-        key = _site_key(name, address)
+        key = _compact(address)
         if not key:
             continue
         found.setdefault(key, {
@@ -320,9 +312,6 @@ def discover(
             found = _structured_dom_sites(company, page)
         if len(found) < 2:
             found = _flattened_text_sites(company, page)
-
-        # A dedicated catalog with only one address is not enough evidence that the
-        # complete multi-site set was enumerated. Leave the normal resolver in control.
         if len(found) < 2:
             continue
 
