@@ -32,9 +32,14 @@ VAL_SET_RE = re.compile(
     r"\.val\(\s*(?P<param>[A-Za-z_$][\w$]*)\s*\)",
     re.I,
 )
-CHECKED_PROP_RE = re.compile(
-    r"\$\(\s*(['\"])#(?P<id>[A-Za-z_][\w:.-]*)\1\s*\)"
-    r"\.(?:prop|attr)\(\s*(['\"])checked\2\s*,\s*(?:true|(['\"])checked\3)\s*\)",
+CHECKED_PROP_TRUE_RE = re.compile(
+    r"\$\(\s*['\"]#(?P<id>[A-Za-z_][\w:.-]*)['\"]\s*\)"
+    r"\.prop\(\s*['\"]checked['\"]\s*,\s*true\s*\)",
+    re.I,
+)
+CHECKED_ATTR_RE = re.compile(
+    r"\$\(\s*['\"]#(?P<id>[A-Za-z_][\w:.-]*)['\"]\s*\)"
+    r"\.attr\(\s*['\"]checked['\"]\s*,\s*['\"]checked['\"]\s*\)",
     re.I,
 )
 TRIGGER_RE = re.compile(
@@ -51,6 +56,13 @@ def _dedupe(values: Iterable[str]) -> List[str]:
         if value and value not in out:
             out.append(value)
     return out
+
+
+def _checked_ids(body: str) -> set[str]:
+    return {
+        *[m.group("id") for m in CHECKED_PROP_TRUE_RE.finditer(body)],
+        *[m.group("id") for m in CHECKED_ATTR_RE.finditer(body)],
+    }
 
 
 def extract_form_report_controls(
@@ -100,7 +112,7 @@ def extract_form_report_controls(
         for raw in raw_values:
             for function_name, args in generic.extract_literal_calls(raw):
                 # Browser built-ins and direct URL calls belong to the ordinary JS
-                # adapter.  Here a named page function must be resolved to a form.
+                # adapter. Here a named page function must be resolved to a form.
                 if function_name.casefold() in {"open", "replace", "void"}:
                     continue
                 out.append({
@@ -150,7 +162,7 @@ def reconstruct_get_form_targets(
     value_bindings = {m.group("id"): m.group("param") for m in VAL_SET_RE.finditer(body)}
     if not value_bindings or not any(param in env for param in value_bindings.values()):
         return []
-    checked_ids = {m.group("id") for m in CHECKED_PROP_RE.finditer(body)}
+    checked_ids = _checked_ids(body)
     triggers = [(m.group("id"), m.group("action")) for m in TRIGGER_RE.finditer(body)]
     if not triggers:
         return []
