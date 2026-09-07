@@ -1,4 +1,4 @@
-import json, re, sys, time
+import hashlib, json, re, sys, time
 from collections import defaultdict
 from pathlib import Path
 
@@ -23,6 +23,10 @@ PROVINCE_MAP={
     "전북특별자치도":"전북","전라북도":"전북","전라남도":"전남","경상북도":"경북","경상남도":"경남",
     "제주특별자치도":"제주"
 }
+
+
+class SoosiroResponseContractError(RuntimeError):
+    """HTTP succeeded, but the source response did not satisfy the JSON-list contract."""
 
 
 def normalize_address(value):
@@ -79,6 +83,58 @@ def _post(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20)
     raise RuntimeError("SOOSIRO request failed without response")
 
 
+def _response_contract_error(response, reason):
+    text=str(getattr(response,"text","") or "")
+    digest=hashlib.sha256(text.encode("utf-8",errors="replace")).hexdigest()[:16]
+    return SoosiroResponseContractError(
+        f"{reason}; status={getattr(response,'status_code',None)}; bytes={len(text.encode('utf-8',errors='replace'))}; sha256_16={digest}"
+    )
+
+
+def _post_list_json(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20):
+    """POST and require the source's documented JSON object + list response contract.
+
+    SOOSIRO can occasionally return an HTTP-200 HTML/error shell.  Such a response is
+    not evidence of an empty query.  Retry it within the same bounded budget and fail
+    closed if a valid ``{"list": [...]}`` response never arrives.
+    """
+    last=None
+    for attempt in range(1, attempts+1):
+        try:
+            response=_post(
+                url,
+                data=data,
+                headers=headers,
+                attempts=1,
+                connect_timeout=connect_timeout,
+                read_timeout=read_timeout,
+            )
+            try:
+                obj=json.loads(str(response.text or "").lstrip("\ufeff"))
+            except (TypeError, ValueError, json.JSONDecodeError) as e:
+                raise _response_contract_error(response,f"invalid JSON: {type(e).__name__}") from e
+            if not isinstance(obj,dict) or "list" not in obj or not isinstance(obj.get("list"),list):
+                raise _response_contract_error(response,"invalid JSON-list contract")
+            return response,obj,obj["list"]
+        except (requests.Timeout, requests.ConnectionError) as e:
+            last=e
+            if attempt >= attempts:
+                raise
+        except requests.HTTPError as e:
+            last=e
+            status=getattr(e.response,"status_code",None)
+            if status not in TRANSIENT_STATUSES or attempt >= attempts:
+                raise
+        except SoosiroResponseContractError as e:
+            last=e
+            if attempt >= attempts:
+                raise
+        time.sleep(attempt)
+    if last:
+        raise last
+    raise RuntimeError("SOOSIRO JSON request failed without response")
+
+
 def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8")); cfg=req.get("sources",{}).get("SOOSIRO_WATER",{})
     terms=cfg.get("search_terms") or [cfg.get("search_term",req.get("company_display_name",""))]
@@ -107,8 +163,8 @@ def main(req_path):
                 candidates[fc]={"FACT_CODE":fc,"FACT_NAME":row.get("FACT_NAME") or prior.get("FACT_NAME"),"FACT_FNAME":row.get("FACT_FNAME") or prior.get("FACT_FNAME"),"FACT_ADDR":row.get("FACT_ADDR") or prior.get("FACT_ADDR"),"discovery_basis":prior.get("discovery_basis") or ("OFFICIAL_ADDRESS" if hit=="OFFICIAL_ADDRESS" else "SEARCH_TERM")}
 
     try:
-        rf=_post(FACTS,data={"pDoCode":""},headers=headers); (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
-        fact_obj=rf.json(); fact_rows=fact_obj.get("list",[]) if isinstance(fact_obj,dict) else []
+        rf,fact_obj,fact_rows=_post_list_json(FACTS,data={"pDoCode":""},headers=headers)
+        (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
         seeded=address_seed_candidates(fact_rows,site_addresses)
         seeded_codes=[]
         for fact in seeded:
@@ -126,9 +182,8 @@ def main(req_path):
             for fc in sorted(set(seeded_codes)):
                 status["requests"]+=1
                 try:
-                    r=_post(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=headers)
+                    r,obj,rows=_post_list_json(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=headers)
                     (raw/f"{y}_FACT_{fc}.json").write_text(r.text,encoding="utf-8")
-                    obj=r.json(); rows=obj.get("list",[]) if isinstance(obj,dict) else []
                     absorb_rows(rows,y,"OFFICIAL_ADDRESS")
                 except Exception as e:
                     status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"ANNUAL_FACT\t{y}\t{fc}\t{type(e).__name__}\t{e}\n")
@@ -137,9 +192,8 @@ def main(req_path):
             for term in cfg.get("search_terms_by_year",{}).get(str(y),terms):
                 status["requests"]+=1
                 try:
-                    r=_post(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":"","pSearchWord":term},headers=headers)
+                    r,obj,rows=_post_list_json(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":"","pSearchWord":term},headers=headers)
                     fn=re.sub(r"[^0-9A-Za-z가-힣]+","_",term).strip("_"); (raw/f"{y}_{fn}.json").write_text(r.text,encoding="utf-8")
-                    obj=r.json(); rows=obj.get("list",[]) if isinstance(obj,dict) else []
                     absorb_rows(rows,y,term)
                 except Exception as e:
                     status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"ANNUAL\t{y}\t{term}\t{type(e).__name__}\t{e}\n")
@@ -158,10 +212,9 @@ def main(req_path):
                     for q in QUARTERS:
                         status["requests"]+=1
                         try:
-                            r=_post(DAILY,data={"pSYear":str(y),"pQuarter":q,"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=dheaders)
+                            r,obj,rows=_post_list_json(DAILY,data={"pSYear":str(y),"pQuarter":q,"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=dheaders)
                             daily_success+=1
                             (draw/f"{y}_{fc}_{q}.json").write_text(r.text,encoding="utf-8")
-                            obj=r.json(); rows=obj.get("list",[]) if isinstance(obj,dict) else []
                             for row in rows:
                                 z=dict(row); z["query_year"]=y; z["query_quarter"]=q; z["source_fact_code"]=fc; daily_rows.append(z)
                         except Exception as e:
