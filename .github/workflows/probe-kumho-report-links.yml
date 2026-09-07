@@ -48,14 +48,16 @@ jobs:
               '2023-eng-static':'https://www.kkpc.com/upload/download/Kumho Petrochemical Sustainability Report 2023.pdf',
               '2024-kor-static':'https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2024.pdf?v=20250822',
               '2025-kor-static':'https://www.kkpc.com/upload/download/금호석유화학 지속가능경영보고서 2025.pdf?v=20260724',
+              '2022-form-min':'https://www.kkpc.com/kor/invest/library/sustainabilitySurvey/?ATTACH_FILE_SEQ=6252&SURVEY=기타',
+              '2022-form-ip':'https://www.kkpc.com/kor/invest/library/sustainabilitySurvey/?ATTACH_FILE_SEQ=6252&USER_IP=127.0.0.1&SURVEY=기타',
           }
           headers={'Referer':r.url,'Range':'bytes=0-1023'}
           for name,url in urls.items():
               print('\nPROBE',name,url)
               try:
                   with s.get(url,headers=headers,stream=True,allow_redirects=True,timeout=(10,30)) as q:
-                      print('status',q.status_code,'final',q.url)
-                      for h in ['Content-Type','Content-Length','Content-Range','Accept-Ranges','Content-Disposition','ETag','Last-Modified']:
+                      print('status',q.status_code,'history',[(x.status_code,x.url,x.headers.get('Location')) for x in q.history],'final',q.url)
+                      for h in ['Content-Type','Content-Length','Content-Range','Accept-Ranges','Content-Disposition','ETag','Last-Modified','Location']:
                           print(h,repr(q.headers.get(h)))
                       first=next((c for c in q.iter_content(1024) if c),b'')
                       print('first_bytes',repr(first[:32]),'read',len(first))
