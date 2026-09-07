@@ -1,21 +1,27 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-890833b4-env-g0-20260906",
-  "requested_company_name": "포스코",
-  "current_legal_name": "주식회사 포스코",
+  "request_id": "company-cf83fccf-env-g0-20260907",
+  "requested_company_name": "금호석유화학",
+  "current_legal_name": "금호석유화학(주)",
   "current_legal_name_active_period": {
-    "start_year": 2022
+    "start_year": 1976
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "주식회사 포스코 국내 사업장",
+    "label": "금호석유화학(주) 국내 사업장",
     "candidate_ids": [
-      "6261-ce4d823b",
-      "2026-22dbf39a",
-      "440-ec07c1ed",
-      "6262-58eb3fe7"
+      "64-2f07e032",
+      "260257-bf0bf857",
+      "latex-64-a19899bd",
+      "1-3-118-4296e225",
+      "2-331-80f8c70a",
+      "2-227-cb4c3d71",
+      "1-2-4651-dc093fa5",
+      "2-2-22384-81b1e632",
+      "10339-7676a45f",
+      "cnt-6-115-0348f593"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -23,21 +29,21 @@
   },
   "company_aliases": [
     {
-      "name": "포스코",
+      "name": "금호석유화학",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
       "active_period": {
-        "start_year": 2022
+        "start_year": 1976
       }
     },
     {
-      "name": "POSCO",
+      "name": "KUMHO PETRO CHEMICAL CO.,LTD",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
       "active_period": {
-        "start_year": 2022
+        "start_year": 1976
       }
     }
   ],
@@ -45,66 +51,150 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "6261-ce4d823b",
-      "site_name_raw": "포스코포항본사",
-      "address_raw": "경상북도 포항시 남구 동해안로 6261",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
+      "candidate_id": "64-2f07e032",
+      "site_name_raw": "울산고무공장",
+      "address_raw": "울산광역시 남구 상개로 64",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
-        "extraction_contract": "LOCATION_PAGE_NEAREST_OPERATIONAL_NAME"
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "2026-22dbf39a",
-      "site_name_raw": "광양제철소",
-      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+      "candidate_id": "260257-bf0bf857",
+      "site_name_raw": "울산수지공장",
+      "address_raw": "울산광역시 남구 처용로 260-257",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
-        "extraction_contract": "LOCATION_PAGE_NEAREST_OPERATIONAL_NAME"
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "440-ec07c1ed",
-      "site_name_raw": "포스코센터",
-      "address_raw": "서울특별시 강남구 테헤란로 440",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
+      "candidate_id": "latex-64-a19899bd",
+      "site_name_raw": "울산 LATEX공장",
+      "address_raw": "울산광역시 남구 상개로64",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "6262-58eb3fe7",
-      "site_name_raw": "포항제철소",
-      "address_raw": "경상북도 포항시 남구 동해안로 6262",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
+      "candidate_id": "1-3-118-4296e225",
+      "site_name_raw": "여수고무제1공장",
+      "address_raw": "전남 여수시 여수산단3로 118",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-        "extraction_contract": "LOCATION_PAGE_NEAREST_OPERATIONAL_NAME"
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "2-331-80f8c70a",
+      "site_name_raw": "여수고무제2공장",
+      "address_raw": "전남 여수시 산단중앙로 331",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "2-227-cb4c3d71",
+      "site_name_raw": "여수정밀화학공장",
+      "address_raw": "전남 여수시 여수산단2로 227",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "1-2-4651-dc093fa5",
+      "site_name_raw": "여수제1에너지",
+      "address_raw": "전남 여수시 여수산단2로 46-51",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "2-2-22384-81b1e632",
+      "site_name_raw": "여수제2에너지",
+      "address_raw": "전남 여수시 여수산단2로 223-84",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "10339-7676a45f",
+      "site_name_raw": "예산건자재공장",
+      "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "cnt-6-115-0348f593",
+      "site_name_raw": "율촌CNT공장",
+      "address_raw": "전남 여수시 율촌면 율촌산단6로 115",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
-      "source_value_raw": "주식회사 포스코 / POSCO / establishment 2022-03-02 / website www.posco.co.kr",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
+      "source_value_raw": "금호석유화학(주) / KUMHO PETRO CHEMICAL CO.,LTD / establishment 1976-12-10 / website www.kkpc.com",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -167,6 +257,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 2022
+    "start_year": 1976
   }
 }
