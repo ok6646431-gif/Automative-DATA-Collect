@@ -80,6 +80,27 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         self.assertEqual(len(scope["candidate_ids"]), 4)
         self.assertEqual(unresolved, [])
 
+    def test_global_network_page_can_be_explicit_domestic_catalog(self):
+        text = (
+            "글로벌네트워크 생산공장 "
+            "울산고무공장 울산광역시 남구 상개로 64 "
+            "여수고무제1공장 전라남도 여수시 여수산단3로 118 "
+            "예산건자재공장 충청남도 예산군 고덕면 예덕로 1033-9"
+        )
+        result = catalog.discover(
+            "예시화학",
+            [Page("https://official.example/company/global/network", text, "", 200)],
+        )
+        self.assertIsNotNone(result)
+        sites, scope, unresolved = result
+        self.assertEqual(len(sites), 3)
+        self.assertEqual(scope["mode"], "SITE_SET")
+        self.assertEqual(unresolved, [])
+        self.assertEqual(
+            {site["site_name_raw"] for site in sites},
+            {"울산고무공장", "여수고무제1공장", "예산건자재공장"},
+        )
+
     def test_single_address_page_does_not_claim_complete_catalog(self):
         result = catalog.discover(
             "예시회사",
