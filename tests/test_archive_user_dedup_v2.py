@@ -1,9 +1,15 @@
-import hashlib, tempfile, unittest, zipfile
+import hashlib, importlib, tempfile, unittest, zipfile
 from pathlib import Path
 
 from pypdf import PdfWriter
 
-from orchestrator.archive_user_dedup_v2 import canonicalize_user_envinfo
+# The full unittest discovery corpus may import archive_user_dedup_v2 before another
+# test module installs optional PDF dependencies. This regression specifically exercises
+# the pypdf-backed semantic comparison, so reload the module after pypdf is importable
+# instead of inheriting a stale module-level PdfReader=None from discovery order.
+import orchestrator.archive_user_dedup_v2 as archive_user_dedup_v2
+archive_user_dedup_v2 = importlib.reload(archive_user_dedup_v2)
+canonicalize_user_envinfo = archive_user_dedup_v2.canonicalize_user_envinfo
 
 
 def write_blank_pdf(path: Path, width: float, height: float, metadata: dict[str, str]):
