@@ -88,3 +88,43 @@ jobs:
           tests.test_collection_completeness
           tests.test_soosiro_retry
           -v
+
+  soosiro_live_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install probe dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Bootstrap current control-plane request
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Probe SOOSIRO only
+        continue-on-error: true
+        run: python collectors/soosiro_collect.py requests/current.generated.json
+      - name: Print SOOSIRO diagnostics
+        if: always()
+        run: |
+          cat output/SOOSIRO_WATER/status.json || true
+          echo '--- errors.log ---'
+          cat output/SOOSIRO_WATER/errors.log || true
+          echo '--- annual response contracts ---'
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('output/SOOSIRO_WATER/raw_annual')
+          for p in sorted(root.glob('*.json')):
+              try:
+                  obj=json.loads(p.read_text(encoding='utf-8').lstrip('\ufeff'))
+                  ok=isinstance(obj,dict) and isinstance(obj.get('list'),list)
+                  rows=len(obj.get('list') or []) if ok else None
+              except Exception as e:
+                  ok=False; rows=None
+              print(f'{p.name}\tbytes={p.stat().st_size}\tcontract_ok={ok}\trows={rows}')
+          PY
