@@ -119,7 +119,7 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
     def test_runtime_guard_stops_before_search_fallback(self):
         start = "https://www.example-corp.com/"
         shell = Page(start, "", "<html></html>", 200)
-        monotonic_values = [100.0, 100.0, 100.0, 600.0, 600.0]
+        monotonic_values = [100.0, 600.0, 600.0]
 
         with patch.object(staged.time, "monotonic", side_effect=monotonic_values), \
              patch.object(staged, "_crawl_no_search", return_value=([shell], [])), \
