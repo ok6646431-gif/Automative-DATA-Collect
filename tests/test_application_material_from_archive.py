@@ -6,7 +6,10 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from tools.build_application_material_from_archive import build_from_human_archive
+from tools.build_application_material_from_archive import (
+    build_from_human_archive,
+    build_or_skip_from_human_archive,
+)
 
 
 class ApplicationMaterialFromArchiveTests(unittest.TestCase):
@@ -111,6 +114,22 @@ class ApplicationMaterialFromArchiveTests(unittest.TestCase):
             self.make_human_archive(source, completeness="INCOMPLETE")
             with self.assertRaisesRegex(RuntimeError, "not verified COMPLETE"):
                 build_from_human_archive(str(source), str(Path(td) / "delivery"), "12345")
+
+    def test_incomplete_archive_is_explicit_cli_skip_without_package(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "Human_Archive.zip"
+            delivery = root / "delivery"
+            self.make_human_archive(source, completeness="INCOMPLETE")
+
+            result = build_or_skip_from_human_archive(
+                str(source), str(delivery), "12345"
+            )
+
+            self.assertEqual(result["status"], "SKIPPED_INCOMPLETE_ARCHIVE")
+            self.assertEqual(result["source_archive_completeness"], "INCOMPLETE")
+            self.assertEqual(result["output_zip"], "")
+            self.assertFalse(delivery.exists())
 
     def test_failed_blocking_acceptance_check_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
