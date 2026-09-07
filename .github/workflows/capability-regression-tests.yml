@@ -13,6 +13,7 @@ on:
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'collectors/soosiro_collect.py'
       - 'tools/build_application_material_from_archive.py'
       - 'tests/test_g0_generic_js_local_year.py'
       - 'tests/test_g0_js_form_report_recovery.py'
@@ -21,6 +22,7 @@ on:
       - 'tests/test_company_profile_builder.py'
       - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
+      - 'tests/test_soosiro_retry.py'
       - 'tests/test_capability_regression_corpus.py'
       - 'tests/regression_cases/capability_cases.json'
       - 'docs/CAPABILITY_MATRIX.md'
@@ -36,6 +38,7 @@ on:
       - 'orchestrator/requested_scope.py'
       - 'orchestrator/collection_completeness.py'
       - 'orchestrator/archive*.py'
+      - 'collectors/soosiro_collect.py'
       - 'tools/build_application_material_from_archive.py'
       - 'tests/test_g0_generic_js_local_year.py'
       - 'tests/test_g0_js_form_report_recovery.py'
@@ -44,6 +47,7 @@ on:
       - 'tests/test_company_profile_builder.py'
       - 'tests/test_request_builder.py'
       - 'tests/test_requested_scope*.py'
+      - 'tests/test_soosiro_retry.py'
       - 'tests/test_capability_regression_corpus.py'
       - 'tests/regression_cases/capability_cases.json'
       - 'docs/CAPABILITY_MATRIX.md'
@@ -82,4 +86,5 @@ jobs:
           tests.test_requested_scope_company_entity_filter
           tests.test_requested_scope_analysis_entity_filter
           tests.test_collection_completeness
+          tests.test_soosiro_retry
           -v
