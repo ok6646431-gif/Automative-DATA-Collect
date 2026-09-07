@@ -1,13 +1,16 @@
 """Runtime entry point wiring version-tolerant public adapters into G0.
 
-A no-op runner revision also gives the control plane a clean validation run after
-cross-cutting scope-policy changes without altering discovery semantics.
+The runner also owns the live-network safety boundary.  All G0 Http instances share
+one process-wide wall-clock budget so a slow corporate site or report archive cannot
+consume the entire GitHub Actions job.  When the budget is exhausted, later requests
+fail closed and the existing discovery/gap policies decide what can be promoted.
 """
 
 from __future__ import annotations
 
 import re
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +41,43 @@ from orchestrator import g0_scripted_report_navigation
 from orchestrator import g0_staged_official_recovery
 from orchestrator import zero_touch_discovery
 
+
+# One live G0 process may instantiate several Http clients across legal identity,
+# official-site recovery and report enrichment.  They all consume the same budget.
+G0_NETWORK_BUDGET_SECONDS = 480
+G0_DEFAULT_HTTP_TIMEOUT = (4, 8)
+_G0_NETWORK_DEADLINE = time.monotonic() + G0_NETWORK_BUDGET_SECONDS
+_ORIGINAL_HTTP = zero_touch_discovery.Http
+
+
+class _BudgetedHttp(_ORIGINAL_HTTP):
+    def __init__(self, timeout=G0_DEFAULT_HTTP_TIMEOUT):
+        super().__init__(timeout=timeout)
+        self._budget_notice_emitted = False
+
+    def _runtime_budget_exhausted(self) -> bool:
+        exhausted = time.monotonic() >= _G0_NETWORK_DEADLINE
+        if exhausted and not self._budget_notice_emitted:
+            self.audit.append({
+                "method": "RUNTIME_GUARD",
+                "status": "BUDGET_EXHAUSTED",
+                "budget_seconds": G0_NETWORK_BUDGET_SECONDS,
+            })
+            self._budget_notice_emitted = True
+        return exhausted
+
+    def get(self, url: str, **kwargs):
+        if self._runtime_budget_exhausted():
+            return None
+        return super().get(url, **kwargs)
+
+    def post(self, url: str, **kwargs):
+        if self._runtime_budget_exhausted():
+            return None
+        return super().post(url, **kwargs)
+
+
+zero_touch_discovery.Http = _BudgetedHttp
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
 
 
