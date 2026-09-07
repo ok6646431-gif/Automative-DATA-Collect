@@ -22,7 +22,7 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
             (deep, "ESG", "https://www.example-corp.com/sustainability"),
         ]
 
-        def crawl(_http, url, max_pages):
+        def crawl(_http, url, max_pages, deadline=None):
             if url == start:
                 return [shell], []
             return pages, links
@@ -48,7 +48,7 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
         ]
         strong_links = [(deep, "사업장", "https://www.example-corp.com/company/location")]
 
-        def crawl(_http, url, max_pages):
+        def crawl(_http, url, max_pages, deadline=None):
             if url in {start, weak}:
                 return [shell], []
             return strong_pages, strong_links
@@ -73,7 +73,7 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
         links = [(deep, "사업장", "https://www.example-corp.com/company/location")]
         budgets = []
 
-        def crawl(_http, url, max_pages):
+        def crawl(_http, url, max_pages, deadline=None):
             if url == start:
                 return [shell], []
             budgets.append(max_pages)
@@ -91,6 +91,46 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
             recovery.last_recovery["candidate_probe_page_budget"],
             staged.MAX_CANDIDATE_PROBE_PAGES,
         )
+
+    def test_initial_surface_is_bounded_below_full_discovery_budget(self):
+        start = "https://www.example-corp.com/"
+        page = Page(start, "Example Corp 회사소개 지속가능 copyright", "", 200)
+        seen_budgets = []
+
+        def crawl(_http, url, max_pages, deadline=None):
+            seen_budgets.append(max_pages)
+            return [page, page], [
+                (start, "회사소개", "https://www.example-corp.com/company"),
+                (start, "사업장", "https://www.example-corp.com/location"),
+                (start, "ESG", "https://www.example-corp.com/sustainability"),
+            ]
+
+        with patch.object(staged, "_crawl_no_search", side_effect=crawl), \
+             patch.object(thin, "_first_party_bootstrap_candidates", side_effect=AssertionError("bootstrap not needed")):
+            staged.crawl_official(object(), start, "Example Corp", max_pages=90)
+
+        self.assertEqual(seen_budgets, [staged.MAX_INITIAL_SURFACE_PAGES])
+        self.assertLess(staged.MAX_INITIAL_SURFACE_PAGES, 90)
+        self.assertEqual(
+            recovery.last_recovery["initial_surface_page_budget"],
+            staged.MAX_INITIAL_SURFACE_PAGES,
+        )
+
+    def test_runtime_guard_stops_before_search_fallback(self):
+        start = "https://www.example-corp.com/"
+        shell = Page(start, "", "<html></html>", 200)
+        monotonic_values = [100.0, 100.0, 100.0, 600.0, 600.0]
+
+        with patch.object(staged.time, "monotonic", side_effect=monotonic_values), \
+             patch.object(staged, "_crawl_no_search", return_value=([shell], [])), \
+             patch.object(thin, "_first_party_bootstrap_candidates", side_effect=AssertionError("budget exhaustion must stop before bootstrap")), \
+             patch.object(thin, "_anchored_domain_candidates", side_effect=AssertionError("budget exhaustion must stop before search")), \
+             patch.object(recovery, "_locate_candidates", side_effect=AssertionError("budget exhaustion must stop before replacement")):
+            pages, _ = staged.crawl_official(object(), start, "Example Corp")
+
+        self.assertEqual(pages, [shell])
+        self.assertEqual(recovery.last_recovery["runtime_guard"]["status"], "BUDGET_EXHAUSTED")
+        self.assertEqual(recovery.last_recovery["runtime_guard"]["stage"], "INITIAL_SURFACE")
 
     def test_initial_dart_surface_does_not_call_legacy_search_seeding_crawler(self):
         start = "https://www.example-corp.com/"
