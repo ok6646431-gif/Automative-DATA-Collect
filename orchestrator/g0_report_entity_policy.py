@@ -34,10 +34,8 @@ GENERIC_PREFIX_TOKENS = {
     "integrated", "kor", "eng", "kr", "en", "korean", "english",
 }
 TERMINAL_ENGLISH_LEGAL_SUFFIX_RE = re.compile(
-    r"(?:\s|,|\.)+(?:"
-    r"co(?:mpany)?\.?\s*,?\s*(?:ltd|limited)\.?)"
-    r"|(?:corporation|corp\.?|incorporated|inc\.?|limited|ltd\.?|llc|plc)"
-    r")\s*$",
+    r"(?:\s|,|\.)+(?:(?:co(?:mpany)?\.?\s*,?\s*(?:ltd|limited)\.?)|"
+    r"(?:corporation|corp\.?|incorporated|inc\.?|limited|ltd\.?|llc|plc))\s*$",
     re.I,
 )
 
