@@ -101,7 +101,7 @@ def _crawl_no_search(
             if base._host(target) not in allowed_hosts or target in seen:
                 continue
             if re.search(
-                r"\.(?:jpg|jpeg|png|gif|svg|css|js|zip|hwp|xlsx?|docx?|pptx?)(?:\?|$)",
+                r"\.(?:pdf|jpg|jpeg|png|gif|svg|css|js|zip|hwp|xlsx?|docx?|pptx?)(?:\?|$)",
                 target,
                 re.I,
             ):
