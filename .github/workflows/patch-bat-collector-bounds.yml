@@ -1,4 +1,5 @@
 name: Patch BAT collector bounded runtime
+# One-shot follow-up: preserve per-part publication years in multipart BAT references.
 
 on:
   push:
@@ -17,15 +18,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: run/control-plane
-      - name: Apply bounded BAT download policy
+      - name: Apply BAT collector metadata patch
         run: python tools/patch_bat_collector_bounds.py
       - name: Run focused regressions before commit
         run: python -m unittest tests.test_bat_revision_collection tests.test_bat_effective_catalog -v
-      - name: Commit bounded collector
+      - name: Commit BAT metadata fix
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add orchestrator/bat_collector.py tests/test_bat_revision_collection.py
           git diff --cached --check
-          git commit -m "Bound BAT source collection runtime"
+          git commit -m "Preserve BAT multipart publication years"
           git push origin HEAD:run/control-plane
