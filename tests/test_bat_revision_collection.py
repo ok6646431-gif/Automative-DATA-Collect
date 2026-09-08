@@ -98,8 +98,8 @@ class BATRevisionCollectionTests(unittest.TestCase):
             {'catalog_id':'BAT_NEW','catalog_family':'BAT_FAMILY','preferred':True,'revision_generation':'II','publication_year':2024,
              'publication_status':'PUBLISHED','title':'다권 BAT','domains':['AIR'],
              'official_documents':[
-                 {'document_part':'1','volume_no':'I','title':'다권 BAT 제1권','official_document_page':'https://ieps.nier.go.kr/web/board/5/11/'},
-                 {'document_part':'2','volume_no':'II','title':'다권 BAT 제2권','official_document_page':'https://ieps.nier.go.kr/web/board/5/12/'},
+                 {'document_part':'1','volume_no':'I','publication_year':2023,'title':'다권 BAT 제1권','official_document_page':'https://ieps.nier.go.kr/web/board/5/11/'},
+                 {'document_part':'2','volume_no':'II','publication_year':2024,'title':'다권 BAT 제2권','official_document_page':'https://ieps.nier.go.kr/web/board/5/12/'},
              ]}
         ]}
         with tempfile.TemporaryDirectory() as td:
@@ -110,6 +110,13 @@ class BATRevisionCollectionTests(unittest.TestCase):
             self.assertEqual(len(rows),2)
             self.assertEqual({r['document_part'] for r in rows},{'1','2'})
             self.assertEqual({r['volume_no'] for r in rows},{'I','II'})
+            by_part={r['document_part']:r for r in rows}
+            self.assertEqual(by_part['1']['publication_year'],'2023')
+            self.assertEqual(by_part['1']['report_year'],'2023')
+            self.assertIn('2023_II',by_part['1']['stored_path'])
+            self.assertEqual(by_part['2']['publication_year'],'2024')
+            self.assertEqual(by_part['2']['report_year'],'2024')
+            self.assertIn('2024_II',by_part['2']['stored_path'])
             self.assertEqual(status['current_downloaded'],2)
             self.assertNotEqual(rows[0]['stored_path'],rows[1]['stored_path'])
 

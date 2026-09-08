@@ -278,15 +278,16 @@ def collect(package,catalog_path=CATALOG_PATH):
             specs=_document_specs(entry)
             for spec in specs:
                 part=str(spec.get('document_part') or '1'); volume_no=str(spec.get('volume_no') or part)
+                spec_publication_year=str(spec.get('publication_year') or entry.get('publication_year') or entry.get('effective_from') or '')[:4]
                 docid='BAT_'+re.sub(r'[^0-9A-Za-z_]+','_',catalog_id)+(f'_P{part}' if len(specs)>1 else '')
                 title=str(spec.get('title') or entry.get('title') or '')
                 base={
                     'document_id':docid,'catalog_id':catalog_id,'catalog_family':family,'revision_id':revision_id,
-                    'revision_generation':revision,'publication_year':publication_year,
+                    'revision_generation':revision,'publication_year':spec_publication_year,
                     'revision_status':'SUPERSEDED_ARCHIVE_ONLY' if archive_only else revision_status,
                     'preferred_for_matching':'false' if archive_only else 'true',
                     'document_part':part,'volume_no':volume_no,'document_type':'BAT_REFERENCE','title':title,
-                    'report_year':publication_year,'source_url':'','source_locator':entry.get('official_source_locator',''),
+                    'report_year':spec_publication_year,'source_url':'','source_locator':entry.get('official_source_locator',''),
                     'stored_path':'','verification_status':'SOURCE_VERIFIED','importance':'SUPPORTING',
                     'candidate_roles':'|'.join(context['roles']),'candidate_states':'|'.join(context['states']),
                     'applicability_states':'|'.join(context['apps']),'canonical_site_ids':'|'.join(context['site_ids']),
@@ -302,7 +303,7 @@ def collect(package,catalog_path=CATALOG_PATH):
                         archive_locator_pending+=1; continue
                     try:
                         final_url,data,basis=fetch_pdf_from_spec(spec,direct_attempts=1)
-                        folder=out/'documents'/safe(family)/safe(f'{publication_year}_{revision or catalog_id}')
+                        folder=out/'documents'/safe(family)/safe(f'{spec_publication_year}_{revision or catalog_id}')
                         folder.mkdir(parents=True,exist_ok=True)
                         filename=safe(title)+(f'_part{part}' if len(specs)>1 else '')+'.pdf'
                         path=folder/filename; path.write_bytes(data); rel=str(path.relative_to(package))
@@ -323,7 +324,7 @@ def collect(package,catalog_path=CATALOG_PATH):
                     record({**base,'collection_status':'REVIEW_BEFORE_COLLECTION'}); continue
                 try:
                     final_url,data,basis=fetch_pdf_from_spec(spec,direct_attempts=2)
-                    folder=out/'documents'/safe(family)/safe(f'{publication_year}_{revision or catalog_id}')
+                    folder=out/'documents'/safe(family)/safe(f'{spec_publication_year}_{revision or catalog_id}')
                     folder.mkdir(parents=True,exist_ok=True)
                     filename=safe(title)+(f'_part{part}' if len(specs)>1 else '')+'.pdf'
                     path=folder/filename; path.write_bytes(data); rel=str(path.relative_to(package))
