@@ -50,7 +50,7 @@ class BATRevisionCollectionTests(unittest.TestCase):
         ]}
         with tempfile.TemporaryDirectory() as td:
             package,catalog_path=self._setup(td,catalog,current_candidate())
-            with patch('orchestrator.bat_collector.fetch_pdf_from_spec',return_value=('https://ieps.nier.go.kr/file.pdf',b'%PDF-1.4\n%%EOF','TEST')):
+            with patch('orchestrator.bat_collector.fetch_pdf_from_spec',return_value=('https://ieps.nier.go.kr/file.pdf',b'%PDF-1.4\n%%EOF','TEST')) as mocked:
                 status=collect(package,catalog_path)
             rows=read_csv(package/'output'/'BAT_REFERENCES'/'document_index.csv')
             self.assertEqual(len(rows),2)
@@ -67,6 +67,10 @@ class BATRevisionCollectionTests(unittest.TestCase):
             self.assertEqual(status['current_downloaded'],1)
             self.assertEqual(status['superseded_downloaded'],1)
             self.assertEqual(status['status'],'DATA_FOUND')
+            self.assertEqual(mocked.call_args_list[0].args[0]['catalog_id'],'BAT_NEW')
+            self.assertEqual(mocked.call_args_list[0].kwargs.get('direct_attempts'),2)
+            self.assertEqual(mocked.call_args_list[1].args[0]['catalog_id'],'BAT_OLD')
+            self.assertEqual(mocked.call_args_list[1].kwargs.get('direct_attempts'),1)
 
     def test_old_revision_does_not_substitute_when_latest_locator_is_pending(self):
         catalog={'schema_version':'test','entries':[
