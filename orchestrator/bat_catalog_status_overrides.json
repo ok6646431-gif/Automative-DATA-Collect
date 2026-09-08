@@ -1,7 +1,7 @@
 {
   "schema_version": "1.1",
-  "verified_as_of": "2026-09-05",
-  "policy": "A newer revision may deactivate the last verified published matching revision only after final publication is independently verified from an official government/NIER publication page or downloadable original. BREFOS official listing plus byte-verified original PDF is sufficient publication authority. Planning, consultation, or scheduled-distribution language alone is not publication proof.",
+  "verified_as_of": "2026-09-08",
+  "policy": "A newer revision may deactivate the last verified published matching revision only after final publication is independently verified from an official government/NIER publication page or downloadable original. BREFOS official listing plus byte-verified original PDF is sufficient publication authority. Planning, consultation, or scheduled-distribution language alone is not publication proof. A multipart revision is promoted only when every official part has been independently byte-verified.",
   "overrides": [
     {
       "catalog_id": "KBREF_SEMICONDUCTOR_2019",
@@ -47,6 +47,84 @@
           "evidence_type": "OFFICIAL_PDF_BYTE_VERIFICATION",
           "source_locator": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=1501",
           "finding": "HTTP 200 PDF, 7,272,718 bytes, SHA-256 05cc62d6c9971c5917f583ba6e7459af7eb0f776c3dccbe7eba81164675edb02"
+        }
+      ]
+    },
+    {
+      "catalog_id": "KBREF_ORGANIC_CHEM_II_2023_2024",
+      "reason_code": "BREFOS_PUBLISHED_MULTIPART_REVISION_BYTE_VERIFIED",
+      "include_in_effective_catalog": true,
+      "effective_fields": {
+        "preferred": true,
+        "publication_status": "PUBLISHED",
+        "legal_status": "PUBLISHED_REFERENCE",
+        "supersession_status": "CURRENT_VERIFIED_PUBLICATION",
+        "collection_policy": "COLLECT_WHEN_MATCHED",
+        "official_source_locator": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+        "official_document_page": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+        "official_pdf_url": "",
+        "official_pdf_sha256": "",
+        "official_documents": [
+          {
+            "document_part": "1",
+            "volume_no": "1",
+            "publication_year": 2023,
+            "title": "[2기-part 1] 유기화학산업의 환경오염방지 및 통합환경관리를 위한 최적가용기법 기준서",
+            "official_pdf_url": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=548",
+            "official_pdf_sha256": "05f2feade93bac1a347e6163c0f4c6747bf6d2d7d2c84e58acd8f387b6f714b8"
+          },
+          {
+            "document_part": "2",
+            "volume_no": "2",
+            "publication_year": 2023,
+            "title": "[2기-part 2] 유기화학산업의 환경오염방지 및 통합환경관리를 위한 최적가용기법 기준서",
+            "official_pdf_url": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=551",
+            "official_pdf_sha256": "ecb593f3ffff3cc760330a93302d46a09cb96bbae1ff1f794fc0d72eda425616"
+          },
+          {
+            "document_part": "3",
+            "volume_no": "3",
+            "publication_year": 2024,
+            "title": "[2기-part 3] 유기화학산업의 환경오염방지 및 통합환경관리를 위한 최적가용기법 기준서",
+            "official_pdf_url": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=596",
+            "official_pdf_sha256": "a91908cc9e66a08933a1005281ee4eef48d019f1cd836f8495e3b1a97e96b5e7"
+          },
+          {
+            "document_part": "4",
+            "volume_no": "4",
+            "publication_year": 2024,
+            "title": "[2기-part 4] 유기화학산업의 환경오염방지 및 통합환경관리를 위한 최적가용기법 기준서",
+            "official_pdf_url": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=597",
+            "official_pdf_sha256": "fcd3f84cb29034b855de66896469f94fdbd18a15a94205867014d2f0053b9f1c"
+          }
+        ]
+      },
+      "notes_append": "2026-09-08 BREFOS 공식 목록에서 유기화학산업 2기 기준서가 4개 파트로 공개된 것을 확인하고, 성공한 byte-registry Run 34179311982의 artifact를 재검증했다. Part 1~4 모두 VERIFIED_PDF이며 각 원문의 URL, byte size, SHA-256을 고정 증거로 남긴다. 후속 BREFOS 접속 실패는 SOURCE_UNREACHABLE로 분리하고 이 검증된 문서 정체성을 뒤집지 않는다.",
+      "evidence": [
+        {
+          "evidence_type": "OFFICIAL_CURRENT_DOCUMENT_SYSTEM",
+          "source_locator": "https://ieps.nier.go.kr/brefos/home/board/standardDoc/list.do",
+          "finding": "유기화학산업 2기 기준서가 part 1~4로 공개: atchFileId=548/551/596/597, nttId=175/178/198/199"
+        },
+        {
+          "evidence_type": "OFFICIAL_PDF_BYTE_VERIFICATION",
+          "source_locator": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=548",
+          "finding": "Part 1 HTTP PDF, 23,965,557 bytes, SHA-256 05f2feade93bac1a347e6163c0f4c6747bf6d2d7d2c84e58acd8f387b6f714b8"
+        },
+        {
+          "evidence_type": "OFFICIAL_PDF_BYTE_VERIFICATION",
+          "source_locator": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=551",
+          "finding": "Part 2 HTTP PDF, 34,641,486 bytes, SHA-256 ecb593f3ffff3cc760330a93302d46a09cb96bbae1ff1f794fc0d72eda425616"
+        },
+        {
+          "evidence_type": "OFFICIAL_PDF_BYTE_VERIFICATION",
+          "source_locator": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=596",
+          "finding": "Part 3 HTTP PDF, 21,371,441 bytes, SHA-256 a91908cc9e66a08933a1005281ee4eef48d019f1cd836f8495e3b1a97e96b5e7"
+        },
+        {
+          "evidence_type": "OFFICIAL_PDF_BYTE_VERIFICATION",
+          "source_locator": "https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=597",
+          "finding": "Part 4 HTTP PDF, 38,592,466 bytes, SHA-256 fcd3f84cb29034b855de66896469f94fdbd18a15a94205867014d2f0053b9f1c"
         }
       ]
     }
