@@ -43,12 +43,22 @@ jobs:
           expected={'548','551','596','597'}
           found={str(r.get('atch_file_id') or '') for r in rows}
           verified={str(r.get('atch_file_id') or '') for r in rows if r.get('status')=='VERIFIED_PDF'}
+          evidence=[{
+              'atch_file_id':str(r.get('atch_file_id') or ''),
+              'ntt_id':str(r.get('ntt_id') or ''),
+              'title':str(r.get('title') or ''),
+              'status':str(r.get('status') or ''),
+              'bytes':int(r.get('bytes') or 0),
+              'sha256':str(r.get('sha256') or ''),
+              'url':str(r.get('viewer_pdf_url') or r.get('url') or ''),
+          } for r in rows]
           print(json.dumps({
               'status':d.get('status'),
               'discovery_basis':d.get('discovery_basis'),
               'found':sorted(found),
               'verified':sorted(verified),
               'status_counts':d.get('status_counts',{}),
+              'documents':evidence,
           },ensure_ascii=False,indent=2))
           if found != expected or verified != expected:
               raise SystemExit('Organic chemistry II is not fully byte-verified: expected all four official BREFOS parts')
