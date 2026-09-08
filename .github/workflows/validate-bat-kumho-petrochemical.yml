@@ -52,10 +52,19 @@ jobs:
               raise SystemExit('Run 197 metadata is not Kumho Petrochemical')
           if str(scope.get('mode') or '').upper()!='SITE_SET':
               raise SystemExit(f'Expected SITE_SET scope, got {scope.get("mode")}')
+          official=list((profile.get('requested_scope') or {}).get('candidate_ids') or [])
           target=list(scope.get('target_canonical_site_ids') or [])
-          if len(target)!=10:
-              raise SystemExit(f'Expected verified ten-site production scope, got {len(target)}: {target}')
-          print(json.dumps({'KUMHO_METADATA':'PASS','target_site_count':len(target),'target_site_ids':target},ensure_ascii=False,indent=2))
+          if len(official)!=10:
+              raise SystemExit(f'Expected ten official production candidates from G0, got {len(official)}: {official}')
+          if len(target)!=9:
+              raise SystemExit(f'Expected nine resolved canonical production sites, got {len(target)}: {target}')
+          print(json.dumps({
+              'KUMHO_METADATA':'PASS',
+              'official_production_candidate_count':len(official),
+              'resolved_canonical_site_count':len(target),
+              'unresolved_official_unit_count':len(official)-len(target),
+              'target_site_ids':target,
+          },ensure_ascii=False,indent=2))
           PY
       - name: Remove old BAT outputs from retained metadata
         run: |
@@ -98,6 +107,7 @@ jobs:
           plan=json.loads((root/'BAT_Collection_Plan.json').read_text(encoding='utf-8'))
           print(json.dumps({
               'BAT_KUMHO_PETROCHEMICAL_VALIDATION':'PASS',
+              'resolved_scope_count':len(allowed),
               'candidate_count':len(candidates),
               'candidate_sites':sorted({r.get('site_name','') for r in candidates}),
               'candidate_families':sorted({r.get('catalog_family','') for r in candidates}),
