@@ -1,5 +1,5 @@
 name: Validate BAT on current Kumho Petrochemical scope
-# Acceptance path for bounded current-first BAT collection.
+# Acceptance path for bounded current-first BAT collection and multipart year fidelity.
 
 on:
   workflow_dispatch:
@@ -103,6 +103,17 @@ jobs:
               parts=sorted(r.get('document_part') for r in organic_docs)
               if parts!=['1','2','3','4']:
                   raise SystemExit(f'Organic II current document parts changed: {parts}')
+              by_part={r.get('document_part'):r for r in organic_docs}
+              expected_years={'1':'2023','2':'2023','3':'2024','4':'2024'}
+              actual_years={part:by_part[part].get('publication_year') for part in expected_years}
+              if actual_years!=expected_years:
+                  raise SystemExit(f'Organic II per-part publication years changed: expected={expected_years} actual={actual_years}')
+              for part,year in expected_years.items():
+                  row=by_part[part]
+                  if row.get('report_year')!=year:
+                      raise SystemExit(f'Organic II part {part} report year mismatch: {row}')
+                  if f'/{year}_II/' not in str(row.get('stored_path') or ''):
+                      raise SystemExit(f'Organic II part {part} stored under wrong year folder: {row.get("stored_path")}')
           status=json.loads((root/'output'/'BAT_REFERENCES'/'status.json').read_text(encoding='utf-8'))
           summary=json.loads((root/'BAT_Summary.json').read_text(encoding='utf-8'))
           plan=json.loads((root/'BAT_Collection_Plan.json').read_text(encoding='utf-8'))
@@ -114,7 +125,7 @@ jobs:
               'candidate_families':sorted({r.get('catalog_family','') for r in candidates}),
               'collect_catalog_ids':plan.get('collect_catalog_ids',[]),
               'organic_ii_candidate_count':len(organic_candidates),
-              'organic_ii_documents':[{k:r.get(k,'') for k in ['document_part','publication_year','collection_status','source_url','stored_path','notes']} for r in organic_docs],
+              'organic_ii_documents':[{k:r.get(k,'') for k in ['document_part','publication_year','report_year','collection_status','source_url','stored_path','notes']} for r in organic_docs],
               'collection_status':status,
               'summary':summary,
           },ensure_ascii=False,indent=2))
