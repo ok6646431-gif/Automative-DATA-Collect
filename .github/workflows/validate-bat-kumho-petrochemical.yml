@@ -1,0 +1,125 @@
+name: Validate BAT on current Kumho Petrochemical scope
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/validate-bat-kumho-petrochemical.yml'
+      - 'orchestrator/bat_catalog_effective.py'
+      - 'orchestrator/bat_catalog_status_overrides.json'
+      - 'orchestrator/bat_collector.py'
+      - 'orchestrator/bat_resolver.py'
+      - 'orchestrator/bat_stage.py'
+      - 'tests/test_bat_effective_catalog.py'
+      - 'tests/test_bat_revision_collection.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Run BAT regressions
+        run: python -m unittest tests.test_bat_effective_catalog tests.test_bat_revision_collection -v
+      - name: Reuse verified Kumho Petrochemical metadata from master run 197
+        run: |
+          rm -rf assembled
+          mkdir -p assembled
+          gh run download 34116940770 --repo "${{ github.repository }}" --name enterprise-env-metadata --dir assembled
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          required=['Company_Profile.json','Requested_Scope.json','Site_Master.csv','Source_Identity.csv']
+          missing=[x for x in required if not (Path('assembled')/x).exists()]
+          if missing:
+              raise SystemExit(f'metadata artifact lacks BAT inputs: {missing}')
+          profile=json.loads((Path('assembled')/'Company_Profile.json').read_text(encoding='utf-8'))
+          scope=json.loads((Path('assembled')/'Requested_Scope.json').read_text(encoding='utf-8'))
+          text=json.dumps(profile,ensure_ascii=False)
+          if '금호석유화학' not in text:
+              raise SystemExit('Run 197 metadata is not Kumho Petrochemical')
+          if str(scope.get('mode') or '').upper()!='SITE_SET':
+              raise SystemExit(f'Expected SITE_SET scope, got {scope.get("mode")}')
+          target=list(scope.get('target_canonical_site_ids') or [])
+          if len(target)!=10:
+              raise SystemExit(f'Expected verified ten-site production scope, got {len(target)}: {target}')
+          print(json.dumps({'KUMHO_METADATA':'PASS','target_site_count':len(target),'target_site_ids':target},ensure_ascii=False,indent=2))
+          PY
+      - name: Remove old BAT outputs from retained metadata
+        run: |
+          rm -rf assembled/output/BAT_REFERENCES
+          rm -f assembled/BAT_Applicability_Candidates.csv assembled/BAT_Collection_Plan.json assembled/BAT_Industry_Reference_Applicability.json assembled/BAT_Summary.json assembled/BAT_Effective_Catalog.json assembled/BAT_Catalog_Advisories.json
+      - name: Re-resolve and collect BAT with current catalog
+        env:
+          PYTHONPATH: orchestrator
+        run: python orchestrator/bat_stage.py --package assembled
+      - name: Verify current scope and multipart contract
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          root=Path('assembled')
+          scope=json.loads((root/'Requested_Scope.json').read_text(encoding='utf-8'))
+          allowed={str(x) for x in scope.get('target_canonical_site_ids') or []}
+          with (root/'BAT_Applicability_Candidates.csv').open(encoding='utf-8-sig',newline='') as f:
+              candidates=list(csv.DictReader(f))
+          bad_scope=[r for r in candidates if str(r.get('canonical_site_id') or '') not in allowed]
+          stale=[r for r in candidates if '여수제3에너지' in (r.get('site_name') or '')]
+          if bad_scope:
+              raise SystemExit(f'BAT candidates escaped Requested_Scope: {bad_scope}')
+          if stale:
+              raise SystemExit(f'Stale manual BAT site leaked into current run: {stale}')
+          with (root/'output'/'BAT_REFERENCES'/'document_index.csv').open(encoding='utf-8-sig',newline='') as f:
+              docs=list(csv.DictReader(f))
+          organic_candidates=[r for r in candidates if r.get('catalog_id')=='KBREF_ORGANIC_CHEM_II_2023_2024']
+          organic_docs=[r for r in docs if r.get('catalog_id')=='KBREF_ORGANIC_CHEM_II_2023_2024' and r.get('preferred_for_matching')=='true']
+          if organic_candidates:
+              if any(r.get('collection_action')!='COLLECT' for r in organic_candidates):
+                  raise SystemExit(f'Byte-verified current Organic II candidate must be COLLECT: {organic_candidates}')
+              if len(organic_docs)!=4:
+                  raise SystemExit(f'Organic II matched but collector did not materialize four current parts: {organic_docs}')
+              parts=sorted(r.get('document_part') for r in organic_docs)
+              if parts!=['1','2','3','4']:
+                  raise SystemExit(f'Organic II current document parts changed: {parts}')
+          status=json.loads((root/'output'/'BAT_REFERENCES'/'status.json').read_text(encoding='utf-8'))
+          summary=json.loads((root/'BAT_Summary.json').read_text(encoding='utf-8'))
+          plan=json.loads((root/'BAT_Collection_Plan.json').read_text(encoding='utf-8'))
+          print(json.dumps({
+              'BAT_KUMHO_PETROCHEMICAL_VALIDATION':'PASS',
+              'candidate_count':len(candidates),
+              'candidate_sites':sorted({r.get('site_name','') for r in candidates}),
+              'candidate_families':sorted({r.get('catalog_family','') for r in candidates}),
+              'collect_catalog_ids':plan.get('collect_catalog_ids',[]),
+              'organic_ii_candidate_count':len(organic_candidates),
+              'organic_ii_documents':[{k:r.get(k,'') for k in ['document_part','publication_year','collection_status','source_url','stored_path','notes']} for r in organic_docs],
+              'collection_status':status,
+              'summary':summary,
+          },ensure_ascii=False,indent=2))
+          PY
+      - name: Upload focused BAT evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-petrochemical-bat-validation
+          path: |
+            assembled/BAT_Applicability_Candidates.csv
+            assembled/BAT_Collection_Plan.json
+            assembled/BAT_Industry_Reference_Applicability.json
+            assembled/BAT_Summary.json
+            assembled/BAT_Effective_Catalog.json
+            assembled/BAT_Catalog_Advisories.json
+            assembled/output/BAT_REFERENCES
+          if-no-files-found: warn
+          retention-days: 14
