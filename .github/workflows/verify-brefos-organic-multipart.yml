@@ -1,0 +1,63 @@
+name: Verify BREFOS organic chemistry II multipart originals
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/verify-brefos-organic-multipart.yml'
+      - 'orchestrator/brefos_byte_registry.py'
+      - 'orchestrator/brefos_catalog_last_verified.json'
+
+concurrency:
+  group: brefos-organic-chemistry-ii-multipart
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Byte-verify all four organic chemistry II parts
+        run: >-
+          python orchestrator/brefos_byte_registry.py
+          --out BREFOS_Organic_II_Byte_Registry.json
+          --workers 4
+          --atch-file-ids 548,551,596,597
+      - name: Require complete four-part verification
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('BREFOS_Organic_II_Byte_Registry.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          rows=d.get('documents') or []
+          expected={'548','551','596','597'}
+          found={str(r.get('atch_file_id') or '') for r in rows}
+          verified={str(r.get('atch_file_id') or '') for r in rows if r.get('status')=='VERIFIED_PDF'}
+          print(json.dumps({
+              'status':d.get('status'),
+              'discovery_basis':d.get('discovery_basis'),
+              'found':sorted(found),
+              'verified':sorted(verified),
+              'status_counts':d.get('status_counts',{}),
+          },ensure_ascii=False,indent=2))
+          if found != expected or verified != expected:
+              raise SystemExit('Organic chemistry II is not fully byte-verified: expected all four official BREFOS parts')
+          PY
+      - name: Upload verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brefos-organic-chemistry-ii-byte-registry
+          path: BREFOS_Organic_II_Byte_Registry.json
+          if-no-files-found: warn
+          retention-days: 14
