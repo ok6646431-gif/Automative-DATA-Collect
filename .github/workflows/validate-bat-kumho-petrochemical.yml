@@ -1,4 +1,5 @@
 name: Validate BAT on current Kumho Petrochemical scope
+# Acceptance path for bounded current-first BAT collection.
 
 on:
   workflow_dispatch:
