@@ -35,6 +35,40 @@ class BATEffectiveCatalogTests(unittest.TestCase):
         self.assertTrue(by_id['KBREF_SEMICONDUCTOR_II_2025']['include_in_effective_catalog'])
         self.assertEqual(by_id['KBREF_SEMICONDUCTOR_2019']['reason_code'],'SUPERSEDED_BY_BREFOS_VERIFIED_REVISION_II')
 
+    def test_byte_verified_organic_chemistry_ii_is_four_part_current_reference(self):
+        catalog,advisories=build_effective_catalog()
+        entries={e.get('catalog_id'):e for e in catalog.get('entries',[])}
+        current=entries['KBREF_ORGANIC_CHEM_II_2023_2024']
+        self.assertTrue(current.get('preferred'))
+        self.assertEqual(current.get('publication_status'),'PUBLISHED')
+        self.assertEqual(current.get('supersession_status'),'CURRENT_VERIFIED_PUBLICATION')
+        self.assertEqual(current.get('collection_policy'),'COLLECT_WHEN_MATCHED')
+        self.assertEqual(current.get('official_pdf_url'),'')
+        docs=current.get('official_documents') or []
+        self.assertEqual(len(docs),4)
+        self.assertEqual([d.get('document_part') for d in docs],['1','2','3','4'])
+        self.assertEqual([d.get('publication_year') for d in docs],[2023,2023,2024,2024])
+        self.assertEqual(
+            [d.get('official_pdf_url') for d in docs],
+            [
+                'https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=548',
+                'https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=551',
+                'https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=596',
+                'https://ieps.nier.go.kr/brefos/common/file/pdfDocPdf.do?atchFileId=597',
+            ],
+        )
+        self.assertEqual(
+            [d.get('official_pdf_sha256') for d in docs],
+            [
+                '05f2feade93bac1a347e6163c0f4c6747bf6d2d7d2c84e58acd8f387b6f714b8',
+                'ecb593f3ffff3cc760330a93302d46a09cb96bbae1ff1f794fc0d72eda425616',
+                'a91908cc9e66a08933a1005281ee4eef48d019f1cd836f8495e3b1a97e96b5e7',
+                'fcd3f84cb29034b855de66896469f94fdbd18a15a94205867014d2f0053b9f1c',
+            ],
+        )
+        by_id={a.get('catalog_id'):a for a in advisories}
+        self.assertEqual(by_id['KBREF_ORGANIC_CHEM_II_2023_2024']['reason_code'],'BREFOS_PUBLISHED_MULTIPART_REVISION_BYTE_VERIFIED')
+
     def test_site_set_scope_removes_out_of_scope_bat_candidates_before_collection(self):
         plan={
             'schema_version':'test','candidates':[
