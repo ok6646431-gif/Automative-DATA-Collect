@@ -3,153 +3,76 @@ from pathlib import Path
 p=Path('orchestrator/bat_collector.py')
 s=p.read_text(encoding='utf-8')
 
-old="""def _session():
-    # Network dependencies are intentionally lazy-loaded. Importing package_run
-    # must not require requests/bs4 unless BAT collection is actually executed.
-    import requests
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
-    retry=Retry(total=4,connect=4,read=3,status=3,backoff_factor=1.2,
-                status_forcelist=(408,425,429,500,502,503,504),allowed_methods=frozenset({'GET'}),
-                raise_on_status=False,respect_retry_after_header=True)
-    s=requests.Session()
-    s.headers.update({'User-Agent':'Mozilla/5.0 (compatible; EnvironmentalDataCollector/1.0; official-public-reference)'})
-    s.mount('https://',HTTPAdapter(max_retries=retry)); s.mount('http://',HTTPAdapter(max_retries=retry)); return s
+old="""            specs=_document_specs(entry)
+            for spec in specs:
+                part=str(spec.get('document_part') or '1'); volume_no=str(spec.get('volume_no') or part)
+                docid='BAT_'+re.sub(r'[^0-9A-Za-z_]+','_',catalog_id)+(f'_P{part}' if len(specs)>1 else '')
+                title=str(spec.get('title') or entry.get('title') or '')
+                base={
+                    'document_id':docid,'catalog_id':catalog_id,'catalog_family':family,'revision_id':revision_id,
+                    'revision_generation':revision,'publication_year':publication_year,
+                    'revision_status':'SUPERSEDED_ARCHIVE_ONLY' if archive_only else revision_status,
+                    'preferred_for_matching':'false' if archive_only else 'true',
+                    'document_part':part,'volume_no':volume_no,'document_type':'BAT_REFERENCE','title':title,
+                    'report_year':publication_year,'source_url':'','source_locator':entry.get('official_source_locator',''),
 """
-new="""def _session():
-    # Network dependencies are intentionally lazy-loaded. Importing package_run
-    # must not require requests/bs4 unless BAT collection is actually executed.
-    # Retries are handled explicitly by fetch_pdf_from_spec for current direct
-    # documents. Adapter-level retries are disabled so one unreachable official
-    # endpoint cannot multiply into a many-minute hidden stall.
-    import requests
-    from requests.adapters import HTTPAdapter
-    from urllib3.util.retry import Retry
-    retry=Retry(total=0,connect=0,read=0,status=0,backoff_factor=0,
-                status_forcelist=(408,425,429,500,502,503,504),allowed_methods=frozenset({'GET'}),
-                raise_on_status=False,respect_retry_after_header=True)
-    s=requests.Session()
-    s.headers.update({'User-Agent':'Mozilla/5.0 (compatible; EnvironmentalDataCollector/1.0; official-public-reference)'})
-    s.mount('https://',HTTPAdapter(max_retries=retry)); s.mount('http://',HTTPAdapter(max_retries=retry)); return s
+new="""            specs=_document_specs(entry)
+            for spec in specs:
+                part=str(spec.get('document_part') or '1'); volume_no=str(spec.get('volume_no') or part)
+                spec_publication_year=str(spec.get('publication_year') or entry.get('publication_year') or entry.get('effective_from') or '')[:4]
+                docid='BAT_'+re.sub(r'[^0-9A-Za-z_]+','_',catalog_id)+(f'_P{part}' if len(specs)>1 else '')
+                title=str(spec.get('title') or entry.get('title') or '')
+                base={
+                    'document_id':docid,'catalog_id':catalog_id,'catalog_family':family,'revision_id':revision_id,
+                    'revision_generation':revision,'publication_year':spec_publication_year,
+                    'revision_status':'SUPERSEDED_ARCHIVE_ONLY' if archive_only else revision_status,
+                    'preferred_for_matching':'false' if archive_only else 'true',
+                    'document_part':part,'volume_no':volume_no,'document_type':'BAT_REFERENCE','title':title,
+                    'report_year':spec_publication_year,'source_url':'','source_locator':entry.get('official_source_locator',''),
 """
 if old not in s:
-    raise SystemExit('session block not found')
+    raise SystemExit('multipart metadata block not found')
 s=s.replace(old,new)
 
-old="def _get(session,url,timeout=(15,90)):\n"
-new="def _get(session,url,timeout=(8,30)):\n"
-if old not in s:
-    raise SystemExit('_get timeout block not found')
-s=s.replace(old,new)
-
-old="""def fetch_pdf_from_spec(spec):
-    direct=str(spec.get('official_pdf_url') or '').strip(); expected=str(spec.get('official_pdf_sha256') or '').strip().lower(); errors=[]
-    if direct:
-        try:
-            rr=_get(_session(),direct); final,data,digest=_verified_pdf_response(rr,expected)
-            return final,data,f'VERIFIED_OFFICIAL_DIRECT_PDF:sha256={digest}'
-        except Exception as exc: errors.append(f'direct:{direct}:{type(exc).__name__}:{exc}')
-"""
-new="""def fetch_pdf_from_spec(spec,direct_attempts=2):
-    direct=str(spec.get('official_pdf_url') or '').strip(); expected=str(spec.get('official_pdf_sha256') or '').strip().lower(); errors=[]
-    if direct:
-        attempts=max(1,min(int(direct_attempts or 1),2))
-        for attempt in range(1,attempts+1):
-            try:
-                rr=_get(_session(),direct); final,data,digest=_verified_pdf_response(rr,expected)
-                return final,data,f'VERIFIED_OFFICIAL_DIRECT_PDF:sha256={digest}; attempt={attempt}'
-            except Exception as exc:
-                errors.append(f'direct_attempt_{attempt}:{direct}:{type(exc).__name__}:{exc}')
-"""
-if old not in s:
-    raise SystemExit('fetch_pdf_from_spec block not found')
-s=s.replace(old,new)
-
-old="""def _family_entries(catalog,family):
-    entries=[e for e in (catalog.get('entries',[]) or []) if str(e.get('catalog_family') or e.get('catalog_id') or '')==family]
-    return sorted(entries,key=lambda e:(int(e.get('publication_year') or 0),str(e.get('revision_generation') or ''),str(e.get('catalog_id') or '')))
-"""
-new="""def _family_entries(catalog,family):
-    entries=[e for e in (catalog.get('entries',[]) or []) if str(e.get('catalog_family') or e.get('catalog_id') or '')==family]
-    # Current/preferred evidence is the deliverable. Superseded revisions are
-    # enrichment and must never delay or prevent current-reference collection.
-    return sorted(entries,key=lambda e:(
-        0 if e.get('preferred',True) is not False else 1,
-        -int(e.get('publication_year') or 0),
-        str(e.get('revision_generation') or ''),
-        str(e.get('catalog_id') or ''),
-    ))
-"""
-if old not in s:
-    raise SystemExit('_family_entries block not found')
-s=s.replace(old,new)
-
-old="""    rows=[]
-    current_downloaded=current_failed=current_pending=current_locator_pending=0
-    archive_downloaded=archive_failed=archive_locator_pending=0
-
-    for family,group in sorted(by_family.items()):
-"""
-new="""    rows=[]
-    current_downloaded=current_failed=current_pending=current_locator_pending=0
-    archive_downloaded=archive_failed=archive_locator_pending=0
-
-    def record(row):
-        rows.append(row)
-        # Persist progress after every document so a runner timeout or source
-        # outage still leaves an auditable partial index instead of a blank BAT stage.
-        write_csv(out/'document_index.csv',rows,INDEX_FIELDS)
-        print(json.dumps({
-            'BAT_DOCUMENT_PROGRESS':len(rows),
-            'catalog_id':row.get('catalog_id',''),
-            'document_part':row.get('document_part',''),
-            'revision_status':row.get('revision_status',''),
-            'collection_status':row.get('collection_status',''),
-        },ensure_ascii=False),flush=True)
-
-    for family,group in sorted(by_family.items()):
-"""
-if old not in s:
-    raise SystemExit('record insertion point not found')
-s=s.replace(old,new)
-
-marker="    for family,group in sorted(by_family.items()):\n"
-head,tail=s.split(marker,1)
-tail=tail.replace('rows.append(', 'record(')
-s=head+marker+tail
-
-old="final_url,data,basis=fetch_pdf_from_spec(spec)"
+old="folder=out/'documents'/safe(family)/safe(f'{publication_year}_{revision or catalog_id}')"
 if s.count(old)!=2:
-    raise SystemExit(f'expected two collector fetch call sites, got {s.count(old)}')
-s=s.replace(old,"final_url,data,basis=fetch_pdf_from_spec(spec,direct_attempts=1)",1)
-s=s.replace(old,"final_url,data,basis=fetch_pdf_from_spec(spec,direct_attempts=2)",1)
-
+    raise SystemExit(f'expected two folder year call sites, got {s.count(old)}')
+s=s.replace(old,"folder=out/'documents'/safe(family)/safe(f'{spec_publication_year}_{revision or catalog_id}')")
 p.write_text(s,encoding='utf-8')
 
 t=Path('tests/test_bat_revision_collection.py')
 q=t.read_text(encoding='utf-8')
-old="""            with patch('orchestrator.bat_collector.fetch_pdf_from_spec',return_value=('https://ieps.nier.go.kr/file.pdf',b'%PDF-1.4\\n%%EOF','TEST')):
-                status=collect(package,catalog_path)
+old="""             'official_documents':[
+                 {'document_part':'1','volume_no':'I','title':'다권 BAT 제1권','official_document_page':'https://ieps.nier.go.kr/web/board/5/11/'},
+                 {'document_part':'2','volume_no':'II','title':'다권 BAT 제2권','official_document_page':'https://ieps.nier.go.kr/web/board/5/12/'},
+             ]}
 """
-new="""            with patch('orchestrator.bat_collector.fetch_pdf_from_spec',return_value=('https://ieps.nier.go.kr/file.pdf',b'%PDF-1.4\\n%%EOF','TEST')) as mocked:
-                status=collect(package,catalog_path)
+new="""             'official_documents':[
+                 {'document_part':'1','volume_no':'I','publication_year':2023,'title':'다권 BAT 제1권','official_document_page':'https://ieps.nier.go.kr/web/board/5/11/'},
+                 {'document_part':'2','volume_no':'II','publication_year':2024,'title':'다권 BAT 제2권','official_document_page':'https://ieps.nier.go.kr/web/board/5/12/'},
+             ]}
 """
 if old not in q:
-    raise SystemExit('revision test patch target not found')
+    raise SystemExit('multipart test documents block not found')
 q=q.replace(old,new,1)
-anchor="""            self.assertEqual(status['current_downloaded'],1)
-            self.assertEqual(status['superseded_downloaded'],1)
-            self.assertEqual(status['status'],'DATA_FOUND')
+old="""            self.assertEqual({r['document_part'] for r in rows},{'1','2'})
+            self.assertEqual({r['volume_no'] for r in rows},{'I','II'})
+            self.assertEqual(status['current_downloaded'],2)
+            self.assertNotEqual(rows[0]['stored_path'],rows[1]['stored_path'])
 """
-repl="""            self.assertEqual(status['current_downloaded'],1)
-            self.assertEqual(status['superseded_downloaded'],1)
-            self.assertEqual(status['status'],'DATA_FOUND')
-            self.assertEqual(mocked.call_args_list[0].args[0]['catalog_id'],'BAT_NEW')
-            self.assertEqual(mocked.call_args_list[0].kwargs.get('direct_attempts'),2)
-            self.assertEqual(mocked.call_args_list[1].args[0]['catalog_id'],'BAT_OLD')
-            self.assertEqual(mocked.call_args_list[1].kwargs.get('direct_attempts'),1)
+new="""            self.assertEqual({r['document_part'] for r in rows},{'1','2'})
+            self.assertEqual({r['volume_no'] for r in rows},{'I','II'})
+            by_part={r['document_part']:r for r in rows}
+            self.assertEqual(by_part['1']['publication_year'],'2023')
+            self.assertEqual(by_part['1']['report_year'],'2023')
+            self.assertIn('2023_II',by_part['1']['stored_path'])
+            self.assertEqual(by_part['2']['publication_year'],'2024')
+            self.assertEqual(by_part['2']['report_year'],'2024')
+            self.assertIn('2024_II',by_part['2']['stored_path'])
+            self.assertEqual(status['current_downloaded'],2)
+            self.assertNotEqual(rows[0]['stored_path'],rows[1]['stored_path'])
 """
-if anchor not in q:
-    raise SystemExit('revision test assertion anchor not found')
-q=q.replace(anchor,repl,1)
+if old not in q:
+    raise SystemExit('multipart test assertions block not found')
+q=q.replace(old,new,1)
 t.write_text(q,encoding='utf-8')
