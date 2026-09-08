@@ -1,0 +1,55 @@
+name: Inspect verified BREFOS organic II artifact
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/inspect-organic-ii-verified-artifact.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download previously successful byte registry
+        run: |
+          mkdir -p evidence
+          gh run download 34179311982 --repo "${{ github.repository }}" --name brefos-organic-chemistry-ii-byte-registry --dir evidence
+      - name: Validate and print immutable byte evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files=list(Path('evidence').rglob('*.json'))
+          if len(files)!=1:
+              raise SystemExit(f'expected exactly one registry json, got {files}')
+          d=json.loads(files[0].read_text(encoding='utf-8'))
+          rows=d.get('documents') or []
+          expected={'548','551','596','597'}
+          found={str(r.get('atch_file_id') or '') for r in rows}
+          verified={str(r.get('atch_file_id') or '') for r in rows if r.get('status')=='VERIFIED_PDF'}
+          if d.get('status')!='PASS' or found!=expected or verified!=expected:
+              raise SystemExit('source artifact is not a complete four-part VERIFIED_PDF registry')
+          out=[]
+          for r in sorted(rows,key=lambda x:int(x.get('atch_file_id') or 0)):
+              sha=str(r.get('sha256') or '')
+              if len(sha)!=64:
+                  raise SystemExit(f'missing sha for {r.get("atch_file_id")}')
+              out.append({
+                  'atch_file_id':str(r.get('atch_file_id') or ''),
+                  'ntt_id':str(r.get('ntt_id') or ''),
+                  'title':str(r.get('title') or ''),
+                  'bytes':int(r.get('bytes') or 0),
+                  'sha256':sha,
+                  'url':str(r.get('url') or r.get('viewer_pdf_url') or ''),
+                  'status':str(r.get('status') or ''),
+              })
+          print(json.dumps({'source_run_id':'34179311982','checked_at':d.get('checked_at'),'documents':out},ensure_ascii=False,indent=2))
+          PY
