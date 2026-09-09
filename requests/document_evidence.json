@@ -72,13 +72,24 @@
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "금호석유화학 지속가능경영보고서 2025",
       "report_year": 2025,
-      "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
-      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+      "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
       "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
+      "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "ALIGNED"
+      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type. Previously byte/transport-verified KRX disclosure attachment restored as primary; official company-hosted copy retained as fallback.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "COMPANY_HOSTED_OFFICIAL",
+          "notes": "Fresh official-company Discovery route retained as fallback after restoring the previously verified KRX delivery route."
+        }
+      ],
+      "route_merge_status": "RESTORED_VERIFIED_PRIMARY"
     }
   ],
   "gaps": [
