@@ -48,3 +48,5 @@ jobs:
             git commit -m 'Close final collection delivery blockers'
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
+
+# trigger corrected workflow definition
