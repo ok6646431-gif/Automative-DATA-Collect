@@ -7,8 +7,9 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COLLECT = ROOT / ".github/workflows/collect.yml"
-ZERO = ROOT / ".github/workflows/zero-touch-discovery.yml"
+BAT = ROOT / "orchestrator/bat_collector.py"
+RUNNER = ROOT / "orchestrator/zero_touch_runner.py"
+ARCHIVE = ROOT / "orchestrator/archive_stage_core.py"
 DOCS = ROOT / "requests/document_evidence.json"
 TOKEN = ROOT / "requests/run_token.txt"
 
@@ -25,90 +26,95 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def patch_collect() -> None:
-    text = COLLECT.read_text(encoding="utf-8")
-    text = replace_once(
-        text,
-        "run: python -m pip install --disable-pip-version-check xlsxwriter beautifulsoup4 pypdf openpyxl",
-        "run: python -m pip install --disable-pip-version-check requests xlsxwriter beautifulsoup4 pypdf openpyxl",
-        "package requests dependency",
-    )
-    gate = """      - name: Enforce final delivery contract
-        if: always()
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          errors=[]
-          completeness=Path('assembled/Collection_Completeness.json')
-          if not completeness.is_file():
-              errors.append('missing assembled/Collection_Completeness.json')
-          else:
-              payload=json.loads(completeness.read_text(encoding='utf-8'))
-              status=str(payload.get('status') or '')
-              if not status.startswith('COMPLETE'):
-                  errors.append(f'collection completeness is {status or "UNKNOWN"}')
-          human=Path('assembled/Human_Archive.zip')
-          if not human.is_file() or human.stat().st_size == 0:
-              errors.append('missing or empty Human_Archive.zip')
-          app=list(Path('application-delivery').glob('*.zip')) if Path('application-delivery').exists() else []
-          if not any(p.is_file() and p.stat().st_size > 0 for p in app):
-              errors.append('missing application-materials zip')
-          if errors:
-              raise SystemExit('FINAL_DELIVERY_CONTRACT_FAILED: ' + '; '.join(errors))
-          print('FINAL_DELIVERY_CONTRACT_PASS')
-          PY
+def patch_bat_runtime() -> None:
+    text = BAT.read_text(encoding="utf-8")
+    old = """import csv, hashlib, json, re
+from pathlib import Path
+from urllib.parse import urljoin, urlparse, parse_qsl, urlencode, urlunparse
 """
-    marker = "      - name: Publish control-plane run receipt\n"
-    if "      - name: Enforce final delivery contract\n" not in text:
-        if marker not in text:
-            raise RuntimeError("final delivery gate insertion marker missing")
-        text = text.replace(marker, gate + marker, 1)
-    COLLECT.write_text(text, encoding="utf-8")
+    new = """import csv, hashlib, importlib.util, json, re, subprocess, sys
+from pathlib import Path
+from urllib.parse import urljoin, urlparse, parse_qsl, urlencode, urlunparse
 
 
-def patch_zero_touch() -> None:
-    text = ZERO.read_text(encoding="utf-8")
-    text = replace_once(
-        text,
-        "      - 'orchestrator/zero_touch_runner.py'\n",
-        "      - 'orchestrator/document_route_merge.py'\n      - 'orchestrator/zero_touch_runner.py'\n",
-        "zero-touch module trigger",
-    )
-    text = replace_once(
-        text,
-        "      - 'tests/test_document_evidence_schema.py'\n",
-        "      - 'tests/test_document_evidence_schema.py'\n      - 'tests/test_document_route_merge.py'\n",
-        "zero-touch test trigger",
-    )
-    text = replace_once(
-        text,
-        "orchestrator/g0_thin_shell_recovery.py orchestrator/zero_touch_runner.py",
-        "orchestrator/g0_thin_shell_recovery.py orchestrator/document_route_merge.py orchestrator/zero_touch_runner.py",
-        "zero-touch py_compile",
-    )
-    text = replace_once(
-        text,
-        "          python -m unittest tests.test_document_evidence_schema -v\n",
-        "          python -m unittest tests.test_document_evidence_schema -v\n          python -m unittest tests.test_document_route_merge -v\n",
-        "zero-touch route merge regression",
-    )
-    old = """          cp generated-discovery/company_discovery.json "$promo_dir/company_discovery.json"
-          cp generated-discovery/document_evidence.json "$promo_dir/document_evidence.json"
-          cp generated-discovery/event_evidence.json "$promo_dir/event_evidence.json"
+def _ensure_requests_runtime():
+    # BAT collection runs in the final package job, which historically did not
+    # install requests even though the collector imports it lazily. Self-bootstrap
+    # the single missing runtime dependency rather than coupling BAT to workflow YAML.
+    if importlib.util.find_spec('requests') is None:
+        subprocess.run(
+            [sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'requests'],
+            check=True,
+        )
+    if importlib.util.find_spec('requests') is None:
+        raise RuntimeError('BAT HTTP runtime unavailable after requests installation')
+
+
+_ensure_requests_runtime()
 """
-    new = """          cp generated-discovery/company_discovery.json "$promo_dir/company_discovery.json"
-          python orchestrator/document_route_merge.py \\
-            --existing-company requests/company_discovery.json \\
-            --existing-documents requests/document_evidence.json \\
-            --fresh-company generated-discovery/company_discovery.json \\
-            --fresh-documents generated-discovery/document_evidence.json \\
-            --out "$promo_dir/document_evidence.json"
-          cp generated-discovery/event_evidence.json "$promo_dir/event_evidence.json"
+    text = replace_once(text, old, new, "BAT requests runtime bootstrap")
+    BAT.write_text(text, encoding="utf-8")
+
+
+def patch_zero_touch_route_preservation() -> None:
+    text = RUNNER.read_text(encoding="utf-8")
+    text = replace_once(text, "import re\nimport sys\n", "import json\nimport re\nimport sys\n", "zero-touch json import")
+    old = """    discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
+    return discovery, documents, audit
 """
-    text = replace_once(text, old, new, "zero-touch route merge promotion")
-    ZERO.write_text(text, encoding="utf-8")
+    new = """    discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
+
+    # Fresh Discovery owns document identity/coverage, but a stronger transport route
+    # already byte-verified for the same DART-anchored legal entity must not disappear
+    # merely because a later crawl rediscovers a weaker company-hosted URL.
+    try:
+        from orchestrator.document_route_merge import merge_document_routes
+        existing_company_path = ROOT / 'requests/company_discovery.json'
+        existing_documents_path = ROOT / 'requests/document_evidence.json'
+        if existing_company_path.exists() and existing_documents_path.exists():
+            existing_company = json.loads(existing_company_path.read_text(encoding='utf-8'))
+            existing_documents = json.loads(existing_documents_path.read_text(encoding='utf-8'))
+            before = [str(x.get('source_url') or '') for x in documents.get('documents', []) or [] if isinstance(x, dict)]
+            documents = merge_document_routes(existing_company, existing_documents, discovery, documents)
+            after = [str(x.get('source_url') or '') for x in documents.get('documents', []) or [] if isinstance(x, dict)]
+            audit.setdefault('stages', {})['document_route_merge'] = {
+                'status': 'APPLIED',
+                'primary_routes_changed': sum(1 for a, b in zip(before, after) if a != b),
+            }
+    except Exception as exc:
+        audit.setdefault('stages', {})['document_route_merge'] = {
+            'status': 'SKIPPED_ERROR',
+            'error': f'{type(exc).__name__}: {exc}',
+        }
+    return discovery, documents, audit
+"""
+    text = replace_once(text, old, new, "zero-touch repository route preservation")
+    RUNNER.write_text(text, encoding="utf-8")
+
+
+def patch_false_green_gate() -> None:
+    text = ARCHIVE.read_text(encoding="utf-8")
+    text = replace_once(
+        text,
+        "    audit_collection_for_requested_scope(root, root/\"Company_Profile.json\", None, root/\"Document_Evidence.json\" if (root/\"Document_Evidence.json\").exists() else None)\n",
+        "    completeness=audit_collection_for_requested_scope(root, root/\"Company_Profile.json\", None, root/\"Document_Evidence.json\" if (root/\"Document_Evidence.json\").exists() else None)\n",
+        "archive completeness capture",
+    )
+    old = """    shutil.rmtree(root/"Human_Archive",ignore_errors=True)
+    print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals)},ensure_ascii=False))
+    return final
+"""
+    new = """    shutil.rmtree(root/"Human_Archive",ignore_errors=True)
+    print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals),"collection_completeness":completeness},ensure_ascii=False))
+    if str((completeness or {}).get('status') or '') != 'COMPLETE':
+        raise RuntimeError(
+            'COLLECTION_COMPLETENESS_GATE_FAILED: ' +
+            json.dumps(completeness or {}, ensure_ascii=False)
+        )
+    return final
+"""
+    text = replace_once(text, old, new, "archive false-green completion gate")
+    ARCHIVE.write_text(text, encoding="utf-8")
 
 
 def seed_2025_route() -> None:
@@ -143,14 +149,15 @@ def seed_2025_route() -> None:
 
 
 def main() -> int:
-    patch_collect()
-    patch_zero_touch()
+    patch_bat_runtime()
+    patch_zero_touch_route_preservation()
+    patch_false_green_gate()
     seed_2025_route()
     TOKEN.write_text(
         "completion-fix:" + datetime.datetime.now(datetime.timezone.utc).isoformat() + "\n",
         encoding="utf-8",
     )
-    print("completion blockers patched")
+    print("completion blockers patched in source code")
     return 0
 
 
