@@ -1,6 +1,22 @@
-import csv, hashlib, json, re
+import csv, hashlib, importlib.util, json, re, subprocess, sys
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, parse_qsl, urlencode, urlunparse
+
+
+def _ensure_requests_runtime():
+    # BAT collection runs in the final package job, which historically did not
+    # install requests even though the collector imports it lazily. Self-bootstrap
+    # the single missing runtime dependency rather than coupling BAT to workflow YAML.
+    if importlib.util.find_spec('requests') is None:
+        subprocess.run(
+            [sys.executable, '-m', 'pip', 'install', '--disable-pip-version-check', 'requests'],
+            check=True,
+        )
+    if importlib.util.find_spec('requests') is None:
+        raise RuntimeError('BAT HTTP runtime unavailable after requests installation')
+
+
+_ensure_requests_runtime()
 
 try:
     from .bat_resolver import CATALOG_PATH, read_json, read_csv

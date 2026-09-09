@@ -186,7 +186,7 @@ def finalize_archive_manifest(package_root,manifest,archive_summary):
 
 def run(package_root,stable,evidence=None):
     root=Path(package_root).resolve(); copy_document_lane(root,stable,evidence)
-    audit_collection_for_requested_scope(root, root/"Company_Profile.json", None, root/"Document_Evidence.json" if (root/"Document_Evidence.json").exists() else None)
+    completeness=audit_collection_for_requested_scope(root, root/"Company_Profile.json", None, root/"Document_Evidence.json" if (root/"Document_Evidence.json").exists() else None)
     vals,docs,env,env_scope,gap_state=document_reviews(root); merge_validations(root,vals)
     count=append_artifact_rows(root); manifest=refresh_manifest(root,docs,env,env_scope,gap_state,count)
     archive_builder.source_id_scope=requested_source_id_scope
@@ -202,7 +202,12 @@ def run(package_root,stable,evidence=None):
     manifest=read_json(root/"Master_Manifest.json",{}) or {}; manifest["artifact_count"]=artifact_count
     root.joinpath("Master_Manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     shutil.rmtree(root/"Human_Archive",ignore_errors=True)
-    print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals)},ensure_ascii=False))
+    print(json.dumps({"archive_health":"PASS","archive":final,"validations_added":len(vals),"collection_completeness":completeness},ensure_ascii=False))
+    if str((completeness or {}).get('status') or '') != 'COMPLETE':
+        raise RuntimeError(
+            'COLLECTION_COMPLETENESS_GATE_FAILED: ' +
+            json.dumps(completeness or {}, ensure_ascii=False)
+        )
     return final
 
 

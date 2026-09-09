@@ -8,6 +8,7 @@ fail closed and the existing discovery/gap policies decide what can be promoted.
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 import time
@@ -227,6 +228,29 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     g0_kind_disclosure_recovery.enforce_historical_continuity_gate(discovery, audit)
     discovery = g0_entity_continuity_policy.normalize(discovery, audit)
     discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
+
+    # Fresh Discovery owns document identity/coverage, but a stronger transport route
+    # already byte-verified for the same DART-anchored legal entity must not disappear
+    # merely because a later crawl rediscovers a weaker company-hosted URL.
+    try:
+        from orchestrator.document_route_merge import merge_document_routes
+        existing_company_path = ROOT / 'requests/company_discovery.json'
+        existing_documents_path = ROOT / 'requests/document_evidence.json'
+        if existing_company_path.exists() and existing_documents_path.exists():
+            existing_company = json.loads(existing_company_path.read_text(encoding='utf-8'))
+            existing_documents = json.loads(existing_documents_path.read_text(encoding='utf-8'))
+            before = [str(x.get('source_url') or '') for x in documents.get('documents', []) or [] if isinstance(x, dict)]
+            documents = merge_document_routes(existing_company, existing_documents, discovery, documents)
+            after = [str(x.get('source_url') or '') for x in documents.get('documents', []) or [] if isinstance(x, dict)]
+            audit.setdefault('stages', {})['document_route_merge'] = {
+                'status': 'APPLIED',
+                'primary_routes_changed': sum(1 for a, b in zip(before, after) if a != b),
+            }
+    except Exception as exc:
+        audit.setdefault('stages', {})['document_route_merge'] = {
+            'status': 'SKIPPED_ERROR',
+            'error': f'{type(exc).__name__}: {exc}',
+        }
     return discovery, documents, audit
 
 
