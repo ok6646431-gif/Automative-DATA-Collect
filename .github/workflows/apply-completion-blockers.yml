@@ -27,26 +27,18 @@ jobs:
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 pyyaml
       - name: Apply idempotent completion patch
         run: python tools/apply_completion_blockers.py
-      - name: Validate route merge and patched workflows
+      - name: Validate source fixes
         run: |
           python -m unittest tests.test_document_route_merge -v
-          python - <<'PY'
-          from pathlib import Path
-          import yaml
-          for path in (Path('.github/workflows/collect.yml'), Path('.github/workflows/zero-touch-discovery.yml')):
-              yaml.safe_load(path.read_text(encoding='utf-8'))
-              print('YAML_OK', path)
-          PY
+          python -m py_compile orchestrator/bat_collector.py orchestrator/zero_touch_runner.py orchestrator/archive_stage_core.py orchestrator/document_route_merge.py
       - name: Commit completion patch
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/collect.yml .github/workflows/zero-touch-discovery.yml requests/document_evidence.json requests/run_token.txt
+          git add orchestrator/bat_collector.py orchestrator/zero_touch_runner.py orchestrator/archive_stage_core.py requests/document_evidence.json requests/run_token.txt
           if git diff --cached --quiet; then
             echo 'No patch changes to commit.'
           else
             git commit -m 'Close final collection delivery blockers'
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
-
-# trigger corrected workflow definition
