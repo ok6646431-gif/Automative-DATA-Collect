@@ -13,8 +13,11 @@ on:
     paths:
       - 'requests/zero_touch_request.json'
       - 'requests/document_evidence.schema.json'
+      - 'requests/verified_document_routes.json'
       - 'orchestrator/zero_touch_discovery.py'
       - 'orchestrator/dart_public_resolver.py'
+      - 'orchestrator/document_route_merge.py'
+      - 'orchestrator/document_route_registry.py'
       - 'orchestrator/g0_authority_site_recovery.py'
       - 'orchestrator/g0_data_attr_report_recovery.py'
       - 'orchestrator/g0_domestic_site_catalog.py'
@@ -41,6 +44,8 @@ on:
       - 'orchestrator/g0_thin_shell_recovery.py'
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_document_evidence_schema.py'
+      - 'tests/test_document_route_merge.py'
+      - 'tests/test_document_route_registry.py'
       - 'tests/test_zero_touch_discovery.py'
       - 'tests/test_dart_public_resolver.py'
       - 'tests/test_g0_domestic_site_catalog.py'
@@ -85,8 +90,9 @@ jobs:
 
       - name: Run G0 unit and contract regressions
         run: |
-          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/g0_authority_site_recovery.py orchestrator/g0_data_attr_report_recovery.py orchestrator/g0_domestic_site_catalog.py orchestrator/g0_domestic_site_catalog_enrichment.py orchestrator/g0_entity_continuity_policy.py orchestrator/g0_entity_window_normalization.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_generic_js_report_recovery.py orchestrator/g0_js_form_report_recovery.py orchestrator/g0_kind_disclosure_recovery.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_plain_href_report_recovery.py orchestrator/g0_promotion_policy.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_rename_chronology_recovery.py orchestrator/g0_report_catalog_policy.py orchestrator/g0_report_enrichment.py orchestrator/g0_report_entity_policy.py orchestrator/g0_report_finalizer.py orchestrator/g0_scripted_report_enrichment.py orchestrator/g0_scripted_report_navigation.py orchestrator/g0_staged_official_recovery.py orchestrator/g0_thin_shell_recovery.py orchestrator/zero_touch_runner.py
+          python -m py_compile orchestrator/zero_touch_discovery.py orchestrator/dart_public_resolver.py orchestrator/document_route_merge.py orchestrator/document_route_registry.py orchestrator/g0_authority_site_recovery.py orchestrator/g0_data_attr_report_recovery.py orchestrator/g0_domestic_site_catalog.py orchestrator/g0_domestic_site_catalog_enrichment.py orchestrator/g0_entity_continuity_policy.py orchestrator/g0_entity_window_normalization.py orchestrator/g0_evidence_enrichment.py orchestrator/g0_generic_js_report_recovery.py orchestrator/g0_js_form_report_recovery.py orchestrator/g0_kind_disclosure_recovery.py orchestrator/g0_live_adapters.py orchestrator/g0_official_site_recovery.py orchestrator/g0_plain_href_report_recovery.py orchestrator/g0_promotion_policy.py orchestrator/g0_public_disclosure_enrichment.py orchestrator/g0_rename_chronology_recovery.py orchestrator/g0_report_catalog_policy.py orchestrator/g0_report_enrichment.py orchestrator/g0_report_entity_policy.py orchestrator/g0_report_finalizer.py orchestrator/g0_scripted_report_enrichment.py orchestrator/g0_scripted_report_navigation.py orchestrator/g0_staged_official_recovery.py orchestrator/g0_thin_shell_recovery.py orchestrator/zero_touch_runner.py
           python -m unittest tests.test_document_evidence_schema -v
+          python -m unittest tests.test_document_route_merge tests.test_document_route_registry -v
           python -m unittest tests.test_zero_touch_discovery -v
           python -m unittest tests.test_dart_public_resolver -v
           python -m unittest tests.test_g0_domestic_site_catalog -v
@@ -237,6 +243,15 @@ jobs:
           cp "$promo_dir/company_discovery.json" requests/company_discovery.json
           cp "$promo_dir/document_evidence.json" requests/document_evidence.json
           cp "$promo_dir/event_evidence.json" requests/event_evidence.json
+
+          # Persist verified routes by DART legal-entity key so switching companies does
+          # not erase previously accepted delivery routes. The updater fails closed when
+          # a unique strongly verified DART key is unavailable.
+          python orchestrator/document_route_registry.py update \
+            --registry requests/verified_document_routes.json \
+            --company requests/company_discovery.json \
+            --documents requests/document_evidence.json
+
           python - <<'PY'
           import datetime, json
           from pathlib import Path
@@ -245,7 +260,7 @@ jobs:
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add requests/company_discovery.json requests/document_evidence.json requests/event_evidence.json requests/run_token.txt
+          git add requests/company_discovery.json requests/document_evidence.json requests/event_evidence.json requests/verified_document_routes.json requests/run_token.txt
           if git diff --cached --quiet; then
             echo 'No current-input changes to commit.'
           else
@@ -253,8 +268,6 @@ jobs:
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
 
-      # Pushes made with the workflow's GITHUB_TOKEN intentionally do not start new
-      # workflows. Explicitly dispatch the master collector once after promotion.
       - name: Dispatch existing master collection after promotion
         if: success() && steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate == 'PASS'
         env:
