@@ -4,7 +4,7 @@ from orchestrator.document_route_merge import merge_document_routes, same_verifi
 
 
 class DocumentRouteMergeTest(unittest.TestCase):
-    def _company(self, name="금호석유화학(주)", key="00106368"):
+    def _company(self, name="테스트화학(주)", key="00987654"):
         return {
             "current_legal_name": name,
             "identity_evidence": [{
