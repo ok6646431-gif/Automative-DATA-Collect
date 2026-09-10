@@ -15,6 +15,26 @@ class TestDartPublicResolver(unittest.TestCase):
         self.assertIn("에이치디현대삼호", variants)
         self.assertIn("에이치디현대삼호 주식회사", variants)
 
+    def test_generic_short_latin_brand_variant(self):
+        variants = query_variants("KCC")
+        self.assertIn("KCC", variants)
+        self.assertIn("케이씨씨", variants)
+        self.assertIn("케이씨씨 주식회사", variants)
+        self.assertIn("케이씨씨(주)", variants)
+
+    def test_generic_short_latin_variant_matches_korean_dart_row(self):
+        payload = """
+        <table><tr>
+          <td><a onclick="setCrp('00105280','(주)케이씨씨')">(주)케이씨씨</a></td>
+          <td>서울특별시 서초구</td>
+        </tr></table>
+        """
+        self.assertEqual(extract_company_codes(payload, "KCC"), ["00105280"])
+
+    def test_generic_transliteration_is_bounded_to_short_leading_token(self):
+        variants = query_variants("SAMSUNG")
+        self.assertNotIn("에스에이엠에스유엔지", variants)
+
     def test_encoded_search_result_url(self):
         payload = "https%3A%2F%2Fenglishdart.fss.or.kr%2Fdsbc001%2FselectPopup.ax%3FselectKey%3D00332468"
         self.assertIn("00332468", extract_select_keys(payload))
