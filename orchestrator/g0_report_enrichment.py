@@ -35,6 +35,7 @@ FIRST_PUBLICATION_PATTERNS = (
     r"첫\s*(?:번째\s*)?(?:지속가능(?:경영)?|esg)\s*보고서",
     r"최초(?:의)?\s*(?:지속가능(?:경영)?|esg)\s*보고서",
     r"(?:지속가능(?:경영)?|esg)\s*보고서(?:를|을)?\s*처음(?:으로)?\s*(?:발간|발행|공개)",
+    r"(?:지속가능(?:경영)?|esg)\s*보고서(?:를|을)?\s*(?:첫|최초)\s*(?:발간|발행|공개)",
     r"first\s+(?:ever\s+)?(?:sustainability|esg)\s+report",
     r"inaugural\s+(?:sustainability|esg)\s+report",
 )
@@ -85,7 +86,6 @@ def first_publication_claim(text: str, source_url: str, start_year: int, current
             years = [y for y in years if start_year <= y <= current_year]
             if not years:
                 continue
-            # Prefer the year closest to the claim text rather than a remote page date.
             local_positions = []
             for y in sorted(set(years)):
                 for ym in re.finditer(str(y), context):
@@ -227,12 +227,10 @@ def _discover_first_publication_claim(
         if claim:
             return claim
 
-    # Search engines are locator-only. Every hit must return a live HTML page on the
-    # verified organization boundary before its claim text is accepted as evidence.
     queries = (
         '"첫 지속가능경영보고서"', '"최초 지속가능경영보고서"',
-        '"첫 ESG 보고서"', '"first sustainability report"',
-        '"inaugural sustainability report"',
+        '"지속가능경영보고서 첫 발간"', '"첫 ESG 보고서"',
+        '"first sustainability report"', '"inaugural sustainability report"',
     )
     seen: set[str] = {p.url for p in candidates}
     for host in search_hosts:
@@ -363,7 +361,6 @@ def enrich(
         http, official_root, [*main_pages, *secondary_pages], search_hosts, start_year, current_year
     )
     first_report_year = int(first_publication["first_report_year"]) if first_publication else None
-    # A contradictory claim must never erase a real earlier report already verified.
     if first_report_year is not None and found_years and min(found_years) < first_report_year:
         first_publication = None
         first_report_year = None
