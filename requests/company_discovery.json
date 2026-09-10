@@ -12,9 +12,12 @@
     "mode": "SITE_SET",
     "label": "효성티앤씨(주) 국내 사업장",
     "candidate_ids": [
-      "3-2-108-349ae45b",
-      "74-60182bd6",
-      "119-ff61b82b"
+      "119-f395846e",
+      "3-2-108-75bfede4",
+      "488-3cc2025a",
+      "74-1114e280",
+      "30-dbbdd319",
+      "55-45-f41c29c8"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -44,8 +47,22 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "3-2-108-349ae45b",
-      "site_name_raw": "구미공장",
+      "candidate_id": "119-f395846e",
+      "site_name_raw": "스판덱스 본사",
+      "address_raw": "서울시 마포구 마포대로 119",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "3-2-108-75bfede4",
+      "site_name_raw": "스판덱스 구미공장",
       "address_raw": "경북 구미시 3공단2로 108",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
@@ -54,12 +71,26 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "74-60182bd6",
-      "site_name_raw": "구미공장",
+      "candidate_id": "488-3cc2025a",
+      "site_name_raw": "스판덱스 대구영업소",
+      "address_raw": "대구시 중구 국채보상로 488",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "74-1114e280",
+      "site_name_raw": "스판덱스 효성기술원",
       "address_raw": "경기도 안양시 동안구 시민대로 74",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
@@ -68,13 +99,13 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "119-ff61b82b",
-      "site_name_raw": "제보센터",
-      "address_raw": "서울특별시 마포구 마포대로 119",
+      "candidate_id": "30-dbbdd319",
+      "site_name_raw": "나이론폴리에스터 울산공장",
+      "address_raw": "울산시 남구 납도로 30",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
@@ -82,7 +113,21 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "55-45-f41c29c8",
+      "site_name_raw": "직물/염색 대구 공장",
+      "address_raw": "대구시 달서구 성서공단로55길 45",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     }
   ],

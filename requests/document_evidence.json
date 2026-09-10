@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "discovery_status": "PARTIAL",
+  "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_88ccf4ee66",
@@ -11,7 +11,17 @@
       "source_locator": "https://www.hyosungtnc.com/kr",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+          "expected_extension": "html"
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_374cb113f5",
@@ -22,7 +32,17 @@
       "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+          "expected_extension": "html"
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_72513f59d1",
@@ -33,7 +53,17 @@
       "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+          "expected_extension": "html"
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_929143cc20",
@@ -44,7 +74,9 @@
       "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2020_7",
@@ -57,7 +89,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_6",
@@ -70,7 +104,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_5",
@@ -83,7 +119,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_4",
@@ -96,7 +134,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_3",
@@ -109,7 +149,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
@@ -122,21 +164,23 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     }
   ],
   "gaps": [
     {
-      "gap_id": "AUTO_SUSTAINABILITY_2026_UNRESOLVED",
+      "gap_id": "AUTO_SUSTAINABILITY_2026_CURRENT_YEAR_NOT_YET_LISTED",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
       "year": 2026,
-      "verification_status": "UNVERIFIED",
-      "status": "DISCOVERY_GAP",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
-      "source_locator": "https://www.hyosungtnc.com/kr"
+      "verification_status": "SOURCE_VERIFIED",
+      "status": "NOT_PUBLISHED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "A verified first-party annual sustainability-report catalog is current through 2025 and does not list 2026. Because 2026 is the live calendar year, the missing current-year edition is preserved as not yet published/listed rather than a collector failure.",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report"
     }
   ],
   "discovery_scope": {
