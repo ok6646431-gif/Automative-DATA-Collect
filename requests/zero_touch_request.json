@@ -1,4 +1,4 @@
 {
-  "company_name": "효성티앤씨",
-  "rerun_reason": "v1 unseen-company acceptance test after representative regression pass"
+  "company_name": "금호석유화학",
+  "rerun_reason": "v1 representative regression after shared site and report-policy fixes"
 }
