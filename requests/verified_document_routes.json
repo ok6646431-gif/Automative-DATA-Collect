@@ -411,18 +411,319 @@
     "00126566": {
       "current_legal_name": "한화에어로스페이스(주)",
       "company": {
-        "current_legal_name": "한화에어로스페이스(주)",
+        "schema_version": "1.0",
+        "request_id": "company-1b342a45-env-g0-20260910",
         "requested_company_name": "한화에어로스페이스",
+        "current_legal_name": "한화에어로스페이스(주)",
+        "current_legal_name_active_period": {
+          "start_year": 1977
+        },
+        "company_verification_state": "VERIFIED",
+        "confidence": "HIGH",
+        "requested_scope": {
+          "mode": "SITE_SET",
+          "label": "한화에어로스페이스(주) 국내 사업장",
+          "candidate_ids": [
+            "86-76d24dfd",
+            "319-f0400a89",
+            "cs-108-e222664e",
+            "cs-1366-148cfd60",
+            "8-36b277e5",
+            "857-3f988ff6",
+            "144-2b97ba86",
+            "1-1204-eea76192",
+            "2-799-72515598",
+            "3-69-65bb6366",
+            "411-2ecadaf7"
+          ],
+          "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
+          "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
+          "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+        },
+        "company_aliases": [
+          {
+            "name": "한화에어로스페이스",
+            "alias_type": "requested_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+            "active_period": {
+              "start_year": 1977
+            }
+          },
+          {
+            "name": "HANWHA AEROSPACE CO., LTD.",
+            "alias_type": "english_legal_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+            "active_period": {
+              "start_year": 1977
+            }
+          }
+        ],
+        "historical_legal_names": [],
+        "corporate_restructuring_evidence": [],
+        "domestic_site_candidates": [
+          {
+            "candidate_id": "86-76d24dfd",
+            "site_name_raw": "서울 본사",
+            "address_raw": "서울특별시 중구 청계천로 86",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "319-f0400a89",
+            "site_name_raw": "서울 본사",
+            "address_raw": "경기도 성남시 분당구 판교로 319",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "cs-108-e222664e",
+            "site_name_raw": "CS센터",
+            "address_raw": "경기도 양주시 백석읍 꿈나무로 108",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "cs-1366-148cfd60",
+            "site_name_raw": "CS센터",
+            "address_raw": "대전광역시 유성구 유성대로 1366",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "8-36b277e5",
+            "site_name_raw": "대전 사업장",
+            "address_raw": "대전광역시 유성구 외삼로 8",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "857-3f988ff6",
+            "site_name_raw": "보은 사업장",
+            "address_raw": "충북 보은군 내북면 회인내북로 857",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "144-2b97ba86",
+            "site_name_raw": "아산 사업장",
+            "address_raw": "충청남도 아산시 아산밸리남로 144",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "1-1204-eea76192",
+            "site_name_raw": "1사업장/한국사업장",
+            "address_raw": "경상남도 창원시 성산구 창원대로 1204",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "2-799-72515598",
+            "site_name_raw": "2사업장",
+            "address_raw": "경상남도 창원시 성산구 공단로 799",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "3-69-65bb6366",
+            "site_name_raw": "3사업장",
+            "address_raw": "경상남도 창원시 성산구 공단로 69",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "411-2ecadaf7",
+            "site_name_raw": "여수 사업장",
+            "address_raw": "전남 여수시 신월로 411",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          }
+        ],
         "identity_evidence": [
           {
             "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
-            "verification_state": "VERIFIED"
+            "source_value_raw": "한화에어로스페이스(주) / HANWHA AEROSPACE CO., LTD. / establishment 1977-08-01 / website www.hanwhaaerospace.com",
+            "verification_state": "VERIFIED",
+            "confidence": "HIGH"
           }
-        ]
+        ],
+        "related_entity_exclusions": [],
+        "unresolved_items": [],
+        "event_evidence_references": [],
+        "collection_policy": {
+          "minimum_history_years": 5,
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "sources": {
+            "ENVINFO": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false,
+              "max_details": 500
+            },
+            "PRTR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false
+            },
+            "CHEM_STATS": {
+              "requested_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "available_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "prefer_full_history": true
+            },
+            "CLEANSYS_AIR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "prefer_full_history": false
+            },
+            "SOOSIRO_WATER": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "daily_available_years": [
+                2024
+              ],
+              "prefer_full_history": false
+            }
+          }
+        },
+        "legal_entity_active_period": {
+          "start_year": 1977
+        }
       },
       "document_evidence": {
         "schema_version": "1.0",
+        "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
         "documents": [
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_f12e16efa8",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "지속가능경영",
+            "report_year": 2026,
+            "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_58f0fe5ab2",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "환경안전보건경영",
+            "report_year": 2026,
+            "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_eda4c8fe23",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "환경안전보건경영",
+            "report_year": 2026,
+            "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
           {
             "document_id": "AUTO_SUSTAINABILITY_2021",
             "document_type": "SUSTAINABILITY_REPORT",
@@ -432,7 +733,11 @@
             "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2022",
@@ -443,7 +748,11 @@
             "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2023",
@@ -454,7 +763,11 @@
             "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2024",
@@ -465,7 +778,11 @@
             "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2025",
@@ -476,7 +793,11 @@
             "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2026",
@@ -487,10 +808,51 @@
             "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           }
         ],
-        "gaps": []
+        "gaps": [
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2020_PRE_FIRST_PUBLICATION",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2020,
+            "verification_status": "SOURCE_VERIFIED",
+            "status": "NOT_PUBLISHED",
+            "severity": "LOW",
+            "blocking": false,
+            "reason": "A verified first-party source explicitly identifies 2021 as the first annual sustainability/ESG report publication.",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/media/newsroom/list.do?param1=%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C",
+            "evidence_type": "PRE_FIRST_PUBLICATION_YEAR"
+          }
+        ],
+        "discovery_scope": {
+          "history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "annual_series": [
+            "SUSTAINABILITY_REPORT"
+          ],
+          "current_public_document_categories": [
+            "SUSTAINABILITY_REPORT",
+            "ENVIRONMENTAL_MANAGEMENT"
+          ],
+          "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "effective_current_entity_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          }
+        },
+        "request_id": "company-1b342a45-env-g0-20260910"
       }
     },
     "01316227": {
