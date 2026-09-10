@@ -1,4 +1,4 @@
 {
-  "company_name": "금호석유화학",
-  "rerun_reason": "generalization matrix retry after bounded G0 candidate probes and runtime checkpoint patch"
+  "company_name": "한화에어로스페이스",
+  "rerun_reason": "v1 acceptance regression: verify final generalized pipeline on previously validated complex multi-site company before unseen-company trials"
 }
