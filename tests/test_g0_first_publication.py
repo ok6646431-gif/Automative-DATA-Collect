@@ -15,6 +15,16 @@ class FirstPublicationEvidenceTests(unittest.TestCase):
         self.assertEqual(claim["first_report_year"], 2021)
         self.assertEqual(claim["evidence_type"], "EXPLICIT_FIRST_ANNUAL_REPORT_CLAIM")
 
+    def test_report_then_first_publication_word_order_is_accepted(self):
+        claim = first_publication_claim(
+            "2021. 11. 22 한화에어로스페이스, 지속가능경영보고서 첫 발간, ESG경영 본격화",
+            "https://official.example/news/report-first",
+            2020,
+            2026,
+        )
+        self.assertIsNotNone(claim)
+        self.assertEqual(claim["first_report_year"], 2021)
+
     def test_explicit_english_inaugural_report_with_year_is_accepted(self):
         claim = first_publication_claim(
             "In 2022 the company published its inaugural sustainability report.",
