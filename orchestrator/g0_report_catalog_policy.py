@@ -8,6 +8,12 @@ separate year-specific targets may satisfy annual document coverage.
 When one verified first-party catalog explicitly exposes report years on both sides of
 a missing year and the missing year is absent from that catalog, preserve the absence
 as SOURCE_VERIFIED/NOT_PUBLISHED rather than treating it as a collector failure.
+
+The same principle applies to the live calendar-year edge: when a rich verified catalog
+is current through the immediately preceding year but does not yet list the current
+year, that edge is publisher cadence, not a collection failure.  If the catalog itself
+lists the current year but the concrete annual target cannot be verified, the gap stays
+blocking.
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Set
 from urllib.parse import urlparse, urlunparse
 
@@ -61,6 +68,36 @@ def _catalog_supports_nonpublication(year: int, catalog_years: Iterable[int]) ->
     """True only for a bounded interior hole in a sufficiently rich catalog."""
     years = sorted({int(y) for y in catalog_years if y})
     return len(years) >= 3 and year not in years and min(years) < year < max(years)
+
+
+def _current_utc_year() -> int:
+    return datetime.now(timezone.utc).year
+
+
+def _catalog_supports_current_year_nonpublication(
+    year: int,
+    catalog_years: Iterable[int],
+    current_year: int | None = None,
+) -> bool:
+    """Resolve only the live calendar-year edge of a verified annual catalog.
+
+    Safety contract:
+    * the missing year must literally be the current year;
+    * the verified catalog must contain a meaningful multi-year series;
+    * the newest listed year must be exactly the previous year; and
+    * the current year itself must not already be listed.
+
+    This never excuses a failed download for a current-year report that the issuer has
+    already listed, and it never rewrites historical trailing gaps.
+    """
+    years = sorted({int(y) for y in catalog_years if y})
+    current = int(current_year if current_year is not None else _current_utc_year())
+    return (
+        len(years) >= 3
+        and int(year) == current
+        and int(year) not in years
+        and max(years) == current - 1
+    )
 
 
 def _years_from_verified_catalog(http: Any, locator: str) -> Set[int]:
@@ -220,7 +257,7 @@ def normalize_verified_catalog_gaps(
     documents: Dict[str, Any],
     audit: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Demote shared catalog targets, then resolve only verified nonpublication holes."""
+    """Demote shared catalog targets, then resolve verified publication-cadence gaps."""
     _demote_shared_digital_catalogs(discovery, documents, audit)
 
     annual = [
@@ -255,23 +292,38 @@ def normalize_verified_catalog_gaps(
         except (TypeError, ValueError):
             continue
         for locator, catalog_years in verified_catalogs.items():
-            if not _catalog_supports_nonpublication(year, catalog_years):
+            interior_hole = _catalog_supports_nonpublication(year, catalog_years)
+            current_year_edge = _catalog_supports_current_year_nonpublication(year, catalog_years)
+            if not interior_hole and not current_year_edge:
                 continue
-            gap.update({
-                "gap_id": f"AUTO_SUSTAINABILITY_{year}_NOT_LISTED",
-                "verification_status": "SOURCE_VERIFIED",
-                "status": "NOT_PUBLISHED",
-                "severity": "LOW",
-                "blocking": False,
-                "reason": (
+            if current_year_edge:
+                gap_id = f"AUTO_SUSTAINABILITY_{year}_CURRENT_YEAR_NOT_YET_LISTED"
+                reason = (
+                    "A verified first-party annual sustainability-report catalog is "
+                    f"current through {year - 1} and does not list {year}. Because {year} "
+                    "is the live calendar year, the missing current-year edition is "
+                    "preserved as not yet published/listed rather than a collector failure."
+                )
+                basis = "CURRENT_YEAR_EDGE"
+            else:
+                gap_id = f"AUTO_SUSTAINABILITY_{year}_NOT_LISTED"
+                reason = (
                     "A verified first-party sustainability-report catalog lists report "
                     f"years on both sides of {year} but does not list a {year} report; "
                     "the gap is preserved as publisher cadence/non-publication rather "
                     "than a collector failure."
-                ),
+                )
+                basis = "INTERIOR_CATALOG_HOLE"
+            gap.update({
+                "gap_id": gap_id,
+                "verification_status": "SOURCE_VERIFIED",
+                "status": "NOT_PUBLISHED",
+                "severity": "LOW",
+                "blocking": False,
+                "reason": reason,
                 "source_locator": locator,
             })
-            changed.append({"year": year, "source_locator": locator})
+            changed.append({"year": year, "source_locator": locator, "basis": basis})
             break
 
     documents["discovery_status"] = (
