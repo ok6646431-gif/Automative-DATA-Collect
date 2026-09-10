@@ -10,8 +10,13 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, Tuple
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from orchestrator.document_route_merge import dart_keys, merge_document_routes, same_verified_entity
 
