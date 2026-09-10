@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "discovery_status": "PARTIAL",
+  "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_f12e16efa8",
@@ -150,16 +150,17 @@
   ],
   "gaps": [
     {
-      "gap_id": "AUTO_SUSTAINABILITY_2020_UNRESOLVED",
+      "gap_id": "AUTO_SUSTAINABILITY_2020_PRE_FIRST_PUBLICATION",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
       "year": 2020,
-      "verification_status": "UNVERIFIED",
-      "status": "DISCOVERY_GAP",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/index.do"
+      "verification_status": "SOURCE_VERIFIED",
+      "status": "NOT_PUBLISHED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "A verified first-party source explicitly identifies 2021 as the first annual sustainability/ESG report publication.",
+      "source_locator": "https://www.hanwhaaerospace.com/kor/media/newsroom/list.do?param1=%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C",
+      "evidence_type": "PRE_FIRST_PUBLICATION_YEAR"
     }
   ],
   "discovery_scope": {
