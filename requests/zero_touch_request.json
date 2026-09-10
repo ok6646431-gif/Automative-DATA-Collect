@@ -1,4 +1,4 @@
 {
   "company_name": "한화에어로스페이스",
-  "rerun_reason": "v1 acceptance regression: verify final generalized pipeline on previously validated complex multi-site company before unseen-company trials"
+  "rerun_reason": "v1 acceptance regression retry after generic same-organization mobile-host recovery patch"
 }
