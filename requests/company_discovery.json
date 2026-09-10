@@ -1,28 +1,20 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-1b342a45-env-g0-20260910",
-  "requested_company_name": "한화에어로스페이스",
-  "current_legal_name": "한화에어로스페이스(주)",
+  "request_id": "company-7b7146f1-env-g0-20260910",
+  "requested_company_name": "효성티앤씨",
+  "current_legal_name": "효성티앤씨(주)",
   "current_legal_name_active_period": {
-    "start_year": 1977
+    "start_year": 2018
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "한화에어로스페이스(주) 국내 사업장",
+    "label": "효성티앤씨(주) 국내 사업장",
     "candidate_ids": [
-      "86-8bf01ba7",
-      "319-5672607f",
-      "cs-108-e222664e",
-      "cs-1366-148cfd60",
-      "8-228089e4",
-      "857-8bf455ca",
-      "144-8016b512",
-      "1204-2e65d077",
-      "2-799-72515598",
-      "3-69-65bb6366",
-      "3-411-47c6bc5f"
+      "3-2-108-349ae45b",
+      "74-60182bd6",
+      "119-ff61b82b"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -30,21 +22,21 @@
   },
   "company_aliases": [
     {
-      "name": "한화에어로스페이스",
+      "name": "효성티앤씨",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
       "active_period": {
-        "start_year": 1977
+        "start_year": 2018
       }
     },
     {
-      "name": "HANWHA AEROSPACE CO., LTD.",
+      "name": "Hyosung TNC Corporation",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
       "active_period": {
-        "start_year": 1977
+        "start_year": 2018
       }
     }
   ],
@@ -52,164 +44,52 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "86-8bf01ba7",
-      "site_name_raw": "한화에어로스페이스(주) 사업장",
-      "address_raw": "서울특별시 중구 청계천로 86",
+      "candidate_id": "3-2-108-349ae45b",
+      "site_name_raw": "구미공장",
+      "address_raw": "경북 구미시 3공단2로 108",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
         "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     },
     {
-      "candidate_id": "319-5672607f",
-      "site_name_raw": "한화에어로스페이스(주) 사업장",
-      "address_raw": "경기도 성남시 분당구 판교로 319",
+      "candidate_id": "74-60182bd6",
+      "site_name_raw": "구미공장",
+      "address_raw": "경기도 안양시 동안구 시민대로 74",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
         "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     },
     {
-      "candidate_id": "cs-108-e222664e",
-      "site_name_raw": "CS센터",
-      "address_raw": "경기도 양주시 백석읍 꿈나무로 108",
+      "candidate_id": "119-ff61b82b",
+      "site_name_raw": "제보센터",
+      "address_raw": "서울특별시 마포구 마포대로 119",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "cs-1366-148cfd60",
-      "site_name_raw": "CS센터",
-      "address_raw": "대전광역시 유성구 유성대로 1366",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "8-228089e4",
-      "site_name_raw": "한화에어로스페이스(주) 사업장",
-      "address_raw": "대전광역시 유성구 외삼로 8",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "857-8bf455ca",
-      "site_name_raw": "한화에어로스페이스(주) 사업장",
-      "address_raw": "충북 보은군 내북면 회인내북로 857",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "144-8016b512",
-      "site_name_raw": "한화에어로스페이스(주) 사업장",
-      "address_raw": "충청남도 아산시 아산밸리남로 144",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "1204-2e65d077",
-      "site_name_raw": "한국사업장",
-      "address_raw": "경상남도 창원시 성산구 창원대로 1204",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "2-799-72515598",
-      "site_name_raw": "2사업장",
-      "address_raw": "경상남도 창원시 성산구 공단로 799",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "3-69-65bb6366",
-      "site_name_raw": "3사업장",
-      "address_raw": "경상남도 창원시 성산구 공단로 69",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
-      }
-    },
-    {
-      "candidate_id": "3-411-47c6bc5f",
-      "site_name_raw": "3사업장",
-      "address_raw": "전남 여수시 신월로 411",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
         "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
-      "source_value_raw": "한화에어로스페이스(주) / HANWHA AEROSPACE CO., LTD. / establishment 1977-08-01 / website www.hanwhaaerospace.com",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+      "source_value_raw": "효성티앤씨(주) / Hyosung TNC Corporation / establishment 2018-06-04 / website www.hyosungtnc.com",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -272,6 +152,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 1977
+    "start_year": 2018
   }
 }
