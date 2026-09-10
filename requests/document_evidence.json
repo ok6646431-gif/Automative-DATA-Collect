@@ -11,7 +11,17 @@
       "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+          "expected_extension": "html"
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_58f0fe5ab2",
@@ -22,7 +32,17 @@
       "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+          "expected_extension": "html"
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_eda4c8fe23",
@@ -33,7 +53,9 @@
       "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2021",
@@ -46,7 +68,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2022",
@@ -59,7 +83,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2023",
@@ -72,7 +98,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2024",
@@ -85,7 +113,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2025",
@@ -98,7 +128,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2026",
@@ -111,7 +143,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     }
   ],
   "gaps": [
