@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+from orchestrator import g0_report_catalog_policy as catalog_policy
 from orchestrator import g0_report_finalizer as finalizer
 
 
@@ -173,6 +175,83 @@ class ReportFinalizerTests(unittest.TestCase):
         self.assertEqual(out["documents"][0]["document_type"], "SUSTAINABILITY_REPORT_SUMMARY")
         self.assertEqual(len(out["gaps"]), 1)
         self.assertEqual(out["discovery_status"], "PARTIAL")
+
+
+class ReportCatalogCurrentYearTests(unittest.TestCase):
+    def _annual_docs(self):
+        locator = "https://official.example/sustainability/reports"
+        return [
+            {
+                "document_id": f"REPORT_{year}",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "title": f"{year} Sustainability Report",
+                "report_year": year,
+                "source_url": f"https://official.example/files/report_{year}.pdf",
+                "source_locator": locator,
+                "expected_extension": "pdf",
+                "verification_status": "SOURCE_VERIFIED",
+                "importance": "CORE",
+            }
+            for year in range(2020, 2026)
+        ]
+
+    def test_verified_catalog_current_through_previous_year_resolves_live_year(self):
+        documents = {
+            "documents": self._annual_docs(),
+            "gaps": [{
+                "gap_id": "AUTO_SUSTAINABILITY_2026_UNRESOLVED",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "year": 2026,
+                "blocking": True,
+                "verification_status": "UNVERIFIED",
+            }],
+            "discovery_status": "PARTIAL",
+        }
+        with patch(
+            "orchestrator.g0_report_catalog_policy._years_from_verified_catalog",
+            return_value=set(range(2020, 2026)),
+        ), patch(
+            "orchestrator.g0_report_catalog_policy._current_utc_year",
+            return_value=2026,
+        ):
+            out = catalog_policy.normalize_verified_catalog_gaps({}, documents, {})
+        gap = out["gaps"][0]
+        self.assertEqual(gap["status"], "NOT_PUBLISHED")
+        self.assertEqual(gap["verification_status"], "SOURCE_VERIFIED")
+        self.assertFalse(gap["blocking"])
+        self.assertEqual(out["discovery_status"], "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE")
+
+    def test_catalog_listing_current_year_does_not_hide_missing_target(self):
+        documents = {
+            "documents": self._annual_docs(),
+            "gaps": [{
+                "gap_id": "AUTO_SUSTAINABILITY_2026_TARGET_UNRESOLVED",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "year": 2026,
+                "blocking": True,
+                "verification_status": "SOURCE_VERIFIED",
+            }],
+            "discovery_status": "PARTIAL",
+        }
+        with patch(
+            "orchestrator.g0_report_catalog_policy._years_from_verified_catalog",
+            return_value=set(range(2020, 2027)),
+        ), patch(
+            "orchestrator.g0_report_catalog_policy._current_utc_year",
+            return_value=2026,
+        ):
+            out = catalog_policy.normalize_verified_catalog_gaps({}, documents, {})
+        gap = out["gaps"][0]
+        self.assertTrue(gap["blocking"])
+        self.assertNotEqual(gap.get("status"), "NOT_PUBLISHED")
+        self.assertEqual(out["discovery_status"], "PARTIAL")
+
+    def test_historical_trailing_gap_is_not_excused_as_current_year_cadence(self):
+        self.assertFalse(
+            catalog_policy._catalog_supports_current_year_nonpublication(
+                2025, {2020, 2021, 2022, 2023, 2024}, current_year=2026
+            )
+        )
 
 
 if __name__ == "__main__":
