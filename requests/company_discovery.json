@@ -13,15 +13,15 @@
     "label": "한화에어로스페이스(주) 국내 사업장",
     "candidate_ids": [
       "86-76d24dfd",
-      "319-f0400a89",
-      "cs-108-e222664e",
-      "cs-1366-148cfd60",
-      "8-36b277e5",
+      "rd-319-6-403161d6",
+      "cs-108-81506521",
+      "rd-1366-10-82399adc",
+      "8-99-7b9141ac",
       "857-3f988ff6",
       "144-2b97ba86",
-      "1-1204-eea76192",
-      "2-799-72515598",
-      "3-69-65bb6366",
+      "1-1204-76525a65",
+      "2-799-18c9169a",
+      "3-rd-69-39eed559",
       "411-2ecadaf7"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
@@ -62,13 +62,13 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "319-f0400a89",
-      "site_name_raw": "서울 본사",
-      "address_raw": "경기도 성남시 분당구 판교로 319",
+      "candidate_id": "rd-319-6-403161d6",
+      "site_name_raw": "판교 R&D 캠퍼스",
+      "address_raw": "경기도 성남시 분당구 판교로 319번길 6",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
       "identity_status": "CONFIRMED",
@@ -76,12 +76,12 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "cs-108-e222664e",
-      "site_name_raw": "CS센터",
+      "candidate_id": "cs-108-81506521",
+      "site_name_raw": "양주 CS센터",
       "address_raw": "경기도 양주시 백석읍 꿈나무로 108",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
@@ -90,13 +90,13 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "cs-1366-148cfd60",
-      "site_name_raw": "CS센터",
-      "address_raw": "대전광역시 유성구 유성대로 1366",
+      "candidate_id": "rd-1366-10-82399adc",
+      "site_name_raw": "대전 R&D 캠퍼스",
+      "address_raw": "대전광역시 유성구 유성대로 1366번길 10",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
       "identity_status": "CONFIRMED",
@@ -104,13 +104,13 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "8-36b277e5",
+      "candidate_id": "8-99-7b9141ac",
       "site_name_raw": "대전 사업장",
-      "address_raw": "대전광역시 유성구 외삼로 8",
+      "address_raw": "대전광역시 유성구 외삼로 8번길 99",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
       "identity_status": "CONFIRMED",
@@ -118,7 +118,7 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
@@ -132,7 +132,7 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
@@ -146,12 +146,12 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "1-1204-eea76192",
-      "site_name_raw": "1사업장/한국사업장",
+      "candidate_id": "1-1204-76525a65",
+      "site_name_raw": "창원 1사업장/한국사업장",
       "address_raw": "경상남도 창원시 성산구 창원대로 1204",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
@@ -160,12 +160,12 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "2-799-72515598",
-      "site_name_raw": "2사업장",
+      "candidate_id": "2-799-18c9169a",
+      "site_name_raw": "창원 2사업장",
       "address_raw": "경상남도 창원시 성산구 공단로 799",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
@@ -174,12 +174,12 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "3-69-65bb6366",
-      "site_name_raw": "3사업장",
+      "candidate_id": "3-rd-69-39eed559",
+      "site_name_raw": "창원 3사업장 / R&D 캠퍼스",
       "address_raw": "경상남도 창원시 성산구 공단로 69",
       "business_unit_raw": "official domestic-site catalog",
       "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
@@ -188,7 +188,7 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     },
     {
@@ -202,7 +202,7 @@
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
         "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
       }
     }
   ],
