@@ -2,6 +2,7 @@ import unittest
 
 from orchestrator.dart_public_resolver import (
     company_result_probe,
+    discover_dart_keys,
     extract_company_codes,
     extract_select_keys,
     query_variants,
@@ -34,6 +35,52 @@ class TestDartPublicResolver(unittest.TestCase):
     def test_generic_transliteration_is_bounded_to_short_leading_token(self):
         variants = query_variants("SAMSUNG")
         self.assertNotIn("에스에이엠에스유엔지", variants)
+
+    def test_direct_exact_finder_hit_wins_before_broad_dynamic_form_fallback(self):
+        exact = """
+        <table><tr><td><a onclick="setCrp('00105271','케이씨씨')">케이씨씨</a></td></tr></table>
+        """
+        broad = """
+        <table>
+          <tr><td><a onclick="setCrp('00105271','케이씨씨')">케이씨씨</a></td></tr>
+          <tr><td><a onclick="setCrp('01515271','케이씨씨실리콘')">케이씨씨실리콘</a></td></tr>
+        </table>
+        """
+        empty = "<html><body>검색결과 0건</body></html>"
+        form = """
+        <form method="post" action="/corp/searchCorp.ax">
+          <input name="textCrpNm" value="" />
+        </form>
+        """
+
+        class Response:
+            def __init__(self, text, url="https://dart.fss.or.kr/corp/searchCorp.ax"):
+                self.text = text
+                self.content = text.encode("utf-8")
+                self.status_code = 200
+                self.url = url
+
+        class Http:
+            def __init__(self):
+                self.audit = []
+
+            @staticmethod
+            def _query(kwargs):
+                payload = kwargs.get("params") or kwargs.get("data") or {}
+                return payload.get("textCrpNm") or payload.get("textCrpNM") or payload.get("crpNm") or ""
+
+            def get(self, url, **kwargs):
+                if "params" not in kwargs:
+                    return Response(form, url)
+                return Response(exact if self._query(kwargs) == "케이씨씨" else empty, url)
+
+            def post(self, url, **kwargs):
+                query = self._query(kwargs)
+                if query == "케이씨씨":
+                    return Response(broad, url)
+                return Response(empty, url)
+
+        self.assertEqual(discover_dart_keys(Http(), "KCC"), ["00105271"])
 
     def test_encoded_search_result_url(self):
         payload = "https%3A%2F%2Fenglishdart.fss.or.kr%2Fdsbc001%2FselectPopup.ax%3FselectKey%3D00332468"
