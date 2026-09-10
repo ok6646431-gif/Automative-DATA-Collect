@@ -51,7 +51,11 @@ def merge_from_registry(
         (str(d.get("document_type") or ""), d.get("report_year")): str(d.get("source_url") or "")
         for d in before_docs if isinstance(d, dict)
     }
-    merged = merge_document_routes(old_company, old_documents, fresh_company, fresh_documents)
+    # Registry data is supplied explicitly here. Do not recursively consult the on-disk
+    # registry again while evaluating this in-memory snapshot.
+    merged = merge_document_routes(
+        old_company, old_documents, fresh_company, fresh_documents, _skip_registry=True
+    )
     after_docs = list(merged.get("documents", []) or [])
     restored = sum(
         1 for d in after_docs
@@ -87,8 +91,12 @@ def update_registry(
         old_documents = previous.get("document_evidence") or {}
         if not same_verified_entity(old_company, company):
             raise ValueError(f"registry entity guard failed for DART key {key}")
-        # The current run is fresh, but previously stronger routes must remain durable.
-        durable_docs = merge_document_routes(old_company, old_documents, company, durable_docs)
+        # Merge exactly once against the supplied persistent entry. This call must not
+        # re-read the same registry from disk, otherwise route provenance can be folded
+        # repeatedly during one promotion.
+        durable_docs = merge_document_routes(
+            old_company, old_documents, company, durable_docs, _skip_registry=True
+        )
     entities[key] = {
         "current_legal_name": company.get("current_legal_name") or company.get("requested_company_name"),
         "company": copy.deepcopy(company),
