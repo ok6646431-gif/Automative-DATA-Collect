@@ -36,7 +36,7 @@ def _semantic_heading_sites(company: str, page: base.Page) -> Dict[str, Dict[str
     Some official location pages use clean HTML headings (for example a headquarters,
     R&D campus, or service center) but do not expose ``name``/``address`` CSS classes.
     Flattening such a page destroys card boundaries and can reuse the previous facility
-    name for the next address.  On an already-confirmed first-party catalog page, a
+    name for the next address. On an already-confirmed first-party catalog page, a
     semantic heading followed by exactly one road address before the next facility
     heading is a stronger contract than proximity in flattened text.
     """
@@ -109,7 +109,7 @@ CATALOG.write_text(catalog, encoding='utf-8')
 
 
 tests = TESTS.read_text(encoding='utf-8')
-new_tests = r'''
+new_tests = r"""
     def test_semantic_location_headings_preserve_campus_names_and_full_beongil_addresses(self):
         html = '''<html><body>
           <h2>국내 사업장</h2>
@@ -146,7 +146,7 @@ new_tests = r'''
             catalog._validated_address('주소 경기도 성남시 분당구 혁신로 319번길 6 전화 000'),
             '경기도 성남시 분당구 혁신로 319번길 6',
         )
-'''
+"""
 
 main_anchor = '\n\nif __name__ == "__main__":\n'
 if 'test_semantic_location_headings_preserve_campus_names_and_full_beongil_addresses' not in tests:
