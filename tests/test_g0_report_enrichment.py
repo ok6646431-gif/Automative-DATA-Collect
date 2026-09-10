@@ -4,7 +4,7 @@ from orchestrator import g0_entity_continuity_policy as continuity
 from orchestrator import g0_entity_window_normalization as entity_window
 from orchestrator import g0_report_catalog_policy as catalog_policy
 from orchestrator import g0_report_entity_policy as report_policy
-from orchestrator.g0_report_enrichment import strong_report_semantics
+from orchestrator.g0_report_enrichment import first_publication_claim, strong_report_semantics
 
 
 class TestG0ReportEnrichment(unittest.TestCase):
@@ -27,6 +27,33 @@ class TestG0ReportEnrichment(unittest.TestCase):
             "다운로드",
             "https://official.example/download/2025.pdf",
             "https://official.example/media/",
+        ))
+
+    def test_explicit_first_publication_resolves_local_year(self):
+        claim = first_publication_claim(
+            "2021. 11. 22 한화에어로스페이스, 지속가능경영보고서 첫 발간, ESG경영 본격화",
+            "https://official.example/news/report-first",
+            2020,
+            2026,
+        )
+        self.assertIsNotNone(claim)
+        self.assertEqual(claim["first_report_year"], 2021)
+        self.assertEqual(claim["evidence_type"], "EXPLICIT_FIRST_ANNUAL_REPORT_CLAIM")
+
+    def test_archive_start_year_alone_is_not_first_publication_evidence(self):
+        self.assertIsNone(first_publication_claim(
+            "지속가능경영보고서 2021 2022 2023 2024 2025",
+            "https://official.example/esg/reports",
+            2020,
+            2026,
+        ))
+
+    def test_first_publication_without_year_fails_closed(self):
+        self.assertIsNone(first_publication_claim(
+            "당사는 지속가능경영보고서를 첫 발간했습니다.",
+            "https://official.example/news/report",
+            2020,
+            2026,
         ))
 
 
