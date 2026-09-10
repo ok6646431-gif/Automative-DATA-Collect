@@ -1,27 +1,23 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-cf83fccf-env-g0-20260910",
-  "requested_company_name": "금호석유화학",
-  "current_legal_name": "금호석유화학(주)",
+  "request_id": "company-7b7146f1-env-g0-20260910",
+  "requested_company_name": "효성티앤씨",
+  "current_legal_name": "효성티앤씨(주)",
   "current_legal_name_active_period": {
-    "start_year": 1976
+    "start_year": 2018
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "금호석유화학(주) 국내 사업장",
+    "label": "효성티앤씨(주) 국내 사업장",
     "candidate_ids": [
-      "64-2f07e032",
-      "260257-bf0bf857",
-      "latex-64-a19899bd",
-      "1-3-118-4296e225",
-      "2-331-80f8c70a",
-      "2-227-cb4c3d71",
-      "1-2-4651-dc093fa5",
-      "2-2-22384-81b1e632",
-      "10339-7676a45f",
-      "cnt-6-115-0348f593"
+      "119-f395846e",
+      "3-2-108-75bfede4",
+      "488-3cc2025a",
+      "74-1114e280",
+      "30-dbbdd319",
+      "55-45-f41c29c8"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -29,21 +25,21 @@
   },
   "company_aliases": [
     {
-      "name": "금호석유화학",
+      "name": "효성티앤씨",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
       "active_period": {
-        "start_year": 1976
+        "start_year": 2018
       }
     },
     {
-      "name": "KUMHO PETRO CHEMICAL CO.,LTD",
+      "name": "Hyosung TNC Corporation",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
       "active_period": {
-        "start_year": 1976
+        "start_year": 2018
       }
     }
   ],
@@ -51,150 +47,94 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "64-2f07e032",
-      "site_name_raw": "울산고무공장",
-      "address_raw": "울산광역시 남구 상개로 64",
+      "candidate_id": "119-f395846e",
+      "site_name_raw": "스판덱스 본사",
+      "address_raw": "서울시 마포구 마포대로 119",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "260257-bf0bf857",
-      "site_name_raw": "울산수지공장",
-      "address_raw": "울산광역시 남구 처용로 260-257",
+      "candidate_id": "3-2-108-75bfede4",
+      "site_name_raw": "스판덱스 구미공장",
+      "address_raw": "경북 구미시 3공단2로 108",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "latex-64-a19899bd",
-      "site_name_raw": "울산 LATEX공장",
-      "address_raw": "울산광역시 남구 상개로64",
+      "candidate_id": "488-3cc2025a",
+      "site_name_raw": "스판덱스 대구영업소",
+      "address_raw": "대구시 중구 국채보상로 488",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "1-3-118-4296e225",
-      "site_name_raw": "여수고무제1공장",
-      "address_raw": "전남 여수시 여수산단3로 118",
+      "candidate_id": "74-1114e280",
+      "site_name_raw": "스판덱스 효성기술원",
+      "address_raw": "경기도 안양시 동안구 시민대로 74",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "2-331-80f8c70a",
-      "site_name_raw": "여수고무제2공장",
-      "address_raw": "전남 여수시 산단중앙로 331",
+      "candidate_id": "30-dbbdd319",
+      "site_name_raw": "나이론폴리에스터 울산공장",
+      "address_raw": "울산시 남구 납도로 30",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "2-227-cb4c3d71",
-      "site_name_raw": "여수정밀화학공장",
-      "address_raw": "전남 여수시 여수산단2로 227",
+      "candidate_id": "55-45-f41c29c8",
+      "site_name_raw": "직물/염색 대구 공장",
+      "address_raw": "대구시 달서구 성서공단로55길 45",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "1-2-4651-dc093fa5",
-      "site_name_raw": "여수제1에너지",
-      "address_raw": "전남 여수시 여수산단2로 46-51",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "2-2-22384-81b1e632",
-      "site_name_raw": "여수제2에너지",
-      "address_raw": "전남 여수시 여수산단2로 223-84",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "10339-7676a45f",
-      "site_name_raw": "예산건자재공장",
-      "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "cnt-6-115-0348f593",
-      "site_name_raw": "율촌CNT공장",
-      "address_raw": "전남 여수시 율촌면 율촌산단6로 115",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
-        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
-      "source_value_raw": "금호석유화학(주) / KUMHO PETRO CHEMICAL CO.,LTD / establishment 1976-12-10 / website www.kkpc.com",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+      "source_value_raw": "효성티앤씨(주) / Hyosung TNC Corporation / establishment 2018-06-04 / website www.hyosungtnc.com",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -257,6 +197,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 1976
+    "start_year": 2018
   }
 }

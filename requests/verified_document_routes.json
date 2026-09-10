@@ -880,18 +880,255 @@
     "01316227": {
       "current_legal_name": "효성티앤씨(주)",
       "company": {
-        "current_legal_name": "효성티앤씨(주)",
+        "schema_version": "1.0",
+        "request_id": "company-7b7146f1-env-g0-20260910",
         "requested_company_name": "효성티앤씨",
+        "current_legal_name": "효성티앤씨(주)",
+        "current_legal_name_active_period": {
+          "start_year": 2018
+        },
+        "company_verification_state": "VERIFIED",
+        "confidence": "HIGH",
+        "requested_scope": {
+          "mode": "SITE_SET",
+          "label": "효성티앤씨(주) 국내 사업장",
+          "candidate_ids": [
+            "119-f395846e",
+            "3-2-108-75bfede4",
+            "488-3cc2025a",
+            "74-1114e280",
+            "30-dbbdd319",
+            "55-45-f41c29c8"
+          ],
+          "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
+          "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
+          "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+        },
+        "company_aliases": [
+          {
+            "name": "효성티앤씨",
+            "alias_type": "requested_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+            "active_period": {
+              "start_year": 2018
+            }
+          },
+          {
+            "name": "Hyosung TNC Corporation",
+            "alias_type": "english_legal_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+            "active_period": {
+              "start_year": 2018
+            }
+          }
+        ],
+        "historical_legal_names": [],
+        "corporate_restructuring_evidence": [],
+        "domestic_site_candidates": [
+          {
+            "candidate_id": "119-f395846e",
+            "site_name_raw": "스판덱스 본사",
+            "address_raw": "서울시 마포구 마포대로 119",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "3-2-108-75bfede4",
+            "site_name_raw": "스판덱스 구미공장",
+            "address_raw": "경북 구미시 3공단2로 108",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "488-3cc2025a",
+            "site_name_raw": "스판덱스 대구영업소",
+            "address_raw": "대구시 중구 국채보상로 488",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "74-1114e280",
+            "site_name_raw": "스판덱스 효성기술원",
+            "address_raw": "경기도 안양시 동안구 시민대로 74",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "30-dbbdd319",
+            "site_name_raw": "나이론폴리에스터 울산공장",
+            "address_raw": "울산시 남구 납도로 30",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "55-45-f41c29c8",
+            "site_name_raw": "직물/염색 대구 공장",
+            "address_raw": "대구시 달서구 성서공단로55길 45",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          }
+        ],
         "identity_evidence": [
           {
             "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
-            "verification_state": "VERIFIED"
+            "source_value_raw": "효성티앤씨(주) / Hyosung TNC Corporation / establishment 2018-06-04 / website www.hyosungtnc.com",
+            "verification_state": "VERIFIED",
+            "confidence": "HIGH"
           }
-        ]
+        ],
+        "related_entity_exclusions": [],
+        "unresolved_items": [],
+        "event_evidence_references": [],
+        "collection_policy": {
+          "minimum_history_years": 5,
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "sources": {
+            "ENVINFO": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false,
+              "max_details": 500
+            },
+            "PRTR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false
+            },
+            "CHEM_STATS": {
+              "requested_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "available_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "prefer_full_history": true
+            },
+            "CLEANSYS_AIR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "prefer_full_history": false
+            },
+            "SOOSIRO_WATER": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "daily_available_years": [
+                2024
+              ],
+              "prefer_full_history": false
+            }
+          }
+        },
+        "legal_entity_active_period": {
+          "start_year": 2018
+        }
       },
       "document_evidence": {
         "schema_version": "1.0",
+        "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
         "documents": [
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_88ccf4ee66",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "효성티앤씨",
+            "report_year": 2026,
+            "source_url": "https://www.hyosungtnc.com/kr",
+            "source_locator": "https://www.hyosungtnc.com/kr",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_374cb113f5",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "효성티앤씨",
+            "report_year": 2026,
+            "source_url": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_72513f59d1",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "ESG",
+            "report_year": 2026,
+            "source_url": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_929143cc20",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "효성티앤씨",
+            "report_year": 2026,
+            "source_url": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2020_7",
             "document_type": "SUSTAINABILITY_REPORT",
@@ -901,7 +1138,11 @@
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_6",
@@ -912,7 +1153,11 @@
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_5",
@@ -923,7 +1168,11 @@
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_4",
@@ -934,7 +1183,11 @@
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_3",
@@ -945,7 +1198,11 @@
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
@@ -956,10 +1213,50 @@
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "CORE"
+            "importance": "CORE",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           }
         ],
-        "gaps": []
+        "gaps": [
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2026_CURRENT_YEAR_NOT_YET_LISTED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2026,
+            "verification_status": "SOURCE_VERIFIED",
+            "status": "NOT_PUBLISHED",
+            "severity": "LOW",
+            "blocking": false,
+            "reason": "A verified first-party annual sustainability-report catalog is current through 2025 and does not list 2026. Because 2026 is the live calendar year, the missing current-year edition is preserved as not yet published/listed rather than a collector failure.",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report"
+          }
+        ],
+        "discovery_scope": {
+          "history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "annual_series": [
+            "SUSTAINABILITY_REPORT"
+          ],
+          "current_public_document_categories": [
+            "SUSTAINABILITY_REPORT",
+            "ENVIRONMENTAL_MANAGEMENT"
+          ],
+          "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "effective_current_entity_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          }
+        },
+        "request_id": "company-7b7146f1-env-g0-20260910"
       }
     }
   }
