@@ -285,11 +285,35 @@ def document_gap_status(package_root):
 
 
 def classify_archive_summary(package_root, summary):
-    """Separate collection completeness from study-enrichment readiness."""
+    """Separate collection completeness from study-enrichment readiness.
+
+    ``build_archive`` creates a preliminary acceptance snapshot before the user-facing
+    layer is normalized.  ``normalize_user_archive`` then removes/converts machine
+    formats and validates the exact final user tree.  When that post-normalization
+    validation passes, any same-named checks are authoritative for final archive
+    classification; otherwise the preliminary values remain fail-closed.
+    """
     root = Path(package_root)
     result = dict(summary or {})
     checks = dict(result.get("acceptance_checks") or {})
     collection = read_json(root / "Collection_Completeness.json", {}) or {}
+
+    normalization = result.get("user_format_normalization") or {}
+    normalization_acceptance = (
+        normalization.get("acceptance") if isinstance(normalization, dict) else {}
+    ) or {}
+    post_normalization_checks = {}
+    if (
+        isinstance(normalization_acceptance, dict)
+        and str(normalization_acceptance.get("status") or "").upper() == "PASS"
+    ):
+        post_normalization_checks = {
+            str(key): bool(value)
+            for key, value in (normalization_acceptance.get("checks") or {}).items()
+        }
+        for key, value in post_normalization_checks.items():
+            if key in checks:
+                checks[key] = value
 
     guideline = bool(checks.get("guideline_reference_present"))
     coverage_contract_present = "sustainability_coverage_sufficient" in checks
@@ -312,6 +336,7 @@ def classify_archive_summary(package_root, summary):
     result["blocking_acceptance_checks"] = blocking
     result["legacy_observability_checks"] = legacy_observability
     result["study_enrichment_checks"] = study
+    result["post_normalization_acceptance_checks"] = post_normalization_checks
     result["archive_completeness"] = "COMPLETE" if all(blocking.values()) else "INCOMPLETE"
     result["study_enrichment_readiness"] = "READY" if all(study.values()) else "NEEDS_REFERENCE"
     result["collection_completeness_status"] = collection.get("status", "UNKNOWN")
