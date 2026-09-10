@@ -35,26 +35,47 @@ PRODUCTION_TABLE_WORDS = (
     "production plant", "production plants", "production facility",
     "manufacturing plant", "manufacturing site", "factory", "factories",
 )
+OPERATIONAL_SUFFIXES = (
+    "제철소", "공장", "연구소", "기술원", "사업장", "센터", "영업소", "사무소", "본사",
+)
+OPERATIONAL_SUFFIX_RE = "|".join(map(re.escape, OPERATIONAL_SUFFIXES))
 SITE_NAME_RE = re.compile(
-    r"([A-Za-z0-9가-힣㈜()·&.\- ]{2,70}?(?:제철소|공장|연구소|사업장|센터|사무소|본사))\s*$",
+    rf"([A-Za-z0-9가-힣㈜()·&./\- ]{{2,70}}?(?:{OPERATIONAL_SUFFIX_RE}))\s*$",
     re.I,
 )
 NEAREST_SITE_TOKEN_RE = re.compile(
-    r"([A-Za-z0-9가-힣㈜()·&.\-]{1,45}(?:제철소|공장|연구소|사업장|센터|사무소|본사))",
+    rf"([A-Za-z0-9가-힣㈜()·&./\-]{{1,45}}\s*(?:{OPERATIONAL_SUFFIX_RE}))",
     re.I,
 )
-OPERATIONAL_SUFFIXES = ("제철소", "공장", "연구소", "사업장", "센터", "사무소", "본사")
+NON_SITE_UI_TERMS = (
+    "제보센터", "고객센터", "고객지원센터", "문의센터", "채용센터", "홍보센터",
+    "고객문의", "제보하기", "통합검색", "개인정보", "privacy center",
+    "customer center", "contact center", "recruit center", "whistleblowing center",
+)
 NAME_CLASS_HINTS = ("name", "title", "site-name", "site_name", "branch-name", "plant-name", "factory-name")
 ADDRESS_CLASS_HINTS = ("addr", "address", "site-addr", "site_addr", "site-address", "location-address")
 REGION_PREFIX_CANONICAL = (
-    ("서울특별시", "서울"), ("부산광역시", "부산"), ("대구광역시", "대구"),
-    ("인천광역시", "인천"), ("광주광역시", "광주"), ("대전광역시", "대전"),
-    ("울산광역시", "울산"), ("세종특별자치시", "세종"),
+    ("서울특별시", "서울"), ("서울시", "서울"),
+    ("부산광역시", "부산"), ("부산시", "부산"),
+    ("대구광역시", "대구"), ("대구시", "대구"),
+    ("인천광역시", "인천"), ("인천시", "인천"),
+    ("광주광역시", "광주"), ("광주시", "광주"),
+    ("대전광역시", "대전"), ("대전시", "대전"),
+    ("울산광역시", "울산"), ("울산시", "울산"),
+    ("세종특별자치시", "세종"), ("세종시", "세종"),
     ("경기도", "경기"), ("강원특별자치도", "강원"), ("강원도", "강원"),
     ("충청북도", "충북"), ("충청남도", "충남"),
     ("전북특별자치도", "전북"), ("전라북도", "전북"), ("전라남도", "전남"),
     ("경상북도", "경북"), ("경상남도", "경남"),
     ("제주특별자치도", "제주"), ("제주도", "제주"),
+)
+METRO_SHORT_REGION = "서울시|부산시|대구시|인천시|광주시|대전시|울산시|세종시"
+CATALOG_REGION = f"{live.COMMON_REGION}|{METRO_SHORT_REGION}"
+CATALOG_ROAD_ADDRESS_RE = re.compile(
+    rf"((?:(?:{CATALOG_REGION})\s+|[가-힣]{{2,24}}(?:특별자치도|특별자치시|광역시|특별시|도)\s+)"
+    r"[가-힣0-9]{1,24}(?:시|군|구)\s+"
+    r"(?:[가-힣0-9]{1,24}(?:읍|면|동|리|구)\s+)?"
+    r"[가-힣0-9·.\-]{1,36}(?:대로|로|길)\s*\d+(?:[-~]\d+)?)"
 )
 GENERIC_CELL_WORDS = {
     "category", "region", "name", "location", "location & contact", "map",
@@ -96,20 +117,31 @@ def _class_matches(tag: Any, hints: Sequence[str]) -> bool:
     return False
 
 
+def _non_site_ui_name(value: str) -> bool:
+    compact = re.sub(r"\s+", "", str(value or "")).casefold()
+    return any(re.sub(r"\s+", "", term).casefold() in compact for term in NON_SITE_UI_TERMS)
+
+
 def _operational_name(value: str, company: str) -> str:
+    """Accept explicit first-party facility labels without requiring the legal name.
+
+    Global-network pages often label cards as e.g. ``울산공장`` or ``기술원`` rather
+    than repeating the corporate legal name.  The page-level first-party catalog
+    contract supplies company ownership; requiring the company token in every card
+    causes a false fallback to neighbouring labels.  Service/navigation labels are
+    rejected explicitly so ``제보센터`` or ``고객센터`` cannot become sites.
+    """
     name = re.sub(r"\s+", " ", str(value or "")).strip(" -:：|")
     if not name or not any(name.endswith(suffix) for suffix in OPERATIONAL_SUFFIXES):
         return ""
-    company_norm = base.normalize_name(company)
-    name_norm = base.normalize_name(name)
-    if company_norm and name_norm and company_norm not in name_norm and name_norm not in company_norm:
+    if _non_site_ui_name(name):
         return ""
     return name
 
 
 def _validated_address(value: str) -> str:
     text = re.sub(r"\s+", " ", str(value or "")).strip()
-    match = live.FLEX_ROAD_ADDRESS_RE.search(text)
+    match = CATALOG_ROAD_ADDRESS_RE.search(text)
     if not match:
         return ""
     return re.sub(r"\s+", " ", match.group(1)).strip()
@@ -122,7 +154,7 @@ def _clean_cell(value: str) -> str:
 def _table_name(cells: Sequence[str], address_index: int, address_cell: str) -> str:
     """Choose the facility-name cell immediately before the address/contact cell."""
     candidates = list(cells[:address_index])
-    address_match = live.FLEX_ROAD_ADDRESS_RE.search(address_cell)
+    address_match = CATALOG_ROAD_ADDRESS_RE.search(address_cell)
     if address_match:
         prefix = _clean_cell(address_cell[:address_match.start()])
         if prefix:
@@ -134,9 +166,9 @@ def _table_name(cells: Sequence[str], address_index: int, address_cell: str) -> 
             continue
         if any(word.casefold() == folded for word in PRODUCTION_TABLE_WORDS):
             continue
-        if live.FLEX_ROAD_ADDRESS_RE.search(value):
+        if CATALOG_ROAD_ADDRESS_RE.search(value):
             continue
-        if len(value) > 90:
+        if len(value) > 90 or _non_site_ui_name(value):
             continue
         return value
     return ""
@@ -263,8 +295,10 @@ def _bounded_site_name(name: str, company: str) -> str:
 def _site_name(text: str, address_start: int, company: str) -> str:
     raw_before = str(text[max(0, address_start - 180):address_start])
     compact_candidates = NEAREST_SITE_TOKEN_RE.findall(raw_before)
-    if compact_candidates:
-        return _bounded_site_name(compact_candidates[-1], company)
+    for candidate in reversed(compact_candidates):
+        name = _operational_name(_bounded_site_name(candidate, company), company)
+        if name:
+            return name
 
     before = re.sub(r"\s+", " ", raw_before).strip()
     match = SITE_NAME_RE.search(before)
@@ -272,19 +306,25 @@ def _site_name(text: str, address_start: int, company: str) -> str:
         name = re.sub(r"\s+", " ", match.group(1)).strip(" -:：|")
         pieces = re.split(r"[|•·\n\r\t]", name)
         name = pieces[-1].strip() if pieces else name
-        return _bounded_site_name(name, company)
-    return f"{company} 사업장"
+        name = _operational_name(_bounded_site_name(name, company), company)
+        if name:
+            return name
+    # Fail closed. A road address with no explicit nearby facility label can be a
+    # footer/contact address and must not be promoted as a generic company site.
+    return ""
 
 
 def _flattened_text_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
     text = str(page.text or "")
     found: Dict[str, Dict[str, Any]] = {}
-    for match in live.FLEX_ROAD_ADDRESS_RE.finditer(text):
+    for match in CATALOG_ROAD_ADDRESS_RE.finditer(text):
         address = re.sub(r"\s+", " ", match.group(1)).strip()
         context = text[max(0, match.start() - 220): min(len(text), match.end() + 80)]
         if not any(term in context for term in OPERATIONAL_SUFFIXES):
             continue
         name = _site_name(text, match.start(), company)
+        if not name:
+            continue
         key = _compact(address)
         if not key:
             continue
