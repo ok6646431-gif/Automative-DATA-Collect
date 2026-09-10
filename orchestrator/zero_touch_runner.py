@@ -25,6 +25,7 @@ from orchestrator import g0_domestic_site_catalog_enrichment
 from orchestrator import g0_entity_continuity_policy
 from orchestrator import g0_entity_window_normalization
 from orchestrator import g0_evidence_enrichment
+from orchestrator import g0_first_publication_recovery
 from orchestrator import g0_generic_js_report_recovery
 from orchestrator import g0_kind_disclosure_recovery
 from orchestrator import g0_live_adapters
@@ -236,6 +237,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
     )
+    documents = g0_first_publication_recovery.recover(discovery, documents, audit)
     documents = g0_entity_window_normalization.normalize(discovery, documents, audit)
     g0_report_enrichment.refresh_document_unresolved(discovery, documents, audit)
 
