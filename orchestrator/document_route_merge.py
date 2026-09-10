@@ -1,8 +1,11 @@
-"""Preserve stronger verified document delivery routes across zero-touch promotions.
+"""Preserve verified document delivery routes across zero-touch promotions.
 
-Fresh Discovery owns document identity and coverage.  This module only carries forward
-previously verified transport routes for the *same verified legal entity* and the same
-(document_type, report_year) semantic document.  It fails closed on entity ambiguity.
+Fresh Discovery owns document identity and coverage. This module carries forward
+previously verified transport routes only for the same DART-anchored legal entity.
+It can also restore a previously verified annual document when a later crawl regresses
+that exact semantic year to a blocking discovery gap. Restoration is deliberately
+fail-closed: a matching fresh blocking gap must exist, and the old route must already
+be SOURCE_VERIFIED or VERIFIED.
 """
 
 from __future__ import annotations
@@ -25,7 +28,8 @@ VERIFICATION_RANK = {
 STRONG_STATES = {"SOURCE_VERIFIED", "VERIFIED"}
 
 
-def _dart_keys(discovery: Dict[str, Any]) -> set[str]:
+def dart_keys(discovery: Dict[str, Any]) -> set[str]:
+    """Return strongly verified DART selectKey values for one legal entity."""
     keys: set[str] = set()
     for item in discovery.get("identity_evidence", []) or []:
         if not isinstance(item, dict):
@@ -38,13 +42,17 @@ def _dart_keys(discovery: Dict[str, Any]) -> set[str]:
     return keys
 
 
+# Backward-compatible private alias used by older callers/tests if any.
+_dart_keys = dart_keys
+
+
 def same_verified_entity(existing: Dict[str, Any], fresh: Dict[str, Any]) -> bool:
     old_name = normalize_name(existing.get("current_legal_name") or existing.get("requested_company_name"))
     new_name = normalize_name(fresh.get("current_legal_name") or fresh.get("requested_company_name"))
     if not old_name or old_name != new_name:
         return False
-    old_keys = _dart_keys(existing)
-    new_keys = _dart_keys(fresh)
+    old_keys = dart_keys(existing)
+    new_keys = dart_keys(fresh)
     return bool(old_keys and new_keys and old_keys.intersection(new_keys))
 
 
@@ -89,13 +97,38 @@ def _dedupe_routes(routes: Iterable[Optional[Dict[str, Any]]], exclude_url: str 
     return out
 
 
+def _blocking_gap_keys(documents: Dict[str, Any]) -> set[Tuple[str, Optional[int]]]:
+    keys: set[Tuple[str, Optional[int]]] = set()
+    for gap in documents.get("gaps", []) or []:
+        if not isinstance(gap, dict) or not gap.get("blocking"):
+            continue
+        key = (str(gap.get("document_type") or ""), _year(gap.get("year")))
+        if key[0] and key[1] is not None:
+            keys.add(key)
+    return keys
+
+
+def _recompute_discovery_status(documents: Dict[str, Any]) -> None:
+    documents["discovery_status"] = (
+        "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE"
+        if not any(isinstance(g, dict) and g.get("blocking") for g in documents.get("gaps", []) or [])
+        else "PARTIAL"
+    )
+
+
 def merge_document_routes(
     existing_company: Dict[str, Any],
     existing_documents: Dict[str, Any],
     fresh_company: Dict[str, Any],
     fresh_documents: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Return fresh document evidence with safe prior routes carried forward."""
+    """Return fresh evidence with safe prior routes carried forward.
+
+    Two preservation modes are supported for the same verified legal entity:
+    1. same-year fresh document exists -> keep the stronger route / alternate; and
+    2. fresh Discovery regressed the exact year to a blocking gap -> restore the old
+       strongly verified document and remove only that matching blocking gap.
+    """
     merged = copy.deepcopy(fresh_documents)
     if not same_verified_entity(existing_company, fresh_company):
         return merged
@@ -106,12 +139,18 @@ def merge_document_routes(
             continue
         key = _semantic_key(old)
         if key[0] and key[1] is not None:
-            old_by_key[key] = old
+            previous = old_by_key.get(key)
+            if previous is None or VERIFICATION_RANK.get(str(old.get("verification_status") or ""), 0) > VERIFICATION_RANK.get(str(previous.get("verification_status") or ""), 0):
+                old_by_key[key] = old
 
+    fresh_keys: set[Tuple[str, Optional[int]]] = set()
     for fresh in merged.get("documents", []) or []:
         if not isinstance(fresh, dict):
             continue
-        old = old_by_key.get(_semantic_key(fresh))
+        key = _semantic_key(fresh)
+        if key[0] and key[1] is not None:
+            fresh_keys.add(key)
+        old = old_by_key.get(key)
         if not old:
             continue
 
@@ -131,15 +170,13 @@ def merge_document_routes(
             if isinstance(x, dict)
         ]
 
-        # A previously byte/transport-VERIFIED primary must not be silently replaced by
-        # a newly source-verified route.  Equal-strength fresh routes remain primary.
         if old_primary and old_rank > fresh_rank:
             previous_fresh = fresh_primary
-            for key in ("source_url", "source_locator", "expected_extension", "verification_status"):
-                if key in old:
-                    fresh[key] = old.get(key)
+            for field in ("source_url", "source_locator", "expected_extension", "verification_status"):
+                if field in old:
+                    fresh[field] = old.get(field)
                 else:
-                    fresh.pop(key, None)
+                    fresh.pop(field, None)
             fresh["fallback_sources"] = _dedupe_routes(
                 [previous_fresh, *fresh_fallbacks, *old_fallbacks],
                 exclude_url=str(fresh.get("source_url") or ""),
@@ -151,6 +188,34 @@ def merge_document_routes(
                 exclude_url=str(fresh.get("source_url") or ""),
             )
             fresh["route_merge_status"] = "PRESERVED_PREVIOUS_ALTERNATES"
+
+    # Restore a previously verified document only when the fresh run explicitly says
+    # that exact semantic year is unresolved and blocking. This prevents stale registry
+    # entries from expanding the requested scope or inventing documents.
+    gap_keys = _blocking_gap_keys(merged)
+    restored_keys: set[Tuple[str, Optional[int]]] = set()
+    for key, old in old_by_key.items():
+        if key in fresh_keys or key not in gap_keys:
+            continue
+        if _route(old, "PREVIOUS_VERIFIED_PRIMARY") is None:
+            continue
+        restored = copy.deepcopy(old)
+        restored["route_merge_status"] = "RESTORED_PREVIOUS_VERIFIED_DOCUMENT"
+        merged.setdefault("documents", []).append(restored)
+        restored_keys.add(key)
+
+    if restored_keys:
+        kept_gaps: List[Dict[str, Any]] = []
+        for gap in merged.get("gaps", []) or []:
+            if not isinstance(gap, dict):
+                kept_gaps.append(gap)
+                continue
+            key = (str(gap.get("document_type") or ""), _year(gap.get("year")))
+            if gap.get("blocking") and key in restored_keys:
+                continue
+            kept_gaps.append(gap)
+        merged["gaps"] = kept_gaps
+        _recompute_discovery_status(merged)
 
     return merged
 
