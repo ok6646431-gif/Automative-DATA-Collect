@@ -101,6 +101,32 @@ class DomesticSiteCatalogTests(unittest.TestCase):
             {"울산고무공장", "여수고무제1공장", "예산건자재공장"},
         )
 
+    def test_flattened_global_network_pairs_short_metro_addresses_and_rejects_ui_centers(self):
+        text = (
+            "글로벌네트워크 대한민국 "
+            "제보센터 서울특별시 마포구 마포대로 119 "
+            "스판덱스 본사 서울시 마포구 마포대로 119 "
+            "스판덱스 구미공장 경북 구미시 3공단2로 108 "
+            "스판덱스 대구영업소 대구시 중구 국채보상로 488 "
+            "스판덱스 효성기술원 경기도 안양시 동안구 시민대로 74 "
+            "나이론폴리에스터 울산공장 울산시 남구 납도로 30 "
+            "직물염색 대구 공장 대구시 달서구 성서공단로55길 45"
+        )
+        result = catalog.discover(
+            "예시섬유",
+            [Page("https://official.example/company/global-network/textile", text, "", 200)],
+        )
+        self.assertIsNotNone(result)
+        sites, scope, unresolved = result
+        by_address = {site["address_raw"]: site["site_name_raw"] for site in sites}
+        self.assertEqual(by_address["경기도 안양시 동안구 시민대로 74"], "효성기술원")
+        self.assertEqual(by_address["울산시 남구 납도로 30"], "울산공장")
+        self.assertEqual(by_address["대구시 달서구 성서공단로55길 45"], "대구 공장")
+        self.assertNotIn("제보센터", set(by_address.values()))
+        self.assertIn("서울시 마포구 마포대로 119", by_address)
+        self.assertEqual(scope["mode"], "SITE_SET")
+        self.assertEqual(unresolved, [])
+
     def test_single_address_page_does_not_claim_complete_catalog(self):
         result = catalog.discover(
             "예시회사",
@@ -192,6 +218,10 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         self.assertEqual(
             catalog._compact("경상북도 포항시 남구 동해안로 6261"),
             catalog._compact("경북 포항시 남구 동해안로 6261"),
+        )
+        self.assertEqual(
+            catalog._compact("울산광역시 남구 납도로 30"),
+            catalog._compact("울산시 남구 납도로 30"),
         )
         self.assertNotEqual(
             catalog._compact("경상북도 포항시 남구 동해안로 6261"),
