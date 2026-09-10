@@ -30,6 +30,20 @@ LATIN_TO_KOREAN = {
     "DB": "디비",
 }
 
+# DART legal names often spell short Latin brands phonetically in Korean even when
+# users naturally type the Latin acronym (for example, KCC -> 케이씨씨).  Keep the
+# established brand table above for known conventional spellings, but also derive a
+# generic short-acronym locator variant.  This only broadens candidate discovery;
+# every candidate still has to pass the existing official DART re-verification and
+# unique legal-identity score before promotion.
+LATIN_LETTER_TO_KOREAN = {
+    "A": "에이", "B": "비", "C": "씨", "D": "디", "E": "이", "F": "에프",
+    "G": "지", "H": "에이치", "I": "아이", "J": "제이", "K": "케이", "L": "엘",
+    "M": "엠", "N": "엔", "O": "오", "P": "피", "Q": "큐", "R": "알",
+    "S": "에스", "T": "티", "U": "유", "V": "브이", "W": "더블유", "X": "엑스",
+    "Y": "와이", "Z": "제트",
+}
+
 KOREAN_TO_LATIN = {v: k.casefold() for k, v in LATIN_TO_KOREAN.items()}
 CORP_SUFFIX_RE = re.compile(r"주식회사|유한회사|합자회사|합명회사|\(주\)|㈜|co\.?\s*,?\s*ltd\.?|corp\.?|inc\.?|limited|ltd\.?", re.I)
 CODE_FIELD_RE = re.compile(
@@ -38,6 +52,7 @@ CODE_FIELD_RE = re.compile(
     re.I,
 )
 EIGHT_DIGIT_RE = re.compile(r"(?<!\d)(\d{8})(?!\d)")
+SHORT_LATIN_PREFIX_RE = re.compile(r"^([A-Za-z]{2,5})(?=$|[^A-Za-z])")
 
 
 def _dedupe(values: Iterable[str]) -> List[str]:
@@ -56,6 +71,21 @@ def _normalize_company(value: str) -> str:
     return re.sub(r"[^0-9a-z가-힣]+", "", text)
 
 
+def _generic_short_latin_variant(value: str) -> str:
+    """Return a Korean letter-name spelling for a short leading Latin acronym.
+
+    The rule is intentionally bounded to a 2-5 letter leading token.  It is a search
+    locator only, not identity proof, so ordinary legal verification remains unchanged.
+    """
+    raw = str(value or "").strip()
+    match = SHORT_LATIN_PREFIX_RE.match(raw)
+    if not match:
+        return ""
+    token = match.group(1).upper()
+    korean = "".join(LATIN_LETTER_TO_KOREAN[ch] for ch in token)
+    return korean + raw[match.end(1):]
+
+
 def query_variants(company: str) -> List[str]:
     raw = str(company or "").strip()
     values = [raw]
@@ -63,6 +93,9 @@ def query_variants(company: str) -> List[str]:
     for latin, korean in LATIN_TO_KOREAN.items():
         if upper.startswith(latin):
             values.append(korean + raw[len(latin):])
+    generic = _generic_short_latin_variant(raw)
+    if generic and generic != raw:
+        values.append(generic)
     # Source-native corporate forms are common on DART company finder.
     bases = list(values)
     for value in bases:
