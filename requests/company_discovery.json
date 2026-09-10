@@ -1,23 +1,21 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-7b7146f1-env-g0-20260910",
-  "requested_company_name": "효성티앤씨",
-  "current_legal_name": "효성티앤씨(주)",
+  "request_id": "kcc-3a433285-env-g0-20260911",
+  "requested_company_name": "KCC",
+  "current_legal_name": "(주)케이씨씨",
   "current_legal_name_active_period": {
-    "start_year": 2018
+    "start_year": 1958
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "효성티앤씨(주) 국내 사업장",
+    "label": "(주)케이씨씨 국내 사업장",
     "candidate_ids": [
-      "119-f395846e",
-      "3-2-108-75bfede4",
-      "488-3cc2025a",
-      "74-1114e280",
-      "30-dbbdd319",
-      "55-45-f41c29c8"
+      "344-9c27d082",
+      "1-a18d5ba0",
+      "2-15-b028bf7a",
+      "3-12-ad5647e0"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -25,21 +23,21 @@
   },
   "company_aliases": [
     {
-      "name": "효성티앤씨",
+      "name": "KCC",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
       "active_period": {
-        "start_year": 2018
+        "start_year": 1958
       }
     },
     {
-      "name": "Hyosung TNC Corporation",
+      "name": "KCC Corporation",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
       "active_period": {
-        "start_year": 2018
+        "start_year": 1958
       }
     }
   ],
@@ -47,94 +45,66 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "119-f395846e",
-      "site_name_raw": "스판덱스 본사",
-      "address_raw": "서울시 마포구 마포대로 119",
+      "candidate_id": "344-9c27d082",
+      "site_name_raw": "보유한 공장",
+      "address_raw": "서울특별시 서초구 사평대로 344",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     },
     {
-      "candidate_id": "3-2-108-75bfede4",
-      "site_name_raw": "스판덱스 구미공장",
-      "address_raw": "경북 구미시 3공단2로 108",
+      "candidate_id": "1-a18d5ba0",
+      "site_name_raw": "백만원) 사업장",
+      "address_raw": "전북 익산시 석암로 1",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     },
     {
-      "candidate_id": "488-3cc2025a",
-      "site_name_raw": "스판덱스 대구영업소",
-      "address_raw": "대구시 중구 국채보상로 488",
+      "candidate_id": "2-15-b028bf7a",
+      "site_name_raw": "백만원) 사업장",
+      "address_raw": "충청남도 서산시 대산읍 대죽2로 15",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     },
     {
-      "candidate_id": "74-1114e280",
-      "site_name_raw": "스판덱스 효성기술원",
-      "address_raw": "경기도 안양시 동안구 시민대로 74",
+      "candidate_id": "3-12-ad5647e0",
+      "site_name_raw": "백만원) 사업장",
+      "address_raw": "울산시 울주군 온산읍 화산3길 12",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "30-dbbdd319",
-      "site_name_raw": "나이론폴리에스터 울산공장",
-      "address_raw": "울산시 남구 납도로 30",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "55-45-f41c29c8",
-      "site_name_raw": "직물/염색 대구 공장",
-      "address_raw": "대구시 달서구 성서공단로55길 45",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
-      "source_value_raw": "효성티앤씨(주) / Hyosung TNC Corporation / establishment 2018-06-04 / website www.hyosungtnc.com",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
+      "source_value_raw": "(주)케이씨씨 / KCC Corporation / establishment 1958-08-12 / website www.kccworld.co.kr",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -197,6 +167,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 2018
+    "start_year": 1958
   }
 }

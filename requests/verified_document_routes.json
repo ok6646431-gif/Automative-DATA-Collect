@@ -1258,6 +1258,307 @@
         },
         "request_id": "company-7b7146f1-env-g0-20260910"
       }
+    },
+    "00105271": {
+      "current_legal_name": "(주)케이씨씨",
+      "company": {
+        "schema_version": "1.0",
+        "request_id": "kcc-3a433285-env-g0-20260911",
+        "requested_company_name": "KCC",
+        "current_legal_name": "(주)케이씨씨",
+        "current_legal_name_active_period": {
+          "start_year": 1958
+        },
+        "company_verification_state": "VERIFIED",
+        "confidence": "HIGH",
+        "requested_scope": {
+          "mode": "SITE_SET",
+          "label": "(주)케이씨씨 국내 사업장",
+          "candidate_ids": [
+            "344-9c27d082",
+            "1-a18d5ba0",
+            "2-15-b028bf7a",
+            "3-12-ad5647e0"
+          ],
+          "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
+          "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
+          "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+        },
+        "company_aliases": [
+          {
+            "name": "KCC",
+            "alias_type": "requested_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
+            "active_period": {
+              "start_year": 1958
+            }
+          },
+          {
+            "name": "KCC Corporation",
+            "alias_type": "english_legal_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
+            "active_period": {
+              "start_year": 1958
+            }
+          }
+        ],
+        "historical_legal_names": [],
+        "corporate_restructuring_evidence": [],
+        "domestic_site_candidates": [
+          {
+            "candidate_id": "344-9c27d082",
+            "site_name_raw": "보유한 공장",
+            "address_raw": "서울특별시 서초구 사평대로 344",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "1-a18d5ba0",
+            "site_name_raw": "백만원) 사업장",
+            "address_raw": "전북 익산시 석암로 1",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "2-15-b028bf7a",
+            "site_name_raw": "백만원) 사업장",
+            "address_raw": "충청남도 서산시 대산읍 대죽2로 15",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          },
+          {
+            "candidate_id": "3-12-ad5647e0",
+            "site_name_raw": "백만원) 사업장",
+            "address_raw": "울산시 울주군 온산읍 화산3길 12",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
+              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+            }
+          }
+        ],
+        "identity_evidence": [
+          {
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
+            "source_value_raw": "(주)케이씨씨 / KCC Corporation / establishment 1958-08-12 / website www.kccworld.co.kr",
+            "verification_state": "VERIFIED",
+            "confidence": "HIGH"
+          }
+        ],
+        "related_entity_exclusions": [],
+        "unresolved_items": [],
+        "event_evidence_references": [],
+        "collection_policy": {
+          "minimum_history_years": 5,
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "sources": {
+            "ENVINFO": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false,
+              "max_details": 500
+            },
+            "PRTR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false
+            },
+            "CHEM_STATS": {
+              "requested_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "available_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "prefer_full_history": true
+            },
+            "CLEANSYS_AIR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "prefer_full_history": false
+            },
+            "SOOSIRO_WATER": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "daily_available_years": [
+                2024
+              ],
+              "prefer_full_history": false
+            }
+          }
+        },
+        "legal_entity_active_period": {
+          "start_year": 1958
+        }
+      },
+      "document_evidence": {
+        "schema_version": "1.0",
+        "discovery_status": "PARTIAL",
+        "documents": [
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_da6a66a660",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "환경",
+            "report_year": 2026,
+            "source_url": "https://www.kccworld.co.kr/esg/environmental.do",
+            "source_locator": "https://www.kccworld.co.kr/esg/environmental.do",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          }
+        ],
+        "gaps": [
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2020_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2020,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          },
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2021_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2021,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          },
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2022_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2022,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          },
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2023_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2023,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          },
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2024_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2024,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          },
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2025_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2025,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          },
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2026_UNRESOLVED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2026,
+            "verification_status": "UNVERIFIED",
+            "status": "DISCOVERY_GAP",
+            "severity": "MEDIUM",
+            "blocking": true,
+            "reason": "No strongly classified, byte-verified annual sustainability/integrated report file was discovered from verified official report hosts.",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
+          }
+        ],
+        "discovery_scope": {
+          "history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "annual_series": [
+            "SUSTAINABILITY_REPORT"
+          ],
+          "current_public_document_categories": [
+            "SUSTAINABILITY_REPORT",
+            "ENVIRONMENTAL_MANAGEMENT"
+          ],
+          "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "effective_current_entity_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          }
+        },
+        "request_id": "kcc-3a433285-env-g0-20260911"
+      }
     }
   }
 }
