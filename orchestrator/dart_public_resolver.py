@@ -31,11 +31,11 @@ LATIN_TO_KOREAN = {
 }
 
 # DART legal names often spell short Latin brands phonetically in Korean even when
-# users naturally type the Latin acronym (for example, KCC -> 케이씨씨).  Keep the
+# users naturally type the Latin acronym (for example, KCC -> 케이씨씨). Keep the
 # established brand table above for known conventional spellings, but also derive a
-# generic short-acronym locator variant.  This only broadens candidate discovery;
-# every candidate still has to pass the existing official DART re-verification and
-# unique legal-identity score before promotion.
+# generic short-acronym locator variant. This only broadens candidate discovery;
+# every candidate still has to pass official DART re-verification and the existing
+# unique legal-identity gate before promotion.
 LATIN_LETTER_TO_KOREAN = {
     "A": "에이", "B": "비", "C": "씨", "D": "디", "E": "이", "F": "에프",
     "G": "지", "H": "에이치", "I": "아이", "J": "제이", "K": "케이", "L": "엘",
@@ -74,7 +74,7 @@ def _normalize_company(value: str) -> str:
 def _generic_short_latin_variant(value: str) -> str:
     """Return a Korean letter-name spelling for a short leading Latin acronym.
 
-    The rule is intentionally bounded to a 2-5 letter leading token.  It is a search
+    The rule is intentionally bounded to a 2-5 letter leading token. It is a search
     locator only, not identity proof, so ordinary legal verification remains unchanged.
     """
     raw = str(value or "").strip()
@@ -317,28 +317,47 @@ def _search_engine_keys(http: Any, company: str) -> List[str]:
 
 
 def discover_dart_keys(http: Any, company: str) -> List[str]:
+    """Resolve candidate DART keys, preferring direct finder results over fallbacks.
+
+    A direct company-finder query can already return the exact legal-name row. Once
+    that happens, do not continue into the dynamic-form fallback for the same variant:
+    some DART form defaults use substring matching and can add same-brand affiliates,
+    turning a unique exact result into artificial ambiguity.
+    """
     endpoints = [DART + "/corp/searchCorp.ax", DART + "/corp/searchCorpEx.ax"]
-    keys: List[str] = []
     for variant in query_variants(company):
+        variant_keys: List[str] = []
         common_variants: Sequence[Dict[str, str]] = [
             {"textCrpNm": variant, "corporationType": "all", "currentPage": "1", "maxResults": "100", "searchIndex": "", "selectKey": ""},
             {"textCrpNM": variant, "corporationType": "all", "currentPage": "1", "maxResults": "100", "searchIndex": "", "selectKey": ""},
             {"crpNm": variant, "corporationType": "all", "currentPage": "1", "maxResults": "100"},
         ]
         for endpoint in endpoints:
+            direct_keys: List[str] = []
             for payload in common_variants:
                 for method in ("GET", "POST"):
                     r = http.get(endpoint, params=payload) if method == "GET" else http.post(endpoint, data=payload)
                     if r and r.status_code < 500:
-                        keys.extend(_extract_response_keys(http, r, variant, {
+                        direct_keys.extend(_extract_response_keys(http, r, variant, {
                             "endpoint": endpoint,
                             "method": method,
                             "variant": variant,
                             "fields": sorted(payload),
                         }))
-            keys.extend(_dynamic_form_attempts(http, endpoint, variant))
-        if keys:
-            break
-    if not keys:
-        keys.extend(_search_engine_keys(http, company))
-    return _dedupe(keys)
+                    if direct_keys:
+                        break
+                if direct_keys:
+                    break
+            if direct_keys:
+                variant_keys.extend(direct_keys)
+                break
+
+            dynamic_keys = _dynamic_form_attempts(http, endpoint, variant)
+            if dynamic_keys:
+                variant_keys.extend(dynamic_keys)
+                break
+
+        if variant_keys:
+            return _dedupe(variant_keys)
+
+    return _dedupe(_search_engine_keys(http, company))
