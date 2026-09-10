@@ -62,6 +62,17 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
         )
         self.assertEqual(["https://www.example-corp.com/about"], links)
 
+    def test_origin_variants_include_mobile_same_org_host(self):
+        variants = recovery._origin_variants(
+            "https://www.example-corp.com/legacy/index.do"
+        )
+        self.assertIn("https://m.example-corp.com/legacy/index.do", variants)
+        self.assertIn("https://m.example-corp.com/", variants)
+        self.assertIn(
+            "https://www.example-corp.com/",
+            recovery._origin_variants("https://m.example-corp.com/"),
+        )
+
 
 class ThinShellBootstrapTests(unittest.TestCase):
     def test_frame_and_form_targets_are_first_party_page_candidates(self):

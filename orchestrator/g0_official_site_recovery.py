@@ -79,8 +79,12 @@ def _origin_variants(url: str) -> List[str]:
     host = parsed.hostname or ""
     if not host:
         return [url]
-    bare = host.removeprefix("www.")
-    hosts = _dedupe([host, bare, "www." + bare])
+    # Mobile corporate front-ends are commonly published as m.<domain> while
+    # remaining under the same DART-anchored organization boundary.  Probe that
+    # conventional endpoint alongside bare/www variants; it is still only accepted
+    # after the existing first-party crawl/evidence checks succeed.
+    bare = host.removeprefix("www.").removeprefix("m.")
+    hosts = _dedupe([host, bare, "www." + bare, "m." + bare])
     schemes = _dedupe([parsed.scheme if parsed.scheme in {"http", "https"} else "https", "https", "http"])
     paths = _path_candidates(parsed.path or "/")
     out: List[str] = []
