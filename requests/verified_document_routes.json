@@ -1,0 +1,269 @@
+{
+  "schema_version": "1.0",
+  "entities": {
+    "00106368": {
+      "current_legal_name": "금호석유화학(주)",
+      "company": {
+        "current_legal_name": "금호석유화학(주)",
+        "requested_company_name": "금호석유화학",
+        "identity_evidence": [
+          {
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
+            "verification_state": "VERIFIED"
+          }
+        ]
+      },
+      "document_evidence": {
+        "schema_version": "1.0",
+        "documents": [
+          {
+            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2020_4",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2020 sustainability report 국문",
+            "report_year": 2020,
+            "source_url": "https://www.kkpc.com/download/?seq=4017",
+            "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2021_3",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2021 sustainability report 국문",
+            "report_year": 2021,
+            "source_url": "https://www.kkpc.com/download/?seq=5173",
+            "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2022_2",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2022 sustainability report 국문",
+            "report_year": 2022,
+            "source_url": "https://www.kkpc.com/download/?seq=6252",
+            "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2023",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "Kumho Petrochemical Sustainability Report 2023",
+            "report_year": 2023,
+            "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf",
+            "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2024",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "금호석유화학 지속가능경영보고서 2024",
+            "report_year": 2024,
+            "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+            "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2025",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "금호석유화학 지속가능경영보고서 2025",
+            "report_year": 2025,
+            "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
+            "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
+            "expected_extension": "pdf",
+            "verification_status": "VERIFIED",
+            "importance": "CORE",
+            "fallback_sources": [
+              {
+                "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+                "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+                "expected_extension": "pdf",
+                "verification_status": "SOURCE_VERIFIED",
+                "source_role": "COMPANY_HOSTED_OFFICIAL"
+              }
+            ]
+          }
+        ],
+        "gaps": []
+      }
+    },
+    "00126566": {
+      "current_legal_name": "한화에어로스페이스(주)",
+      "company": {
+        "current_legal_name": "한화에어로스페이스(주)",
+        "requested_company_name": "한화에어로스페이스",
+        "identity_evidence": [
+          {
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+            "verification_state": "VERIFIED"
+          }
+        ]
+      },
+      "document_evidence": {
+        "schema_version": "1.0",
+        "documents": [
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2021",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2021 지속가능경영보고서 국문",
+            "report_year": 2021,
+            "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c8af89b6-ac6f-46cb-9d00-96fc8f58f2be",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2022",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2022 지속가능경영보고서 국문",
+            "report_year": 2022,
+            "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c454e213-56dc-44db-a912-94b7e2401e1d",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2023",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2023 지속가능경영보고서 국문",
+            "report_year": 2023,
+            "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=010c9815-b2d3-4004-a344-839ab0cb1a6d",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2024",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2024 지속가능경영보고서 국문",
+            "report_year": 2024,
+            "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=1772e31b-cc5b-46e6-8d8e-23ca8865886d",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2025",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2025 지속가능경영보고서 국문",
+            "report_year": 2025,
+            "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=6dbe86fc-e967-4769-a69e-de586349a9fe",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2026",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2026 지속가능경영보고서 국문",
+            "report_year": 2026,
+            "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=506d56b7-09c6-4f53-833c-7842311b2582",
+            "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          }
+        ],
+        "gaps": []
+      }
+    },
+    "01316227": {
+      "current_legal_name": "효성티앤씨(주)",
+      "company": {
+        "current_legal_name": "효성티앤씨(주)",
+        "requested_company_name": "효성티앤씨",
+        "identity_evidence": [
+          {
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+            "verification_state": "VERIFIED"
+          }
+        ]
+      },
+      "document_evidence": {
+        "schema_version": "1.0",
+        "documents": [
+          {
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2020_7",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2020 sustainability report KOR",
+            "report_year": 2020,
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2020_kr.pdf",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_6",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2021 sustainability report KOR",
+            "report_year": 2021,
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_kr.pdf",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_5",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2022 sustainability report KOR",
+            "report_year": 2022,
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_kr.pdf",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_4",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2023 sustainability report KOR",
+            "report_year": 2023,
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_kr.pdf",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_3",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2024 sustainability report KOR",
+            "report_year": 2024,
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_kr.pdf",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2025 sustainability report KOR",
+            "report_year": 2025,
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_kr.pdf",
+            "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE"
+          }
+        ],
+        "gaps": []
+      }
+    }
+  }
+}
