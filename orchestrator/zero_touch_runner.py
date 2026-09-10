@@ -101,6 +101,48 @@ g0_domestic_site_catalog_enrichment.STRONG_LOCATION_WORDS = _extend_tokens(
     "글로벌네트워크", "글로벌 네트워크", "global network",
 )
 
+
+def _robust_official_domain_links(http, domain, terms):
+    """Locate first-party URLs in modern search markup without trusting search text.
+
+    Search engines are used only as locators.  Their direct, redirect, cite, data-URL
+    and displayed-text forms are parsed by the same hardened routine already used for
+    official-site recovery.  Every returned URL is then restricted back to the
+    requested official domain (or its subdomains); downstream code still has to fetch
+    and verify the target itself before using any evidence from it.
+    """
+    raw_domain = str(domain or "").strip()
+    if not raw_domain:
+        return []
+    domain_host = zero_touch_discovery._host(
+        raw_domain if "://" in raw_domain else "https://" + raw_domain
+    )
+    if not domain_host:
+        return []
+    query = f"site:{domain_host} {terms}"
+    search_urls = (
+        "https://www.google.com/search?q=" + zero_touch_discovery.quote(query) + "&num=20",
+        "https://www.bing.com/search?q=" + zero_touch_discovery.quote(query) + "&count=20",
+        "https://html.duckduckgo.com/html/?q=" + zero_touch_discovery.quote(query),
+    )
+    found = []
+    for search_url in search_urls:
+        r = http.get(search_url)
+        if not r or r.status_code >= 400:
+            continue
+        for candidate in g0_official_site_recovery._search_result_links(search_url, r.text):
+            candidate_host = zero_touch_discovery._host(candidate)
+            if candidate_host == domain_host or candidate_host.endswith("." + domain_host):
+                if candidate not in found:
+                    found.append(candidate.split("#", 1)[0])
+        if found:
+            break
+    return found
+
+
+# Use one robust, fail-closed search-result parser across official-site and report
+# discovery instead of maintaining a weaker report-specific parser.
+zero_touch_discovery.search_official_domain_links = _robust_official_domain_links
 zero_touch_discovery.discover_dart_keys = dart_public_resolver.discover_dart_keys
 
 
