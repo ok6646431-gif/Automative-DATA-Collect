@@ -229,5 +229,43 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         )
 
 
+    def test_semantic_location_headings_preserve_campus_names_and_full_beongil_addresses(self):
+        html = '''<html><body>
+          <h2>국내 사업장</h2>
+          <section><h3>서울 본사</h3><p>주소 서울특별시 중구 중앙로 86</p></section>
+          <section><h3>판교 R&amp;D 캠퍼스</h3><p>주소 경기도 성남시 분당구 혁신로 319번길 6</p></section>
+          <section><h3>양주 CS센터</h3><p>주소 경기도 양주시 백석읍 꿈나무로 108</p></section>
+          <section><h3>대전 R&amp;D 캠퍼스</h3><p>주소 대전광역시 유성구 연구대로 1366번길 10</p></section>
+          <section><h3>대전 사업장</h3><p>주소 대전광역시 유성구 외삼로 8번길 99</p></section>
+        </body></html>'''
+        text = (
+            '국내 사업장 서울 본사 주소 서울특별시 중구 중앙로 86 '
+            '판교 R&D 캠퍼스 주소 경기도 성남시 분당구 혁신로 319번길 6 '
+            '양주 CS센터 주소 경기도 양주시 백석읍 꿈나무로 108 '
+            '대전 R&D 캠퍼스 주소 대전광역시 유성구 연구대로 1366번길 10 '
+            '대전 사업장 주소 대전광역시 유성구 외삼로 8번길 99'
+        )
+        result = catalog.discover(
+            '예시항공',
+            [Page('https://official.example/company/domestic-sites', text, html, 200)],
+        )
+        self.assertIsNotNone(result)
+        sites, scope, unresolved = result
+        by_address = {site['address_raw']: site for site in sites}
+        self.assertEqual(by_address['경기도 성남시 분당구 혁신로 319번길 6']['site_name_raw'], '판교 R&D 캠퍼스')
+        self.assertEqual(by_address['대전광역시 유성구 연구대로 1366번길 10']['site_name_raw'], '대전 R&D 캠퍼스')
+        self.assertEqual(by_address['대전광역시 유성구 외삼로 8번길 99']['site_name_raw'], '대전 사업장')
+        self.assertEqual(by_address['경기도 양주시 백석읍 꿈나무로 108']['site_name_raw'], '양주 CS센터')
+        self.assertTrue(all(site['discovery_evidence']['extraction_contract'] == 'SEMANTIC_HEADING_ADDRESS_PAIR' for site in sites))
+        self.assertEqual(scope['mode'], 'SITE_SET')
+        self.assertEqual(unresolved, [])
+
+    def test_nested_beongil_address_is_not_truncated(self):
+        self.assertEqual(
+            catalog._validated_address('주소 경기도 성남시 분당구 혁신로 319번길 6 전화 000'),
+            '경기도 성남시 분당구 혁신로 319번길 6',
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

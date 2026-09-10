@@ -36,7 +36,7 @@ PRODUCTION_TABLE_WORDS = (
     "manufacturing plant", "manufacturing site", "factory", "factories",
 )
 OPERATIONAL_SUFFIXES = (
-    "제철소", "공장", "연구소", "기술원", "사업장", "센터", "영업소", "사무소", "본사",
+    "제철소", "공장", "연구소", "기술원", "사업장", "센터", "영업소", "사무소", "본사", "캠퍼스",
 )
 OPERATIONAL_SUFFIX_RE = "|".join(map(re.escape, OPERATIONAL_SUFFIXES))
 SITE_NAME_RE = re.compile(
@@ -75,7 +75,7 @@ CATALOG_ROAD_ADDRESS_RE = re.compile(
     rf"((?:(?:{CATALOG_REGION})\s+|[가-힣]{{2,24}}(?:특별자치도|특별자치시|광역시|특별시|도)\s+)"
     r"[가-힣0-9]{1,24}(?:시|군|구)\s+"
     r"(?:[가-힣0-9]{1,24}(?:읍|면|동|리|구)\s+)?"
-    r"[가-힣0-9·.\-]{1,36}(?:대로|로|길)\s*\d+(?:[-~]\d+)?)"
+    r"[가-힣0-9·.\-]{1,36}(?:대로|로|길)\s*\d+(?:[-~]\d+)?(?:번길\s*\d+(?:[-~]\d+)?)?)"
 )
 GENERIC_CELL_WORDS = {
     "category", "region", "name", "location", "location & contact", "map",
@@ -281,6 +281,68 @@ def _structured_dom_sites(company: str, page: base.Page) -> Dict[str, Dict[str, 
     return found
 
 
+def _semantic_heading_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
+    """Pair semantic facility headings with the next bounded Korean road address.
+
+    Some official location pages use clean HTML headings (for example a headquarters,
+    R&D campus, or service center) but do not expose ``name``/``address`` CSS classes.
+    Flattening such a page destroys card boundaries and can reuse the previous facility
+    name for the next address. On an already-confirmed first-party catalog page, a
+    semantic heading followed by exactly one road address before the next facility
+    heading is a stronger contract than proximity in flattened text.
+    """
+    html = str(page.html or "")
+    if not html.strip():
+        return {}
+    soup = BeautifulSoup(html, "html.parser")
+    found: Dict[str, Dict[str, Any]] = {}
+    heading_names = {"h1", "h2", "h3", "h4", "h5", "h6", "dt", "strong"}
+
+    headings: List[Tuple[Any, str]] = []
+    for tag in soup.find_all(True):
+        role = str((getattr(tag, "attrs", {}) or {}).get("role") or "").casefold()
+        if getattr(tag, "name", "") not in heading_names and role != "heading" and not _class_matches(tag, NAME_CLASS_HINTS):
+            continue
+        raw = _clean_cell(" ".join(tag.stripped_strings))
+        name = _operational_name(raw, company)
+        if name:
+            headings.append((tag, name))
+
+    for heading, name in headings:
+        address = ""
+        scanned = 0
+        for tag in heading.find_all_next(True):
+            scanned += 1
+            if scanned > 40:
+                break
+            if tag is not heading:
+                role = str((getattr(tag, "attrs", {}) or {}).get("role") or "").casefold()
+                if getattr(tag, "name", "") in heading_names or role == "heading" or _class_matches(tag, NAME_CLASS_HINTS):
+                    next_name = _operational_name(_clean_cell(" ".join(tag.stripped_strings)), company)
+                    if next_name:
+                        break
+            value = _clean_cell(" ".join(tag.stripped_strings))
+            matches = list(CATALOG_ROAD_ADDRESS_RE.finditer(value))
+            if len(matches) != 1:
+                continue
+            candidate = _validated_address(value)
+            if candidate:
+                address = candidate
+                break
+        if not address:
+            continue
+        key = _compact(address)
+        if not key:
+            continue
+        found.setdefault(key, {
+            "name": name,
+            "address": address,
+            "source_locator": page.url,
+            "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR",
+        })
+    return found
+
+
 def _bounded_site_name(name: str, company: str) -> str:
     name = re.sub(r"\s+", " ", str(name or "")).strip(" -:：|")
     company_token = re.sub(r"\s+", "", company)
@@ -350,6 +412,8 @@ def discover(
         found = _structured_table_sites(company, page)
         if len(found) < 2:
             found = _structured_dom_sites(company, page)
+        if len(found) < 2:
+            found = _semantic_heading_sites(company, page)
         if len(found) < 2:
             found = _flattened_text_sites(company, page)
         if len(found) < 2:
