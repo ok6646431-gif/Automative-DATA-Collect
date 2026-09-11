@@ -3,125 +3,136 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_da6a66a660",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "환경",
-      "report_year": 2026,
-      "source_url": "https://www.kccworld.co.kr/esg/environmental.do",
-      "source_locator": "https://www.kccworld.co.kr/esg/environmental.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
-    },
-    {
-      "document_id": "AUTO_SUSTAINABILITY_2020",
+      "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2020_3",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2019_20년 지속가능경영보고서(국문)",
+      "title": "2020 sustainability report 국문",
       "report_year": 2020,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/d3aba716bf04122b051.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "source_url": "https://www.kkpc.com/download/?seq=4017",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "notes": "Nearest single-year official report DOM context + literal JavaScript call + statically reconstructed same-org GET form submission + streamed PDF magic verification.",
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_2021",
+      "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2021_2",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2020_21년 지속가능경영보고서(국문)",
+      "title": "2021 sustainability report 국문",
       "report_year": 2021,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/955d8658d0b46728404.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "source_url": "https://www.kkpc.com/download/?seq=5173",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "notes": "Nearest single-year official report DOM context + literal JavaScript call + statically reconstructed same-org GET form submission + streamed PDF magic verification.",
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_2022",
+      "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2022_1",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021_22년 지속가능경영보고서(국문)",
+      "title": "2022 sustainability report 국문",
       "report_year": 2022,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/5101b92f52b4e97978b.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "source_url": "https://www.kkpc.com/download/?seq=6252",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "notes": "Nearest single-year official report DOM context + literal JavaScript call + statically reconstructed same-org GET form submission + streamed PDF magic verification.",
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_2023",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_3",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022_23년 지속가능경영보고서(국문) (2)",
+      "title": "Kumho Petrochemical Sustainability Report 2023",
       "report_year": 2023,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/c538b8a9fdb471ebc0d.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN",
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+      "entity_alignment": "ALIGNED",
       "fallback_sources": [],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_2024",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_2",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024년 지속가능경영보고서_국문",
+      "title": "Kumho Petrochemical Sustainability Report 2024",
       "report_year": 2024,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/3540a621ca240d0ad0c.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202024.pdf?v=20250822",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [],
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+        }
+      ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_2025",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 KCC지속가능성보고서 국문",
+      "title": "Kumho Petrochemical Sustainability Report 2025",
       "report_year": 2025,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/27a0abb7b284f69a4b3.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
       "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
+      "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
-    },
-    {
-      "document_id": "AUTO_SUSTAINABILITY_2026",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2026 KCC 지속가능성보고서_KOR",
-      "report_year": 2026,
-      "source_url": "https://www.kccworld.co.kr/upload/boardQ/067f45cb6a5467c9513.pdf",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202025.pdf?v=20260729",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "FRESH_DISCOVERY_PRIMARY",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+        },
+        {
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+        }
+      ],
+      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY"
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
+      "source_key": "CORP_DOCS",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "year": 2026,
+      "verification_status": "SOURCE_VERIFIED",
+      "status": "NOT_PUBLISHED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "As of 2026-09-11, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://www.kkpc.com/kor/"
+    }
+  ],
   "discovery_scope": {
     "history_window": {
       "start_year": 2020,
@@ -144,5 +155,5 @@
       "end_year": 2026
     }
   },
-  "request_id": "kcc-3a433285-env-g0-20260911"
+  "request_id": "company-cf83fccf-env-g0-20260911"
 }

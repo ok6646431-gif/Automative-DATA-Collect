@@ -5,7 +5,7 @@
       "current_legal_name": "금호석유화학(주)",
       "company": {
         "schema_version": "1.0",
-        "request_id": "company-cf83fccf-env-g0-20260910",
+        "request_id": "company-cf83fccf-env-g0-20260911",
         "requested_company_name": "금호석유화학",
         "current_legal_name": "금호석유화학(주)",
         "current_legal_name_active_period": {
@@ -270,7 +270,7 @@
         "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
         "documents": [
           {
-            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2020_4",
+            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2020_3",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2020 sustainability report 국문",
             "report_year": 2020,
@@ -285,7 +285,7 @@
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
-            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2021_3",
+            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2021_2",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2021 sustainability report 국문",
             "report_year": 2021,
@@ -300,7 +300,7 @@
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
-            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2022_2",
+            "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2022_1",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2022 sustainability report 국문",
             "report_year": 2022,
@@ -315,7 +315,7 @@
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
-            "document_id": "AUTO_SUSTAINABILITY_2023",
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_3",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "Kumho Petrochemical Sustainability Report 2023",
             "report_year": 2023,
@@ -324,43 +324,60 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "ALIGNED",
             "fallback_sources": [],
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
-            "document_id": "AUTO_SUSTAINABILITY_2024",
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_2",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": "금호석유화학 지속가능경영보고서 2024",
+            "title": "Kumho Petrochemical Sustainability Report 2024",
             "report_year": 2024,
-            "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+            "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202024.pdf?v=20250822",
             "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "ALIGNED",
-            "fallback_sources": [],
+            "fallback_sources": [
+              {
+                "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+                "verification_status": "SOURCE_VERIFIED",
+                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+                "expected_extension": "pdf",
+                "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+              }
+            ],
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
-            "document_id": "AUTO_SUSTAINABILITY_2025",
+            "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": "금호석유화학 지속가능경영보고서 2025",
+            "title": "Kumho Petrochemical Sustainability Report 2025",
             "report_year": 2025,
             "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
             "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
             "expected_extension": "pdf",
             "verification_status": "VERIFIED",
             "importance": "CORE",
-            "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "ALIGNED",
             "fallback_sources": [
               {
-                "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+                "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202025.pdf?v=20260729",
                 "verification_status": "SOURCE_VERIFIED",
                 "source_role": "FRESH_DISCOVERY_PRIMARY",
+                "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+                "expected_extension": "pdf",
+                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+              },
+              {
+                "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+                "verification_status": "SOURCE_VERIFIED",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -379,7 +396,7 @@
             "status": "NOT_PUBLISHED",
             "severity": "LOW",
             "blocking": false,
-            "reason": "As of 2026-09-10, verified official report sources list reports through 2025, not 2026.",
+            "reason": "As of 2026-09-11, verified official report sources list reports through 2025, not 2026.",
             "source_locator": "https://www.kkpc.com/kor/"
           }
         ],
@@ -405,7 +422,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "company-cf83fccf-env-g0-20260910"
+        "request_id": "company-cf83fccf-env-g0-20260911"
       }
     },
     "00126566": {

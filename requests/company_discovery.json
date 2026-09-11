@@ -1,34 +1,27 @@
 {
   "schema_version": "1.0",
-  "request_id": "kcc-3a433285-env-g0-20260911",
-  "requested_company_name": "KCC",
-  "current_legal_name": "(주)케이씨씨",
+  "request_id": "company-cf83fccf-env-g0-20260911",
+  "requested_company_name": "금호석유화학",
+  "current_legal_name": "금호석유화학(주)",
   "current_legal_name_active_period": {
-    "start_year": 1958
+    "start_year": 1976
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "(주)케이씨씨 국내 사업장",
+    "label": "금호석유화학(주) 국내 사업장",
     "candidate_ids": [
-      "344-9b81de4a",
-      "39-4f9e49f4",
-      "2-15-079935ce",
-      "106-2ad2ca1c",
-      "4-100-f55a139f",
-      "8307-771e22ad",
-      "30-6b146dbf",
-      "4-19-a64c668f",
-      "764-d046cea8",
-      "135-d63bcfcd",
-      "161-6534152e",
-      "393-26-9f04e96e",
-      "6719-ce53f6e0",
-      "1527-334-0afbe03c",
-      "59-358b85ba",
-      "272-dbf9b181",
-      "119-04b48e48"
+      "64-2f07e032",
+      "260257-bf0bf857",
+      "latex-64-a19899bd",
+      "1-3-118-4296e225",
+      "2-331-80f8c70a",
+      "2-227-cb4c3d71",
+      "1-2-4651-dc093fa5",
+      "2-2-22384-81b1e632",
+      "10339-7676a45f",
+      "cnt-6-115-0348f593"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -36,21 +29,21 @@
   },
   "company_aliases": [
     {
-      "name": "KCC",
+      "name": "금호석유화학",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
       "active_period": {
-        "start_year": 1958
+        "start_year": 1976
       }
     },
     {
-      "name": "KCC Corporation",
+      "name": "KUMHO PETRO CHEMICAL CO.,LTD",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
       "active_period": {
-        "start_year": 1958
+        "start_year": 1976
       }
     }
   ],
@@ -58,248 +51,150 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "344-9b81de4a",
-      "site_name_raw": "서울 본사",
-      "address_raw": "서울특별시 서초구 사평대로 344",
+      "candidate_id": "64-2f07e032",
+      "site_name_raw": "울산고무공장",
+      "address_raw": "울산광역시 남구 상개로 64",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "39-4f9e49f4",
-      "site_name_raw": "김천공장",
-      "address_raw": "경상북도 김천시 어모면 산업단지로 39",
+      "candidate_id": "260257-bf0bf857",
+      "site_name_raw": "울산수지공장",
+      "address_raw": "울산광역시 남구 처용로 260-257",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "2-15-079935ce",
-      "site_name_raw": "대죽석고보드공장",
-      "address_raw": "충청남도 서산시 대산읍 대죽2로 15",
+      "candidate_id": "latex-64-a19899bd",
+      "site_name_raw": "울산 LATEX공장",
+      "address_raw": "울산광역시 남구 상개로64",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "106-2ad2ca1c",
-      "site_name_raw": "문막공장",
-      "address_raw": "강원도 원주시 문막읍 문막공단길 106",
+      "candidate_id": "1-3-118-4296e225",
+      "site_name_raw": "여수고무제1공장",
+      "address_raw": "전남 여수시 여수산단3로 118",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "4-100-f55a139f",
-      "site_name_raw": "안성공장",
-      "address_raw": "경기도 안성시 서운면 제4산단로 100",
+      "candidate_id": "2-331-80f8c70a",
+      "site_name_raw": "여수고무제2공장",
+      "address_raw": "전남 여수시 산단중앙로 331",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "8307-771e22ad",
-      "site_name_raw": "여천공장",
-      "address_raw": "전남광주통합특별시 여수시 상암로 830-7",
+      "candidate_id": "2-227-cb4c3d71",
+      "site_name_raw": "여수정밀화학공장",
+      "address_raw": "전남 여수시 여수산단2로 227",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "30-6b146dbf",
-      "site_name_raw": "울산공장",
-      "address_raw": "울산광역시 동구 방어진순환도로 30",
+      "candidate_id": "1-2-4651-dc093fa5",
+      "site_name_raw": "여수제1에너지",
+      "address_raw": "전남 여수시 여수산단2로 46-51",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "4-19-a64c668f",
-      "site_name_raw": "전주건재공장",
-      "address_raw": "전라북도 완주군 봉동읍 완주산단4로 19",
+      "candidate_id": "2-2-22384-81b1e632",
+      "site_name_raw": "여수제2에너지",
+      "address_raw": "전남 여수시 여수산단2로 223-84",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "764-d046cea8",
-      "site_name_raw": "전주페인트공장",
-      "address_raw": "전라북도 완주군 봉동읍 과학로 764",
+      "candidate_id": "10339-7676a45f",
+      "site_name_raw": "예산건자재공장",
+      "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "135-d63bcfcd",
-      "site_name_raw": "강릉 사무소",
-      "address_raw": "강원도 강릉시 연곡면 연주로 135",
+      "candidate_id": "cnt-6-115-0348f593",
+      "site_name_raw": "율촌CNT공장",
+      "address_raw": "전남 여수시 율촌면 율촌산단6로 115",
       "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
         "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "161-6534152e",
-      "site_name_raw": "제주 사무소",
-      "address_raw": "제주 제주시 연북로 161",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "393-26-9f04e96e",
-      "site_name_raw": "인천물류센터",
-      "address_raw": "인천광역시 서해구 중봉대로 393번길 26",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "6719-ce53f6e0",
-      "site_name_raw": "당진물류센터",
-      "address_raw": "충청남도 당진시 신평면 서해로 6719",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "1527-334-0afbe03c",
-      "site_name_raw": "대전물류센터",
-      "address_raw": "대전광역시 대덕구 대덕대로1527번길 334",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "59-358b85ba",
-      "site_name_raw": "광주물류센터",
-      "address_raw": "전남광주통합특별시 광산구 원두로 59",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "272-dbf9b181",
-      "site_name_raw": "칠곡물류센터",
-      "address_raw": "경상북도 칠곡군 지천면 금호로 272",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "119-04b48e48",
-      "site_name_raw": "울산물류센터",
-      "address_raw": "울산광역시 울주군 두서면 활천산업로 119",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105271",
-      "source_value_raw": "(주)케이씨씨 / KCC Corporation / establishment 1958-08-12 / website www.kccworld.co.kr",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
+      "source_value_raw": "금호석유화학(주) / KUMHO PETRO CHEMICAL CO.,LTD / establishment 1976-12-10 / website www.kkpc.com",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -362,6 +257,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 1958
+    "start_year": 1976
   }
 }
