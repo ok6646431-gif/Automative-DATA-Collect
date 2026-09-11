@@ -5,7 +5,7 @@
       "current_legal_name": "금호석유화학(주)",
       "company": {
         "schema_version": "1.0",
-        "request_id": "company-cf83fccf-env-g0-20260911",
+        "request_id": "company-cf83fccf-env-g0-20260912",
         "requested_company_name": "금호석유화학",
         "current_legal_name": "금호석유화학(주)",
         "current_legal_name_active_period": {
@@ -345,7 +345,7 @@
               {
                 "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -356,7 +356,7 @@
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": "Kumho Petrochemical Sustainability Report 2025",
+            "title": "금호석유화학 지속가능경영보고서 2025",
             "report_year": 2025,
             "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
             "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
@@ -396,7 +396,7 @@
             "status": "NOT_PUBLISHED",
             "severity": "LOW",
             "blocking": false,
-            "reason": "As of 2026-09-11, verified official report sources list reports through 2025, not 2026.",
+            "reason": "As of 2026-09-12, verified official report sources list reports through 2025, not 2026.",
             "source_locator": "https://www.kkpc.com/kor/"
           }
         ],
@@ -422,7 +422,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "company-cf83fccf-env-g0-20260911"
+        "request_id": "company-cf83fccf-env-g0-20260912"
       }
     },
     "00126566": {
