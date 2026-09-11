@@ -1,4 +1,4 @@
 {
-  "company_name": "한화에어로스페이스",
-  "rerun_reason": "representative regression 2 after KCC final validation; unchanged common code after Kumho pass"
+  "company_name": "효성티앤씨",
+  "rerun_reason": "representative regression 3 after KCC final validation; unchanged common production code after Kumho and Hanwha passes"
 }
