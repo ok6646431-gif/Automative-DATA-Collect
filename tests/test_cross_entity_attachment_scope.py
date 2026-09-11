@@ -20,6 +20,10 @@ def write_csv(path: Path, rows):
         w=csv.DictWriter(f,fieldnames=fields); w.writeheader(); w.writerows(rows)
 
 
+def valid_pdf_bytes(label: bytes) -> bytes:
+    return b'%PDF-1.4\n' + label + b'\n' + b'0' * 1200 + b'\n%%EOF'
+
+
 class CrossEntityAttachmentScopeTests(unittest.TestCase):
     def scope(self):
         return {
@@ -71,8 +75,8 @@ class CrossEntityAttachmentScopeTests(unittest.TestCase):
             raw.mkdir(parents=True); archive.mkdir()
             (package/'Company_Profile.json').write_text(json.dumps({'company_display_name':'알파주식회사'}),encoding='utf-8')
             (package/'Requested_Scope.json').write_text(json.dumps(self.scope(),ensure_ascii=False),encoding='utf-8')
-            foreign=raw/'foreign.pdf'; foreign.write_bytes(b'%PDF-foreign%%EOF')
-            local=raw/'local.pdf'; local.write_bytes(b'%PDF-local%%EOF')
+            foreign=raw/'foreign.pdf'; foreign.write_bytes(valid_pdf_bytes(b'foreign'))
+            local=raw/'local.pdf'; local.write_bytes(valid_pdf_bytes(b'local'))
             write_csv(env/'discovery.csv',[])
             rows=[
                 {'year':'2024','compId':'SITE-A','compNm':'알파공장','file_id':'F1','original_filename':'2024 알파홀딩스 지속가능경영보고서.pdf','stored_path':str(foreign.relative_to(package)),'collection_status':'DOWNLOADED','sha256':'foreign','section_id':'inquiry26','section_title':'환경(지속가능)보고서 발간 현황','document_category':'OTHER_ENVINFO_EVIDENCE'},
