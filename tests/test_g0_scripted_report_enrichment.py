@@ -6,6 +6,7 @@ from orchestrator.g0_data_attr_report_recovery import (
     reconstruct_data_targets,
 )
 from orchestrator.g0_generic_js_report_recovery import (
+    _script_texts,
     candidates_from_generic_js_page,
     extract_direct_literal_targets,
     extract_literal_calls,
@@ -13,6 +14,7 @@ from orchestrator.g0_generic_js_report_recovery import (
     reconstruct_targets,
 )
 from orchestrator.g0_scripted_report_enrichment import (
+    _page_download_prefixes,
     candidates_from_scripted_page,
     extract_download_prefixes,
 )
@@ -39,8 +41,10 @@ class FakeResponse:
 class FakeHttp:
     def __init__(self):
         self.audit = []
+        self.get_calls = []
 
     def get(self, url, **kwargs):
+        self.get_calls.append(url)
         if url.endswith("/js/download.js"):
             return FakeResponse(
                 url,
@@ -98,6 +102,25 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
     def test_extract_download_prefixes_from_same_function_contract(self):
         script = 'function fileDownload(param) { let url = getContextPath() + "/attach?et=" + param; window.location.href = url; }'
         self.assertEqual(extract_download_prefixes(script), ["/attach?et="])
+
+    def test_same_external_script_is_fetched_once_per_http_instance(self):
+        http = FakeHttp()
+        scripted_html = '<script src="/js/download.js"></script><a onclick="fileDownload(\"x\")">x</a>'
+        _page_download_prefixes(http, "https://official.example/esg/report.do", scripted_html)
+        _page_download_prefixes(http, "https://official.example/esg/other.do", scripted_html)
+        self.assertEqual(
+            http.get_calls.count("https://official.example/js/download.js"),
+            1,
+        )
+
+        generic_http = FakeHttp()
+        generic_html = '<script src="/js/generic-download.js"></script>'
+        _script_texts(generic_http, "https://official.example/esg/report.do", generic_html)
+        _script_texts(generic_http, "https://official.example/esg/other.do", generic_html)
+        self.assertEqual(
+            generic_http.get_calls.count("https://official.example/js/generic-download.js"),
+            1,
+        )
 
     def test_scripted_report_requires_report_semantics_and_pdf_bytes(self):
         html = '''

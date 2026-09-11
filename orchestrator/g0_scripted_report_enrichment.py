@@ -79,14 +79,23 @@ def _page_download_prefixes(http: Any, page_url: str, html: str) -> List[str]:
     for script in soup.find_all("script"):
         if not script.get("src"):
             prefixes.extend(extract_download_prefixes(script.string or script.get_text() or ""))
+    cache = getattr(http, "_g0_same_host_script_text_cache", None)
+    if cache is None:
+        cache = {}
+        setattr(http, "_g0_same_host_script_text_cache", cache)
     for script in soup.find_all("script", src=True)[:30]:
         url = urljoin(page_url, script["src"])
         if base._host(url) != page_host:
             continue
-        response = http.get(url)
-        if not response or response.status_code >= 400:
-            continue
-        prefixes.extend(extract_download_prefixes(response.text))
+        if url in cache:
+            script_text = cache[url]
+        else:
+            response = http.get(url)
+            if not response or response.status_code >= 400:
+                continue
+            script_text = response.text
+            cache[url] = script_text
+        prefixes.extend(extract_download_prefixes(script_text))
         if prefixes:
             break
     return _dedupe(prefixes)

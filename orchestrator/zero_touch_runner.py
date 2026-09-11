@@ -227,11 +227,17 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
         discovery = g0_rename_chronology_recovery.enrich(discovery, audit)
 
     documents = g0_report_enrichment.enrich(discovery, documents, audit)
-    documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
-    documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
+
+    # Bounded parsers get first use of the live-network budget.  They inspect already
+    # verified report-index pages and can resolve arbitrary static JS/data-attribute
+    # controls without crawling the wider corporate site.  Broad navigation remains a
+    # fallback, followed by a second generic pass for any new report pages it reveals.
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
     documents = g0_plain_href_report_recovery.enrich(discovery, documents, audit)
+    documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
+    documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
+    documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_report_entity_policy.normalize(discovery, documents, audit)
     documents = g0_report_finalizer.finalize(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(

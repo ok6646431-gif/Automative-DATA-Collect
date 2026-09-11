@@ -270,14 +270,25 @@ def _script_texts(http: Any, page_url: str, html: str) -> List[Tuple[str, str]]:
             text = script.string or script.get_text() or ""
             if text.strip():
                 out.append((page_url, text))
+    cache = getattr(http, "_g0_same_host_script_text_cache", None)
+    if cache is None:
+        cache = {}
+        setattr(http, "_g0_same_host_script_text_cache", cache)
     for script in soup.find_all("script", src=True)[:50]:
         url = urljoin(page_url, str(script.get("src") or ""))
         if base._host(url) != host:
             continue
-        response = http.get(url)
-        if not response or response.status_code >= 400:
-            continue
-        out.append((response.url or url, response.text))
+        if url in cache:
+            script_text = cache[url]
+            final_url = url
+        else:
+            response = http.get(url)
+            if not response or response.status_code >= 400:
+                continue
+            script_text = response.text
+            final_url = response.url or url
+            cache[url] = script_text
+        out.append((final_url, script_text))
     return out
 
 
