@@ -281,6 +281,39 @@ def render_url_pdf(url,pdf_path):
     except Exception as exc: return False,f'{type(exc).__name__}: {exc}'
 
 
+def _declared_pdf_attachment(att, src):
+    original=str(att.get('original_filename') or Path(src).name)
+    return Path(original).suffix.lower()=='.pdf' or Path(src).suffix.lower()=='.pdf'
+
+
+def _raw_archive_path(package_root, src):
+    """Return the deterministic system-layer location for an output source file."""
+    root=Path(package_root).resolve(); src=Path(src).resolve(); output=(root/'output').resolve()
+    try:
+        rel=src.relative_to(output)
+    except ValueError:
+        return ''
+    return (Path(SYSTEM_ROOT)/rel).as_posix()
+
+
+def _write_invalid_pdf_notice(package_root, src, directory, year, original_filename):
+    directory=Path(directory); directory.mkdir(parents=True,exist_ok=True)
+    original=str(original_filename or Path(src).name)
+    target=directory/f'{safe(year)}_{safe(Path(original).stem)}_원본파일이상.txt'
+    raw_path=_raw_archive_path(package_root,src) or '90_시스템원본에서 원본 경로를 확인하십시오.'
+    target.write_text(
+        'ENV-INFO 원본 첨부파일 안내\n\n'
+        '이 첨부파일은 원본에서 PDF 확장자로 제공되었으나 PDF 구조 검증을 통과하지 못했습니다.\n'
+        '손상되었거나 PDF가 아닌 응답을 PDF 파일명으로 제공한 경우일 수 있으므로 사용자용 PDF로 가장하지 않고 제외했습니다.\n'
+        '원본 바이트는 수정하지 않았으며 시스템 원본 영역에 그대로 보존됩니다.\n\n'
+        f'원본 파일명: {original}\n'
+        f'원본 보존 경로: {raw_path}\n'
+        '조치 상태: REVIEW_REQUIRED\n',
+        encoding='utf-8',
+    )
+    return target
+
+
 def build_envinfo_user(package_root,archive_root,scope,labels):
     root=Path(package_root); env=root/'output'/'ENVINFO'; user=Path(archive_root)/USER_ROOT/'03_환경정보공개시스템'; created=[]; failures=[]; exclusions=[]
     profile=read_json(root/'Company_Profile.json',{}) or {}; tokens=target_site_tokens(profile)
@@ -316,19 +349,27 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
         src=root/str(att.get('stored_path') or '')
         if not src.exists(): continue
         raw_name=att.get('compNm') or labels.get(('ENVINFO',comp),comp); display=next((name for name,tok in tokens if tok and tok in normalize_site_name(raw_name,profile)),raw_name)
-        year=str(att.get('year') or '연도미상')
-        created.append(unique_copy(src,user/safe(display)/'첨부자료',f'{year}_{att.get("original_filename") or src.name}'))
+        year=str(att.get('year') or '연도미상'); original=str(att.get('original_filename') or src.name)
+        attachment_dir=user/safe(display)/'첨부자료'
+        if _declared_pdf_attachment(att,src) and not valid_pdf(src):
+            notice=_write_invalid_pdf_notice(root,src,attachment_dir,year,original); created.append(notice)
+            failures.append({
+                'site':display,
+                'year':year,
+                'issue_type':'ENVINFO_ATTACHMENT_INVALID_PDF',
+                'reason':f'원본 첨부파일이 PDF 구조 검증에 실패하여 사용자 PDF에서 제외됨: {original}',
+            })
+            continue
+        created.append(unique_copy(src,attachment_dir,f'{year}_{original}'))
     return created,failures,exclusions
 
 
 def promote_envinfo_references(package_root,archive_root,scope,company_name):
     """Expose high-value ENV-INFO attachments in the user folders they belong to.
 
-    ENV-INFO remains the provenance: every file is still preserved under
-    03_환경정보공개시스템/첨부자료.  This function only adds a user-facing copy when the
-    disclosure section/category itself identifies the attachment as a sustainability
-    report or an environmental/chemical-management policy.  It does not infer a
-    document class from environmental performance content.
+    ENV-INFO remains the provenance: every healthy file is still exposed under
+    03_환경정보공개시스템/첨부자료. Malformed PDF attachments remain only in the raw
+    system layer with a user-facing notice; they are never promoted as reports/policy.
     """
     root=Path(package_root); env=root/'output'/'ENVINFO'; user=Path(archive_root)/USER_ROOT; created=[]
     requested_scope=read_json(root/'Requested_Scope.json',{}) or {}
@@ -338,6 +379,8 @@ def promote_envinfo_references(package_root,archive_root,scope,company_name):
         if match_envinfo_attachment(att,requested_scope): continue
         src=root/str(att.get('stored_path') or '')
         if not src.exists(): continue
+        if _declared_pdf_attachment(att,src) and not valid_pdf(src):
+            continue
         section_id=str(att.get('section_id') or '').strip().lower()
         section_title=str(att.get('section_title') or '')
         category=str(att.get('document_category') or '')
@@ -458,11 +501,11 @@ def write_user_indexes(package_root,archive_root,documents,env_failures):
     if rr:
         review_rows += [{k:(json.dumps(v,ensure_ascii=False) if isinstance(v,(dict,list)) else v) for k,v in r.items()} for r in rr if isinstance(r,dict)]
     if env_failures:
-        review_rows += [{'issue_type':'ENVINFO_PDF_RENDER_FAILED','object_key':f"{x['site']} {x['year']}",'severity':'MEDIUM','status':'REVIEW_REQUIRED','evidence':x['reason']} for x in env_failures]
+        review_rows += [{'issue_type':x.get('issue_type') or 'ENVINFO_PDF_RENDER_FAILED','object_key':f"{x['site']} {x['year']}",'severity':'MEDIUM','status':'REVIEW_REQUIRED','evidence':x['reason']} for x in env_failures]
     dict_rows_to_xlsx(idx/'확인필요_REVIEW_REQUIRED.xlsx',[('검토필요',review_rows)])
     write_csv(idx/'사용자자료_목록.csv',file_rows,['구분','파일명','상대경로','용량_MB'])
     (idx/'README_먼저읽기.txt').write_text(
-        'Archive v2 사용 안내\n\n1) 평소에는 01_사용자자료만 확인하면 됩니다.\n2) HTML/JSON/JSONL/실행로그 등 재현·개발용 원본은 90_시스템원본에 분리했습니다.\n3) 지속가능경영보고서처럼 연도별 1개인 문서는 연도 폴더 없이 한 폴더에 파일명으로 연도를 표시합니다.\n4) ENV-INFO가 공식 첨부파일로 제공한 지속가능경영보고서·정책 자료는 원래 03 폴더에 보존하면서 04/06에도 사용자 편의를 위해 복사해 표시합니다.\n5) 00_자료목록의 전체자료목록.xlsx와 확인필요_REVIEW_REQUIRED.xlsx를 먼저 확인하십시오.\n',encoding='utf-8')
+        'Archive v2 사용 안내\n\n1) 평소에는 01_사용자자료만 확인하면 됩니다.\n2) HTML/JSON/JSONL/실행로그 등 재현·개발용 원본은 90_시스템원본에 분리했습니다.\n3) 지속가능경영보고서처럼 연도별 1개인 문서는 연도 폴더 없이 한 폴더에 파일명으로 연도를 표시합니다.\n4) ENV-INFO가 공식 첨부파일로 제공한 지속가능경영보고서·정책 자료는 원래 03 폴더에 보존하면서 04/06에도 사용자 편의를 위해 복사해 표시합니다.\n5) PDF 확장자 원본이 구조 검증에 실패한 경우 사용자 폴더에는 원본 대신 안내 TXT를 두고, 원본 바이트는 90_시스템원본에 그대로 보존합니다.\n6) 00_자료목록의 전체자료목록.xlsx와 확인필요_REVIEW_REQUIRED.xlsx를 먼저 확인하십시오.\n',encoding='utf-8')
     return file_rows
 
 
