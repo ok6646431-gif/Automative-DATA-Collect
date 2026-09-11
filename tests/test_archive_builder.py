@@ -36,7 +36,8 @@ class ArchiveBuilderTests(unittest.TestCase):
 
             env=root/"output"/"ENVINFO"; (env/"raw_attachments"/"2024"/"C1").mkdir(parents=True)
             att=env/"raw_attachments"/"2024"/"C1"/"조직도.png"; att.write_bytes(b"PNGDATA")
-            env_report=env/"raw_attachments"/"2024"/"C1"/"지속가능경영보고서.pdf"; env_report.write_bytes(b"%PDF-env-report")
+            env_report=env/"raw_attachments"/"2024"/"C1"/"지속가능경영보고서.pdf"
+            env_report.write_bytes(b"%PDF-1.4\n" + b"0"*1200 + b"\n%%EOF")
             write_csv(env/"attachment_index.csv",[{
                 "year":"2024","compId":"C1","compNm":"테스트공장","section_id":"inquiry10","section_title":"전담조직","file_id":"F1","original_filename":"조직도.png",
                 "stored_path":str(att.relative_to(root)),"bytes":str(att.stat().st_size),"sha256":"dummy","content_type":"image/png","importance":"CORE",
