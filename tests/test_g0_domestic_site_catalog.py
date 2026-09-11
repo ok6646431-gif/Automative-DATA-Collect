@@ -267,5 +267,52 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         )
 
 
+    def test_flattened_fallback_rejects_prose_and_table_fragments_before_real_catalog(self):
+        noisy = Page(
+            "https://official.example/esg/overview",
+            (
+                "국내사업장 당사는 여러 지역에 보유한 공장 서울특별시 서초구 산업로 10 "
+                "단위: 백만원) 사업장 전북 익산시 산업로 20 "
+                "백만원) 사업장 충청남도 서산시 대산읍 산업2로 30"
+            ),
+            "",
+            200,
+        )
+        real = Page(
+            "https://official.example/company/global-network",
+            (
+                "글로벌네트워크 생산공장 "
+                "서울 본사 서울특별시 서초구 산업로 10 "
+                "익산공장 전북 익산시 산업로 20 "
+                "대산 제2공장 충청남도 서산시 대산읍 산업2로 30"
+            ),
+            "",
+            200,
+        )
+        result = catalog.discover("예시소재", [noisy, real])
+        self.assertIsNotNone(result)
+        sites, scope, unresolved = result
+        self.assertEqual(
+            {site["site_name_raw"] for site in sites},
+            {"서울 본사", "익산공장", "제2공장"},
+        )
+        self.assertTrue(all(site["source_locator"] == real.url for site in sites))
+        self.assertTrue(all(
+            site["discovery_evidence"]["extraction_contract"] == "FLATTENED_TEXT_FALLBACK"
+            for site in sites
+        ))
+        self.assertEqual(scope["mode"], "SITE_SET")
+        self.assertEqual(unresolved, [])
+
+    def test_site_name_quality_guard_is_company_agnostic_and_preserves_real_labels(self):
+        self.assertEqual(catalog._operational_name("보유한 공장", "예시회사"), "")
+        self.assertEqual(catalog._operational_name("운영하는 사업장", "예시회사"), "")
+        self.assertEqual(catalog._operational_name("백만원) 사업장", "예시회사"), "")
+        self.assertEqual(catalog._operational_name("대구 공장", "예시회사"), "대구 공장")
+        self.assertEqual(catalog._operational_name("대전 사업장", "예시회사"), "대전 사업장")
+        self.assertEqual(catalog._operational_name("판교 R&D 캠퍼스", "예시회사"), "판교 R&D 캠퍼스")
+        self.assertEqual(catalog._operational_name("대한 공장", "대한"), "대한 공장")
+
+
 if __name__ == "__main__":
     unittest.main()

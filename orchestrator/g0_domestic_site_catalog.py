@@ -122,6 +122,65 @@ def _non_site_ui_name(value: str) -> bool:
     return any(re.sub(r"\s+", "", term).casefold() in compact for term in NON_SITE_UI_TERMS)
 
 
+# Flattened-text fallbacks are intentionally weaker than structured cards/tables.  A
+# nearby sentence fragment can happen to end in an operational suffix (for example a
+# prose phrase such as "...한 공장"), so suffix matching alone is not enough to promote
+# it as a facility name.  These guards are lexical/grammatical and company-agnostic.
+GENERIC_BARE_SITE_LABELS = {
+    "공장", "사업장", "센터", "영업소", "사무소", "캠퍼스",
+    "주요공장", "주요사업장", "국내공장", "국내사업장",
+}
+DESCRIPTIVE_SITE_PREFIX_RE = re.compile(
+    r"(?:^|\s)[가-힣]+(?:하는|한|있는|없는|되는|된|중인|하던|했던)\s*$"
+)
+ACCOUNTING_SITE_CONTEXT_RE = re.compile(
+    r"(?:단위|금액|매출|매출액|자산|백만원|천만원|억원|만원|천원|원)\)?\s*$",
+    re.I,
+)
+
+
+def _prose_like_site_name(value: str, company: str) -> bool:
+    """Reject sentence/table fragments that only *look* like facility labels.
+
+    This is deliberately not a company allow-list.  It only rejects shapes that cannot
+    safely be treated as a proper facility label in a flattened-text fallback.  A label
+    equal to the company name plus a separated suffix remains valid even when the legal
+    name itself happens to end with an adnominal-looking Korean syllable.
+    """
+    name = re.sub(r"\s+", " ", str(value or "")).strip(" -:：|")
+    compact = re.sub(r"\s+", "", name)
+    if compact in GENERIC_BARE_SITE_LABELS:
+        return True
+
+    # A proper label may contain balanced corporate parentheses such as ``(주)`` but a
+    # dangling closing bracket is a strong sign that the token leaked from a table unit
+    # or preceding prose, e.g. ``백만원) 사업장``.
+    for opening, closing in (("(", ")"), ("[", "]"), ("{", "}")):
+        if name.count(closing) > name.count(opening):
+            return True
+
+    suffix = next((s for s in OPERATIONAL_SUFFIXES if name.endswith(s)), "")
+    if not suffix:
+        return False
+    prefix = name[:-len(suffix)].strip()
+    if not prefix:
+        return compact in GENERIC_BARE_SITE_LABELS
+
+    company_compact = re.sub(r"[^0-9A-Za-z가-힣]+", "", str(company or "")).casefold()
+    prefix_compact = re.sub(r"[^0-9A-Za-z가-힣]+", "", prefix).casefold()
+    if company_compact and prefix_compact == company_compact:
+        return False
+
+    if ACCOUNTING_SITE_CONTEXT_RE.search(prefix):
+        return True
+
+    # When the suffix is written as a separate word, an immediately preceding Korean
+    # adnominal form is prose ("보유한 공장", "운영하는 사업장"), not a site label.
+    if re.search(r"\s" + re.escape(suffix) + r"$", name) and DESCRIPTIVE_SITE_PREFIX_RE.search(prefix):
+        return True
+    return False
+
+
 def _operational_name(value: str, company: str) -> str:
     """Accept explicit first-party facility labels without requiring the legal name.
 
@@ -134,7 +193,7 @@ def _operational_name(value: str, company: str) -> str:
     name = re.sub(r"\s+", " ", str(value or "")).strip(" -:：|")
     if not name or not any(name.endswith(suffix) for suffix in OPERATIONAL_SUFFIXES):
         return ""
-    if _non_site_ui_name(name):
+    if _non_site_ui_name(name) or _prose_like_site_name(name, company):
         return ""
     return name
 
