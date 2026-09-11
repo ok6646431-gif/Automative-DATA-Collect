@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "discovery_status": "PARTIAL",
+  "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
       "document_id": "AUTO_ENVIRONMENT_PAGE_da6a66a660",
@@ -16,6 +16,58 @@
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
+      "document_id": "AUTO_SUSTAINABILITY_2020",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2019_20년 지속가능경영보고서(국문)",
+      "report_year": 2020,
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/d3aba716bf04122b051.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2021",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2020_21년 지속가능경영보고서(국문)",
+      "report_year": 2021,
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/955d8658d0b46728404.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2022",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2021_22년 지속가능경영보고서(국문)",
+      "report_year": 2022,
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/5101b92f52b4e97978b.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2023",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2022_23년 지속가능경영보고서(국문) (2)",
+      "report_year": 2023,
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/c538b8a9fdb471ebc0d.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
+    },
+    {
       "document_id": "AUTO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
       "title": "2024년 지속가능경영보고서_국문",
@@ -26,7 +78,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2025",
@@ -39,7 +93,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2026",
@@ -52,59 +108,12 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     }
   ],
-  "gaps": [
-    {
-      "gap_id": "AUTO_SUSTAINABILITY_2020_UNRESOLVED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2020,
-      "verification_status": "UNVERIFIED",
-      "status": "DISCOVERY_GAP",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-    },
-    {
-      "gap_id": "AUTO_SUSTAINABILITY_2021_UNRESOLVED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2021,
-      "verification_status": "UNVERIFIED",
-      "status": "DISCOVERY_GAP",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-    },
-    {
-      "gap_id": "AUTO_SUSTAINABILITY_2022_UNRESOLVED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2022,
-      "verification_status": "UNVERIFIED",
-      "status": "DISCOVERY_GAP",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-    },
-    {
-      "gap_id": "AUTO_SUSTAINABILITY_2023_UNRESOLVED",
-      "source_key": "CORP_DOCS",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2023,
-      "verification_status": "UNVERIFIED",
-      "status": "DISCOVERY_GAP",
-      "severity": "MEDIUM",
-      "blocking": true,
-      "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-    }
-  ],
+  "gaps": [],
   "discovery_scope": {
     "history_window": {
       "start_year": 2020,

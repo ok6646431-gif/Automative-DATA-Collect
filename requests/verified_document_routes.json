@@ -1275,10 +1275,23 @@
           "mode": "SITE_SET",
           "label": "(주)케이씨씨 국내 사업장",
           "candidate_ids": [
-            "344-9c27d082",
-            "1-a18d5ba0",
-            "2-15-b028bf7a",
-            "3-12-ad5647e0"
+            "344-9b81de4a",
+            "39-4f9e49f4",
+            "2-15-079935ce",
+            "106-2ad2ca1c",
+            "4-100-f55a139f",
+            "8307-771e22ad",
+            "30-6b146dbf",
+            "4-19-a64c668f",
+            "764-d046cea8",
+            "135-d63bcfcd",
+            "161-6534152e",
+            "393-26-9f04e96e",
+            "6719-ce53f6e0",
+            "1527-334-0afbe03c",
+            "59-358b85ba",
+            "272-dbf9b181",
+            "119-04b48e48"
           ],
           "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
           "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -1308,59 +1321,241 @@
         "corporate_restructuring_evidence": [],
         "domestic_site_candidates": [
           {
-            "candidate_id": "344-9c27d082",
-            "site_name_raw": "보유한 공장",
+            "candidate_id": "344-9b81de4a",
+            "site_name_raw": "서울 본사",
             "address_raw": "서울특별시 서초구 사평대로 344",
             "business_unit_raw": "official domestic-site catalog",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
             "identity_status": "CONFIRMED",
             "verification_state": "VERIFIED",
             "discovery_evidence": {
               "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
-              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
             }
           },
           {
-            "candidate_id": "1-a18d5ba0",
-            "site_name_raw": "백만원) 사업장",
-            "address_raw": "전북 익산시 석암로 1",
+            "candidate_id": "39-4f9e49f4",
+            "site_name_raw": "김천공장",
+            "address_raw": "경상북도 김천시 어모면 산업단지로 39",
             "business_unit_raw": "official domestic-site catalog",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
             "identity_status": "CONFIRMED",
             "verification_state": "VERIFIED",
             "discovery_evidence": {
               "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
-              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
             }
           },
           {
-            "candidate_id": "2-15-b028bf7a",
-            "site_name_raw": "백만원) 사업장",
+            "candidate_id": "2-15-079935ce",
+            "site_name_raw": "대죽석고보드공장",
             "address_raw": "충청남도 서산시 대산읍 대죽2로 15",
             "business_unit_raw": "official domestic-site catalog",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
             "identity_status": "CONFIRMED",
             "verification_state": "VERIFIED",
             "discovery_evidence": {
               "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
-              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
             }
           },
           {
-            "candidate_id": "3-12-ad5647e0",
-            "site_name_raw": "백만원) 사업장",
-            "address_raw": "울산시 울주군 온산읍 화산3길 12",
+            "candidate_id": "106-2ad2ca1c",
+            "site_name_raw": "문막공장",
+            "address_raw": "강원도 원주시 문막읍 문막공단길 106",
             "business_unit_raw": "official domestic-site catalog",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
             "identity_status": "CONFIRMED",
             "verification_state": "VERIFIED",
             "discovery_evidence": {
               "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-              "catalog_page": "https://www.kccworld.co.kr/esg/sustainability.do",
-              "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "4-100-f55a139f",
+            "site_name_raw": "안성공장",
+            "address_raw": "경기도 안성시 서운면 제4산단로 100",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "8307-771e22ad",
+            "site_name_raw": "여천공장",
+            "address_raw": "전남광주통합특별시 여수시 상암로 830-7",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "30-6b146dbf",
+            "site_name_raw": "울산공장",
+            "address_raw": "울산광역시 동구 방어진순환도로 30",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "4-19-a64c668f",
+            "site_name_raw": "전주건재공장",
+            "address_raw": "전라북도 완주군 봉동읍 완주산단4로 19",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "764-d046cea8",
+            "site_name_raw": "전주페인트공장",
+            "address_raw": "전라북도 완주군 봉동읍 과학로 764",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "135-d63bcfcd",
+            "site_name_raw": "강릉 사무소",
+            "address_raw": "강원도 강릉시 연곡면 연주로 135",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "161-6534152e",
+            "site_name_raw": "제주 사무소",
+            "address_raw": "제주 제주시 연북로 161",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "393-26-9f04e96e",
+            "site_name_raw": "인천물류센터",
+            "address_raw": "인천광역시 서해구 중봉대로 393번길 26",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "6719-ce53f6e0",
+            "site_name_raw": "당진물류센터",
+            "address_raw": "충청남도 당진시 신평면 서해로 6719",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "1527-334-0afbe03c",
+            "site_name_raw": "대전물류센터",
+            "address_raw": "대전광역시 대덕구 대덕대로1527번길 334",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "59-358b85ba",
+            "site_name_raw": "광주물류센터",
+            "address_raw": "전남광주통합특별시 광산구 원두로 59",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "272-dbf9b181",
+            "site_name_raw": "칠곡물류센터",
+            "address_raw": "경상북도 칠곡군 지천면 금호로 272",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "119-04b48e48",
+            "site_name_raw": "울산물류센터",
+            "address_raw": "울산광역시 울주군 두서면 활천산업로 119",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kccworld.co.kr/about-kcc/network.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kccworld.co.kr/about-kcc/network.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
             }
           }
         ],
@@ -1435,7 +1630,7 @@
       },
       "document_evidence": {
         "schema_version": "1.0",
-        "discovery_status": "PARTIAL",
+        "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
         "documents": [
           {
             "document_id": "AUTO_ENVIRONMENT_PAGE_da6a66a660",
@@ -1451,6 +1646,58 @@
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
+            "document_id": "AUTO_SUSTAINABILITY_2020",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2019_20년 지속가능경영보고서(국문)",
+            "report_year": 2020,
+            "source_url": "https://www.kccworld.co.kr/upload/boardQ/d3aba716bf04122b051.pdf",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "entity_alignment": "UNKNOWN"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2021",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2020_21년 지속가능경영보고서(국문)",
+            "report_year": 2021,
+            "source_url": "https://www.kccworld.co.kr/upload/boardQ/955d8658d0b46728404.pdf",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "entity_alignment": "UNKNOWN"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2022",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2021_22년 지속가능경영보고서(국문)",
+            "report_year": 2022,
+            "source_url": "https://www.kccworld.co.kr/upload/boardQ/5101b92f52b4e97978b.pdf",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "entity_alignment": "UNKNOWN"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2023",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2022_23년 지속가능경영보고서(국문) (2)",
+            "report_year": 2023,
+            "source_url": "https://www.kccworld.co.kr/upload/boardQ/c538b8a9fdb471ebc0d.pdf",
+            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "entity_alignment": "UNKNOWN"
+          },
+          {
             "document_id": "AUTO_SUSTAINABILITY_2024",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2024년 지속가능경영보고서_국문",
@@ -1461,7 +1708,9 @@
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
             "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-            "entity_alignment": "UNKNOWN"
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2025",
@@ -1474,7 +1723,9 @@
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
             "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-            "entity_alignment": "UNKNOWN"
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_2026",
@@ -1487,59 +1738,12 @@
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
             "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-            "entity_alignment": "UNKNOWN"
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           }
         ],
-        "gaps": [
-          {
-            "gap_id": "AUTO_SUSTAINABILITY_2020_UNRESOLVED",
-            "source_key": "CORP_DOCS",
-            "document_type": "SUSTAINABILITY_REPORT",
-            "year": 2020,
-            "verification_status": "UNVERIFIED",
-            "status": "DISCOVERY_GAP",
-            "severity": "MEDIUM",
-            "blocking": true,
-            "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-          },
-          {
-            "gap_id": "AUTO_SUSTAINABILITY_2021_UNRESOLVED",
-            "source_key": "CORP_DOCS",
-            "document_type": "SUSTAINABILITY_REPORT",
-            "year": 2021,
-            "verification_status": "UNVERIFIED",
-            "status": "DISCOVERY_GAP",
-            "severity": "MEDIUM",
-            "blocking": true,
-            "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-          },
-          {
-            "gap_id": "AUTO_SUSTAINABILITY_2022_UNRESOLVED",
-            "source_key": "CORP_DOCS",
-            "document_type": "SUSTAINABILITY_REPORT",
-            "year": 2022,
-            "verification_status": "UNVERIFIED",
-            "status": "DISCOVERY_GAP",
-            "severity": "MEDIUM",
-            "blocking": true,
-            "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-          },
-          {
-            "gap_id": "AUTO_SUSTAINABILITY_2023_UNRESOLVED",
-            "source_key": "CORP_DOCS",
-            "document_type": "SUSTAINABILITY_REPORT",
-            "year": 2023,
-            "verification_status": "UNVERIFIED",
-            "status": "DISCOVERY_GAP",
-            "severity": "MEDIUM",
-            "blocking": true,
-            "reason": "No byte-verified annual sustainability/integrated report was recovered from verified official report sources.",
-            "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do"
-          }
-        ],
+        "gaps": [],
         "discovery_scope": {
           "history_window": {
             "start_year": 2020,
