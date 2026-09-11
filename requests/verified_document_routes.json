@@ -1446,7 +1446,9 @@
             "source_locator": "https://www.kccworld.co.kr/esg/environmental.do",
             "expected_extension": "html",
             "verification_status": "SOURCE_VERIFIED",
-            "importance": "SUPPORTING"
+            "importance": "SUPPORTING",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           }
         ],
         "gaps": [
