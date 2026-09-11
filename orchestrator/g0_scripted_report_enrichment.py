@@ -323,7 +323,8 @@ def _crawl_for_scripted_candidates(
         if not response or response.status_code >= 400 or not _is_html_response(response):
             continue
         pages.append(response.url)
-        if "fileDownload" in response.text:
+        has_literal_pdf_control = "onclick" in response.text and ".pdf" in response.text.casefold()
+        if "fileDownload" in response.text or has_literal_pdf_control:
             candidates.extend(candidates_from_scripted_page(
                 http, response.url, response.text, start_year, current_year
             ))

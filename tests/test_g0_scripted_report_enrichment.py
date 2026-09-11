@@ -14,6 +14,7 @@ from orchestrator.g0_generic_js_report_recovery import (
     reconstruct_targets,
 )
 from orchestrator.g0_scripted_report_enrichment import (
+    _crawl_for_scripted_candidates,
     _page_download_prefixes,
     candidates_from_scripted_page,
     extract_download_prefixes,
@@ -206,6 +207,37 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
             2026,
         )
         self.assertEqual(found, [])
+
+    def test_crawl_invokes_literal_pdf_parser_without_legacy_function_name(self):
+        page_html = '''
+        <html><body>
+          <section class="annual-report">
+            <h3>지속가능성 보고서</h3>
+            <a onclick="fnFileDown('2022_23년 지속가능경영보고서(국문)','/upload/annual_range.pdf','url')">국문 다운로드</a>
+          </section>
+        </body></html>
+        '''
+
+        class CrawlHttp(FakeHttp):
+            def get(self, url, **kwargs):
+                self.get_calls.append(url)
+                if url.endswith('/esg/sustainability.do'):
+                    return FakeResponse(url, text=page_html, content_type='text/html')
+                if url.endswith('/upload/annual_range.pdf'):
+                    return FakeResponse(url, content=b'%PDF-1.7\nliteral-crawl', content_type='application/pdf')
+                return FakeResponse(url, status=404)
+
+        found, pages = _crawl_for_scripted_candidates(
+            CrawlHttp(),
+            'https://official.example/esg/sustainability.do',
+            2020,
+            2026,
+            max_pages=2,
+        )
+        self.assertEqual(pages, ['https://official.example/esg/sustainability.do'])
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]['year'], 2023)
+        self.assertEqual(found[0]['download_contract'], 'VERIFIED_SAME_HOST_LITERAL_PDF_ARG')
 
     def test_generic_literal_function_call_is_parsed(self):
         calls = extract_literal_calls(
