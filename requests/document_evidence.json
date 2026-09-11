@@ -26,7 +26,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2021",
@@ -39,7 +41,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2022",
@@ -52,7 +56,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2023",
@@ -65,7 +71,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2024",
