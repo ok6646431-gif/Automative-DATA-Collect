@@ -1,4 +1,4 @@
 {
-  "company_name": "금호석유화학",
-  "rerun_reason": "representative regression 1 after generic KCC site-name and malformed ENVINFO PDF fixes"
+  "company_name": "한화에어로스페이스",
+  "rerun_reason": "representative regression 2 after KCC final validation; unchanged common code after Kumho pass"
 }
