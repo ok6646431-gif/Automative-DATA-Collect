@@ -1,10 +1,9 @@
 """Prevent annual range labels from being mistaken for report issuer names.
 
-Titles such as ``2019_20년 지속가능경영보고서`` are annual-period labels, not issuer
-statements.  The entity policy previously removed the four-digit year first and left
-``20년`` behind, which then looked like a mismatching issuer.  Remove only recognized
-YYYY_YY / YYYY-YY / YYYY/YYYY annual-range prefixes before normal issuer parsing.
-Actual affiliate/company prefixes remain fail-closed.
+Titles such as ``2019_20년 지속가능경영보고서`` and ``2022/23년 ...`` are annual
+period labels, not issuer statements.  Strip only recognized YYYY_YY / YYYY-YY /
+YYYY/YYYY ranges before separator/path parsing; actual affiliate names remain
+fail-closed conflicts.
 """
 from __future__ import annotations
 
@@ -26,11 +25,20 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+RANGE_PATTERN = r"(?<!\\d)(?:19|20)\\d{2}\\s*[_/／-]\\s*(?:(?:19|20)\\d{2}|\\d{2})\\s*년?(?!\\d)"
+
+
 def patch_source() -> None:
     text = SOURCE.read_text(encoding="utf-8")
-    old = '''def _clean_issuer_prefix(prefix: str) -> str:\n    text = unquote(str(prefix or "")).replace("_", " ").replace("-", " ")\n    text = re.sub(r"(?<!\\d)(?:19|20)\\d{2}(?!\\d)", " ", text)\n'''
-    new = '''def _clean_issuer_prefix(prefix: str) -> str:\n    text = unquote(str(prefix or ""))\n    # Annual-period labels are not issuer names.  Strip the complete range before\n    # normalizing separators so a suffix such as ``20년`` cannot survive as a fake\n    # company name.  This is deliberately bounded to a four-digit leading year.\n    text = re.sub(\n        r"(?<!\\d)(?:19|20)\\d{2}\\s*[_/／-]\\s*(?:(?:19|20)\\d{2}|\\d{2})\\s*년?(?!\\d)",\n        " ",\n        text,\n    )\n    text = text.replace("_", " ").replace("-", " ")\n    text = re.sub(r"(?<!\\d)(?:19|20)\\d{2}(?!\\d)", " ", text)\n'''
-    SOURCE.write_text(replace_once(text, old, new, "range-year issuer cleanup"), encoding="utf-8")
+
+    old_clean = '''def _clean_issuer_prefix(prefix: str) -> str:\n    text = unquote(str(prefix or "")).replace("_", " ").replace("-", " ")\n    text = re.sub(r"(?<!\\d)(?:19|20)\\d{2}(?!\\d)", " ", text)\n'''
+    new_clean = '''def _clean_issuer_prefix(prefix: str) -> str:\n    text = unquote(str(prefix or ""))\n    text = re.sub(\n        r"(?<!\\d)(?:19|20)\\d{2}\\s*[_/／-]\\s*(?:(?:19|20)\\d{2}|\\d{2})\\s*년?(?!\\d)",\n        " ",\n        text,\n    )\n    text = text.replace("_", " ").replace("-", " ")\n    text = re.sub(r"(?<!\\d)(?:19|20)\\d{2}(?!\\d)", " ", text)\n'''
+    text = replace_once(text, old_clean, new_clean, "range-year cleanup")
+
+    old_explicit = '''    idx, _ = min(positions, key=lambda x: x[0])\n    prefix = raw[:idx]\n    prefix = re.split(r"[|/\\\\:]+", prefix)[-1]\n    core = _clean_issuer_prefix(prefix)\n'''
+    new_explicit = '''    idx, _ = min(positions, key=lambda x: x[0])\n    prefix = raw[:idx]\n    # Remove an annual-range label before slash/colon splitting. Otherwise a title\n    # such as ``2022/23년 지속가능경영보고서`` leaves ``23년`` as a fake issuer.\n    prefix = re.sub(\n        r"(?<!\\d)(?:19|20)\\d{2}\\s*[_/／-]\\s*(?:(?:19|20)\\d{2}|\\d{2})\\s*년?(?!\\d)",\n        " ",\n        prefix,\n    )\n    prefix = re.split(r"[|/\\\\:]+", prefix)[-1]\n    core = _clean_issuer_prefix(prefix)\n'''
+    text = replace_once(text, old_explicit, new_explicit, "pre-split range-year cleanup")
+    SOURCE.write_text(text, encoding="utf-8")
 
 
 def patch_test() -> None:
