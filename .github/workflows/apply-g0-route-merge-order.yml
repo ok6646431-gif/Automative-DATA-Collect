@@ -1,0 +1,46 @@
+name: Apply generic G0 route-merge ordering fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - 'tools/patch_g0_route_merge_order.py'
+      - '.github/workflows/apply-g0-route-merge-order.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install regression dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 jsonschema xlsxwriter openpyxl pypdf
+      - name: Apply generic route-merge ordering patch
+        run: python tools/patch_g0_route_merge_order.py
+      - name: Validate focused report regressions
+        run: |
+          python -m py_compile orchestrator/zero_touch_runner.py orchestrator/g0_report_catalog_policy.py orchestrator/g0_report_finalizer.py
+          python -m unittest tests.test_document_route_merge tests.test_g0_report_finalizer -v
+      - name: Validate full regression suite
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Commit validated common-code patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/zero_touch_runner.py tests/test_g0_report_finalizer.py
+          if git diff --cached --quiet; then
+            echo 'No route-merge ordering changes to commit.'
+          else
+            git commit -m 'Apply verified document routes before final coverage policy'
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
