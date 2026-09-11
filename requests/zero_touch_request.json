@@ -1,4 +1,4 @@
 {
-  "company_name": "효성티앤씨",
-  "rerun_reason": "representative regression 3 after KCC final validation; unchanged common production code after Kumho and Hanwha passes"
+  "company_name": "금호석유화학",
+  "rerun_reason": "representative regression 1 after generic verified-document route-merge ordering fix"
 }
