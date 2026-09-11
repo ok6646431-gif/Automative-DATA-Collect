@@ -25,10 +25,10 @@ GENERIC_BARE_SITE_LABELS = {
     "주요공장", "주요사업장", "국내공장", "국내사업장",
 }
 DESCRIPTIVE_SITE_PREFIX_RE = re.compile(
-    r"(?:^|\\s)[가-힣]+(?:하는|한|있는|없는|되는|된|중인|하던|했던)\\s*$"
+    r"(?:^|\s)[가-힣]+(?:하는|한|있는|없는|되는|된|중인|하던|했던)\s*$"
 )
 ACCOUNTING_SITE_CONTEXT_RE = re.compile(
-    r"(?:단위|금액|매출|매출액|자산|백만원|천만원|억원|만원|천원|원)\\)?\\s*$",
+    r"(?:단위|금액|매출|매출액|자산|백만원|천만원|억원|만원|천원|원)\)?\s*$",
     re.I,
 )
 
@@ -41,8 +41,8 @@ def _prose_like_site_name(value: str, company: str) -> bool:
     equal to the company name plus a separated suffix remains valid even when the legal
     name itself happens to end with an adnominal-looking Korean syllable.
     """
-    name = re.sub(r"\\s+", " ", str(value or "")).strip(" -:：|")
-    compact = re.sub(r"\\s+", "", name)
+    name = re.sub(r"\s+", " ", str(value or "")).strip(" -:：|")
+    compact = re.sub(r"\s+", "", name)
     if compact in GENERIC_BARE_SITE_LABELS:
         return True
 
@@ -70,7 +70,7 @@ def _prose_like_site_name(value: str, company: str) -> bool:
 
     # When the suffix is written as a separate word, an immediately preceding Korean
     # adnominal form is prose ("보유한 공장", "운영하는 사업장"), not a site label.
-    if re.search(r"\\s" + re.escape(suffix) + r"$", name) and DESCRIPTIVE_SITE_PREFIX_RE.search(prefix):
+    if re.search(r"\s" + re.escape(suffix) + r"$", name) and DESCRIPTIVE_SITE_PREFIX_RE.search(prefix):
         return True
     return False
 '''
