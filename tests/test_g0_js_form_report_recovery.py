@@ -41,6 +41,13 @@ class JsFormReportRecoveryTests(unittest.TestCase):
         self.assertEqual(controls[0]["args"], ["file-22"])
         self.assertEqual(controls[0]["year_evidence"], "LOCAL_DOM")
 
+    def test_korean_sustainability_noun_form_is_admitted(self):
+        html = self.html.replace("[2022] SUSTAINABILITY REPORT", "2022 지속가능성보고서")
+        controls = extract_form_report_controls(html, 2020, 2026)
+        self.assertEqual(len(controls), 1)
+        self.assertEqual(controls[0]["year"], 2022)
+        self.assertEqual(controls[0]["function"], "requestAnnual")
+
     def test_get_form_target_is_reconstructed_from_declared_contract(self):
         controls = extract_form_report_controls(self.html, 2020, 2026)
         body = '''

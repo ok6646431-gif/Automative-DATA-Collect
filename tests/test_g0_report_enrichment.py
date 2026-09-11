@@ -15,6 +15,13 @@ class TestG0ReportEnrichment(unittest.TestCase):
             "https://official.example/sustainability/",
         ))
 
+    def test_korean_sustainability_noun_report_filename_is_accepted(self):
+        self.assertTrue(strong_report_semantics(
+            "2025 KCC 지속가능성보고서",
+            "https://official.example/pdf/2025_KCC_지속가능성보고서.pdf",
+            "https://official.example/esg/reports",
+        ))
+
     def test_brochure_never_satisfies_annual_report(self):
         self.assertFalse(strong_report_semantics(
             "브로슈어 다운로드 (2025)",

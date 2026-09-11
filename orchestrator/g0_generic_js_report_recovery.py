@@ -37,6 +37,7 @@ DIRECT_TARGET_RE = re.compile(
 )
 REPORT_TOKENS = (
     "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서",
+    "지속가능성보고서", "지속가능성 보고서",
     "sustainability report", "integrated report", "esg report",
 )
 DOWNLOAD_TOKENS = ("pdf", "download", "다운로드")

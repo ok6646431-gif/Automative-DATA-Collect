@@ -27,6 +27,7 @@ from orchestrator import g0_entity_window_normalization
 from orchestrator import g0_evidence_enrichment
 from orchestrator import g0_first_publication_recovery
 from orchestrator import g0_generic_js_report_recovery
+from orchestrator import g0_js_form_report_recovery
 from orchestrator import g0_kind_disclosure_recovery
 from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
@@ -233,6 +234,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     # controls without crawling the wider corporate site.  Broad navigation remains a
     # fallback, followed by a second generic pass for any new report pages it reveals.
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
+    documents = g0_js_form_report_recovery.enrich(discovery, documents, audit)
     documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
     documents = g0_plain_href_report_recovery.enrich(discovery, documents, audit)
     documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)

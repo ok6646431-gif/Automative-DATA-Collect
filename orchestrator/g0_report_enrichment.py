@@ -19,7 +19,8 @@ from bs4 import BeautifulSoup
 from orchestrator import zero_touch_discovery as base
 
 POSITIVE_REPORT_TOKENS = (
-    "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서", "sustainability report",
+    "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서",
+    "지속가능성보고서", "지속가능성 보고서", "sustainability report",
     "integrated report", "통합보고서", "통합 보고서", "esg report", "sustainability_report",
     "sustainability-report", "sustainability_", "sustainability-",
 )
