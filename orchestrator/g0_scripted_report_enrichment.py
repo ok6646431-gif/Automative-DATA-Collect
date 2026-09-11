@@ -140,6 +140,90 @@ def _verify_pdf(http: Any, target: str, source: str) -> Tuple[bool, str, str]:
     return ok, final, ctype
 
 
+def _quoted_call_args(raw: str) -> List[str]:
+    values: List[str] = []
+    for match in re.finditer(r"'([^']*)'|\"([^\"]*)\"", str(raw or ""), re.S):
+        values.append(match.group(1) if match.group(1) is not None else match.group(2))
+    return values
+
+
+def _report_year_from_literal_context(text: str) -> int | None:
+    raw = str(text or "")
+    match = re.search(
+        r"(?<!\d)(?P<first>(?:19|20)\d{2})\s*[_/／-]\s*(?P<second>(?:19|20)\d{2}|\d{2})(?!\d)",
+        raw,
+    )
+    if match:
+        first = int(match.group("first"))
+        second_raw = match.group("second")
+        if len(second_raw) == 4:
+            second = int(second_raw)
+        else:
+            second = (first // 100) * 100 + int(second_raw)
+            if second < first:
+                second += 100
+        return max(first, second)
+    return base._year_from(raw)
+
+
+def _literal_pdf_candidates(
+    http: Any,
+    page_url: str,
+    html: str,
+    start_year: int,
+    current_year: int,
+) -> List[Dict[str, Any]]:
+    """Recover same-host PDF paths passed literally to arbitrary JS functions."""
+    soup = BeautifulSoup(html or "", "html.parser")
+    page_host = base._host(page_url)
+    found: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for anchor in soup.find_all(["a", "button"]):
+        onclick = str(anchor.get("onclick") or "")
+        if ".pdf" not in onclick.casefold():
+            continue
+        args = _quoted_call_args(onclick)
+        pdf_args = [x for x in args if re.search(r"\.pdf(?:[?#].*)?$", str(x or ""), re.I)]
+        if not pdf_args:
+            continue
+        context = " ".join(_dedupe([_anchor_context(anchor), *args]))
+        if not strict.strong_report_semantics(context, pdf_args[0], page_url):
+            continue
+        year = _report_year_from_literal_context(context)
+        if not year or year < start_year or year > current_year:
+            continue
+        for raw_target in pdf_args:
+            target = urljoin(page_url, raw_target)
+            parsed = urlparse(target)
+            if parsed.scheme not in {"http", "https"} or base._host(target) != page_host:
+                continue
+            if target in seen:
+                continue
+            seen.add(target)
+            ok, final_url, ctype = _verify_pdf(http, target, page_url)
+            if not ok:
+                continue
+            lowered = context.casefold()
+            score = 90
+            if "지속가능경영보고서" in lowered or "지속가능성보고서" in lowered or "sustainability report" in lowered:
+                score += 10
+            if "통합보고" in lowered or "integrated report" in lowered:
+                score += 5
+            if any(x in lowered for x in ("국문", "korean", " kor", "_kor", "_kr")):
+                score += 3
+            found.append({
+                "year": int(year),
+                "label": args[0] if args else f"{year} sustainability report",
+                "url": final_url,
+                "source_locator": page_url,
+                "score": score,
+                "content_type": ctype,
+                "download_contract": "VERIFIED_SAME_HOST_LITERAL_PDF_ARG",
+            })
+            break
+    return found
+
+
 def candidates_from_scripted_page(
     http: Any,
     page_url: str,
@@ -148,14 +232,15 @@ def candidates_from_scripted_page(
     current_year: int,
 ) -> List[Dict[str, Any]]:
     """Extract and byte-verify annual-report candidates from one trusted page."""
+    literal_found = _literal_pdf_candidates(http, page_url, html, start_year, current_year)
     if "fileDownload" not in str(html or ""):
-        return []
+        return literal_found
     soup = BeautifulSoup(html or "", "html.parser")
     prefixes = _page_download_prefixes(http, page_url, html)
     if not prefixes:
-        return []
-    found: List[Dict[str, Any]] = []
-    seen_targets: set[str] = set()
+        return literal_found
+    found: List[Dict[str, Any]] = list(literal_found)
+    seen_targets: set[str] = {str(item.get("url") or "") for item in literal_found}
     for anchor in soup.find_all("a"):
         onclick = str(anchor.get("onclick") or "")
         call = DOWNLOAD_CALL_RE.search(onclick)

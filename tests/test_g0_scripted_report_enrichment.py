@@ -86,6 +86,12 @@ class FakeHttp:
                 content=b"%PDF-1.7\ndirect-js",
                 content_type="application/pdf",
             )
+        if url.endswith("/upload/annual_range.pdf"):
+            return FakeResponse(
+                url,
+                content=b"%PDF-1.7\nliteral-arg",
+                content_type="application/pdf",
+            )
         if "/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/2026%20" in url or (
             "/fileViewer/pdf/1786079799668_7461931077646106262/attr/company/" in url
             and url.endswith(".pdf")
@@ -152,6 +158,44 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
             <span>2025 회사 브로슈어</span>
             <a onclick='fileDownload("TOKEN2024")' download="Company_Brochure_2025.pdf">다운로드</a>
           </li>
+        </body></html>
+        '''
+        found = candidates_from_scripted_page(
+            FakeHttp(),
+            "https://official.example/media/",
+            html,
+            2020,
+            2026,
+        )
+        self.assertEqual(found, [])
+
+    def test_multi_argument_literal_pdf_path_recovers_range_report_year(self):
+        html = '''
+        <html><body>
+          <section class="annual-report">
+            <h3>지속가능성 보고서</h3>
+            <article>
+              <a onclick="downloadAnnual('2022/23 지속가능경영보고서_국문','/upload/annual_range.pdf','url')">국문 다운로드</a>
+            </article>
+          </section>
+        </body></html>
+        '''
+        found = candidates_from_scripted_page(
+            FakeHttp(),
+            "https://official.example/esg/sustainability.do",
+            html,
+            2020,
+            2026,
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["year"], 2023)
+        self.assertEqual(found[0]["url"], "https://official.example/upload/annual_range.pdf")
+        self.assertEqual(found[0]["download_contract"], "VERIFIED_SAME_HOST_LITERAL_PDF_ARG")
+
+    def test_literal_pdf_argument_still_requires_report_semantics(self):
+        html = '''
+        <html><body>
+          <a onclick="downloadAsset('2024 회사 브로슈어','/upload/annual_range.pdf','url')">다운로드</a>
         </body></html>
         '''
         found = candidates_from_scripted_page(
