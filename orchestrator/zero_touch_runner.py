@@ -206,6 +206,50 @@ def _has_verified_rename(discovery):
     )
 
 
+def _merge_verified_document_routes(discovery, documents, audit):
+    """Restore same-entity byte-verified routes before final coverage decisions.
+
+    Fresh Discovery owns document identity and coverage.  A previously byte-verified
+    route for the same DART-anchored legal entity may restore a concrete annual file,
+    but that restored evidence still has to pass the normal finalizer, catalog-cadence,
+    entity-window and promotion policies.  Therefore route restoration belongs before
+    those final coverage decisions, not after them.
+    """
+    try:
+        from orchestrator.document_route_merge import merge_document_routes
+
+        existing_company_path = ROOT / "requests/company_discovery.json"
+        existing_documents_path = ROOT / "requests/document_evidence.json"
+        if existing_company_path.exists() and existing_documents_path.exists():
+            existing_company = json.loads(existing_company_path.read_text(encoding="utf-8"))
+            existing_documents = json.loads(existing_documents_path.read_text(encoding="utf-8"))
+            before = [
+                str(x.get("source_url") or "")
+                for x in documents.get("documents", []) or []
+                if isinstance(x, dict)
+            ]
+            documents = merge_document_routes(
+                existing_company, existing_documents, discovery, documents
+            )
+            after = [
+                str(x.get("source_url") or "")
+                for x in documents.get("documents", []) or []
+                if isinstance(x, dict)
+            ]
+            audit.setdefault("stages", {})["document_route_merge"] = {
+                "status": "APPLIED",
+                "primary_routes_changed": sum(
+                    1 for a, b in zip(before, after) if a != b
+                ),
+            }
+    except Exception as exc:
+        audit.setdefault("stages", {})["document_route_merge"] = {
+            "status": "SKIPPED_ERROR",
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    return documents
+
+
 def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90):
     discovery, documents, audit = _base_discover(company, start_year=start_year, max_pages=max_pages)
     _attach_official_recovery(audit)
@@ -241,6 +285,7 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_report_entity_policy.normalize(discovery, documents, audit)
+    documents = _merge_verified_document_routes(discovery, documents, audit)
     documents = g0_report_finalizer.finalize(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
@@ -281,28 +326,6 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     discovery = g0_entity_continuity_policy.normalize(discovery, audit)
     discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
 
-    # Fresh Discovery owns document identity/coverage, but a stronger transport route
-    # already byte-verified for the same DART-anchored legal entity must not disappear
-    # merely because a later crawl rediscovers a weaker company-hosted URL.
-    try:
-        from orchestrator.document_route_merge import merge_document_routes
-        existing_company_path = ROOT / 'requests/company_discovery.json'
-        existing_documents_path = ROOT / 'requests/document_evidence.json'
-        if existing_company_path.exists() and existing_documents_path.exists():
-            existing_company = json.loads(existing_company_path.read_text(encoding='utf-8'))
-            existing_documents = json.loads(existing_documents_path.read_text(encoding='utf-8'))
-            before = [str(x.get('source_url') or '') for x in documents.get('documents', []) or [] if isinstance(x, dict)]
-            documents = merge_document_routes(existing_company, existing_documents, discovery, documents)
-            after = [str(x.get('source_url') or '') for x in documents.get('documents', []) or [] if isinstance(x, dict)]
-            audit.setdefault('stages', {})['document_route_merge'] = {
-                'status': 'APPLIED',
-                'primary_routes_changed': sum(1 for a, b in zip(before, after) if a != b),
-            }
-    except Exception as exc:
-        audit.setdefault('stages', {})['document_route_merge'] = {
-            'status': 'SKIPPED_ERROR',
-            'error': f'{type(exc).__name__}: {exc}',
-        }
     return discovery, documents, audit
 
 

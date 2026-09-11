@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from orchestrator import g0_report_catalog_policy as catalog_policy
@@ -178,6 +179,26 @@ class ReportFinalizerTests(unittest.TestCase):
 
 
 class ReportCatalogCurrentYearTests(unittest.TestCase):
+    def test_verified_route_merge_precedes_final_coverage_policies(self):
+        runner_path = Path(__file__).resolve().parents[1] / "orchestrator" / "zero_touch_runner.py"
+        source = runner_path.read_text(encoding="utf-8")
+        start = source.index("def _enriched_discover")
+        merge_pos = source.index(
+            "documents = _merge_verified_document_routes(discovery, documents, audit)", start
+        )
+        finalizer_pos = source.index(
+            "documents = g0_report_finalizer.finalize(discovery, documents, audit)", start
+        )
+        catalog_pos = source.index(
+            "documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(", start
+        )
+        promotion_pos = source.index(
+            "discovery, documents, audit = g0_promotion_policy.apply(", start
+        )
+        self.assertLess(merge_pos, finalizer_pos)
+        self.assertLess(finalizer_pos, catalog_pos)
+        self.assertLess(catalog_pos, promotion_pos)
+
     def _annual_docs(self):
         locator = "https://official.example/sustainability/reports"
         return [
