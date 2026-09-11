@@ -1,135 +1,57 @@
-"""One-shot generic report-discovery wiring patch.
+"""Temporary first-party report-page contract probe.
 
-The repository already contains a fail-closed JavaScript GET-form annual-report
-recovery adapter and regression tests, but the live zero-touch runner never invokes
-it.  In addition, Korean issuers often call the artifact a ``지속가능성보고서`` rather
-than ``지속가능경영보고서``; that noun form was absent from the shared report-semantic
-vocabulary and therefore failed before transport reconstruction.
-
-This patch is company-agnostic:
-* wire the existing JS-form adapter into live G0 before broader crawling;
-* admit the ordinary Korean ``지속가능성보고서`` wording in strict/generic semantics;
-* add regressions for both semantic gates; and
-* run the existing fail-closed form reconstruction suite.
+This does not modify production source. It prints only bounded report/pagination
+controls from the already verified KCC official sustainability page so the generic
+recovery can be implemented from the site's actual contract instead of guessing.
 """
-
 from __future__ import annotations
 
-import subprocess
-import sys
-from pathlib import Path
+import re
+import requests
+from bs4 import BeautifulSoup
 
-ROOT = Path(__file__).resolve().parents[1]
-RUNNER = ROOT / "orchestrator/zero_touch_runner.py"
-STRICT = ROOT / "orchestrator/g0_report_enrichment.py"
-GENERIC = ROOT / "orchestrator/g0_generic_js_report_recovery.py"
-FORM_TEST = ROOT / "tests/test_g0_js_form_report_recovery.py"
-STRICT_TEST = ROOT / "tests/test_g0_report_enrichment.py"
-
-
-def replace_once(text: str, old: str, new: str, label: str) -> str:
-    if new in text:
-        return text
-    count = text.count(old)
-    if count != 1:
-        raise RuntimeError(f"{label}: expected one patch target, found {count}")
-    return text.replace(old, new, 1)
-
-
-def patch_runner() -> None:
-    text = RUNNER.read_text(encoding="utf-8")
-    text = replace_once(
-        text,
-        "from orchestrator import g0_generic_js_report_recovery\nfrom orchestrator import g0_kind_disclosure_recovery\n",
-        "from orchestrator import g0_generic_js_report_recovery\nfrom orchestrator import g0_js_form_report_recovery\nfrom orchestrator import g0_kind_disclosure_recovery\n",
-        "runner JS-form import",
-    )
-    text = replace_once(
-        text,
-        "    documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)\n    documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)\n",
-        "    documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)\n    documents = g0_js_form_report_recovery.enrich(discovery, documents, audit)\n    documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)\n",
-        "runner JS-form stage",
-    )
-    RUNNER.write_text(text, encoding="utf-8")
-
-
-def patch_semantics() -> None:
-    text = STRICT.read_text(encoding="utf-8")
-    text = replace_once(
-        text,
-        '    "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서", "sustainability report",\n',
-        '    "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서",\n    "지속가능성보고서", "지속가능성 보고서", "sustainability report",\n',
-        "strict Korean sustainability noun form",
-    )
-    STRICT.write_text(text, encoding="utf-8")
-
-    text = GENERIC.read_text(encoding="utf-8")
-    text = replace_once(
-        text,
-        '    "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서",\n    "sustainability report", "integrated report", "esg report",\n',
-        '    "지속가능경영보고서", "지속가능 보고서", "지속가능경영 보고서",\n    "지속가능성보고서", "지속가능성 보고서",\n    "sustainability report", "integrated report", "esg report",\n',
-        "generic Korean sustainability noun form",
-    )
-    GENERIC.write_text(text, encoding="utf-8")
-
-
-def patch_tests() -> None:
-    text = FORM_TEST.read_text(encoding="utf-8")
-    anchor = '''    def test_local_report_control_is_admitted_without_download_word(self):\n        controls = extract_form_report_controls(self.html, 2020, 2026)\n        self.assertEqual(len(controls), 1)\n        self.assertEqual(controls[0]["year"], 2022)\n        self.assertEqual(controls[0]["function"], "requestAnnual")\n        self.assertEqual(controls[0]["args"], ["file-22"])\n        self.assertEqual(controls[0]["year_evidence"], "LOCAL_DOM")\n'''
-    addition = anchor + '''\n    def test_korean_sustainability_noun_form_is_admitted(self):\n        html = self.html.replace("[2022] SUSTAINABILITY REPORT", "2022 지속가능성보고서")\n        controls = extract_form_report_controls(html, 2020, 2026)\n        self.assertEqual(len(controls), 1)\n        self.assertEqual(controls[0]["year"], 2022)\n        self.assertEqual(controls[0]["function"], "requestAnnual")\n'''
-    FORM_TEST.write_text(
-        replace_once(text, anchor, addition, "JS-form Korean noun regression"),
-        encoding="utf-8",
-    )
-
-    text = STRICT_TEST.read_text(encoding="utf-8")
-    anchor = '''    def test_sustainability_report_filename_is_accepted(self):\n        self.assertTrue(strong_report_semantics(\n            "다운로드",\n            "https://official.example/pdf/회사_지속가능경영보고서_2024_F.pdf",\n            "https://official.example/sustainability/",\n        ))\n'''
-    addition = anchor + '''\n    def test_korean_sustainability_noun_report_filename_is_accepted(self):\n        self.assertTrue(strong_report_semantics(\n            "2025 KCC 지속가능성보고서",\n            "https://official.example/pdf/2025_KCC_지속가능성보고서.pdf",\n            "https://official.example/esg/reports",\n        ))\n'''
-    STRICT_TEST.write_text(
-        replace_once(text, anchor, addition, "strict Korean noun regression"),
-        encoding="utf-8",
-    )
+URL = "https://www.kccworld.co.kr/esg/sustainability.do"
 
 
 def main() -> int:
-    patch_runner()
-    patch_semantics()
-    patch_tests()
-    subprocess.run(
-        [
-            sys.executable, "-m", "unittest",
-            "tests.test_g0_js_form_report_recovery",
-            "tests.test_g0_report_enrichment",
-            "tests.test_g0_scripted_report_enrichment",
-            "-v",
-        ],
-        cwd=ROOT,
-        check=True,
-    )
-    subprocess.run(
-        [
-            sys.executable, "-m", "py_compile",
-            "orchestrator/zero_touch_runner.py",
-            "orchestrator/g0_report_enrichment.py",
-            "orchestrator/g0_generic_js_report_recovery.py",
-            "orchestrator/g0_js_form_report_recovery.py",
-        ],
-        cwd=ROOT,
-        check=True,
-    )
-    subprocess.run(
-        [
-            "git", "add",
-            "orchestrator/zero_touch_runner.py",
-            "orchestrator/g0_report_enrichment.py",
-            "orchestrator/g0_generic_js_report_recovery.py",
-            "tests/test_g0_js_form_report_recovery.py",
-            "tests/test_g0_report_enrichment.py",
-        ],
-        cwd=ROOT,
-        check=True,
-    )
-    print("JS-form annual-report recovery wired and Korean report semantics regression-tested")
+    r = requests.get(URL, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+    r.raise_for_status()
+    print("PROBE_STATUS", r.status_code, r.url, len(r.content))
+    html = r.text
+    soup = BeautifulSoup(html, "html.parser")
+
+    print("FORMS")
+    for form in soup.find_all("form"):
+        print("FORM", form.get("id"), form.get("name"), form.get("method"), form.get("action"))
+        for inp in form.find_all(["input", "select"]):
+            print(" FIELD", inp.name, inp.get("name"), inp.get("id"), inp.get("value"))
+
+    print("PAGE_CONTROLS")
+    for tag in soup.find_all(["a", "button"]):
+        raw = " ".join([
+            " ".join(tag.stripped_strings),
+            str(tag.get("href") or ""),
+            str(tag.get("onclick") or ""),
+            str(tag.get("class") or ""),
+            str(tag.get("id") or ""),
+        ])
+        if re.search(r"page|paging|next|prev|이전|다음|더보기|fn[A-Za-z]*Page|goPage", raw, re.I):
+            print("CONTROL", raw[:1000])
+
+    print("INLINE_PAGINATION_JS")
+    for script in soup.find_all("script"):
+        if script.get("src"):
+            continue
+        text = script.get_text() or ""
+        for m in re.finditer(r".{0,500}(?:page|paging|currentPage|pageIndex|goPage|fn[A-Za-z]*Page).{0,1200}", text, re.I | re.S):
+            snippet = re.sub(r"\s+", " ", m.group(0)).strip()
+            print("JS", snippet[:1800])
+
+    print("REPORT_CONTROLS")
+    for tag in soup.find_all(["a", "button"]):
+        raw = " ".join([str(tag.get("onclick") or ""), " ".join(tag.stripped_strings)])
+        if "fnFileDown" in raw or "지속가능" in raw:
+            print("REPORT", raw[:1000])
     return 0
 
 
