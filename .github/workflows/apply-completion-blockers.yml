@@ -29,15 +29,15 @@ jobs:
         run: python tools/apply_completion_blockers.py
       - name: Validate source fixes
         run: |
-          python -m unittest tests.test_document_route_merge -v
+          python -m unittest tests.test_document_route_merge tests.test_g0_scripted_report_enrichment -v
           if [ -f tests/test_g0_kind_sustainability_fallback.py ]; then python -m unittest tests.test_g0_kind_sustainability_fallback -v; fi
-          python -m py_compile orchestrator/bat_collector.py orchestrator/zero_touch_runner.py orchestrator/archive_stage_core.py orchestrator/document_route_merge.py
+          python -m py_compile orchestrator/bat_collector.py orchestrator/zero_touch_runner.py orchestrator/archive_stage_core.py orchestrator/document_route_merge.py orchestrator/g0_scripted_report_enrichment.py
           if [ -f orchestrator/g0_kind_sustainability_fallback.py ]; then python -m py_compile orchestrator/g0_kind_sustainability_fallback.py; fi
       - name: Commit completion patch
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add orchestrator/bat_collector.py orchestrator/zero_touch_runner.py orchestrator/archive_stage_core.py orchestrator/document_route_merge.py orchestrator/g0_kind_sustainability_fallback.py tests/test_g0_kind_sustainability_fallback.py .github/workflows/zero-touch-discovery.yml requests/document_evidence.json requests/run_token.txt 2>/dev/null || true
+          git add orchestrator/bat_collector.py orchestrator/zero_touch_runner.py orchestrator/archive_stage_core.py orchestrator/document_route_merge.py orchestrator/g0_scripted_report_enrichment.py tests/test_g0_scripted_report_enrichment.py orchestrator/g0_kind_sustainability_fallback.py tests/test_g0_kind_sustainability_fallback.py .github/workflows/zero-touch-discovery.yml requests/document_evidence.json requests/run_token.txt 2>/dev/null || true
           if git diff --cached --quiet; then
             echo 'No patch changes to commit.'
           else
