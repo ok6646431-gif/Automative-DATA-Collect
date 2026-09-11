@@ -43,6 +43,27 @@ class ReportEntityAlignmentTests(unittest.TestCase):
         )
         self.assertEqual(status, "ALIGNED")
 
+    def test_korean_range_year_prefix_is_not_mistaken_for_issuer(self):
+        for title in (
+            "2019_20년 지속가능경영보고서(국문)",
+            "2020_21년 지속가능경영보고서(국문)",
+            "2021-22년 지속가능경영보고서(국문)",
+            "2022/23년 지속가능경영보고서(국문)",
+        ):
+            with self.subTest(title=title):
+                status, issuers = entity_alignment(self.discovery, title, "")
+                self.assertEqual(status, "UNKNOWN")
+                self.assertEqual(issuers, [])
+
+    def test_range_year_cleanup_does_not_hide_actual_affiliate_issuer(self):
+        status, issuers = entity_alignment(
+            self.discovery,
+            "2022_23 Example Chemicals Energy Co., Ltd. Sustainability Report",
+            "",
+        )
+        self.assertEqual(status, "CONFLICT")
+        self.assertIn("examplechemicalsenergy", issuers)
+
 
 if __name__ == "__main__":
     unittest.main()

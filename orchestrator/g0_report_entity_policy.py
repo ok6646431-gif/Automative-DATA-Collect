@@ -83,7 +83,13 @@ def _identity_cores(discovery: Dict[str, Any]) -> Set[str]:
 
 
 def _clean_issuer_prefix(prefix: str) -> str:
-    text = unquote(str(prefix or "")).replace("_", " ").replace("-", " ")
+    text = unquote(str(prefix or ""))
+    text = re.sub(
+        r"(?<!\d)(?:19|20)\d{2}\s*[_/／-]\s*(?:(?:19|20)\d{2}|\d{2})\s*년?(?!\d)",
+        " ",
+        text,
+    )
+    text = text.replace("_", " ").replace("-", " ")
     text = re.sub(r"(?<!\d)(?:19|20)\d{2}(?!\d)", " ", text)
     text = re.sub(r"\b(?:kor|eng|kr|en|korean|english)\b", " ", text, flags=re.I)
     tokens = [x for x in re.split(r"\s+", text.strip()) if x]
@@ -108,6 +114,13 @@ def _explicit_issuer(value: str) -> str:
         return ""
     idx, _ = min(positions, key=lambda x: x[0])
     prefix = raw[:idx]
+    # Remove an annual-range label before slash/colon splitting. Otherwise a title
+    # such as ``2022/23년 지속가능경영보고서`` leaves ``23년`` as a fake issuer.
+    prefix = re.sub(
+        r"(?<!\d)(?:19|20)\d{2}\s*[_/／-]\s*(?:(?:19|20)\d{2}|\d{2})\s*년?(?!\d)",
+        " ",
+        prefix,
+    )
     prefix = re.split(r"[|/\\:]+", prefix)[-1]
     core = _clean_issuer_prefix(prefix)
     # A year/language-only prefix is not an issuer statement.
