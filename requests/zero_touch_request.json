@@ -1,4 +1,4 @@
 {
   "company_name": "KCC",
-  "rerun_reason": "revalidate KCC after generic literal-PDF parser is routed from the official-site crawler"
+  "rerun_reason": "full revalidation after generic site-name quality guard and report entity range-year normalization"
 }
