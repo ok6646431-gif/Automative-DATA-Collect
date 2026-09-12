@@ -3,12 +3,12 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_f12e16efa8",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_88ccf4ee66",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "지속가능경영",
+      "title": "효성티앤씨",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://www.hyosungtnc.com/kr",
+      "source_locator": "https://www.hyosungtnc.com/kr",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING",
@@ -16,54 +16,99 @@
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_58f0fe5ab2",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_374cb113f5",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "환경안전보건경영",
+      "title": "효성티앤씨",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
+      "source_url": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_url": "https://www.hyosungtnc.com/kr",
           "verification_status": "SOURCE_VERIFIED",
           "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_locator": "https://www.hyosungtnc.com/kr",
           "expected_extension": "html"
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_eda4c8fe23",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_72513f59d1",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "환경안전보건경영",
+      "title": "ESG",
       "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
+      "source_url": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_url": "https://www.hyosungtnc.com/kr",
           "verification_status": "SOURCE_VERIFIED",
           "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_locator": "https://www.hyosungtnc.com/kr",
           "expected_extension": "html"
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_6",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_929143cc20",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "효성티앤씨",
+      "report_year": 2026,
+      "source_url": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+      "expected_extension": "html",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "SUPPORTING",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hyosungtnc.com/kr",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr",
+          "expected_extension": "html"
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2020_16",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 sustainability report 2021 지속가능경영보고서 영문",
+      "title": "2020 sustainability report ENG",
+      "report_year": 2020,
+      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2019_en.pdf",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2020_kr.pdf",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+          "expected_extension": "pdf",
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_14",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "2021 sustainability report ENG",
       "report_year": 2021,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=ae89a69e-aadf-434f-a3c6-e079017fa15d",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_en.pdf",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
@@ -71,23 +116,23 @@
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c8af89b6-ac6f-46cb-9d00-96fc8f58f2be",
+          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_kr.pdf",
           "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
           "expected_extension": "pdf",
-          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_5",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_13",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 sustainability report 2022 지속가능경영보고서 영문",
+      "title": "2022 sustainability report ENG",
       "report_year": 2022,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=9e4954b9-c17a-45b4-b751-d849fe8864e7",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_en.pdf",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
@@ -95,23 +140,23 @@
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c454e213-56dc-44db-a912-94b7e2401e1d",
+          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_kr.pdf",
           "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
           "expected_extension": "pdf",
-          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_4",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_12",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 sustainability report 2023 지속가능경영보고서 영문",
+      "title": "2023 sustainability report ENG",
       "report_year": 2023,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=b9227131-cc1f-4fe6-b713-f8467e4dae96",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_en.pdf",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
@@ -119,23 +164,23 @@
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=010c9815-b2d3-4004-a344-839ab0cb1a6d",
+          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_kr.pdf",
           "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
           "expected_extension": "pdf",
-          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_3",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_11",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 sustainability report 2024 지속가능경영보고서 영문",
+      "title": "2024 sustainability report ENG",
       "report_year": 2024,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=2677fcfa-2c0a-48ea-809f-4ba93bef128c",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_en.pdf",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
@@ -143,23 +188,23 @@
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=1772e31b-cc5b-46e6-8d8e-23ca8865886d",
+          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_kr.pdf",
           "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
           "expected_extension": "pdf",
-          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_2",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_10",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 sustainability report 2025 지속가능경영보고서 영문",
+      "title": "2025 sustainability report ENG",
       "report_year": 2025,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=65225506-bd6a-433e-87b6-d1f1f34ac4a9",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://www.hyosungtnc.com/assets/files/ESG_Compact_Book_EN.pdf",
+      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
@@ -167,36 +212,12 @@
       "entity_alignment": "UNKNOWN",
       "fallback_sources": [
         {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=6dbe86fc-e967-4769-a69e-de586349a9fe",
+          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_kr.pdf",
           "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
           "expected_extension": "pdf",
-          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
-    },
-    {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2026_1",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2026 sustainability report 2026 지속가능경영보고서 영문",
-      "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=bd997741-ba0b-41f0-9169-6c70ed688f82",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=506d56b7-09c6-4f53-833c-7842311b2582",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
         }
       ],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
@@ -204,17 +225,16 @@
   ],
   "gaps": [
     {
-      "gap_id": "AUTO_SUSTAINABILITY_2020_PRE_FIRST_PUBLICATION",
+      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2020,
+      "year": 2026,
       "verification_status": "SOURCE_VERIFIED",
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "A verified first-party source explicitly identifies 2021 as the first annual sustainability/ESG report publication.",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/media/newsroom/list.do?param1=%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C",
-      "evidence_type": "PRE_FIRST_PUBLICATION_YEAR"
+      "reason": "As of 2026-09-13, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://www.hyosungtnc.com/kr"
     }
   ],
   "discovery_scope": {
@@ -239,5 +259,5 @@
       "end_year": 2026
     }
   },
-  "request_id": "company-1b342a45-env-g0-20260913"
+  "request_id": "company-7b7146f1-env-g0-20260913"
 }
