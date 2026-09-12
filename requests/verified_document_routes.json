@@ -429,7 +429,7 @@
       "current_legal_name": "한화에어로스페이스(주)",
       "company": {
         "schema_version": "1.0",
-        "request_id": "company-1b342a45-env-g0-20260911",
+        "request_id": "company-1b342a45-env-g0-20260913",
         "requested_company_name": "한화에어로스페이스",
         "current_legal_name": "한화에어로스페이스(주)",
         "current_legal_name_active_period": {
@@ -779,7 +779,7 @@
               {
                 "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c8af89b6-ac6f-46cb-9d00-96fc8f58f2be",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -803,7 +803,7 @@
               {
                 "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c454e213-56dc-44db-a912-94b7e2401e1d",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -827,7 +827,7 @@
               {
                 "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=010c9815-b2d3-4004-a344-839ab0cb1a6d",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -851,7 +851,7 @@
               {
                 "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=1772e31b-cc5b-46e6-8d8e-23ca8865886d",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -875,7 +875,7 @@
               {
                 "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=6dbe86fc-e967-4769-a69e-de586349a9fe",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -899,7 +899,7 @@
               {
                 "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=506d56b7-09c6-4f53-833c-7842311b2582",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
                 "expected_extension": "pdf",
                 "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
@@ -945,7 +945,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "company-1b342a45-env-g0-20260911"
+        "request_id": "company-1b342a45-env-g0-20260913"
       }
     },
     "01316227": {
