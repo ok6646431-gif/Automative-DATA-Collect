@@ -1,23 +1,21 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-7b7146f1-env-g0-20260913",
-  "requested_company_name": "효성티앤씨",
-  "current_legal_name": "효성티앤씨(주)",
+  "request_id": "company-890833b4-env-g0-20260914",
+  "requested_company_name": "포스코",
+  "current_legal_name": "주식회사 포스코",
   "current_legal_name_active_period": {
-    "start_year": 2018
+    "start_year": 2022
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "효성티앤씨(주) 국내 사업장",
+    "label": "주식회사 포스코 국내 사업장",
     "candidate_ids": [
-      "119-f395846e",
-      "3-2-108-75bfede4",
-      "488-3cc2025a",
-      "74-1114e280",
-      "30-dbbdd319",
-      "55-45-f41c29c8"
+      "6261-b923b0cc",
+      "2026-22dbf39a",
+      "440-ec07c1ed",
+      "6262-58eb3fe7"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -25,21 +23,21 @@
   },
   "company_aliases": [
     {
-      "name": "효성티앤씨",
+      "name": "포스코",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
       "active_period": {
-        "start_year": 2018
+        "start_year": 2022
       }
     },
     {
-      "name": "Hyosung TNC Corporation",
+      "name": "POSCO",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
       "active_period": {
-        "start_year": 2018
+        "start_year": 2022
       }
     }
   ],
@@ -47,94 +45,66 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "119-f395846e",
-      "site_name_raw": "스판덱스 본사",
-      "address_raw": "서울시 마포구 마포대로 119",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "candidate_id": "6261-b923b0cc",
+      "site_name_raw": "포항본사",
+      "address_raw": "경상북도 포항시 남구 동해안로 6261",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
         "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "3-2-108-75bfede4",
-      "site_name_raw": "스판덱스 구미공장",
-      "address_raw": "경북 구미시 3공단2로 108",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "candidate_id": "2026-22dbf39a",
+      "site_name_raw": "광양제철소",
+      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
         "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "488-3cc2025a",
-      "site_name_raw": "스판덱스 대구영업소",
-      "address_raw": "대구시 중구 국채보상로 488",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "candidate_id": "440-ec07c1ed",
+      "site_name_raw": "포스코센터",
+      "address_raw": "서울특별시 강남구 테헤란로 440",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
         "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "74-1114e280",
-      "site_name_raw": "스판덱스 효성기술원",
-      "address_raw": "경기도 안양시 동안구 시민대로 74",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+      "candidate_id": "6262-58eb3fe7",
+      "site_name_raw": "포항제철소",
+      "address_raw": "경상북도 포항시 남구 동해안로 6262",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "30-dbbdd319",
-      "site_name_raw": "나이론폴리에스터 울산공장",
-      "address_raw": "울산시 남구 납도로 30",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "55-45-f41c29c8",
-      "site_name_raw": "직물/염색 대구 공장",
-      "address_raw": "대구시 달서구 성서공단로55길 45",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hyosungtnc.com/kr/company/intro/global-network/textile",
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
         "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01316227",
-      "source_value_raw": "효성티앤씨(주) / Hyosung TNC Corporation / establishment 2018-06-04 / website www.hyosungtnc.com",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
+      "source_value_raw": "주식회사 포스코 / POSCO / establishment 2022-03-02 / website www.posco.co.kr",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -197,6 +167,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 2018
+    "start_year": 2022
   }
 }
