@@ -5,7 +5,7 @@
       "current_legal_name": "금호석유화학(주)",
       "company": {
         "schema_version": "1.0",
-        "request_id": "company-cf83fccf-env-g0-20260912",
+        "request_id": "company-cf83fccf-env-g0-20260914",
         "requested_company_name": "금호석유화학",
         "current_legal_name": "금호석유화학(주)",
         "current_legal_name_active_period": {
@@ -396,7 +396,7 @@
             "status": "NOT_PUBLISHED",
             "severity": "LOW",
             "blocking": false,
-            "reason": "As of 2026-09-12, verified official report sources list reports through 2025, not 2026.",
+            "reason": "As of 2026-09-14, verified official report sources list reports through 2025, not 2026.",
             "source_locator": "https://www.kkpc.com/kor/"
           }
         ],
@@ -422,7 +422,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "company-cf83fccf-env-g0-20260912"
+        "request_id": "company-cf83fccf-env-g0-20260914"
       }
     },
     "00126566": {
