@@ -1,0 +1,74 @@
+name: Generic annual-report JS probe
+
+on:
+  push:
+    branches:
+      - 'diagnostics/report-js-probe'
+    paths:
+      - '.github/workflows/report-js-probe.yml'
+      - 'requests/report_js_probe_token.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Probe current verified report locators without company-specific routes
+        run: |
+          python - <<'PY'
+          import json, re, time
+          from pathlib import Path
+          from orchestrator import zero_touch_runner as runtime
+          from orchestrator import g0_generic_js_report_recovery as js
+
+          discovery=json.loads(Path('requests/company_discovery.json').read_text(encoding='utf-8'))
+          documents=json.loads(Path('requests/document_evidence.json').read_text(encoding='utf-8'))
+          window=(discovery.get('collection_policy') or {}).get('requested_history_window') or {}
+          start_year=int(window.get('start_year') or 2020)
+          end_year=int(window.get('end_year') or 2026)
+          locators=[]
+          for row in [*(documents.get('documents') or []), *(documents.get('gaps') or [])]:
+              u=str(row.get('source_locator') or '').strip()
+              if u and u not in locators and any(t in u.casefold() for t in ('report','esg','sustain','보고','cmspage')):
+                  locators.append(u)
+          print(json.dumps({'locators':locators,'start_year':start_year,'end_year':end_year},ensure_ascii=False))
+          runtime._G0_NETWORK_DEADLINE=time.monotonic()+180
+          http=js.base.Http()
+          for page_url in locators[:8]:
+              r=http.get(page_url)
+              print('\nPAGE',page_url,'STATUS',getattr(r,'status_code',None),'FINAL',getattr(r,'url',None))
+              if not r or r.status_code>=400:
+                  continue
+              controls=js.extract_report_controls(r.text,start_year,end_year)
+              scripts=js._script_texts(http,r.url,r.text)
+              print('CONTROLS',len(controls),'SCRIPTS',len(scripts))
+              for i,c in enumerate(controls[:40],1):
+                  fn=str(c.get('function') or '')
+                  definition=js._function_definition(fn,scripts) if fn else None
+                  targets=[]
+                  body=''
+                  params=[]
+                  source=''
+                  if definition:
+                      params,body,source=definition
+                      targets=js.reconstruct_targets(r.url,params,c.get('args') or [],body)
+                  print(json.dumps({
+                      'i':i,'year':c.get('year'),'raw_control':c.get('raw_control'),
+                      'function':fn,'args':c.get('args'),'definition_found':bool(definition),
+                      'params':params,'script_source':source,'targets':targets,
+                      'body_excerpt':re.sub(r'\s+',' ',body)[:3000] if body else ''
+                  },ensure_ascii=False))
+              candidates,diagnostics=js.candidates_from_generic_js_page(http,r.url,r.text,start_year,end_year)
+              print('CANDIDATES',json.dumps(candidates,ensure_ascii=False))
+              print('DIAGNOSTICS',json.dumps(diagnostics,ensure_ascii=False)[:30000])
+          print('HTTP_AUDIT_TAIL',json.dumps(http.audit[-60:],ensure_ascii=False)[:30000])
+          PY
