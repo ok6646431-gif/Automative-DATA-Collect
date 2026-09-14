@@ -14,6 +14,7 @@ on:
       - 'tests/test_user_archive_format.py'
       - 'tests/test_user_archive_format_html_normalization.py'
       - 'tests/test_archive_user_dedup_v2.py'
+      - 'tests/test_archive_user_dedup_pipeline.py'
       - 'tests/test_archive_sustainability_crosslane.py'
       - '.github/workflows/archive-crosslane-tests.yml'
   workflow_dispatch:
@@ -39,6 +40,7 @@ jobs:
           tests.test_user_archive_format
           tests.test_user_archive_format_html_normalization
           tests.test_archive_user_dedup_v2
+          tests.test_archive_user_dedup_pipeline
           tests.test_archive_sustainability_crosslane
           tests.test_archive_zip_dedup
           -v
