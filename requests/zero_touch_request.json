@@ -1,4 +1,4 @@
 {
   "company_name": "포스코",
-  "rerun_reason": "unseen-company acceptance 1 of 3 after representative regression 3/3 on unchanged generic production code"
+  "rerun_reason": "validate generic JS local-variable report recovery before representative regression reset"
 }
