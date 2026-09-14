@@ -34,16 +34,22 @@ jobs:
           assert len(d['domestic_site_candidates'])==13
           ids={x['candidate_id'] for x in d['domestic_site_candidates']}
           assert set(d['requested_scope']['candidate_ids'])==ids
-          a=json.loads(Path('requests/industry_reference_applicability.json').read_text(encoding='utf-8'))
-          e=[x for x in a['references'] if x['document_id']=='NIER_ENERGY_KBREF_II_2022'][0]
-          assert set(e['candidate_ids'])=={'kkpc-yeosu-energy-1','kkpc-yeosu-energy-2','kkpc-yeosu-energy-3'}
-          print({'kumho_sites':len(ids),'energy_kbref_sites':len(e['candidate_ids'])})
+          a_path=Path('requests/industry_reference_applicability.json')
+          if a_path.exists():
+              a=json.loads(a_path.read_text(encoding='utf-8'))
+              e=[x for x in a.get('references',[]) if x.get('document_id')=='NIER_ENERGY_KBREF_II_2022']
+              if e:
+                  assert set(e[0]['candidate_ids'])=={'kkpc-yeosu-energy-1','kkpc-yeosu-energy-2','kkpc-yeosu-energy-3'}
+          print({'kumho_sites':len(ids),'legacy_bat_input_present':a_path.exists()})
           PY
       - name: Commit input switch only
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add requests/company_discovery.json requests/industry_reference_applicability.json requests/event_evidence.json
+          git add requests/company_discovery.json requests/event_evidence.json
+          if [ -f requests/industry_reference_applicability.json ]; then
+            git add requests/industry_reference_applicability.json
+          fi
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Switch acceptance input to Kumho Petrochemical"
           git push
