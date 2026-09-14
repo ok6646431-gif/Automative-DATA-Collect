@@ -1,0 +1,55 @@
+name: G0 artifact diagnostic probe
+
+on:
+  push:
+    branches:
+      - 'diagnostics/report-js-probe'
+    paths:
+      - '.github/workflows/g0-artifact-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download production G0 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download 34812728071 -n zero-touch-discovery-34812728071 -D probe
+      - name: Inspect report-page and review state
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from orchestrator.company_profile_builder import compile_discovery
+          root=Path('probe')
+          audit=json.loads((root/'Discovery_Audit.json').read_text(encoding='utf-8'))
+          docs=json.loads((root/'document_evidence.json').read_text(encoding='utf-8'))
+          disc=json.loads((root/'company_discovery.json').read_text(encoding='utf-8'))
+          stages=audit.get('stages') or {}
+          corp=stages.get('corporate_documents') or {}
+          js=stages.get('generic_js_report_recovery') or {}
+          fresh=stages.get('fresh_process_document_recovery') or {}
+          nav=stages.get('scripted_report_navigation_recovery') or {}
+          print('CORP_REPORT_PAGES',json.dumps(corp.get('report_index_pages') or [],ensure_ascii=False))
+          print('NAV_VISITED',json.dumps(nav.get('visited_pages') or [],ensure_ascii=False))
+          print('JS_VISITED',json.dumps(js.get('visited_pages') or [],ensure_ascii=False))
+          print('JS_RECOVERED',json.dumps(js.get('recovered_years') or [],ensure_ascii=False))
+          print('JS_DIAGNOSTICS',json.dumps(js.get('control_diagnostics') or [],ensure_ascii=False)[:40000])
+          print('FRESH',json.dumps(fresh,ensure_ascii=False))
+          print('DOC_LOCATORS',json.dumps(sorted({str(x.get('source_locator') or '') for x in [*(docs.get('documents') or []),*(docs.get('gaps') or [])] if str(x.get('source_locator') or '')}),ensure_ascii=False))
+          print('DISC_UNRESOLVED',json.dumps(disc.get('unresolved_items') or [],ensure_ascii=False))
+          print('SITES',json.dumps(disc.get('domestic_site_candidates') or [],ensure_ascii=False))
+          profile,summary=compile_discovery(disc)
+          print('COMPILE_REVIEW_COUNT',summary.get('review_required_count'))
+          print('COMPILE_REVIEWS',json.dumps(summary.get('unresolved_discovery_items') or [],ensure_ascii=False))
+          PY
