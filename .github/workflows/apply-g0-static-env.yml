@@ -25,6 +25,17 @@ jobs:
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4
       - name: Apply generic patch
         run: python tools/patch_g0_static_env.py
+      - name: Keep candidate targets bound to executable function expressions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('orchestrator/g0_generic_js_report_recovery.py')
+          text = p.read_text(encoding='utf-8')
+          extra = '''\n    # A literal function argument may itself be the declared report target. This is\n    # still fail-closed because same-org and real PDF-byte verification occur later.\n    expressions.extend(str(arg) for arg in args if URLISH_LITERAL_RE.search(str(arg)))\n'''
+          if extra not in text:
+              raise SystemExit('expected argument-candidate block not found')
+          p.write_text(text.replace(extra, '\n', 1), encoding='utf-8')
+          PY
       - name: Compile modified module
         run: python -m py_compile orchestrator/g0_generic_js_report_recovery.py
       - name: Run focused regressions
