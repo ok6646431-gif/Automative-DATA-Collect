@@ -10,6 +10,8 @@ on:
       - 'orchestrator/bat_master_catalog.json'
       - 'orchestrator/bat_resolver.py'
       - 'orchestrator/bat_collector.py'
+      - 'orchestrator/bat_stage.py'
+      - 'orchestrator/bat_legal_applicability.py'
       - 'orchestrator/bat_archive.py'
       - 'orchestrator/brefos_byte_registry.py'
       - 'orchestrator/brefos_catalog_last_verified.json'
@@ -20,6 +22,8 @@ on:
       - 'tests/test_bat_effective_catalog.py'
       - 'tests/test_bat_resolver.py'
       - 'tests/test_bat_revision_collection.py'
+      - 'tests/test_bat_requested_scope_authority.py'
+      - 'tests/test_bat_legal_applicability.py'
       - 'tests/test_bat_archive.py'
       - 'tests/test_brefos_byte_registry.py'
       - 'tests/test_brefos_catalog_reconcile.py'
@@ -50,6 +54,8 @@ jobs:
           tests.test_bat_effective_catalog
           tests.test_bat_resolver
           tests.test_bat_revision_collection
+          tests.test_bat_requested_scope_authority
+          tests.test_bat_legal_applicability
           tests.test_bat_archive
           tests.test_brefos_byte_registry
           tests.test_brefos_catalog_reconcile
@@ -66,6 +72,8 @@ jobs:
           orchestrator/bat_catalog_effective.py
           orchestrator/bat_resolver.py
           orchestrator/bat_collector.py
+          orchestrator/bat_stage.py
+          orchestrator/bat_legal_applicability.py
           orchestrator/bat_archive.py
           orchestrator/brefos_byte_registry.py
           orchestrator/brefos_catalog_reconcile.py
