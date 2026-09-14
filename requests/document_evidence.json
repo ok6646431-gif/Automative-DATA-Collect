@@ -13,7 +13,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING",
       "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "coverage_role": "SUPPORTING_SUMMARY_ONLY"
+      "coverage_role": "SUPPORTING_SUMMARY_ONLY",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2020",
@@ -27,6 +29,8 @@
       "importance": "CORE",
       "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification. Report year predates the verified current legal-entity start (2022); preserved as historical reference only.",
       "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
       "coverage_role": "PRE_ENTITY_HISTORICAL_REFERENCE"
     },
     {
@@ -40,7 +44,9 @@
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     }
   ],
   "gaps": [
