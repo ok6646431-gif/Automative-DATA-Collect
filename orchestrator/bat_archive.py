@@ -77,9 +77,14 @@ def _candidate_row(row, family_folder=''):
         '현행판본': row.get('revision_generation', ''),
         '역할': row.get('candidate_role', ''),
         '후보상태': row.get('candidate_state', ''),
-        '적용성근거상태': row.get('applicability_state', ''),
+        '기술적적용성근거': row.get('applicability_state', ''),
+        '기술관련성': row.get('technical_relevance_state', ''),
+        '통합환경관리_법적대상성': row.get('site_legal_applicability_state', 'UNKNOWN'),
+        '법적대상성근거': row.get('site_legal_applicability_source', ''),
+        '회사BAT채택': row.get('company_adoption_state', 'NOT_VERIFIED'),
+        '자료사용구분': row.get('bat_reference_use', ''),
         '발간상태': row.get('publication_status', ''),
-        '법적상태': row.get('legal_status', ''),
+        '기준서법적상태': row.get('legal_status', ''),
         '예정일': row.get('effective_from', ''),
         '업종근거': row.get('matched_industry_terms', ''),
         'KSIC근거': row.get('matched_ksic_prefixes', ''),
@@ -90,7 +95,10 @@ def _candidate_row(row, family_folder=''):
         '수집조치': row.get('collection_action', ''),
         '공식출처': row.get('official_source_locator', ''),
         'BAT원문폴더': f'{BAT_DOCUMENTS_DIR}/{family_folder}' if family_folder else '',
-        '해석경계': '사업장 후보는 preferred/current 판본에 대해서만 생성. 구판 보유는 현행 적용 또는 기업의 BAT 채택을 의미하지 않음',
+        '해석경계': row.get('interpretation_boundary') or (
+            'BAT 기술 관련성, 통합환경관리제도 법적 대상성, 회사의 실제 BAT 채택은 서로 다른 주장임. '
+            '비대상 사업장도 기술 참고자료로 BAT가 수집될 수 있음.'
+        ),
     }
 
 
@@ -128,15 +136,12 @@ def expose(package_root, archive_root):
 
     BAT PDFs are stored once per BAT family/revision. Site folders contain only XLSX
     applicability maps that point to the shared BAT source folders, preventing duplicate
-    document bytes across sites. Applicability remains current/preferred-only; older
-    revisions are historical reference material and never substitute for a missing current
-    revision or prove company adoption.
+    document bytes across sites. Legal applicability, technical relevance and company
+    adoption are separate; older revisions remain historical references only.
     """
     package = Path(package_root)
     archive = Path(archive_root)
 
-    # Remove the legacy location if an archive tree is rebuilt in place. New BAT output is
-    # a sibling of 01_사용자자료, not a subsection of company/public evidence.
     legacy = archive / '01_사용자자료' / '07_가이드라인_참고자료' / 'BAT_기준서'
     if legacy.exists():
         shutil.rmtree(legacy)
@@ -250,7 +255,11 @@ def expose(package_root, archive_root):
         'bat_archive_site_maps': [str(p.relative_to(archive)) for p in site_maps],
         'bat_archive_failures': failures,
         'guideline_reference_present': bool(copied),
-        'principle': 'BAT is delivered as a separate reference area. PDFs are stored once per family/revision and site maps reference shared originals. Applicability uses preferred/current revisions only; older revisions are historical reference and never prove company BAT adoption.',
+        'principle': (
+            'BAT is a separate reference area. Technical relevance, Integrated Environmental Management legal applicability '
+            'and company adoption are reported independently; non-target sites may retain technically relevant BAT only as '
+            'reference material. Older revisions never prove current applicability or adoption.'
+        ),
     }
 
 
