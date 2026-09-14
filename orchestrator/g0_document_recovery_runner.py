@@ -19,6 +19,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -95,6 +96,66 @@ def _document_routes(documents: Dict[str, Any]) -> Dict[int, str]:
     return routes
 
 
+def _document_report_locators(documents: Dict[str, Any]) -> List[str]:
+    """Return bounded HTTP provenance pages already present in report evidence.
+
+    The primary G0 may locate an official report catalog and preserve it only as a
+    document/gap ``source_locator`` while its broader corporate-page audit contains
+    different pages.  A fresh positive-only recovery pass should not discard that
+    provenance.  These pages are only seeds: downstream adapters still require local
+    report semantics, same-host reconstruction and byte-verified PDF content.
+    """
+    out: List[str] = []
+    rows = [*(documents.get("documents", []) or []), *(documents.get("gaps", []) or [])]
+    for row in rows:
+        if not isinstance(row, dict) or row.get("document_type") != "SUSTAINABILITY_REPORT":
+            continue
+        locator = str(row.get("source_locator") or "").strip()
+        parsed = urlparse(locator)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            continue
+        locator = locator.split("#", 1)[0]
+        if locator not in out:
+            out.append(locator)
+    return out[:24]
+
+
+def _seeded_generic_js_recovery(
+    discovery: Dict[str, Any],
+    documents: Dict[str, Any],
+    audit: Dict[str, Any],
+    stage: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run bounded first-party JS recovery with document provenance as extra seeds.
+
+    ``g0_generic_js_report_recovery`` normally reads report index pages from the audit.
+    The fresh pass additionally knows the post-discovery document evidence, which may
+    contain a stronger official report-page locator.  Temporarily expose those locators
+    to the adapter, then restore the original corporate-document audit verbatim so the
+    provenance of the primary discovery stage is not rewritten.
+    """
+    stages = audit.setdefault("stages", {})
+    corporate = stages.setdefault("corporate_documents", {})
+    had_report_pages = "report_index_pages" in corporate
+    original_pages = list(corporate.get("report_index_pages") or [])
+    seeded = [p for p in _document_report_locators(documents) if p not in original_pages]
+    stage["seeded_report_pages"] = seeded
+    if seeded:
+        corporate["report_index_pages"] = [*original_pages, *seeded]
+    try:
+        return g0_generic_js_report_recovery.enrich(discovery, documents, audit)
+    finally:
+        if had_report_pages:
+            corporate["report_index_pages"] = original_pages
+        else:
+            corporate.pop("report_index_pages", None)
+
+
+def _target_years_remaining(documents: Dict[str, Any], target_years: List[int]) -> List[int]:
+    current = set(blocking_sustainability_years(documents))
+    return sorted(year for year in target_years if year in current)
+
+
 def run(out_dir: str | Path, budget_seconds: int = DEFAULT_RECOVERY_BUDGET_SECONDS) -> Dict[str, Any]:
     root = Path(out_dir)
     company_path = root / "company_discovery.json"
@@ -130,14 +191,28 @@ def run(out_dir: str | Path, budget_seconds: int = DEFAULT_RECOVERY_BUDGET_SECON
     # untouched. The workflow supplies a substantially shorter second-pass budget.
     runtime._G0_NETWORK_DEADLINE = time.monotonic() + int(max(1, budget_seconds))
 
-    documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
-    documents = g0_js_form_report_recovery.enrich(discovery, documents, audit)
-    documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
-    documents = g0_plain_href_report_recovery.enrich(discovery, documents, audit)
-    documents = g0_kind_sustainability_recovery.enrich(discovery, documents, audit)
-    documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
-    documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
-    documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
+    # Start with the highest-confidence, already-located first-party report pages.  The
+    # primary G0 can preserve a verified catalog only in document provenance, so the
+    # fresh pass temporarily seeds those locators into the generic-JS adapter.
+    documents = _seeded_generic_js_recovery(discovery, documents, audit, stage)
+    remaining = _target_years_remaining(documents, before_years)
+    stage["blocking_years_after_seeded_generic_js"] = remaining
+
+    # Once the original blocking target years are positively recovered, do not spend
+    # the independent budget on slower central-index or broad-navigation fallbacks.
+    if remaining:
+        documents = g0_js_form_report_recovery.enrich(discovery, documents, audit)
+        documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
+        documents = g0_plain_href_report_recovery.enrich(discovery, documents, audit)
+        documents = g0_kind_sustainability_recovery.enrich(discovery, documents, audit)
+        documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
+        documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
+        documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
+        stage["live_recovery_short_circuit"] = False
+    else:
+        stage["live_recovery_short_circuit"] = True
+        stage["short_circuit_after"] = "SEEDED_GENERIC_JS_REPORT_RECOVERY"
+
     documents = g0_report_entity_policy.normalize(discovery, documents, audit)
     documents = runtime._merge_verified_document_routes(discovery, documents, audit)
     documents = g0_report_finalizer.finalize(discovery, documents, audit)
