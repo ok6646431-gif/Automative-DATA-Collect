@@ -1,0 +1,41 @@
+name: Validate requested scope boundary
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - 'orchestrator/requested_scope.py'
+      - 'orchestrator/requested_scope_candidate_guard.py'
+      - 'orchestrator/scope_quality.py'
+      - 'orchestrator/archive_stage.py'
+      - 'tests/test_requested_scope.py'
+      - 'tests/test_requested_scope_candidate_guard.py'
+      - '.github/workflows/validate-requested-scope.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile requested-scope boundary
+        run: >-
+          python -m py_compile
+          orchestrator/requested_scope.py
+          orchestrator/requested_scope_candidate_guard.py
+          orchestrator/scope_quality.py
+          orchestrator/archive_stage.py
+      - name: Run requested-scope regressions
+        run: >-
+          python -m unittest
+          tests.test_requested_scope
+          tests.test_requested_scope_candidate_guard
+          -v
