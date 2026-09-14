@@ -250,7 +250,7 @@ def _source_entity_compatible(value, profile, candidates):
             return True, "SAME_ENTITY_REQUESTED_SITE"
         if any(_subunit_core_match(remainder_core, site) for site in site_cores):
             return True, "SAME_ENTITY_REQUESTED_SUBUNIT"
-        if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소")):
+        if any(remainder.startswith(_entity_plain(x)) for x in ("본사", "사업장", "공장", "캠퍼스", "연구원", "사업소", "제철소", "센터")):
             return True, "SAME_ENTITY_FACILITY_LABEL"
         if re.fullmatch(r"[0-9A-Za-z가-힣]{1,12}사업장", remainder):
             return True, "SAME_ENTITY_GENERIC_SITE_LABEL"
