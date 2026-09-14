@@ -4,6 +4,7 @@ from pathlib import Path
 from bat_resolver import CATALOG_PATH, CANDIDATE_FIELDS, resolve
 from bat_collector import collect
 from bat_catalog_effective import materialize_effective_catalog
+from bat_legal_applicability import annotate as annotate_legal_applicability
 from requested_scope import _selected_address_counts, _candidate_matches
 
 
@@ -94,6 +95,7 @@ def _canonical_candidate_map(package):
                 if cid: inverse.setdefault(cid,[]).append(candidate_id)
     return profile,inverse
 
+
 def _filter_plan_to_requested_scope(package,plan):
     """Apply the same verified SITE_SET boundary used by Archive/analysis to BAT candidates.
 
@@ -143,11 +145,7 @@ def _filter_plan_to_requested_scope(package,plan):
 
 
 def _write_auto_applicability(package):
-    """Convert strong resolver matches into cross-layer reference applicability.
-
-    VERIFIED here means only that the reference is applicable context for the selected
-    site; it explicitly does not mean the company has adopted the BAT technique.
-    """
+    """Expose technical reference applicability while keeping legal/adoption claims separate."""
     package=Path(package); profile,inverse=_canonical_candidate_map(package)
     candidates,_=_read_csv(package/'BAT_Applicability_Candidates.csv')
     docs,_=_read_csv(package/'output'/'BAT_REFERENCES'/'document_index.csv')
@@ -162,16 +160,33 @@ def _write_auto_applicability(package):
         candidate_ids=[]
         for cid in canonical: candidate_ids.extend(inverse.get(cid,[]))
         candidate_ids=sorted(set(candidate_ids))
+        site_assessments=[]
+        for row in strong:
+            cid=str(row.get('canonical_site_id') or '')
+            site_assessments.append({
+                'canonical_site_id':cid,
+                'site_name':row.get('site_name',''),
+                'legal_applicability_state':row.get('site_legal_applicability_state','UNKNOWN'),
+                'technical_relevance_state':row.get('technical_relevance_state',''),
+                'company_adoption_state':row.get('company_adoption_state','NOT_VERIFIED'),
+                'reference_use':row.get('bat_reference_use',''),
+                'legal_source_locator':row.get('site_legal_applicability_source',''),
+            })
         refs.append({
             'document_id':doc.get('document_id',''),
             'applicability_state':'VERIFIED' if canonical and candidate_ids else 'REVIEW_REQUIRED',
+            'reference_applicability_state':'VERIFIED' if canonical and candidate_ids else 'REVIEW_REQUIRED',
             'candidate_ids':candidate_ids,
             'reference_domains':[x for x in str(doc.get('reference_domains') or '').split('|') if x],
             'basis':' | '.join(sorted({r.get('evidence_basis','') for r in strong if r.get('evidence_basis')})),
             'source_locator':doc.get('source_locator',''),
-            'interpretation_boundary':'Verified reference applicability only; no inference that the company has adopted or operates the BAT technique.'
+            'site_assessments':site_assessments,
+            'interpretation_boundary':(
+                'Verified technical-reference applicability only. Legal applicability under the Integrated Environmental '
+                'Management regime and company adoption are separately stated per site; neither is inferred from BAT collection.'
+            )
         })
-    payload={'schema_version':'1.0','request_id':profile.get('request_id',''),'references':refs}
+    payload={'schema_version':'1.1','request_id':profile.get('request_id',''),'references':refs}
     path=package/'BAT_Industry_Reference_Applicability.json'
     path.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
     return path,refs
@@ -182,22 +197,32 @@ def run(package,catalog_path=CATALOG_PATH,as_of=None):
     effective_catalog_path,catalog_advisories=materialize_effective_catalog(package,catalog_path)
     plan=resolve(package,effective_catalog_path,as_of)
     plan,scope_filter=_filter_plan_to_requested_scope(package,plan)
+    plan,legal_boundary=annotate_legal_applicability(package,plan)
     status=collect(package,effective_catalog_path)
     bridged=_bridge_into_corp_docs(package)
     applicability_path,refs=_write_auto_applicability(package)
+    legal_counts=legal_boundary.get('site_legal_applicability_counts',{})
     summary={
-        'schema_version':'1.3',
+        'schema_version':'1.4',
         'candidate_count':plan.get('candidate_count',0),
         'site_count':plan.get('site_count',0),
         'collect_catalog_ids':plan.get('collect_catalog_ids',[]),
         'collection_status':status,
         'semantic_bridge_documents':bridged,
         'verified_reference_applicability':sum(r.get('applicability_state')=='VERIFIED' for r in refs),
+        'legal_target_confirmed_sites':legal_counts.get('TARGET_CONFIRMED',0),
+        'legal_non_target_confirmed_sites':legal_counts.get('NON_TARGET_CONFIRMED',0),
+        'legal_unknown_sites':legal_counts.get('UNKNOWN',0),
+        'legal_technical_boundary_path':str(package/'BAT_Legal_Technical_Boundary.json'),
         'applicability_path':str(applicability_path),
         'effective_catalog_path':str(effective_catalog_path),
         'catalog_advisory_count':len(catalog_advisories),
         'requested_scope_filter':scope_filter,
-        'principle':'Many-to-many site/BAT candidates; current legal applicability, future applicability and technical relevance remain separate. A candidate or downloaded reference never proves company adoption. Newer revision planning does not supersede the last verified published reference until final publication is independently verified.'
+        'principle':(
+            'Many-to-many site/BAT candidates. Site legal applicability, BAT technical relevance and company adoption are '
+            'separate claims. A non-target site may still receive technically relevant BAT reference material, but it is '
+            'labelled TECHNICAL_REFERENCE_ONLY. Absence never proves NON_TARGET, and downloaded BAT never proves adoption.'
+        )
     }
     (package/'BAT_Summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
     return summary
