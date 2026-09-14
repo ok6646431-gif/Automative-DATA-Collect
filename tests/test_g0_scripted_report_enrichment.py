@@ -87,6 +87,12 @@ class FakeHttp:
                 content=b"%PDF-1.7\ndirect-js",
                 content_type="application/pdf",
             )
+        if url.endswith("/assets/file/report_2024_kor.pdf"):
+            return FakeResponse(
+                url,
+                content=b"%PDF-1.7\nstatic-local-env",
+                content_type="application/pdf",
+            )
         if url.endswith("/upload/annual_range.pdf"):
             return FakeResponse(
                 url,
@@ -326,6 +332,44 @@ class TestG0ScriptedReportEnrichment(unittest.TestCase):
         })
         self.assertEqual(found[0]["download_contract"], "VERIFIED_GENERIC_SAME_HOST_JS_FUNCTION")
         self.assertTrue(any(d["function_definition_found"] for d in diagnostics if d["function"] == "mergeAnnual"))
+
+    def test_generic_js_resolves_intermediate_local_variables(self):
+        html = '''
+        <html><body>
+          <article class="annual-report">
+            <h3>2024 지속가능경영보고서</h3>
+            <a href="javascript:void(0)" onclick="mergeReport('2024','kor')">
+              KOR PDF 다운로드
+            </a>
+          </article>
+          <script>
+          function mergeReport(year, lang) {
+            var fileName = "report_" + year + "_" + lang + ".pdf";
+            var basePath = "/assets/file/";
+            var reportPath = basePath + fileName;
+            window.open(reportPath);
+          }
+          </script>
+        </body></html>
+        '''
+        found, diagnostics = candidates_from_generic_js_page(
+            FakeHttp(),
+            "https://official.example/esg/report/",
+            html,
+            2020,
+            2026,
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["year"], 2024)
+        self.assertEqual(
+            found[0]["url"],
+            "https://official.example/assets/file/report_2024_kor.pdf",
+        )
+        self.assertTrue(diagnostics[0]["function_definition_found"])
+        self.assertIn(
+            "https://official.example/assets/file/report_2024_kor.pdf",
+            diagnostics[0]["candidate_targets"],
+        )
 
     def test_direct_window_open_literal_is_recovered_without_function_definition(self):
         raw = "window.open('../files/report_2020_kor.pdf', '_blank')"
