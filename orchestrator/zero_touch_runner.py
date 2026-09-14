@@ -29,6 +29,7 @@ from orchestrator import g0_first_publication_recovery
 from orchestrator import g0_generic_js_report_recovery
 from orchestrator import g0_js_form_report_recovery
 from orchestrator import g0_kind_disclosure_recovery
+from orchestrator import g0_kind_sustainability_recovery
 from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
 from orchestrator import g0_plain_href_report_recovery
@@ -273,14 +274,15 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
 
     documents = g0_report_enrichment.enrich(discovery, documents, audit)
 
-    # Bounded parsers get first use of the live-network budget.  They inspect already
-    # verified report-index pages and can resolve arbitrary static JS/data-attribute
-    # controls without crawling the wider corporate site.  Broad navigation remains a
-    # fallback, followed by a second generic pass for any new report pages it reveals.
+    # Bounded first-party parsers get first use of the live-network budget.  A
+    # standardized KIND voluntary-disclosure lane then fills remaining annual-report
+    # gaps using positive evidence only.  Missing KIND rows never prove non-publication.
+    # Broad company-site navigation remains the last recovery layer.
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_js_form_report_recovery.enrich(discovery, documents, audit)
     documents = g0_data_attr_report_recovery.enrich(discovery, documents, audit)
     documents = g0_plain_href_report_recovery.enrich(discovery, documents, audit)
+    documents = g0_kind_sustainability_recovery.enrich(discovery, documents, audit)
     documents = g0_scripted_report_enrichment.enrich(discovery, documents, audit)
     documents = g0_scripted_report_navigation.enrich(discovery, documents, audit)
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
