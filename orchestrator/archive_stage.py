@@ -41,10 +41,16 @@ import archive_stage_core as _core
 from archive_stage_core import *  # preserve public helper contract
 from archive_user_dedup_pipeline import run as _deduplicate_user_archive
 from bat_archive import expose as _expose_bat_references
+from requested_scope_candidate_guard import (
+    audit_collection_for_requested_scope as _strict_scope_audit,
+)
 
-# The stable core imported the legacy dedup function at module import time. Replace
-# that function object with the ordered pipeline before ``_core.run`` is invoked.
+# The stable core imported the legacy dedup and requested-scope audit functions at
+# module import time. Replace those function objects before ``_core.run`` is invoked.
+# The strict scope audit prevents one verified requested site from silently dropping
+# out merely because sibling sites were successfully mapped.
 _core.deduplicate_archive_zip = _deduplicate_user_archive
+_core.audit_collection_for_requested_scope = _strict_scope_audit
 
 _BASE_BUILD_ARCHIVE = _core.build_archive
 
