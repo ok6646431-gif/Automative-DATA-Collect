@@ -24,6 +24,7 @@ from orchestrator import g0_js_form_report_recovery
 from orchestrator import g0_report_enrichment as strict
 from orchestrator import g0_scripted_report_enrichment as scripted
 from orchestrator import zero_touch_discovery as base
+from orchestrator.document_year_guard import route_year_conflicts
 
 SUPPORTING_LABEL_TOKENS = (
     "factbook", "fact book", "appendix", "하이라이트", "highlight", "summary", "요약",
@@ -43,6 +44,34 @@ def _dedupe(values: Iterable[str]) -> List[str]:
 def _supporting_label(label: str) -> bool:
     low = str(label or "").casefold()
     return any(token in low for token in SUPPORTING_LABEL_TOKENS)
+
+
+def _nearest_report_context(tag: Any, start_year: int, current_year: int) -> Tuple[str, int | None]:
+    """Stop at the nearest single-year report block even when it is outside the request.
+
+    Filtering years before choosing the nearest DOM block can turn the last pre-window
+    report into the first in-window year from an ancestor.  Example: a 2019 anchor under
+    a page requested from 2020 may otherwise be silently relabeled as 2020.  We inspect
+    all explicit 20xx years first; an out-of-window nearest block is terminal and is
+    rejected instead of climbing to a broader ancestor.
+    """
+    fallback = ""
+    node = tag
+    for _ in range(7):
+        if node is None:
+            break
+        text = " ".join(getattr(node, "stripped_strings", []) or []).strip()
+        if text:
+            low = text.casefold()
+            if any(token in low for token in generic.REPORT_TOKENS):
+                years = sorted({int(m.group(1)) for m in generic.YEAR_RE.finditer(text)})
+                if len(years) == 1:
+                    year = years[0]
+                    return text[:1200], year if start_year <= year <= current_year else None
+                if not fallback:
+                    fallback = text[:1200]
+        node = getattr(node, "parent", None)
+    return fallback, None
 
 
 def candidates_from_plain_href_page(
@@ -68,7 +97,7 @@ def candidates_from_plain_href_page(
         if not generic._has_download_signal(anchor, label.casefold(), attr_text):
             continue
 
-        context, year = generic._local_report_context(anchor, start_year, current_year)
+        context, year = _nearest_report_context(anchor, start_year, current_year)
         if not context or not year:
             continue
         if not any(token in context.casefold() for token in generic.REPORT_TOKENS):
@@ -91,11 +120,18 @@ def candidates_from_plain_href_page(
         }
         diagnostics.append(diagnostic)
 
+        if route_year_conflicts({"source_url": target}, year):
+            diagnostic["rejected"] = "EXPLICIT_ROUTE_YEAR_CONFLICT"
+            continue
+
         ok, final_url, content_type = scripted._verify_pdf(http, target, page_url)
         diagnostic["pdf_magic_verified"] = bool(ok)
         diagnostic["final_url"] = final_url
         diagnostic["content_type"] = content_type
         if not ok:
+            continue
+        if route_year_conflicts({"source_url": final_url}, year):
+            diagnostic["rejected"] = "FINAL_ROUTE_YEAR_CONFLICT"
             continue
         if not strict.strong_report_semantics(context, final_url, page_url):
             continue
