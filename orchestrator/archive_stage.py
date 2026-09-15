@@ -1,14 +1,20 @@
 """Compatibility wrapper for the archive stage with BAT reference delivery.
 
 The stable archive implementation is preserved in ``archive_stage_core``. This
-wrapper adds the BAT human-delivery hook after the normal archive tree is built and
-routes the final user-facing dedup through an ordered pipeline.
+wrapper adds the BAT human-delivery hook after the normal archive tree is built,
+routes the final user-facing dedup through an ordered pipeline, and enforces the
+product boundary between company-wide raw evidence and the Human Archive.
+
+Collectors may preserve broad/company-wide raw evidence under ``assembled/output``.
+That evidence belongs to the final orchestrated/source artifacts, not to the
+human-facing ZIP.  The legacy builder used to duplicate all raw evidence under
+``90_시스템원본`` inside Human_Archive.zip; production now suppresses that copy and
+fails closed if any system/raw file leaks back into the Human Archive.
 
 The production wrapper deliberately finalizes the materialized archive tree before
-creating any full-size ZIP. The dedup pipeline then reduces duplicate-heavy user/raw
-copies in that live tree and writes the final ZIP exactly once. This avoids the large
-peak-disk penalty of keeping an undeduplicated tree and an undeduplicated ZIP at the
-same time.
+creating the accepted full-size ZIP. The dedup pipeline then reduces duplicate-heavy
+user copies in that live tree and writes the final ZIP. This avoids the large
+peak-disk penalty of keeping duplicated raw evidence inside the human product.
 
 The dedup pipeline performs strict PDF render-structure comparison for same-year
 sustainability-report copies, including ENV-INFO attachments. ``pypdf``,
@@ -51,6 +57,12 @@ import archive_stage_core as _core
 from archive_stage_core import *  # preserve public helper contract
 from archive_user_dedup_pipeline import run as _deduplicate_user_archive
 from bat_archive import expose as _expose_bat_references
+from human_archive_raw_policy import (
+    assert_human_archive_raw_separated as _assert_human_archive_raw_separated,
+    raw_preservation_stats as _raw_preservation_stats,
+    rewrite_human_archive_raw_references as _rewrite_human_archive_raw_references,
+    suppress_system_raw_copy as _suppress_system_raw_copy,
+)
 from requested_scope_candidate_guard import (
     audit_collection_for_requested_scope as _strict_scope_audit,
 )
@@ -62,6 +74,13 @@ from requested_scope_candidate_guard import (
 _core.deduplicate_archive_zip = _deduplicate_user_archive
 _core.audit_collection_for_requested_scope = _strict_scope_audit
 
+# The legacy archive builder copied the complete company-wide collector tree into
+# Human_Archive/90_시스템원본.  Production retains that tree at package_root/output and
+# uploads it with the final/source artifacts, so copying it into the human product is
+# both redundant and unsafe for scope/size.  Patching the module attribute is enough:
+# archive_builder.build_archive resolves copy_system_raw from its module globals.
+_core.archive_builder.copy_system_raw = _suppress_system_raw_copy
+
 _BASE_BUILD_ARCHIVE = _core.build_archive
 
 
@@ -69,13 +88,27 @@ def _build_archive_with_bat(package_root, contract_path=_core.archive_builder.CO
     summary = _BASE_BUILD_ARCHIVE(package_root, contract_path)
     root = Path(package_root).resolve()
     archive_root = root / 'Human_Archive' / summary['archive_root']
+
+    # The raw collector tree remains under root/output.  Remove stale wording from
+    # user-facing notices and fail closed before any BAT/reference material is added.
+    _rewrite_human_archive_raw_references(archive_root)
+    _assert_human_archive_raw_separated(archive_root)
+    raw_preservation = _raw_preservation_stats(root)
+
     bat = _expose_bat_references(root, archive_root)
 
     summary['bat_archive'] = bat
+    summary['raw_preservation'] = raw_preservation
+    summary['system_files'] = 0
     checks = dict(summary.get('acceptance_checks') or {})
+    checks['system_raw_absent_from_human_archive'] = True
     if bat.get('guideline_reference_present'):
         checks['guideline_reference_present'] = True
     summary['acceptance_checks'] = checks
+    summary['principle'] = (
+        '요청범위 사용자 자료와 회사 전체 raw 보존을 분리한다. Human Archive에는 '
+        '요청범위의 사람용 자료만 포함하고, collector raw는 최종 전체 패키지 output에 별도 보존한다.'
+    )
 
     # Keep the package-level summary synchronized before the core stage performs
     # classification, normalization and final ZIP acceptance.
@@ -89,11 +122,12 @@ _core.build_archive = _build_archive_with_bat
 
 
 def _finalize_archive_manifest_pre_zip(package_root, manifest, archive_summary):
-    """Finalize the live archive tree without materializing an undeduplicated ZIP.
+    """Finalize the live archive tree while enforcing raw/user separation.
 
     ``archive_stage_core.run`` immediately invokes the injected dedup pipeline after
-    this function returns. That pipeline supports a live-tree/pre-ZIP execution mode
-    and creates ``Human_Archive.zip`` only after all semantic and exact dedup passes.
+    this function returns. The final product must not contain the legacy
+    ``90_시스템원본`` payload; authoritative raw evidence remains in ``assembled/output``
+    and the source/final workflow artifacts.
     """
     root = Path(package_root).resolve()
     stable = {
@@ -109,11 +143,9 @@ def _finalize_archive_manifest_pre_zip(package_root, manifest, archive_summary):
     )
 
     archive = root / 'Human_Archive' / archive_summary['archive_root']
+    _assert_human_archive_raw_separated(archive)
     idx = archive / '00_자료목록'
     shutil.copy2(root / 'Master_Manifest.json', idx / 'Master_Manifest.json')
-    system_manifest = archive / '90_시스템원본' / 'control_plane' / 'Master_Manifest.json'
-    if system_manifest.parent.exists():
-        shutil.copy2(root / 'Master_Manifest.json', system_manifest)
     for extra in [root / 'Requested_Scope.json', root / 'Analysis_Scope.csv']:
         if extra.exists():
             shutil.copy2(extra, idx / extra.name)
@@ -135,6 +167,7 @@ def _finalize_archive_manifest_pre_zip(package_root, manifest, archive_summary):
         **archive_summary,
         'archive_files': len(file_rows),
         'zip_path': 'Human_Archive.zip',
+        'system_files': 0,
     }
     root.joinpath('Archive_Summary.json').write_text(
         json.dumps(final, ensure_ascii=False, indent=2), encoding='utf-8'
@@ -143,7 +176,7 @@ def _finalize_archive_manifest_pre_zip(package_root, manifest, archive_summary):
 
 
 # Production archive construction now performs metadata/tree finalization first and
-# delegates the only complete ZIP write to the live-tree dedup pipeline.
+# delegates the accepted complete ZIP write to the live-tree dedup pipeline.
 _core.finalize_archive_manifest = _finalize_archive_manifest_pre_zip
 
 
