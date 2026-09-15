@@ -6,7 +6,7 @@ R2 = live regression only for affected source lanes.
 R3 = full Collection -> Human Archive -> Application Materials E2E.
 
 A higher tier does not erase lower-tier information: a change may require R3 and also
-identify affected R2 sources.  Callers can decide whether a release run needs both.
+identify affected R2 sources. Callers can decide whether a release run needs both.
 """
 from __future__ import annotations
 
@@ -101,7 +101,12 @@ INFRA_PATTERNS = (
 
 
 def _norm(path: str) -> str:
-    return str(path or "").strip().replace("\\", "/").lstrip("./")
+    text = str(path or "").strip().replace("\\", "/")
+    # Remove only an explicit relative-path prefix. Do not use lstrip('./') because
+    # that also strips the significant leading dot from '.github/...'.
+    while text.startswith("./"):
+        text = text[2:]
+    return text.lstrip("/")
 
 
 def _starts(path: str, prefixes: Iterable[str]) -> bool:
