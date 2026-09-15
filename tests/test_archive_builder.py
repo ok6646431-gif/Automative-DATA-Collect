@@ -13,7 +13,7 @@ def write_csv(path, rows):
 
 
 class ArchiveBuilderTests(unittest.TestCase):
-    def test_builds_v2_user_and_system_layers(self):
+    def test_builds_v2_user_layer_and_preserves_external_raw(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
             profile={
@@ -68,7 +68,10 @@ class ArchiveBuilderTests(unittest.TestCase):
             self.assertTrue((archive/"01_사용자자료"/"03_환경정보공개시스템"/"테스트공장"/"첨부자료"/"2024_조직도.png").exists())
             self.assertTrue((archive/"01_사용자자료"/"03_환경정보공개시스템"/"테스트공장"/"첨부자료"/"2024_지속가능경영보고서.pdf").exists())
             self.assertTrue((archive/"01_사용자자료"/"04_지속가능경영보고서"/"ENVINFO공개연도_2024_지속가능경영보고서.pdf").exists())
-            self.assertTrue((archive/"90_시스템원본"/"ENVINFO"/"raw_detail"/"2024_C1_테스트공장.html").exists())
+            # Collector raw evidence remains externally preserved under output/ and must
+            # never be copied into the human-facing archive.
+            self.assertTrue((root/"output"/"ENVINFO"/"raw_detail"/"2024_C1_테스트공장.html").exists())
+            self.assertFalse((archive/"90_시스템원본").exists())
             self.assertTrue((archive/"01_사용자자료"/"04_지속가능경영보고서"/"테스트화학_지속가능경영보고서_2024.pdf").exists())
             self.assertFalse((archive/"01_사용자자료"/"04_지속가능경영보고서"/"2024").exists())
             self.assertTrue((archive/"01_사용자자료"/"01_TMS"/"대기_CleanSYS"/"CleanSYS_대기TMS_정리.xlsx").exists())
