@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import requests
@@ -35,18 +34,15 @@ KNOWN = [
     (2021, 'ESG Policybook', 'https://sustainability.posco.com/assets/file/2021_POSCO_Policybook.pdf', '2021_POSCO_ESG_Policybook.pdf'),
 ]
 
-S = requests.Session()
-S.headers.update({'User-Agent': 'Mozilla/5.0 (public official document collector)'})
-
 
 def mkdirs():
     for p in [DOC, PAGE, LEGAL, INDEX]:
         p.mkdir(parents=True, exist_ok=True)
 
 
-def download_pdf(url: str, out: Path, timeout=25):
+def download_pdf(url: str, out: Path, timeout=18):
     try:
-        r = S.get(url, timeout=timeout, allow_redirects=True)
+        r = requests.get(url, timeout=timeout, allow_redirects=True, headers={'User-Agent':'Mozilla/5.0'})
         r.raise_for_status()
         if not r.content.startswith(b'%PDF'):
             return False, f'not_pdf:{r.headers.get("content-type", "")}'
@@ -56,15 +52,23 @@ def download_pdf(url: str, out: Path, timeout=25):
         return False, f'{type(e).__name__}:{str(e)[:160]}'
 
 
+def collect_one(item):
+    year, cat, url, name = item
+    ok, note = download_pdf(url, DOC / name)
+    return [cat, year, name, url, '다운로드 완료' if ok else '다운로드 실패', note]
+
+
 def collect():
     mkdirs()
     rows = []
-    for year, cat, url, name in KNOWN:
-        ok, note = download_pdf(url, DOC / name)
-        rows.append([cat, year, name, url, '다운로드 완료' if ok else '다운로드 실패', note])
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futs = [ex.submit(collect_one, x) for x in KNOWN]
+        for fut in as_completed(futs):
+            rows.append(fut.result())
+    rows.sort(key=lambda r: (-(int(r[1]) if isinstance(r[1], int) else 0), r[0], r[2]))
     rows.append(['기업시민보고서', 2020, 'POSCO_지속가능경영보고서_공식아카이브.pdf', ARCHIVE_URL,
                  '공식 아카이브 PDF에 존재 확인', '지원서 즉시사용팩: 2020 원문 파일 경로 자동복원은 전체 수집 파이프라인에서 별도 처리'])
-    ok, note = download_pdf(DIVISION_URL, LEGAL / '2022_포스코_물적분할_공식자료.pdf')
+    ok, note = download_pdf(DIVISION_URL, LEGAL / '2022_포스코_물적분할_공식자료.pdf', timeout=15)
     rows.append(['법인경계', 2022, '2022_포스코_물적분할_공식자료.pdf', DIVISION_URL, '다운로드 완료' if ok else '다운로드 실패', note])
     (ROOT / '_collection_rows.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
 
