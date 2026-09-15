@@ -14,7 +14,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,12 +39,17 @@ jobs:
           mkdir -p 'posco-pack/02_환경직_핵심공식페이지'
           render() {
             local url="$1"; local out="$2"
-            "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --virtual-time-budget=10000 --print-to-pdf="$out" "$url" || true
+            timeout 20s "$chrome" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --disable-dev-shm-usage --virtual-time-budget=6000 --print-to-pdf="$out" "$url" || true
           }
-          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781' 'posco-pack/02_환경직_핵심공식페이지/2025_POSCO_환경영향_공식페이지.pdf'
-          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2648825310001950' 'posco-pack/02_환경직_핵심공식페이지/2025_POSCO_기후변화_공식페이지.pdf'
-          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2681672717001150' 'posco-pack/02_환경직_핵심공식페이지/2025_POSCO_ESG_Factbook_공식페이지.pdf'
-          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381' 'posco-pack/02_환경직_핵심공식페이지/POSCO_지속가능경영보고서_공식아카이브.pdf'
+          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2676068505003781' 'posco-pack/02_환경직_핵심공식페이지/2025_POSCO_환경영향_공식페이지.pdf' &
+          p1=$!
+          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2648825310001950' 'posco-pack/02_환경직_핵심공식페이지/2025_POSCO_기후변화_공식페이지.pdf' &
+          p2=$!
+          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2681672717001150' 'posco-pack/02_환경직_핵심공식페이지/2025_POSCO_ESG_Factbook_공식페이지.pdf' &
+          p3=$!
+          render 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381' 'posco-pack/02_환경직_핵심공식페이지/POSCO_지속가능경영보고서_공식아카이브.pdf' &
+          p4=$!
+          wait "$p1" "$p2" "$p3" "$p4" || true
       - name: Build XLSX index and finalize pack
         run: python support/posco_application_pack.py --stage finalize
       - name: Show package contents
