@@ -116,7 +116,7 @@
           "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
         }
       ],
-      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY"
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     }
   ],
   "gaps": [
