@@ -1,3 +1,4 @@
+import csv
 import json
 import tempfile
 import unittest
@@ -28,6 +29,91 @@ class RequestedScopeCandidateGuardTests(unittest.TestCase):
             ],
         }
 
+    def _colocated_profile(self):
+        return {
+            'company_id': 'COMP_TEST',
+            'company_display_name': '테스트화학 주식회사',
+            'requested_company_name': '테스트화학',
+            'site_candidates': [
+                {
+                    'candidate_id': 'R',
+                    'site_name_raw': '울산고무공장',
+                    'address_raw': '울산광역시 남구 상개로 64',
+                    'verification_state': 'VERIFIED',
+                    'identity_status': 'CONFIRMED',
+                },
+                {
+                    'candidate_id': 'L',
+                    'site_name_raw': '울산 LATEX공장',
+                    'address_raw': '울산광역시 남구 상개로64',
+                    'verification_state': 'VERIFIED',
+                    'identity_status': 'CONFIRMED',
+                },
+            ],
+            'requested_scope': {'mode': 'SITE_SET', 'candidate_ids': ['R', 'L']},
+        }
+
+    def _colocated_scope(self):
+        return {
+            'mode': 'SITE_SET',
+            'label': '울산 공식 거점',
+            'target_candidate_ids': ['R', 'L'],
+            'target_canonical_site_ids': {'SITE_R'},
+            'target_source_ids': {'ENVINFO': {'E1'}, 'PRTR': {'P1'}},
+            'unresolved_candidates': [
+                {
+                    'candidate_id': 'L',
+                    'site_name_raw': '울산 LATEX공장',
+                    'address_raw': '울산광역시 남구 상개로64',
+                    'reason': 'COLOCATED_OFFICIAL_UNIT_NOT_DISTINCTLY_CONFIRMED',
+                }
+            ],
+        }
+
+    def _write_table(self, path, rows):
+        fields = []
+        for row in rows:
+            for key in row:
+                if key not in fields:
+                    fields.append(key)
+        with Path(path).open('w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def _write_colocated_evidence(self, root, include_prtr=True, include_latex=False):
+        self._write_table(root / 'Site_Master.csv', [
+            {
+                'canonical_site_id': 'SITE_R',
+                'canonical_site_name': '테스트화학 울산고무',
+                'canonical_address_key': '울산남구상개로64',
+                'identity_status': 'CONFIRMED',
+            }
+        ])
+        rows = [
+            {
+                'source_key': 'ENVINFO', 'source_site_id': 'E1',
+                'source_site_name_raw': '테스트화학 울산고무',
+                'source_address_raw': '울산광역시 남구 상개로 64',
+                'canonical_site_id': 'SITE_R', 'match_status': 'CONFIRMED',
+            }
+        ]
+        if include_prtr:
+            rows.append({
+                'source_key': 'PRTR', 'source_site_id': 'P1',
+                'source_site_name_raw': '테스트화학(주)울산고무공장',
+                'source_address_raw': '울산광역시 남구 상개로 64',
+                'canonical_site_id': 'SITE_R', 'match_status': 'CONFIRMED',
+            })
+        if include_latex:
+            rows.append({
+                'source_key': 'CHEM_STATS', 'source_site_id': 'C1',
+                'source_site_name_raw': '테스트화학 울산 LATEX공장',
+                'source_address_raw': '울산광역시 남구 상개로 64',
+                'canonical_site_id': '', 'match_status': 'REVIEW_REQUIRED',
+            })
+        self._write_table(root / 'Source_Identity.csv', rows)
+
     def test_partial_site_mapping_remains_blocking(self):
         rows = unresolved_candidate_rows(self._partial_scope())
         self.assertEqual(1, len(rows))
@@ -53,6 +139,49 @@ class RequestedScopeCandidateGuardTests(unittest.TestCase):
             'unresolved_candidates': [],
         }
         self.assertEqual([], unresolved_candidate_rows(scope))
+
+    def test_colocated_unit_can_resolve_collection_scope_without_identity_merge(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            profile = self._colocated_profile()
+            self._write_colocated_evidence(root)
+            relations, remaining = mod.resolve_collection_relations(
+                root, profile, self._colocated_scope()
+            )
+
+            self.assertEqual([], remaining)
+            self.assertEqual(1, len(relations))
+            relation = relations[0]
+            self.assertEqual('L', relation['candidate_id'])
+            self.assertEqual(mod.RELATION, relation['relation_type'])
+            self.assertEqual('COLLECTION_ONLY', relation['resolution_scope'])
+            self.assertFalse(relation['identity_merge'])
+            self.assertEqual('SITE_R', relation['coverage_canonical_site_id'])
+            self.assertEqual(['ENVINFO', 'PRTR'], relation['corroborating_source_keys'])
+
+    def test_colocated_relation_stays_unresolved_with_only_one_address_source(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            profile = self._colocated_profile()
+            self._write_colocated_evidence(root, include_prtr=False)
+            relations, remaining = mod.resolve_collection_relations(
+                root, profile, self._colocated_scope()
+            )
+
+            self.assertEqual([], relations)
+            self.assertEqual('L', remaining[0]['candidate_id'])
+
+    def test_colocated_relation_stays_unresolved_when_distinct_source_row_exists(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            profile = self._colocated_profile()
+            self._write_colocated_evidence(root, include_latex=True)
+            relations, remaining = mod.resolve_collection_relations(
+                root, profile, self._colocated_scope()
+            )
+
+            self.assertEqual([], relations)
+            self.assertEqual('L', remaining[0]['candidate_id'])
 
     def test_archive_audit_cannot_report_complete_with_one_unresolved_requested_site(self):
         with tempfile.TemporaryDirectory() as td:
