@@ -1,0 +1,181 @@
+name: R2 representative source regression
+
+on:
+  workflow_call:
+    inputs:
+      sources:
+        description: 'Comma-separated source lanes'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: 'Comma-separated source lanes, or ALL'
+        required: false
+        default: 'ENVINFO,PRTR,CHEM_STATS,CLEANSYS_AIR,SOOSIRO_WATER'
+        type: string
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/source-regression-checkpoint.yml'
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  source_regression:
+    name: R2 ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - label: KUMHO
+            company: 금호석유화학
+            snapshot: 488ddccbb634cb7af181d2a81507883eb3291458
+          - label: HANWHA_AEROSPACE
+            company: 한화에어로스페이스
+            snapshot: ccca0d9cc94a3849e8116a72015242c1eca89a8d
+          - label: HYOSUNG_TNC
+            company: 효성티앤씨
+            snapshot: 7e248b0717fe07bd7849c892bb8bb51a8f4fbe01
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source collector dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Restore frozen representative request snapshot
+        env:
+          SNAPSHOT: ${{ matrix.snapshot }}
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "$SNAPSHOT"
+          for f in company_discovery.json document_evidence.json event_evidence.json; do
+            git show "FETCH_HEAD:requests/$f" > "requests/$f"
+          done
+      - name: Compile runtime request on current shared code
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Run affected source lanes only
+        id: source_run
+        continue-on-error: true
+        env:
+          SOURCES: ${{ inputs.sources || 'ENVINFO,PRTR,CHEM_STATS,CLEANSYS_AIR,SOOSIRO_WATER' }}
+        run: >-
+          python orchestrator/source_regression_runner.py
+          --company '${{ matrix.company }}'
+          --sources "$SOURCES"
+          --output 'r2-${{ matrix.label }}.json'
+      - name: Summarize company checkpoint
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          p=Path('r2-${{ matrix.label }}.json')
+          print('## R2 ${{ matrix.company }}')
+          if not p.exists():
+              print('- result: **REGRESSION_FAIL** (result file missing)')
+          else:
+              d=json.loads(p.read_text(encoding='utf-8'))
+              print(f"- aggregate: **{d['aggregate_result']}**")
+              for r in d['results']:
+                  print(f"- {r['source']}: {r['result']} / source_status={r['source_status']} / rows={r['rows']}")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r2-source-${{ matrix.label }}
+          path: |
+            r2-${{ matrix.label }}.json
+            requests/runtime/Company_Discovery_Summary.json
+            output/*/status.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Enforce code-regression failure only
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          p=Path('r2-${{ matrix.label }}.json')
+          if not p.exists():
+              raise SystemExit('R2 result file missing')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          result=d['aggregate_result']
+          if result == 'REGRESSION_FAIL':
+              raise SystemExit('R2 code regression failed')
+          if result == 'INFRA_RETRY_REQUIRED':
+              print('::warning::R2 incomplete because an external source was unavailable; classify as INFRA_RETRY_REQUIRED, not regression failure')
+          else:
+              print('R2 PASS')
+          PY
+
+  aggregate:
+    needs: source_regression
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: r2-source-*
+          path: r2-results
+          merge-multiple: true
+      - name: Aggregate representative results
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files=sorted(Path('r2-results').glob('r2-*.json'))
+          if len(files) != 3:
+              raise SystemExit(f'expected 3 representative results, found {len(files)}')
+          data=[json.loads(p.read_text(encoding='utf-8')) for p in files]
+          results=[d['aggregate_result'] for d in data]
+          if 'REGRESSION_FAIL' in results:
+              overall='REGRESSION_FAIL'
+          elif 'INFRA_RETRY_REQUIRED' in results:
+              overall='INFRA_RETRY_REQUIRED'
+          else:
+              overall='PASS'
+          payload={'schema_version':'1.0','overall_result':overall,'companies':data}
+          Path('r2-representative-summary.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          print(json.dumps(payload,ensure_ascii=False,indent=2))
+          if overall == 'REGRESSION_FAIL':
+              raise SystemExit('representative R2 code regression failed')
+          PY
+      - name: Write aggregate summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          p=Path('r2-representative-summary.json')
+          print('## R2 representative checkpoint')
+          if p.exists():
+              d=json.loads(p.read_text(encoding='utf-8'))
+              print(f"Overall: **{d['overall_result']}**")
+              print('`INFRA_RETRY_REQUIRED` means retry the unavailable source only; it does not invalidate successful source/company lanes.')
+          else:
+              print('Overall: **REGRESSION_FAIL**')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r2-representative-summary
+          path: r2-representative-summary.json
+          if-no-files-found: warn
+          retention-days: 14
