@@ -34,6 +34,22 @@ class DocumentRouteMergeTest(unittest.TestCase):
         self.assertEqual(doc["fallback_sources"][0]["source_url"], "https://company.example/new.pdf")
         self.assertIn("https://company.example/old.pdf", [x["source_url"] for x in doc["fallback_sources"]])
 
+    def test_conflicting_year_previous_primary_cannot_override_fresh_route(self):
+        existing = {"documents": [{
+            "document_id": "OLD_2020", "document_type": "SUSTAINABILITY_REPORT", "report_year": 2020,
+            "source_url": "https://company.example/SR_2019_en.pdf",
+            "expected_extension": "pdf", "verification_status": "VERIFIED",
+        }]}
+        fresh = {"documents": [{
+            "document_id": "FRESH_2020", "document_type": "SUSTAINABILITY_REPORT", "report_year": 2020,
+            "source_url": "https://company.example/SR_2020_kr.pdf",
+            "expected_extension": "pdf", "verification_status": "SOURCE_VERIFIED",
+        }]}
+        result = merge_document_routes(self._company(), existing, self._company(), fresh)
+        doc = result["documents"][0]
+        self.assertEqual(doc["source_url"], "https://company.example/SR_2020_kr.pdf")
+        self.assertNotIn("https://company.example/SR_2019_en.pdf", [x["source_url"] for x in doc.get("fallback_sources", [])])
+
     def test_equal_strength_keeps_fresh_primary_and_old_as_fallback(self):
         existing = {"documents": [{"document_type": "SUSTAINABILITY_REPORT", "report_year": 2024, "source_url": "https://old.example/2024.pdf", "verification_status": "VERIFIED"}]}
         fresh = {"documents": [{"document_type": "SUSTAINABILITY_REPORT", "report_year": 2024, "source_url": "https://fresh.example/2024.pdf", "verification_status": "VERIFIED"}]}
@@ -63,6 +79,21 @@ class DocumentRouteMergeTest(unittest.TestCase):
         self.assertEqual(out["documents"][0]["route_merge_status"], "RESTORED_PREVIOUS_VERIFIED_DOCUMENT")
         self.assertEqual(out["gaps"], [])
         self.assertEqual(out["discovery_status"], "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE")
+
+    def test_conflicting_year_old_document_cannot_resolve_gap(self):
+        existing = {"documents": [{
+            "document_id": "OLD_2020", "document_type": "SUSTAINABILITY_REPORT", "report_year": 2020,
+            "source_url": "https://official.example/report_2019.pdf", "verification_status": "VERIFIED",
+            "expected_extension": "pdf",
+        }]}
+        fresh = {"documents": [], "gaps": [{
+            "gap_id": "G2020", "document_type": "SUSTAINABILITY_REPORT", "year": 2020,
+            "blocking": True, "status": "DISCOVERY_GAP",
+        }], "discovery_status": "PARTIAL"}
+        out = merge_document_routes(self._company(), existing, self._company(), fresh)
+        self.assertEqual(out["documents"], [])
+        self.assertEqual(len(out["gaps"]), 1)
+        self.assertEqual(out["discovery_status"], "PARTIAL")
 
     def test_unverified_old_document_does_not_resolve_gap(self):
         existing = {"documents": [{
