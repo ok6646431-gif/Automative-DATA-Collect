@@ -1,0 +1,155 @@
+name: POSCO identity gate live validation v3
+
+on:
+  push:
+    branches: [run/posco-identity-gate-validation-v3]
+    paths:
+      - .github/workflows/posco-identity-gate-live-validation-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  validate-public-collectors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Restore verified POSCO discovery inputs
+        run: |
+          git fetch --depth=1 origin run/posco-support-pack
+          for f in company_discovery.json document_evidence.json event_evidence.json; do
+            git show FETCH_HEAD:requests/$f > requests/$f
+          done
+      - name: Build runtime request with identity gate
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Run identity gate unit tests
+        run: python -m unittest tests.test_entity_scope_gate tests.test_soosiro_identity_gate -v
+      - name: Collect ENV-INFO
+        run: python collectors/envinfo_collect.py requests/current.generated.json
+      - name: Recover ENV-INFO target attachments only
+        run: python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root .
+      - name: Collect CleanSYS
+        run: python collectors/cleansys_collect.py requests/current.generated.json
+      - name: Collect SOOSIRO
+        run: python collectors/soosiro_collect.py requests/current.generated.json
+      - name: Collect PRTR
+        run: python collectors/prtr_collect.py requests/current.generated.json
+      - name: Collect chemical statistics
+        run: python collectors/chem_stats_collect.py requests/current.generated.json
+      - name: Verify exact POSCO target IDs and no heavy-download leakage
+        run: |
+          python - <<'PY'
+          import csv, json
+          from pathlib import Path
+
+          root=Path('output')
+          def loadj(p): return json.loads(Path(p).read_text(encoding='utf-8'))
+          summary={s:loadj(root/s/'status.json') for s in ['ENVINFO','CLEANSYS_AIR','SOOSIRO_WATER','PRTR','CHEM_STATS']}
+
+          env=root/'ENVINFO'
+          with (env/'discovery.csv').open(encoding='utf-8-sig',newline='') as f:
+              env_rows=list(csv.DictReader(f))
+          with (env/'attachment_index.csv').open(encoding='utf-8-sig',newline='') as f:
+              attachment_rows=list(csv.DictReader(f))
+          env_ids={str(r.get('compId') or '') for r in env_rows}
+          expected_env={'00000000000000520227','00000000000000523070'}
+          if env_ids != expected_env:
+              raise SystemExit(f'ENVINFO target IDs changed: {env_ids}')
+          leak=[r for r in attachment_rows if str(r.get('compId') or '') not in env_ids]
+          if leak:
+              raise SystemExit('ENVINFO heavy-download leak: '+str(leak[:3]))
+          files=[p for p in (env/'raw_attachments').rglob('*') if p.is_file()]
+          summary['ENVINFO']['physical_attachment_files']=len(files)
+          summary['ENVINFO']['physical_attachment_bytes']=sum(p.stat().st_size for p in files)
+          summary['ENVINFO']['attachment_companies']=sorted({r.get('compNm','') for r in attachment_rows if r.get('compNm')})
+
+          clean=loadj(root/'CLEANSYS_AIR'/'candidates.json')
+          clean_ids={str(r.get('fact_code') or '') for r in clean}
+          if clean_ids != {'110022','130502'}:
+              raise SystemExit(f'CleanSYS target IDs changed: {clean_ids}')
+
+          water=loadj(root/'SOOSIRO_WATER'/'fact_candidates.json')
+          water_ids={str(r.get('FACT_CODE') or '') for r in water}
+          expected_water={'46F0015','46F0131','47F0012'}
+          if water_ids != expected_water:
+              raise SystemExit(f'SOOSIRO target IDs changed: {water_ids}')
+
+          with (root/'PRTR'/'discovery.csv').open(encoding='utf-8-sig',newline='') as f:
+              prtr=list(csv.DictReader(f))
+          prtr_ids={str(r.get('entrps_id') or '') for r in prtr}
+          if prtr_ids != {'201226','813618'}:
+              raise SystemExit(f'PRTR target IDs changed: {prtr_ids}')
+
+          with (root/'CHEM_STATS'/'discovery.csv').open(encoding='utf-8-sig',newline='') as f:
+              chem=list(csv.DictReader(f))
+          chem_ids={str(r.get('bplcId') or r.get('bplcid') or '') for r in chem}
+          if chem_ids != {'ABZ562N','ACA106N','ACD354N'}:
+              raise SystemExit(f'CHEM_STATS target IDs changed: {chem_ids}')
+
+          def rejected_names(path, fields):
+              vals=[]
+              p=Path(path)
+              if not p.exists(): return vals
+              for line in p.read_text(encoding='utf-8',errors='replace').splitlines():
+                  if not line.strip(): continue
+                  row=json.loads(line)
+                  val=' | '.join(str(row.get(k) or '') for k in fields).strip(' |')
+                  if val and val not in vals: vals.append(val)
+              return vals
+
+          summary['ENVINFO']['scope_rejected_names']=rejected_names(env/'scope_rejected_rows.jsonl',['compNm'])
+          summary['PRTR']['scope_rejected_names']=rejected_names(root/'PRTR'/'scope_rejected_rows.jsonl',['company_name_raw'])
+          summary['CHEM_STATS']['scope_rejected_names']=rejected_names(root/'CHEM_STATS'/'scope_rejected_rows.jsonl',['bplcNm','locplcAdres'])
+          summary['SOOSIRO_WATER']['scope_rejected_names']=rejected_names(root/'SOOSIRO_WATER'/'scope_rejected_rows.jsonl',['FACT_NAME','FACT_FNAME'])
+          cp=root/'CLEANSYS_AIR'/'scope_rejected_candidates.json'
+          summary['CLEANSYS_AIR']['scope_rejected_names']=[x.get('company_name_raw','') for x in loadj(cp)] if cp.exists() else []
+
+          rejected_blob=json.dumps(summary,ensure_ascii=False)
+          for token in ['포스코퓨처엠','포스코인터내셔널']:
+              if token not in rejected_blob:
+                  raise SystemExit(f'affiliate rejection evidence missing: {token}')
+          if '포스코(포항)' in summary['SOOSIRO_WATER'].get('scope_rejected_names',[]):
+              raise SystemExit('valid SOOSIRO location alias still rejected')
+
+          Path('posco_identity_gate_validation_v3.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(summary,ensure_ascii=False,indent=2))
+          PY
+      - name: Upload validation evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-identity-gate-validation-v3
+          path: |
+            posco_identity_gate_validation_v3.json
+            requests/current.generated.json
+            output/ENVINFO/status.json
+            output/ENVINFO/discovery.csv
+            output/ENVINFO/scope_rejected_rows.jsonl
+            output/ENVINFO/attachment_index.csv
+            output/CLEANSYS_AIR/status.json
+            output/CLEANSYS_AIR/candidates.json
+            output/CLEANSYS_AIR/scope_rejected_candidates.json
+            output/SOOSIRO_WATER/status.json
+            output/SOOSIRO_WATER/fact_candidates.json
+            output/SOOSIRO_WATER/scope_rejected_rows.jsonl
+            output/PRTR/status.json
+            output/PRTR/discovery.csv
+            output/PRTR/scope_rejected_rows.jsonl
+            output/CHEM_STATS/status.json
+            output/CHEM_STATS/discovery.csv
+            output/CHEM_STATS/scope_rejected_rows.jsonl
+          if-no-files-found: error
+          retention-days: 7
