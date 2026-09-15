@@ -1,10 +1,16 @@
 {
-  "schema_version": "2.1",
+  "schema_version": "2.2",
   "archive_name_pattern": "{company_display_name}_환경자료",
   "roots": {
     "INDEX": "00_자료목록",
     "USER": "01_사용자자료",
-    "SYSTEM_RAW": "90_시스템원본"
+    "BAT": "02_BAT_참고자료"
+  },
+  "raw_preservation": {
+    "policy": "EXTERNAL_TO_HUMAN_ARCHIVE",
+    "package_raw_root": "output",
+    "prohibited_human_archive_root": "90_시스템원본",
+    "principle": "Company-wide raw collector evidence remains in the final orchestrated/source artifacts and is never duplicated into Human_Archive.zip."
   },
   "user_folders": {
     "CLEANSYS_AIR": "01_사용자자료/01_TMS/대기_CleanSYS",
@@ -41,7 +47,8 @@
     "validate_pdf_integrity": true,
     "validate_xlsx_integrity": true,
     "public_policy_required": true,
-    "guideline_reference_required": true
+    "guideline_reference_required": true,
+    "system_raw_inside_human_archive_prohibited": true
   },
   "delivery": {
     "policy": "EXACT_ARCHIVE_OR_BYTE_PRESERVING_VALIDATED_SUBSET_ONLY",
@@ -51,13 +58,13 @@
     "manual_repackaging_after_acceptance": "PROHIBITED"
   },
   "principles": [
-    "A user must be able to conduct ordinary research and comparison without opening 90_시스템원본.",
-    "Raw HTML, JSON, JSONL, collector logs and control-plane evidence are isolated under 90_시스템원본.",
-    "Publicly readable source documents and user-friendly structured exports are placed under 01_사용자자료.",
+    "A user must be able to conduct ordinary research and comparison using the Human Archive alone.",
+    "Raw HTML, JSON, JSONL, collector logs, company-wide out-of-scope attachments and control-plane evidence remain outside Human_Archive.zip in the final orchestrated/source artifacts.",
+    "Publicly readable source documents and user-friendly structured exports are placed under 01_사용자자료 only when they belong to the resolved requested scope.",
     "Single-document annual series such as sustainability reports remain in one shallow folder with the year in the filename.",
     "Site-year folders are used only where multiple documents per site/year make the extra hierarchy useful.",
     "Missing, blocked or ambiguous material is explicit REVIEW_REQUIRED and prevents a false COMPLETE claim.",
-    "Human-facing copies never replace source-native raw artifacts and every copied file remains traceable to evidence.",
+    "Human-facing copies never replace source-native raw artifacts; the raw artifacts remain preserved externally and every copied file remains traceable to evidence.",
     "The artifact delivered to a user must be the accepted Human Archive itself or a verified byte-preserving subset derived from it; ad-hoc repackaging after acceptance is not a valid delivery path."
   ]
 }
