@@ -1,0 +1,54 @@
+name: Apply identity before heavy download
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - tools/apply_identity_before_heavy_download.py
+      - .github/workflows/apply-identity-before-heavy-download.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  apply-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Apply generic collector patch
+        run: python tools/apply_identity_before_heavy_download.py
+      - name: Compile patched collectors
+        run: |
+          python -m py_compile \
+            collectors/entity_scope_gate.py \
+            collectors/envinfo_collect.py \
+            collectors/prtr_collect.py \
+            collectors/chem_stats_collect.py \
+            collectors/cleansys_collect.py \
+            collectors/soosiro_collect.py \
+            orchestrator/request_builder.py
+      - name: Run gate regressions
+        run: python -m unittest tests.test_entity_scope_gate -v
+      - name: Show patch
+        run: git diff --check && git diff -- collectors orchestrator/request_builder.py tests/test_entity_scope_gate.py
+      - name: Commit patched collectors
+        run: |
+          if git diff --quiet; then
+            echo "No collector changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add collectors/envinfo_collect.py collectors/prtr_collect.py collectors/chem_stats_collect.py collectors/cleansys_collect.py collectors/soosiro_collect.py
+          git commit -m "Gate heavy public-source collection by verified entity"
+          git push origin HEAD:run/control-plane
