@@ -1,0 +1,113 @@
+name: POSCO raw separation package replay
+
+on:
+  push:
+    branches:
+      - run/posco-raw-separation-test
+    paths:
+      - '.github/workflows/posco-raw-separation-package-replay.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install package/archive dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl
+      - name: Install Korean/CJK fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk fonts-nanum
+      - name: Restore verified POSCO control-plane inputs
+        run: |
+          git fetch --depth=1 origin run/posco-support-pack
+          for f in company_discovery.json document_evidence.json event_evidence.json; do
+            git show FETCH_HEAD:requests/$f > requests/$f
+          done
+      - name: Bootstrap runtime company inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download verified stable POSCO source artifacts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 34947350725
+          pattern: stable-*
+          path: collected/stable
+          merge-multiple: true
+          github-token: ${{ github.token }}
+      - name: Download verified POSCO ICIS artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 34947350725
+          name: icis-attempt-1
+          path: collected/icis/icis-attempt-1
+          github-token: ${{ github.token }}
+      - name: Assemble and validate
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Preserve discovery bootstrap summary
+        run: cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
+      - name: Build corrected Human Archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
+      - name: Build application materials
+        run: >-
+          python tools/build_application_material_from_archive.py
+          --input assembled/Human_Archive.zip
+          --output-dir application-delivery
+          --source-run replay-34947350725
+          --summary-out application-delivery/application_package_result.json
+      - name: Show corrected sizes and raw-separation status
+        run: |
+          python - <<'PY'
+          import json, pathlib, zipfile
+          root=pathlib.Path('assembled')
+          summary=json.loads((root/'Archive_Summary.json').read_text(encoding='utf-8'))
+          print(json.dumps({
+            'archive_completeness': summary.get('archive_completeness'),
+            'collection_completeness_status': summary.get('collection_completeness_status'),
+            'system_files': summary.get('system_files'),
+            'raw_preservation': summary.get('raw_preservation'),
+            'zip_bytes': (root/'Human_Archive.zip').stat().st_size,
+            'system_raw_absent_from_human_archive': (summary.get('acceptance_checks') or {}).get('system_raw_absent_from_human_archive'),
+          }, ensure_ascii=False))
+          with zipfile.ZipFile(root/'Human_Archive.zip') as zf:
+            leaked=[n for n in zf.namelist() if '/90_시스템원본/' in n]
+            if leaked:
+              raise SystemExit('SYSTEM RAW LEAK: '+str(leaked[:10]))
+          result=json.loads(pathlib.Path('application-delivery/application_package_result.json').read_text(encoding='utf-8'))
+          print(json.dumps({'application_status':result.get('status'),'application_zip':result.get('output_zip')}, ensure_ascii=False))
+          PY
+      - name: Upload corrected Human Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-human-archive-raw-separated
+          path: assembled/Human_Archive.zip
+          retention-days: 7
+      - name: Upload corrected application materials
+        uses: actions/upload-artifact@v4
+        with:
+          name: posco-application-materials-raw-separated
+          path: application-delivery/
+          retention-days: 7
+          compression-level: 0
