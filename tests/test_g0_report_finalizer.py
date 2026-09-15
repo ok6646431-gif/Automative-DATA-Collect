@@ -153,6 +153,61 @@ class ReportFinalizerTests(unittest.TestCase):
         self.assertEqual(out["documents"][0]["report_year"], 2021)
         self.assertEqual(len(audit["stages"]["report_finalizer"]["normalized_pdf_titles"]), 1)
 
+    def test_conflicting_primary_is_replaced_by_strong_matching_year_fallback(self):
+        discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
+        documents = {
+            "documents": [{
+                "document_id": "D2020",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "title": "2020 Sustainability Report ENG",
+                "report_year": 2020,
+                "source_url": "https://example.com/files/SR_2019_en.pdf",
+                "expected_extension": "pdf",
+                "verification_status": "SOURCE_VERIFIED",
+                "importance": "CORE",
+                "fallback_sources": [{
+                    "source_url": "https://example.com/files/SR_2020_kr.pdf",
+                    "expected_extension": "pdf",
+                    "verification_status": "SOURCE_VERIFIED",
+                    "source_locator": "https://example.com/reports",
+                }],
+            }],
+            "gaps": [],
+        }
+        audit = {}
+        out = finalizer.finalize(discovery, documents, audit)
+        self.assertEqual(len(out["documents"]), 1)
+        self.assertEqual(out["documents"][0]["source_url"], "https://example.com/files/SR_2020_kr.pdf")
+        self.assertEqual(out["documents"][0]["route_merge_status"], "REPLACED_EXPLICIT_YEAR_CONFLICT_PRIMARY")
+        self.assertEqual(out["discovery_status"], "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE")
+        conflicts = audit["stages"]["report_finalizer"]["route_year_conflicts"]
+        self.assertEqual(conflicts[0]["action"], "REPLACED_WITH_MATCHING_VERIFIED_FALLBACK")
+
+    def test_conflicting_primary_without_matching_route_reopens_blocking_gap(self):
+        discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
+        documents = {
+            "documents": [{
+                "document_id": "D2020",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "title": "2020 Sustainability Report ENG",
+                "report_year": 2020,
+                "source_url": "https://example.com/files/SR_2019_en.pdf",
+                "expected_extension": "pdf",
+                "verification_status": "SOURCE_VERIFIED",
+                "importance": "CORE",
+            }],
+            "gaps": [],
+            "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+        }
+        audit = {}
+        out = finalizer.finalize(discovery, documents, audit)
+        self.assertEqual(out["documents"], [])
+        self.assertEqual(out["discovery_status"], "PARTIAL")
+        self.assertEqual(len(out["gaps"]), 1)
+        self.assertTrue(out["gaps"][0]["blocking"])
+        self.assertEqual(out["gaps"][0]["year"], 2020)
+        self.assertEqual(out["gaps"][0]["reason"], "EXPLICIT_ROUTE_YEAR_CONFLICT_NO_MATCHING_VERIFIED_ALTERNATIVE")
+
     def test_highlight_filename_remains_supporting_summary(self):
         discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
         documents = {
