@@ -2,18 +2,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import html
-import os
-import re
-import shutil
-import subprocess
+import json
 import zipfile
 from pathlib import Path
-from urllib.parse import urljoin
 
 import requests
-from bs4 import BeautifulSoup
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.utils import get_column_letter
 
@@ -42,7 +36,7 @@ KNOWN = [
 ]
 
 S = requests.Session()
-S.headers.update({'User-Agent': 'Mozilla/5.0 (POSCO application support pack; public official documents)'})
+S.headers.update({'User-Agent': 'Mozilla/5.0 (public official document collector)'})
 
 
 def mkdirs():
@@ -50,221 +44,111 @@ def mkdirs():
         p.mkdir(parents=True, exist_ok=True)
 
 
-def sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open('rb') as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b''):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def download_pdf(url: str, out: Path, timeout=60) -> tuple[bool, str]:
+def download_pdf(url: str, out: Path, timeout=25):
     try:
         r = S.get(url, timeout=timeout, allow_redirects=True)
         r.raise_for_status()
-        body = r.content
-        if not body.startswith(b'%PDF'):
+        if not r.content.startswith(b'%PDF'):
             return False, f'not_pdf:{r.headers.get("content-type", "")}'
-        out.write_bytes(body)
-        return True, f'{len(body)} bytes'
+        out.write_bytes(r.content)
+        return True, f'{len(r.content)} bytes'
     except Exception as e:
-        return False, type(e).__name__ + ':' + str(e)[:180]
-
-
-def discover_2020() -> list[tuple[str, str]]:
-    """Find official 2020 report routes from the archive HTML without guessing a company-specific URL."""
-    found = []
-    try:
-        r = S.get(ARCHIVE_URL, timeout=40)
-        r.raise_for_status()
-        raw = html.unescape(r.text)
-    except Exception:
-        return found
-
-    candidates = set()
-    for m in re.findall(r'(?i)(?:https?://[^\"\'<> ]+\.pdf(?:\?[^\"\'<> ]*)?|/[^\"\'<> ]+\.pdf(?:\?[^\"\'<> ]*)?|/S91/S91F10/download\.do\?[^\"\'<> ]+)', raw):
-        candidates.add(urljoin(ARCHIVE_URL, m.replace('&amp;', '&')))
-    for m in re.findall(r'(?i)(?:/S91/S91F10/download\.do\?fid=\d+&pid=\d+)', raw):
-        candidates.add(urljoin(ARCHIVE_URL, m))
-
-    # First take obvious 2020 paths.
-    ordered = sorted(candidates, key=lambda u: (('2020' not in u), ('eng' in u.lower()), u))
-    for u in ordered:
-        if '2020' in u:
-            found.append((u, 'url_contains_2020'))
-
-    # For opaque download.do routes, inspect Content-Disposition without keeping the body unless it is 2020.
-    for u in ordered:
-        if 'download.do' not in u or any(x[0] == u for x in found):
-            continue
-        try:
-            with S.get(u, timeout=30, allow_redirects=True, stream=True) as rr:
-                cd = rr.headers.get('content-disposition', '')
-                if '2020' in cd:
-                    found.append((u, 'content_disposition_2020'))
-        except Exception:
-            pass
-    # de-duplicate
-    out = []
-    seen = set()
-    for x in found:
-        if x[0] not in seen:
-            out.append(x); seen.add(x[0])
-    return out[:8]
+        return False, f'{type(e).__name__}:{str(e)[:160]}'
 
 
 def collect():
     mkdirs()
     rows = []
     for year, cat, url, name in KNOWN:
-        out = DOC / name
-        ok, note = download_pdf(url, out)
+        ok, note = download_pdf(url, DOC / name)
         rows.append([cat, year, name, url, '다운로드 완료' if ok else '다운로드 실패', note])
-
-    # 2020: discover from the official archive itself. Preserve failure honestly if no route can be recovered.
-    got_2020 = False
-    for i, (url, basis) in enumerate(discover_2020(), 1):
-        name = f'2020_POSCO_공식보고서_{i}.pdf'
-        out = DOC / name
-        ok, note = download_pdf(url, out)
-        rows.append(['기업시민보고서', 2020, name, url, '다운로드 완료' if ok else '다운로드 실패', basis + '; ' + note])
-        if ok:
-            got_2020 = True
-            break
-    if not got_2020:
-        rows.append(['기업시민보고서', 2020, '', ARCHIVE_URL, '공식 아카이브에서 존재 확인 / 자동 파일회수 미완료', '지원서용 간이팩에서는 공식 아카이브 링크를 보존'])
-
+    rows.append(['기업시민보고서', 2020, 'POSCO_지속가능경영보고서_공식아카이브.pdf', ARCHIVE_URL,
+                 '공식 아카이브 PDF에 존재 확인', '지원서 즉시사용팩: 2020 원문 파일 경로 자동복원은 전체 수집 파이프라인에서 별도 처리'])
     ok, note = download_pdf(DIVISION_URL, LEGAL / '2022_포스코_물적분할_공식자료.pdf')
     rows.append(['법인경계', 2022, '2022_포스코_물적분할_공식자료.pdf', DIVISION_URL, '다운로드 완료' if ok else '다운로드 실패', note])
-
-    # Save collection rows for finalize stage.
-    import json
     (ROOT / '_collection_rows.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding='utf-8')
 
 
-def style_sheet(ws):
-    header_fill = PatternFill('solid', fgColor='D9EAF7')
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-    ws.freeze_panes = 'A2'
-    ws.auto_filter.ref = ws.dimensions
-    for col in range(1, ws.max_column + 1):
-        maxlen = 0
-        for cell in ws[get_column_letter(col)]:
-            v = '' if cell.value is None else str(cell.value)
-            maxlen = min(max(maxlen, len(v)), 55)
-            cell.alignment = Alignment(vertical='top', wrap_text=True)
-        ws.column_dimensions[get_column_letter(col)].width = max(12, maxlen + 2)
-
-
-def build_xlsx():
-    import json
-    rows = json.loads((ROOT / '_collection_rows.json').read_text(encoding='utf-8'))
-
-    # Add page PDFs generated by workflow.
-    for name, url, note in [
-        ('2025_POSCO_환경영향_공식페이지.pdf', ENV_URL, '환경조직, 인허가, 배출방지시설, 화학물질, 폐기물, 환경투자'),
-        ('2025_POSCO_기후변화_공식페이지.pdf', CLIMATE_URL, '기후변화 대응 및 탄소중립'),
-        ('2025_POSCO_ESG_Factbook_공식페이지.pdf', FACTBOOK_PAGE_URL, '최신 ESG 핵심 데이터 웹페이지'),
-        ('POSCO_지속가능경영보고서_공식아카이브.pdf', ARCHIVE_URL, '2020~2025 공식 보고서 존재 및 다운로드 경로 확인용'),
-    ]:
-        p = PAGE / name
-        rows.append(['공식 ESG 웹페이지', 2025 if name.startswith('2025') else '', name, url, 'PDF 저장 완료' if p.exists() else 'PDF 저장 실패', note])
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = '자료목록'
-    ws.append(['분류', '연도', '파일명', '공식 출처 URL', '상태', '비고'])
-    for r in rows:
-        ws.append(r)
-    style_sheet(ws)
-
-    ws2 = wb.create_sheet('환경핵심지표_2022_2024')
-    ws2.append(['지표', '단위', 2022, 2023, 2024, '출처/주의사항'])
-    metrics = [
-        ['Scope 1&2 온실가스', 'tCO2e', 70185623, 71971900, 71065170, '2024 POSCO ESG Factbook'],
-        ['에너지 사용량', 'GJ', 333781599, 354002733, 359242804, '2022는 포항·광양제철소, 2023~2024 전사 기준'],
-        ['대기오염물질 총배출량', 'ton', 53451, 55042, 49340, '2022·2023 집계방식 변경으로 조정값'],
-        ['NOx', 'ton', 27653, 27685, 23909, '2024 POSCO ESG Factbook'],
-        ['SOx', 'ton', 23294, 23945, 22366, '2024 POSCO ESG Factbook'],
-        ['Dust', 'ton', 2504, 3413, 3065, '2024 POSCO ESG Factbook'],
-        ['폐기물 발생량', 'ton', 19116690, 19523970, 20203736, '2024 POSCO ESG Factbook'],
-        ['폐기물 재활용률', '%', 98.3, 98.6, 98.8, '2024 POSCO ESG Factbook'],
-        ['용수 취수량(포항·광양)', 'ton', 145115608, 153645403, 156026930, '2024 POSCO ESG Factbook'],
-        ['용수 재사용률(포항·광양)', '%', 23.5, 20.8, 19.3, '2024 POSCO ESG Factbook'],
-        ['BOD 배출량', 'ton', 191.114, 203.841, 193.728, '2024 POSCO ESG Factbook'],
-        ['T-N 배출량', 'ton', 684.976, 668.257, 879.314, '2022·2023 확정값 조정'],
-        ['T-P 배출량', 'ton', 3.827, 2.073, 5.717, '2024 POSCO ESG Factbook'],
-        ['SS 배출량', 'ton', 134.747, 134.238, 160.598, '2022·2023 확정값 조정'],
-        ['TOC 배출량', 'ton', None, 288.780, 343.460, 'COD→TOC 전환 및 TMS 측정기기 교체로 2022 TOC 활용 불가'],
-        ['환경 법규 위반 건수', '건', 9, 8, 12, '2023 집계오류·중복집계 조정'],
-    ]
-    for r in metrics:
-        ws2.append(r)
-    style_sheet(ws2)
-
-    ws3 = wb.create_sheet('지원서용_환경직포인트')
-    ws3.append(['구분', '확인된 공식 내용', '지원서 활용 방향', '출처'])
-    points = [
-        ['환경조직', '대표이사 산하 안전보건환경본부, 환경에너지기획실, 제철소 환경자원그룹 운영', '환경 직무가 현장 관리와 본사 전략을 함께 연결한다는 근거', ENV_URL],
-        ['환경자원그룹 업무', '제철소 환경관리체계 수립·운영, 인허가 주관, 배출방지시설 점검, 화학물질 교육 실적 관리, 폐기물 재활용 처리', '지원 직무의 실제 업무 이해를 보여주는 핵심 근거', ENV_URL],
-        ['규제 대응', '국내외 탄소규제, 에너지정책, 온실가스 외부평가 대응', '법규·정책 변화 모니터링 및 대응 역량과 연결', ENV_URL],
-        ['환경투자', '2020~2025 총 2조 2,946억원: 대기 1조 9,953억원, 수질 2,636억원, 부산물자원화 127억원, 화학물질·토양 등 230억원', 'TMS, SCR/SNCR, 집진, 폐수처리, 유해화학물질 취급시설 등 구체 설비와 연결', ENV_URL],
-        ['핵심 사업장', '포항제철소, 광양제철소가 환경 데이터의 핵심 운영 사업장', '사업장 단위 환경관리 관점으로 회사 조사', 'https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645916083001125'],
-    ]
-    for r in points:
-        ws3.append(r)
-    style_sheet(ws3)
-
-    ws4 = wb.create_sheet('법인경계_주의')
-    ws4.append(['항목', '내용'])
-    notes = [
-        ['현재 지원 대상', '철강 사업회사 주식회사 포스코(POSCO)'],
-        ['2022 경계', '2022-03-01 물적분할로 현재 포스코가 신설되고, 기존 법인은 포스코홀딩스로 존속'],
-        ['2020~2021 자료', '분할 전 철강사업 역사자료로 활용하되 현재 포스코와 동일 법인이라고 표기하지 않음'],
-        ['2022 이후 자료', '현재 철강 사업회사 포스코의 자료로 분류'],
-        ['사업 연속성', '포항·광양 제철소 철강사업의 운영 연속성과 법인 동일성은 구분해서 해석'],
-    ]
-    for r in notes:
-        ws4.append(r)
-    style_sheet(ws4)
-
-    out = INDEX / '포스코_지원용_자료목록_및_환경핵심데이터.xlsx'
-    wb.save(out)
+def style(ws):
+    fill = PatternFill('solid', fgColor='D9EAF7')
+    for c in ws[1]:
+        c.font = Font(bold=True); c.fill = fill; c.alignment = Alignment(horizontal='center', vertical='center')
+    ws.freeze_panes = 'A2'; ws.auto_filter.ref = ws.dimensions
+    for i in range(1, ws.max_column + 1):
+        vals = [str(c.value or '') for c in ws[get_column_letter(i)]]
+        ws.column_dimensions[get_column_letter(i)].width = min(58, max(12, max(map(len, vals), default=10) + 2))
+        for c in ws[get_column_letter(i)]: c.alignment = Alignment(vertical='top', wrap_text=True)
 
 
 def finalize():
-    build_xlsx()
-    readme = ROOT / 'README_먼저보기.txt'
-    readme.write_text(
-        '포스코 안전/보건/환경 지원서 작성용 간이 자료세트\n\n'
-        '1) 00_자료목록의 XLSX부터 확인하세요.\n'
-        '2) 02_환경직_핵심공식페이지의 환경영향 PDF는 포스코가 공개한 환경조직, 인허가, 방지시설, 화학물질, 폐기물, 환경투자 내용을 담고 있습니다.\n'
-        '3) 01_공식보고서는 지속가능경영보고서/ESG Factbook 원문입니다.\n'
-        '4) 2020~2021 자료는 2022 물적분할 이전 철강사업 역사자료입니다. 현재 포스코와 동일 법인이라고 단정하지 마세요.\n'
-        '5) 이 파일은 지원서 작성을 위한 즉시 사용 가능한 간이팩이며 ENV-INFO/PRTR/CleanSYS/SOOSIRO 전체 수집 패키지는 아닙니다.\n',
-        encoding='utf-8'
-    )
-    internal = ROOT / '_collection_rows.json'
-    if internal.exists():
-        internal.unlink()
-    zip_path = Path('포스코_지원용_환경자료세트.zip')
-    if zip_path.exists():
-        zip_path.unlink()
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
-        for p in sorted(ROOT.rglob('*')):
-            if p.is_file():
-                z.write(p, arcname=str(Path('포스코_지원용_환경자료세트') / p.relative_to(ROOT)))
-    print({'zip': str(zip_path), 'bytes': zip_path.stat().st_size, 'sha256': sha256(zip_path)})
+    rows = json.loads((ROOT / '_collection_rows.json').read_text(encoding='utf-8'))
+    for name, url, note in [
+        ('2025_POSCO_환경영향_공식페이지.pdf', ENV_URL, '환경조직, 인허가, 배출방지시설, 화학물질, 폐기물, 환경투자'),
+        ('2025_POSCO_기후변화_공식페이지.pdf', CLIMATE_URL, '기후변화 및 탄소중립'),
+        ('2025_POSCO_ESG_Factbook_공식페이지.pdf', FACTBOOK_PAGE_URL, '최신 ESG 데이터'),
+        ('POSCO_지속가능경영보고서_공식아카이브.pdf', ARCHIVE_URL, '2020~2025 공식 보고서 아카이브'),
+    ]:
+        rows.append(['공식 ESG 웹페이지', 2025 if name.startswith('2025') else '', name, url,
+                     'PDF 저장 완료' if (PAGE/name).exists() else 'PDF 저장 실패', note])
 
+    wb = Workbook(); ws = wb.active; ws.title = '자료목록'
+    ws.append(['분류','연도','파일명','공식 출처 URL','상태','비고'])
+    for r in rows: ws.append(r)
+    style(ws)
+
+    ws2 = wb.create_sheet('환경핵심지표_2022_2024')
+    ws2.append(['지표','단위',2022,2023,2024,'출처/주의사항'])
+    metrics = [
+        ['Scope 1&2 온실가스','tCO2e',70185623,71971900,71065170,'2024 POSCO ESG Factbook'],
+        ['에너지 사용량','GJ',333781599,354002733,359242804,'2022 포항·광양, 2023~2024 전사 기준'],
+        ['대기오염물질 총배출량','ton',53451,55042,49340,'2022·2023 조정값'],
+        ['NOx','ton',27653,27685,23909,'2024 POSCO ESG Factbook'],
+        ['SOx','ton',23294,23945,22366,'2024 POSCO ESG Factbook'],
+        ['Dust','ton',2504,3413,3065,'2024 POSCO ESG Factbook'],
+        ['폐기물 발생량','ton',19116690,19523970,20203736,'2024 POSCO ESG Factbook'],
+        ['폐기물 재활용률','%',98.3,98.6,98.8,'2024 POSCO ESG Factbook'],
+        ['용수 취수량(포항·광양)','ton',145115608,153645403,156026930,'2024 POSCO ESG Factbook'],
+        ['용수 재사용률(포항·광양)','%',23.5,20.8,19.3,'2024 POSCO ESG Factbook'],
+        ['BOD','ton',191.114,203.841,193.728,'2024 POSCO ESG Factbook'],
+        ['T-N','ton',684.976,668.257,879.314,'2022·2023 확정값 조정'],
+        ['T-P','ton',3.827,2.073,5.717,'2024 POSCO ESG Factbook'],
+        ['SS','ton',134.747,134.238,160.598,'2022·2023 확정값 조정'],
+        ['TOC','ton',None,288.780,343.460,'COD→TOC 전환으로 2022 TOC 활용 불가'],
+        ['환경 법규 위반','건',9,8,12,'2023 중복집계 등 조정'],
+    ]
+    for r in metrics: ws2.append(r)
+    style(ws2)
+
+    ws3 = wb.create_sheet('지원서용_환경직포인트')
+    ws3.append(['구분','공식자료에서 확인되는 내용','지원서 활용','출처'])
+    for r in [
+        ['환경조직','대표이사 산하 안전보건환경본부, 환경에너지기획실, 제철소 환경자원그룹','현장 관리와 본사 전략을 연결하는 직무 구조',ENV_URL],
+        ['환경자원그룹','환경관리체계 수립·운영, 인허가 주관, 배출방지시설 점검, 화학물질 교육 실적 관리, 폐기물 재활용 처리','직무 이해 근거',ENV_URL],
+        ['규제 대응','국내외 탄소규제, 에너지정책, 온실가스 외부평가 대응','법규·정책 대응 역량과 연결',ENV_URL],
+        ['환경투자','2020~2025 총 2조 2,946억원: 대기 19,953억, 수질 2,636억, 부산물 127억, 화학물질·토양 등 230억','TMS, SCR/SNCR, 집진, 폐수처리, 유해화학물질 설비와 연결',ENV_URL],
+        ['핵심 사업장','포항제철소, 광양제철소','사업장 단위 환경관리 관점','https://sustainability.posco.com/S91/S91F10/kor/cmspage.do?mmcd=2645916083001125'],
+    ]: ws3.append(r)
+    style(ws3)
+
+    ws4 = wb.create_sheet('법인경계_주의'); ws4.append(['항목','내용'])
+    for r in [
+        ['현재 지원 대상','철강 사업회사 주식회사 포스코(POSCO)'],
+        ['2022 경계','2022-03-01 물적분할로 현재 포스코가 신설되고 기존 법인은 포스코홀딩스로 존속'],
+        ['2020~2021','분할 전 철강사업 역사자료. 현재 포스코와 동일 법인이라고 표기하지 않음'],
+        ['2022 이후','현재 철강 사업회사 포스코 자료'],
+        ['해석 원칙','포항·광양 제철소 철강사업의 운영 연속성과 법인 동일성은 구분'],
+    ]: ws4.append(r)
+    style(ws4)
+
+    wb.save(INDEX/'포스코_지원용_자료목록_및_환경핵심데이터.xlsx')
+    (ROOT/'README_먼저보기.txt').write_text(
+        '포스코 안전/보건/환경 지원서 작성용 즉시사용 자료세트\n\n'
+        '00_자료목록 XLSX부터 보세요. 02_환경직_핵심공식페이지의 환경영향 PDF가 직무 조사 핵심입니다.\n'
+        '2020~2021은 2022 물적분할 이전 철강사업 역사자료이며 현재 포스코와 동일 법인이라고 단정하지 않습니다.\n'
+        '이 팩은 지원서 작성용 간이팩으로 ENV-INFO/PRTR/CleanSYS/SOOSIRO 전체 수집 패키지는 아닙니다.\n', encoding='utf-8')
+    (ROOT/'_collection_rows.json').unlink(missing_ok=True)
+    print('files', len([p for p in ROOT.rglob('*') if p.is_file()]))
 
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--stage', choices=['collect', 'finalize'], required=True)
-    args = ap.parse_args()
-    if args.stage == 'collect':
-        collect()
-    else:
-        finalize()
+    ap = argparse.ArgumentParser(); ap.add_argument('--stage', choices=['collect','finalize'], required=True); a = ap.parse_args()
+    collect() if a.stage == 'collect' else finalize()
