@@ -137,27 +137,10 @@ jobs:
 
   r2_source_checkpoint:
     needs: [plan, r1_fast]
-    if: ${{ always() && needs.plan.outputs.r2_required == 'true' && needs.r1_fast.result == 'success' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    steps:
-      - name: Record affected live source lanes
-        env:
-          SOURCES: ${{ needs.plan.outputs.r2_sources }}
-        run: |
-          echo "R2_REQUIRED_SOURCES=$SOURCES"
-          echo 'Only these source lanes are invalidated. Full Master E2E is not invalidated by this R2-only change.'
-          echo 'Representative-company live checks should run these lanes in parallel at the source checkpoint.'
-      - name: Add checkpoint summary
-        env:
-          SOURCES: ${{ needs.plan.outputs.r2_sources }}
-        run: |
-          {
-            echo '## R2 source checkpoint'
-            echo "Affected lanes: **$SOURCES**"
-            echo ''
-            echo 'The old rule `shared change => reset all 3 full E2E regressions` is not used.'
-          } >> "$GITHUB_STEP_SUMMARY"
+    if: ${{ needs.plan.outputs.r2_required == 'true' && needs.r1_fast.result == 'success' }}
+    uses: ./.github/workflows/source-regression-checkpoint.yml
+    with:
+      sources: ${{ needs.plan.outputs.r2_sources }}
 
   r3_full_e2e_requirement:
     needs: [plan, r1_fast]
