@@ -1,0 +1,47 @@
+name: Fix SOOSIRO alternative-name gate
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - .github/workflows/fix-soosiro-name-gate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-test-commit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fix response text attribute typo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('collectors/soosiro_collect.py')
+          text=p.read_text(encoding='utf-8')
+          old='getattr(response,"text,","")'
+          new='getattr(response,"text","")'
+          if old not in text:
+              raise SystemExit('expected typo anchor not found')
+          p.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Compile and run identity-gate tests
+        run: |
+          python -m py_compile collectors/entity_scope_gate.py collectors/soosiro_collect.py
+          python -m unittest tests.test_entity_scope_gate tests.test_soosiro_identity_gate -v
+          git diff --check
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add collectors/soosiro_collect.py
+          git commit -m "Fix SOOSIRO alternative-name gate runtime path"
+          git push origin HEAD:run/control-plane
