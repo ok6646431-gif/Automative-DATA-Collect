@@ -1,0 +1,21 @@
+name: POSCO isolated support-pack trigger
+
+on:
+  push:
+    branches:
+      - run/posco-support-pack
+    paths:
+      - '.github/workflows/posco-support-pack.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch isolated POSCO zero-touch discovery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run zero-touch-discovery.yml --repo "${{ github.repository }}" --ref "${GITHUB_REF_NAME}" -f company_name='포스코'
