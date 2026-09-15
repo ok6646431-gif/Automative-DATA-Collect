@@ -1,0 +1,173 @@
+name: Regression tier router
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - 'orchestrator/**'
+      - 'collectors/**'
+      - 'tools/**'
+      - 'tests/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'orchestrator/**'
+      - 'collectors/**'
+      - 'tools/**'
+      - 'tests/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      changed_paths:
+        description: 'Optional newline/comma-separated changed paths for policy simulation'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      tier: ${{ steps.export.outputs.tier }}
+      r1_required: ${{ steps.export.outputs.r1_required }}
+      r2_required: ${{ steps.export.outputs.r2_required }}
+      r3_required: ${{ steps.export.outputs.r3_required }}
+      r2_sources: ${{ steps.export.outputs.r2_sources }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve changed paths
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MANUAL_PATHS: ${{ inputs.changed_paths }}
+        run: |
+          set -euo pipefail
+          : > changed_paths.txt
+          if [ -n "${MANUAL_PATHS:-}" ]; then
+            printf '%s\n' "$MANUAL_PATHS" | tr ',' '\n' | sed '/^[[:space:]]*$/d' > changed_paths.txt
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
+            git diff --name-only "$PR_BASE_SHA" "$PR_HEAD_SHA" > changed_paths.txt
+          elif [ -n "${BEFORE_SHA:-}" ] && ! printf '%s' "$BEFORE_SHA" | grep -Eq '^0+$'; then
+            git diff --name-only "$BEFORE_SHA" "$HEAD_SHA" > changed_paths.txt
+          else
+            git diff-tree --no-commit-id --name-only -r "$HEAD_SHA" > changed_paths.txt
+          fi
+          sort -u -o changed_paths.txt changed_paths.txt
+          echo 'Changed paths:'
+          cat changed_paths.txt
+      - name: Build regression plan
+        run: python orchestrator/regression_tier_policy.py --paths-file changed_paths.txt --output regression-plan.json
+      - name: Export plan outputs
+        id: export
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          p=json.load(open('regression-plan.json',encoding='utf-8'))
+          print('tier='+p['required_tier'])
+          print('r1_required='+str(bool(p['r1_required'])).lower())
+          print('r2_required='+str(bool(p['r2_required'])).lower())
+          print('r3_required='+str(bool(p['r3_required'])).lower())
+          print('r2_sources='+','.join(p['r2_sources']))
+          PY
+      - name: Summarize routing decision
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          p=json.load(open('regression-plan.json',encoding='utf-8'))
+          print('## Regression routing')
+          print(f"- Required tier: **{p['required_tier']}**")
+          print(f"- R2 sources: **{', '.join(p['r2_sources']) or 'none'}**")
+          print(f"- R3 full E2E: **{'required' if p['r3_required'] else 'not required'}**")
+          print('- Network/remote-host failures are classified as **INFRA_RETRY_REQUIRED**, not code regression failures.')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: regression-routing-plan
+          path: |
+            changed_paths.txt
+            regression-plan.json
+          if-no-files-found: error
+          retention-days: 14
+
+  r1-fast:
+    needs: plan
+    if: ${{ needs.plan.outputs.r1_required == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic-test dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Run R1 fast deterministic regression
+        run: >-
+          python -m unittest
+          tests.test_regression_tier_policy
+          tests.test_entity_scope_gate
+          tests.test_soosiro_identity_gate
+          tests.test_g0_generic_js_local_year
+          tests.test_g0_js_form_report_recovery
+          tests.test_g0_report_entity_alignment
+          tests.test_capability_regression_corpus
+          tests.test_company_profile_builder
+          tests.test_request_builder
+          tests.test_requested_scope
+          tests.test_requested_scope_subunits
+          tests.test_requested_scope_rename_bridge
+          tests.test_requested_scope_bilingual_bridge
+          tests.test_requested_scope_company_entity_filter
+          tests.test_requested_scope_analysis_entity_filter
+          tests.test_collection_completeness
+          tests.test_soosiro_retry
+          tests.test_application_material_from_archive
+          -v
+
+  r2-source-checkpoint:
+    needs: [plan, r1-fast]
+    if: ${{ always() && needs.plan.outputs.r2_required == 'true' && (needs.r1-fast.result == 'success' || needs.r1-fast.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Record affected live source lanes
+        env:
+          SOURCES: ${{ needs.plan.outputs.r2_sources }}
+        run: |
+          echo "R2_REQUIRED_SOURCES=$SOURCES"
+          echo 'Only these source lanes are invalidated. Full Master E2E is not invalidated by this R2-only change.'
+          echo 'Representative-company live checks should run these lanes in parallel at the source checkpoint.'
+      - name: Add checkpoint summary
+        env:
+          SOURCES: ${{ needs.plan.outputs.r2_sources }}
+        run: |
+          {
+            echo '## R2 source checkpoint'
+            echo "Affected lanes: **$SOURCES**"
+            echo ''
+            echo 'The old rule `shared change => reset all 3 full E2E regressions` is not used.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  r3-full-e2e-requirement:
+    needs: [plan, r1-fast]
+    if: ${{ always() && needs.plan.outputs.r3_required == 'true' && (needs.r1-fast.result == 'success' || needs.r1-fast.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Record R3 requirement
+        run: |
+          echo 'R3_REQUIRED=true'
+          echo 'Full Collection -> Human Archive -> Application Materials is required for this structural/release change.'
+          echo 'R3 should reuse already-verified source inputs where possible rather than forcing unrelated source re-downloads.'
