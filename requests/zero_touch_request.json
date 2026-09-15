@@ -1,4 +1,4 @@
 {
   "company_name": "금호석유화학",
-  "rerun_reason": "strict representative regression after shared Human Archive raw-separation fix; verify Collection COMPLETE, Human Archive COMPLETE/PASS, Application Materials PASS, no system raw inside Human Archive"
+  "rerun_reason": "strict Full E2E representative regression on shared code 7b277405c0c1cd674785d7a9c18cc887d37f2e66 after R2 3/3 PASS; verify Collection COMPLETE, Human Archive COMPLETE/PASS, Application Materials PASS, system_raw_absent_from_human_archive=true, raw evidence preserved externally"
 }
