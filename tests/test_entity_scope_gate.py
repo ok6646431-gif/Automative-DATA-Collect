@@ -66,7 +66,7 @@ class EntityScopeGateTest(unittest.TestCase):
             with self.subTest(name=name):
                 result = evaluate_candidate(name, "", GATE)
                 self.assertTrue(result["allowed"])
-                self.assertEqual(result["decision"], "ALLOW_CURRENT_ENTITY_VERIFIED_SITE_ALIAS")
+                self.assertEqual(result["decision"], "ALLOW_CURRENT_ENTITY_LOCATION_ALIAS")
                 self.assertIn(token, result["reason"])
 
     def test_location_alias_must_be_exact_suffix(self):

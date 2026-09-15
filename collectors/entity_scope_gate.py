@@ -230,20 +230,9 @@ def evaluate_candidate(name, address="", gate=None):
         if not suffix:
             continue
 
-        if suffix in site_alias_tokens:
-            return {
-                "allowed": True,
-                "decision": "ALLOW_CURRENT_ENTITY_VERIFIED_SITE_ALIAS",
-                "reason": f"source name is current entity plus exact alias derived from a verified site label: {suffix}",
-            }
-
-        if suffix in unique_role_tokens:
-            return {
-                "allowed": True,
-                "decision": "ALLOW_CURRENT_ENTITY_UNIQUE_ROLE_ALIAS",
-                "reason": f"source name is current entity plus role {suffix}, which identifies one verified site",
-            }
-
+        # Preserve the pre-existing decision semantics for locality aliases. A site
+        # like 포항제철소 also yields the site stem 포항, but locality is the older and
+        # narrower classification and should win when both apply.
         if suffix in location_tokens:
             return {
                 "allowed": True,
@@ -257,6 +246,20 @@ def evaluate_candidate(name, address="", gate=None):
                     "decision": "ALLOW_CURRENT_ENTITY_LOCATION_ROLE_ALIAS",
                     "reason": f"source name is current entity plus verified location/role alias {suffix}",
                 }
+
+        if suffix in site_alias_tokens:
+            return {
+                "allowed": True,
+                "decision": "ALLOW_CURRENT_ENTITY_VERIFIED_SITE_ALIAS",
+                "reason": f"source name is current entity plus exact alias derived from a verified site label: {suffix}",
+            }
+
+        if suffix in unique_role_tokens:
+            return {
+                "allowed": True,
+                "decision": "ALLOW_CURRENT_ENTITY_UNIQUE_ROLE_ALIAS",
+                "reason": f"source name is current entity plus role {suffix}, which identifies one verified site",
+            }
 
     if address_match:
         return {
