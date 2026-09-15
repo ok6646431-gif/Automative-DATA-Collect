@@ -1,4 +1,4 @@
 {
   "company_name": "금호석유화학",
-  "rerun_reason": "strict representative regression rerun on final candidate code after generic report-year boundary and verified-route hardening"
+  "rerun_reason": "strict representative regression after shared Human Archive raw-separation fix; verify Collection COMPLETE, Human Archive COMPLETE/PASS, Application Materials PASS, no system raw inside Human Archive"
 }
