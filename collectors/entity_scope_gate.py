@@ -6,6 +6,14 @@ LEGAL_FORM_PATTERNS = [
     r"\(주\)", r"㈜", r"\(유\)",
 ]
 
+# These are generic facility-role suffixes, not company-specific aliases.  Removing
+# one from a *verified* site name can yield a conservative source-native location
+# token such as '포항' from '포항제철소' or '울산' from '울산공장'.
+SITE_ROLE_SUFFIXES = [
+    "제철소", "사업장", "사업소", "공장", "본사", "사무소", "연구소", "연구원",
+    "센터", "캠퍼스", "단지", "기지", "터미널",
+]
+
 
 def _without_legal_forms(value):
     text = str(value or "").casefold()
@@ -38,6 +46,37 @@ def _gate_sites(gate):
     return out
 
 
+def _verified_location_tokens(sites, entity_names):
+    """Derive conservative short location aliases from verified site names only.
+
+    The token is usable only for heavy-download admission when the source label is
+    exactly '<verified current entity><token>'.  It never creates or merges a
+    canonical site identity.  Address text alone never creates these tokens.
+    """
+    entity_set = {x for x in entity_names if x}
+    out = set()
+    for site in sites:
+        raw = compact_name(site.get("site_name"))
+        if not raw:
+            continue
+        stem = raw
+        for suffix in sorted(SITE_ROLE_SUFFIXES, key=len, reverse=True):
+            compact_suffix = compact_name(suffix)
+            if compact_suffix and stem.endswith(compact_suffix):
+                stem = stem[:-len(compact_suffix)]
+                break
+        # Require at least two Korean syllables.  Ignore stems that collapse to the
+        # company itself (for example '포스코센터' -> '포스코').
+        if (
+            stem
+            and stem not in entity_set
+            and len(stem) >= 2
+            and re.fullmatch(r"[가-힣]{2,}", stem)
+        ):
+            out.add(stem)
+    return sorted(out)
+
+
 def evaluate_candidate(name, address="", gate=None):
     """Decide whether a source candidate may trigger heavy/detail collection.
 
@@ -45,6 +84,12 @@ def evaluate_candidate(name, address="", gate=None):
     source-ID probing are allowed only when the candidate can be tied to the verified
     current legal entity or a verified site name.  Address alone is deliberately not
     sufficient because co-located official units can be distinct identities.
+
+    A source may abbreviate a verified site to a location label, e.g. '회사(포항)'
+    instead of '회사 포항제철소'.  Such a label is admitted only when its suffix exactly
+    equals a location token derived from a verified site name.  This is an admission
+    rule for collection only; downstream identity resolution still decides which site
+    the source record belongs to.
 
     Returns a dict with ``allowed``, ``decision`` and ``reason``.
     """
@@ -93,6 +138,22 @@ def evaluate_candidate(name, address="", gate=None):
                     return {"allowed": True, "decision": "ALLOW_CURRENT_ENTITY_SITE", "reason": f"source name combines verified current entity and site {site.get('site_name')}"}
                 if candidate.startswith(entity) and site_name in candidate[len(entity):]:
                     return {"allowed": True, "decision": "ALLOW_CURRENT_ENTITY_SITE", "reason": f"source name contains verified site {site.get('site_name')} after current entity stem"}
+
+    # Source-native systems sometimes collapse a facility role to a parenthesized
+    # location, e.g. '포스코(포항)'.  Permit only an exact entity+verified-location
+    # composition.  Extra suffix text is intentionally rejected, so affiliate names
+    # such as '포스코퓨처엠' cannot satisfy this rule.
+    location_tokens = _verified_location_tokens(sites, entity_names)
+    for entity in entity_names:
+        if not candidate.startswith(entity):
+            continue
+        suffix = candidate[len(entity):]
+        if suffix and suffix in location_tokens:
+            return {
+                "allowed": True,
+                "decision": "ALLOW_CURRENT_ENTITY_LOCATION_ALIAS",
+                "reason": f"source name is current entity plus verified site-derived location token {suffix}",
+            }
 
     if address_match:
         return {
