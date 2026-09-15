@@ -30,6 +30,10 @@ class FakeHttp:
             return FakeResponse(url, b"%PDF-1.7\nfactbook")
         if "fid=REPORT2024" in url:
             return FakeResponse(url, b"%PDF-1.7\nannual-report-2024")
+        if "fid=REPORT2020" in url or "report_2020.pdf" in url:
+            return FakeResponse(url, b"%PDF-1.7\nannual-report-2020")
+        if "fid=REPORT2019" in url or "report_2019.pdf" in url:
+            return FakeResponse(url, b"%PDF-1.7\nannual-report-2019")
         if "other.example" in url:
             return FakeResponse(url, b"%PDF-1.7\ncross-host")
         return FakeResponse(url, status=404)
@@ -55,6 +59,36 @@ class PlainHrefReportRecoveryTests(unittest.TestCase):
         self.assertEqual(by_year[2025]["url"], "https://official.example/download.do?fid=REPORT2025")
         self.assertEqual(by_year[2025]["download_contract"], "VERIFIED_PLAIN_SAME_ORG_HREF_LOCAL_YEAR")
         self.assertTrue(all(x.get("pdf_magic_verified") for x in diagnostics))
+
+    def test_pre_window_report_is_not_relabelled_as_first_requested_year(self):
+        html = '''
+        <section class="archive">
+          <article><h3>2020 지속가능경영보고서</h3>
+            <a href="/files/report_2020.pdf">KOR</a>
+          </article>
+          <article><h3>2019 지속가능경영보고서</h3>
+            <a href="/files/report_2019.pdf">KOR</a>
+          </article>
+        </section>
+        '''
+        found, _ = candidates_from_plain_href_page(
+            FakeHttp(), "https://official.example/reports", html, 2020, 2026
+        )
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0]["year"], 2020)
+        self.assertEqual(found[0]["url"], "https://official.example/files/report_2020.pdf")
+
+    def test_explicit_route_year_conflict_is_rejected(self):
+        html = '''
+        <article><h3>2020 지속가능경영보고서</h3>
+          <a href="/files/report_2019.pdf">KOR</a>
+        </article>
+        '''
+        found, diagnostics = candidates_from_plain_href_page(
+            FakeHttp(), "https://official.example/reports", html, 2020, 2026
+        )
+        self.assertEqual(found, [])
+        self.assertEqual(diagnostics[0]["rejected"], "EXPLICIT_ROUTE_YEAR_CONFLICT")
 
     def test_factbook_is_excluded_even_when_pdf_bytes_are_valid(self):
         html = '''
