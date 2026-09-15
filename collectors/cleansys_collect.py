@@ -7,8 +7,10 @@ from urllib3.exceptions import InsecureRequestWarning
 
 try:
     from .name_filter import matching_exclusion
+    from .entity_scope_gate import evaluate_candidate
 except ImportError:
     from name_filter import matching_exclusion
+    from entity_scope_gate import evaluate_candidate
 
 BASE="https://cleansys.or.kr"; INDEX=BASE+"/index.do"; ANNUAL=BASE+"/apiService/selectAnnualResult.do"
 UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36"
@@ -41,7 +43,7 @@ def main(req_path):
             tls_error=str(e); verify=False; warnings.simplefilter("ignore",InsecureRequestWarning)
             r=requests.get(INDEX,headers={"User-Agent":UA},timeout=(5,10),verify=False); r.raise_for_status()
         (out/"index_raw.html").write_text(r.text,encoding="utf-8")
-        soup=BeautifulSoup(r.text,"html.parser"); candidates=[]; excluded_candidates=[]
+        soup=BeautifulSoup(r.text,"html.parser"); candidates=[]; excluded_candidates=[]; scope_rejected_candidates=[]
         for opt in soup.find_all("option"):
             name=opt.get_text(" ",strip=True); fact=(opt.get("value") or "").strip()
             if not fact or not any(term_matches_option(t,name) for t in terms):
@@ -51,7 +53,11 @@ def main(req_path):
             if exclusion:
                 excluded_candidates.append({**row,"excluded_by":exclusion})
             else:
-                candidates.append(row)
+                decision=evaluate_candidate(name,"",cfg.get("identity_gate"))
+                if decision["allowed"]:
+                    candidates.append({**row,"detail_scope_decision":decision["decision"]})
+                else:
+                    scope_rejected_candidates.append({**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
         seen=set(); candidates=[x for x in candidates if not ((x["fact_code"],x["company_name_raw"]) in seen or seen.add((x["fact_code"],x["company_name_raw"])))]
         seen_ex=set(); excluded_candidates=[x for x in excluded_candidates if not ((x["fact_code"],x["company_name_raw"],x["excluded_by"]) in seen_ex or seen_ex.add((x["fact_code"],x["company_name_raw"],x["excluded_by"])))]
         rows=[]; errors=[]
@@ -67,9 +73,10 @@ def main(req_path):
             except Exception as e: errors.append({**c,"error":f"{type(e).__name__}: {e}"})
         (out/"candidates.json").write_text(json.dumps(candidates,ensure_ascii=False,indent=2),encoding="utf-8")
         (out/"excluded_candidates.json").write_text(json.dumps(excluded_candidates,ensure_ascii=False,indent=2),encoding="utf-8")
+        (out/"scope_rejected_candidates.json").write_text(json.dumps(scope_rejected_candidates,ensure_ascii=False,indent=2),encoding="utf-8")
         with (out/"annual_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
-        status.update({"status":"DATA_FOUND" if rows else ("RESPONSE_OK_NO_TERM_MATCH" if not candidates else "REQUEST_OR_PARSE_FAILED"),"candidate_count":len(candidates),"excluded_candidates":len(excluded_candidates),"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
+        status.update({"status":"DATA_FOUND" if rows else ("RESPONSE_OK_NO_TERM_MATCH" if not candidates else "REQUEST_OR_PARSE_FAILED"),"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"]!="REQUEST_OR_PARSE_FAILED" else 41

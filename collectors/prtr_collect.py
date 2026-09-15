@@ -8,8 +8,10 @@ from urllib3.util.retry import Retry
 
 try:
     from .name_filter import matching_exclusion
+    from .entity_scope_gate import evaluate_candidate
 except ImportError:
     from name_filter import matching_exclusion
+    from entity_scope_gate import evaluate_candidate
 
 BASE = "https://icis.mcee.go.kr"
 SEARCH = BASE + "/prtr/prtrInfo/entrpsSearch.do"
@@ -70,7 +72,7 @@ def main(req_path):
         r0=requests.post(SEARCH,data=form(end,first_term,1),headers={"User-Agent":UA,"Referer":SEARCH},timeout=(8,20)); r0.raise_for_status()
     except Exception as e:
         status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"}); write_status(out,status); return 22
-    s=session(); dedup={}; successful=0; excluded_rows=[]
+    s=session(); dedup={}; successful=0; excluded_rows=[]; scope_rejected_rows=[]
     try:
         for spec in cfg["search_terms"]:
             ys=int(spec.get("year_start",start)); ye=spec.get("year_end",end); ye=end if ye=="auto" else int(ye); term=spec["term"]
@@ -89,6 +91,10 @@ def main(req_path):
                         if exclusion:
                             excluded_rows.append({"search_year":y,"search_term":term,"excluded_by":exclusion,**row})
                             continue
+                        decision=evaluate_candidate(row["company_name_raw"],row["address_raw"],cfg.get("identity_gate"))
+                        if not decision["allowed"]:
+                            scope_rejected_rows.append({"search_year":y,"search_term":term,**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
+                            continue
                         hits=match_sites(row["address_raw"],cfg.get("site_address_anchors",{})); key=(y,row["entrps_id"])
                         if key not in dedup: dedup[key]={"search_year":y,**row,"proposed_site_ids":"|".join(hits),"search_terms_hit":term,"match_status":"ADDRESS_CANDIDATE" if len(hits)==1 else ("REVIEW_REQUIRED" if len(hits)>1 else "UNRESOLVED"),"source_url":SEARCH}
                         elif term not in dedup[key]["search_terms_hit"].split("|"): dedup[key]["search_terms_hit"]+="|"+term
@@ -97,6 +103,8 @@ def main(req_path):
         with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f: w=csv.DictWriter(f,fieldnames=cols); w.writeheader(); w.writerows(rows)
         with (out/"excluded_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in excluded_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
+        with (out/"scope_rejected_rows.jsonl").open("w",encoding="utf-8") as f:
+            for row in scope_rejected_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
         detail_ok=0; detail_fail=0; flat=[]
         if cfg.get("collect_details",True):
             for row in rows:
@@ -113,7 +121,7 @@ def main(req_path):
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
         with (out/"detail_table_rows.jsonl").open("w",encoding="utf-8") as f:
             for r in flat: f.write(json.dumps(r,ensure_ascii=False)+"\n")
-        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"years":years,"successful_responses":successful,"excluded_rows":len(excluded_rows),"detail_ok":detail_ok,"detail_fail":detail_fail,"detail_table_rows":len(flat)})
+        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"years":years,"successful_responses":successful,"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"detail_ok":detail_ok,"detail_fail":detail_fail,"detail_table_rows":len(flat)})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":repr(e)})
     write_status(out,status); return 21 if status["status"] in {"REQUEST_OR_PARSE_FAILED","REMOTE_HOST_UNREACHABLE"} else 0
 

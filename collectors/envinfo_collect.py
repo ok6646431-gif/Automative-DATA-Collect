@@ -6,8 +6,10 @@ from bs4 import BeautifulSoup
 
 try:
     from .name_filter import matching_exclusion
+    from .entity_scope_gate import split_candidates
 except ImportError:
     from name_filter import matching_exclusion
+    from entity_scope_gate import split_candidates
 
 BASE="https://www.env-info.kr"
 SEARCH_PAGE=BASE+"/member/open/companyTotalInfoSearch.do"
@@ -199,7 +201,12 @@ def main(req_path):
                         dedup[key]["search_terms_hit"]+="|"+term
                 if page*page_size>=total or not rows: break
                 page+=1
-        rows=list(dedup.values())
+        search_candidate_rows=list(dedup.values())
+        rows,scope_rejected_rows=split_candidates(
+            search_candidate_rows,
+            name_getter=lambda r: r.get("compNm", ""),
+            gate=cfg.get("identity_gate"),
+        )
         all_keys=sorted({k for r in rows for k in r})
         if rows:
             with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f:
@@ -208,6 +215,8 @@ def main(req_path):
                 for r in rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
         with (out/"excluded_rows.jsonl").open("w",encoding="utf-8") as f:
             for r in excluded_rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
+        with (out/"scope_rejected_rows.jsonl").open("w",encoding="utf-8") as f:
+            for r in scope_rejected_rows: f.write(json.dumps(r,ensure_ascii=False)+"\n")
         detail_ok=0; detail_fail=0
         if collect_details:
             for row in rows[:max_details]:
@@ -243,7 +252,7 @@ def main(req_path):
                     (out/"errors.log").open("a",encoding="utf-8").write(f"DETAIL\t{year}\t{comp}\t{e}\n")
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
         write_attachment_index(out,attachment_rows)
-        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","rows":len(rows),"excluded_rows":len(excluded_rows),"unique_comp_ids":len({r.get('compId') for r in rows}),"detail_ok":detail_ok,"detail_fail":detail_fail,"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
+        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","search_candidate_rows":len(search_candidate_rows),"rows":len(rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"unique_comp_ids":len({r.get('compId') for r in rows}),"detail_ok":detail_ok,"detail_fail":detail_fail,"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
     except Exception as e:
         write_attachment_index(out,attachment_rows)
         status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows),"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})

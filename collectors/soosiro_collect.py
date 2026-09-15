@@ -6,8 +6,10 @@ import requests
 
 try:
     from .name_filter import matching_exclusion
+    from .entity_scope_gate import evaluate_candidate
 except ImportError:
     from name_filter import matching_exclusion
+    from entity_scope_gate import evaluate_candidate
 
 BASE="https://www.soosiro.or.kr"
 ANNUAL=BASE+"/open/web/annual/listJson"
@@ -144,7 +146,7 @@ def main(req_path):
     out=Path("output/SOOSIRO_WATER"); raw=out/"raw_annual"; draw=out/"raw_daily"; raw.mkdir(parents=True,exist_ok=True); draw.mkdir(parents=True,exist_ok=True)
     headers={"User-Agent":UA,"Referer":BASE+"/open/web/annual?pMENU_NO=410","Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","Accept":"application/json,text/plain,*/*"}
     status={"source_key":"SOOSIRO_WATER","status":"RUNNING","annual_years":years,"daily_years":daily_years,"terms":terms,"requests":0,"errors":0}
-    dedup={}; candidates={}; excluded_rows=[]
+    dedup={}; candidates={}; excluded_rows=[]; scope_rejected_rows=[]
 
     def absorb_rows(rows,y,hit):
         for row in rows:
@@ -152,6 +154,10 @@ def main(req_path):
             exclusion=matching_exclusion(source_name,exclude_terms)
             if exclusion:
                 excluded_rows.append({"query_year":y,"search_term":hit,"excluded_by":exclusion,**row})
+                continue
+            decision=evaluate_candidate(source_name,row.get("FACT_ADDR",""),cfg.get("identity_gate"))
+            if not decision["allowed"]:
+                scope_rejected_rows.append({"query_year":y,"search_term":hit,**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
                 continue
             fc=str(row.get("FACT_CODE","") or ""); wn=str(row.get("WAST_NO","") or ""); key=(str(row.get("YEAR",y)),fc,wn)
             if key not in dedup:
@@ -172,6 +178,10 @@ def main(req_path):
             source_name=" ".join(str(fact.get(k) or "") for k in ("FACT_NAME","FACT_FNAME"))
             exclusion=matching_exclusion(source_name,exclude_terms)
             if not fc or exclusion: continue
+            decision=evaluate_candidate(source_name,fact.get("FACT_ADDR",""),cfg.get("identity_gate"))
+            if not decision["allowed"]:
+                scope_rejected_rows.append({"search_term":"OFFICIAL_ADDRESS",**fact,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
+                continue
             candidates[fc]={"FACT_CODE":fc,"FACT_NAME":fact.get("FACT_NAME"),"FACT_FNAME":fact.get("FACT_FNAME"),"FACT_ADDR":fact.get("FACT_ADDR"),"discovery_basis":"OFFICIAL_ADDRESS"}
             seeded_codes.append(fc)
 
@@ -202,6 +212,8 @@ def main(req_path):
             for row in annual_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
         with (out/"excluded_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in excluded_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
+        with (out/"scope_rejected_rows.jsonl").open("w",encoding="utf-8") as f:
+            for row in scope_rejected_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
         (out/"fact_candidates.json").write_text(json.dumps(list(candidates.values()),ensure_ascii=False,indent=2),encoding="utf-8")
 
         daily_rows=[]; daily_success=0
@@ -221,7 +233,7 @@ def main(req_path):
                             status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DAILY\t{y}\t{fc}\t{q}\t{type(e).__name__}\t{e}\n")
         with (out/"daily_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in daily_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
-        status.update({"status":"DATA_FOUND" if annual_rows else "NO_MATCH","annual_rows":len(annual_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
+        status.update({"status":"DATA_FOUND" if annual_rows else "NO_MATCH","annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows)})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"]!="REQUEST_OR_PARSE_FAILED" else 31

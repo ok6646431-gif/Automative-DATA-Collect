@@ -6,8 +6,10 @@ from bs4 import BeautifulSoup
 
 try:
     from .name_filter import matching_exclusion
+    from .entity_scope_gate import evaluate_candidate
 except ImportError:
     from name_filter import matching_exclusion
+    from entity_scope_gate import evaluate_candidate
 
 BASE="https://icis.mcee.go.kr"
 DISCOVERY=BASE+"/iprtr/cdrInfoDetailListJson.do"
@@ -73,7 +75,7 @@ def main(req_path):
     years=sorted({int(x) for x in cfg.get("years",[2024])}); terms=cfg.get("search_terms") or [req.get("company_display_name","")]; max_pages=int(cfg.get("max_pages",10)); exclude_terms=cfg.get("exclude_terms",[])
     out=Path("output/CHEM_STATS"); raw=out/"raw_discovery"; details=out/"raw_detail"; raw.mkdir(parents=True,exist_ok=True); details.mkdir(parents=True,exist_ok=True)
     s=requests.Session(); s.headers.update({"User-Agent":UA,"X-Requested-With":"XMLHttpRequest","Accept":"application/json,text/javascript,*/*;q=0.01","Referer":BASE+"/pageLink.do"})
-    status={"source_key":"CHEM_STATS","status":"RUNNING","requests":0,"errors":0,"years":years,"terms":terms}; dedup={}; successful=0; excluded_rows=[]
+    status={"source_key":"CHEM_STATS","status":"RUNNING","requests":0,"errors":0,"years":years,"terms":terms}; dedup={}; successful=0; excluded_rows=[]; scope_rejected_rows=[]
     detail_cache={}; backfill_audit=[]
     try:
         try:
@@ -102,6 +104,10 @@ def main(req_path):
                         exclusion=matching_exclusion(field_ci(source_row,"bplcnm",""),exclude_terms)
                         if exclusion:
                             excluded_rows.append({"search_year":y,"search_term":term,"excluded_by":exclusion,**source_row})
+                            continue
+                        decision=evaluate_candidate(field_ci(source_row,"bplcnm",""),field_ci(source_row,"locplcadres",""),cfg.get("identity_gate"))
+                        if not decision["allowed"]:
+                            scope_rejected_rows.append({"search_year":y,"search_term":term,**source_row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
                             continue
                         key=(y,str(bid))
                         if key not in dedup:
@@ -158,6 +164,7 @@ def main(req_path):
             with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f: w=csv.DictWriter(f,fieldnames=keys,extrasaction="ignore"); w.writeheader(); w.writerows(rows)
             write_jsonl(out/"discovery.jsonl",rows)
         write_jsonl(out/"excluded_rows.jsonl",excluded_rows)
+        write_jsonl(out/"scope_rejected_rows.jsonl",scope_rejected_rows)
         write_jsonl(out/"source_id_backfill_audit.jsonl",backfill_audit)
 
         # 3) Collect/validate the actual detail artifact for every discovered or
@@ -188,7 +195,7 @@ def main(req_path):
             "source_id_backfill_attempts":len(backfill_audit),"source_id_backfill_rows":sum(1 for r in backfill_audit if r.get("query_status")=="DATA_PRESENT"),
             "source_id_no_data_confirmed":sum(1 for r in backfill_audit if r.get("query_status")=="NO_DATA_CONFIRMED"),
             "source_id_backfill_failed":sum(1 for r in backfill_audit if r.get("query_status")=="QUERY_FAILED"),
-            "successful_responses":successful,"excluded_rows":len(excluded_rows),"unique_bplc_ids":len({x for x in ids if x}),
+            "successful_responses":successful,"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"unique_bplc_ids":len({x for x in ids if x}),
             "detail_ok":detail_ok,"detail_fail":detail_fail,"detail_table_rows":len(table_rows)
         })
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
