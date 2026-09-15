@@ -57,6 +57,45 @@ def address_seed_candidates(facts, site_addresses):
     return seeded
 
 
+def source_name_scope_decision(row, gate):
+    """Evaluate SOOSIRO's alternative source-name fields independently.
+
+    FACT_NAME and FACT_FNAME are alternative labels for the same facility and are
+    frequently identical. Concatenating them can turn a valid source label such as
+    '회사(지역)' into '회사(지역)회사(지역)' and create a false rejection. Heavy
+    collection is allowed when any non-empty source-native name independently passes
+    the shared verified-entity/site gate. The combined string is retained elsewhere
+    only for explicit exclusion matching and audit readability.
+    """
+    decisions=[]
+    for key in ("FACT_NAME","FACT_FNAME"):
+        value=str(row.get(key) or "").strip()
+        if not value:
+            continue
+        decision=evaluate_candidate(value,row.get("FACT_ADDR",""),gate)
+        decisions.append((key,value,decision))
+        if decision["allowed"]:
+            return {
+                **decision,
+                "matched_name_field":key,
+                "matched_name_value":value,
+            }
+    if decisions:
+        # Preserve the strongest fail-closed signal when a verified address happened
+        # to match but the source name did not prove current-entity identity.
+        key,value,decision=next(
+            (item for item in decisions if item[2].get("decision")=="REJECT_ADDRESS_ONLY"),
+            decisions[0],
+        )
+        return {
+            **decision,
+            "matched_name_field":key,
+            "matched_name_value":value,
+        }
+    decision=evaluate_candidate("",row.get("FACT_ADDR",""),gate)
+    return {**decision,"matched_name_field":"","matched_name_value":""}
+
+
 def _post(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20):
     """POST with bounded retry for transient transport/server failures only."""
     last=None
@@ -86,7 +125,7 @@ def _post(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20)
 
 
 def _response_contract_error(response, reason):
-    text=str(getattr(response,"text","") or "")
+    text=str(getattr(response,"text,","") or "")
     digest=hashlib.sha256(text.encode("utf-8",errors="replace")).hexdigest()[:16]
     return SoosiroResponseContractError(
         f"{reason}; status={getattr(response,'status_code',None)}; bytes={len(text.encode('utf-8',errors='replace'))}; sha256_16={digest}"
@@ -155,18 +194,18 @@ def main(req_path):
             if exclusion:
                 excluded_rows.append({"query_year":y,"search_term":hit,"excluded_by":exclusion,**row})
                 continue
-            decision=evaluate_candidate(source_name,row.get("FACT_ADDR",""),cfg.get("identity_gate"))
+            decision=source_name_scope_decision(row,cfg.get("identity_gate"))
             if not decision["allowed"]:
-                scope_rejected_rows.append({"query_year":y,"search_term":hit,**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
+                scope_rejected_rows.append({"query_year":y,"search_term":hit,**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"],"detail_scope_name_field":decision.get("matched_name_field","")})
                 continue
             fc=str(row.get("FACT_CODE","") or ""); wn=str(row.get("WAST_NO","") or ""); key=(str(row.get("YEAR",y)),fc,wn)
             if key not in dedup:
-                z=dict(row); z["search_terms_hit"]=hit; dedup[key]=z
+                z=dict(row); z["search_terms_hit"]=hit; z["detail_scope_decision"]=decision["decision"]; z["detail_scope_name_field"]=decision.get("matched_name_field",""); dedup[key]=z
             elif hit and hit not in dedup[key]["search_terms_hit"].split("|"):
                 dedup[key]["search_terms_hit"]+=("|" if dedup[key]["search_terms_hit"] else "")+hit
             if fc:
                 prior=candidates.get(fc,{})
-                candidates[fc]={"FACT_CODE":fc,"FACT_NAME":row.get("FACT_NAME") or prior.get("FACT_NAME"),"FACT_FNAME":row.get("FACT_FNAME") or prior.get("FACT_FNAME"),"FACT_ADDR":row.get("FACT_ADDR") or prior.get("FACT_ADDR"),"discovery_basis":prior.get("discovery_basis") or ("OFFICIAL_ADDRESS" if hit=="OFFICIAL_ADDRESS" else "SEARCH_TERM")}
+                candidates[fc]={"FACT_CODE":fc,"FACT_NAME":row.get("FACT_NAME") or prior.get("FACT_NAME"),"FACT_FNAME":row.get("FACT_FNAME") or prior.get("FACT_FNAME"),"FACT_ADDR":row.get("FACT_ADDR") or prior.get("FACT_ADDR"),"discovery_basis":prior.get("discovery_basis") or ("OFFICIAL_ADDRESS" if hit=="OFFICIAL_ADDRESS" else "SEARCH_TERM"),"detail_scope_decision":decision["decision"]}
 
     try:
         rf,fact_obj,fact_rows=_post_list_json(FACTS,data={"pDoCode":""},headers=headers)
@@ -178,11 +217,11 @@ def main(req_path):
             source_name=" ".join(str(fact.get(k) or "") for k in ("FACT_NAME","FACT_FNAME"))
             exclusion=matching_exclusion(source_name,exclude_terms)
             if not fc or exclusion: continue
-            decision=evaluate_candidate(source_name,fact.get("FACT_ADDR",""),cfg.get("identity_gate"))
+            decision=source_name_scope_decision(fact,cfg.get("identity_gate"))
             if not decision["allowed"]:
-                scope_rejected_rows.append({"search_term":"OFFICIAL_ADDRESS",**fact,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
+                scope_rejected_rows.append({"search_term":"OFFICIAL_ADDRESS",**fact,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"],"detail_scope_name_field":decision.get("matched_name_field","")})
                 continue
-            candidates[fc]={"FACT_CODE":fc,"FACT_NAME":fact.get("FACT_NAME"),"FACT_FNAME":fact.get("FACT_FNAME"),"FACT_ADDR":fact.get("FACT_ADDR"),"discovery_basis":"OFFICIAL_ADDRESS"}
+            candidates[fc]={"FACT_CODE":fc,"FACT_NAME":fact.get("FACT_NAME"),"FACT_FNAME":fact.get("FACT_FNAME"),"FACT_ADDR":fact.get("FACT_ADDR"),"discovery_basis":"OFFICIAL_ADDRESS","detail_scope_decision":decision["decision"]}
             seeded_codes.append(fc)
 
         # Query unambiguous source fact codes found from verified official addresses.
