@@ -26,54 +26,63 @@ PUBLIC_SOURCES = (
 ALL_SOURCE_LANES = PUBLIC_SOURCES + ("CORP_DOCS",)
 
 SOURCE_PATH_RULES = {
-    "ENVINFO": (
-        "collectors/envinfo_",
-    ),
-    "PRTR": (
-        "collectors/prtr_",
-    ),
-    "CHEM_STATS": (
-        "collectors/chem_stats_",
-        "collectors/icis_",
-        "orchestrator/icis_",
-    ),
-    "CLEANSYS_AIR": (
-        "collectors/cleansys_",
-    ),
-    "SOOSIRO_WATER": (
-        "collectors/soosiro_",
-    ),
+    "ENVINFO": ("collectors/envinfo_",),
+    "PRTR": ("collectors/prtr_",),
+    "CHEM_STATS": ("collectors/chem_stats_",),
+    "CLEANSYS_AIR": ("collectors/cleansys_",),
+    "SOOSIRO_WATER": ("collectors/soosiro_",),
     "CORP_DOCS": (
         "collectors/corporate_docs_",
         "orchestrator/corporate_document_",
     ),
 }
 
-# Identity/scope/request compilation can change which candidate reaches every public
-# collector, so all public source lanes are invalidated, but archive/package E2E is not.
+# Shared ICIS plumbing/gates affect both ICIS-backed collectors.
+ICIS_SHARED_PREFIXES = (
+    "collectors/icis_",
+    "orchestrator/icis_",
+)
+
+# These paths can change which candidate reaches every public collector, but they do
+# not alter the archive/package contract and therefore must not force R3.
 ALL_PUBLIC_R2_PREFIXES = (
     "collectors/entity_scope_gate.py",
     "collectors/name_filter.py",
     "orchestrator/request_builder.py",
     "orchestrator/bootstrap_inputs.py",
-    "orchestrator/company_profile_builder.py",
     "orchestrator/requested_scope.py",
 )
 
-# Structural output changes need the full user-facing E2E contract.  They do not, by
+# Company/entity discovery can also change which corporate-document entity is valid.
+ALL_SOURCE_R2_PREFIXES = (
+    "orchestrator/zero_touch_discovery.py",
+    "orchestrator/dart_public_resolver.py",
+    "orchestrator/g0_",
+    "orchestrator/company_profile_builder.py",
+)
+
+# Structural output changes need the full user-facing E2E contract. They do not, by
 # themselves, require re-downloading public sources; R3 should reuse verified inputs
 # where the workflow supports it.
 R3_PREFIXES = (
     "orchestrator/archive",
     "orchestrator/package",
+    "orchestrator/master_",
     "orchestrator/collection_completeness.py",
     "tools/build_application_material",
     "tools/validate_application_material",
     "tools/build_human_archive",
 )
+R3_EXACT_FILES = {
+    ".github/workflows/collect.yml",
+}
 
+# Company request/evidence promotions are data-plane inputs, not shared-code changes.
+# They must not trigger regression just because the target company changed.
 NO_RUNTIME_PREFIXES = (
     "docs/",
+    "requests/",
+    "output/",
 )
 NO_RUNTIME_FILES = {
     "PROJECT_STATE.md",
@@ -111,23 +120,32 @@ def classify_paths(paths: Iterable[str]) -> dict:
             reasons.append({"path": path, "impact": "NO_RUNTIME"})
             continue
 
-        # Tests/workflows/policy files are deterministic-regression changes only unless
-        # another runtime path in the same commit raises the tier.
-        if path.startswith("tests/") or path.startswith(".github/workflows/"):
-            r1 = True
-            reasons.append({"path": path, "impact": "R1"})
-            continue
-
         r1 = True
 
-        if _starts(path, R3_PREFIXES):
+        if path in R3_EXACT_FILES or _starts(path, R3_PREFIXES):
             r3 = True
             reasons.append({"path": path, "impact": "R3"})
+            continue
+
+        if _starts(path, ALL_SOURCE_R2_PREFIXES):
+            sources.update(ALL_SOURCE_LANES)
+            reasons.append({"path": path, "impact": "R2", "sources": list(ALL_SOURCE_LANES)})
             continue
 
         if _starts(path, ALL_PUBLIC_R2_PREFIXES):
             sources.update(PUBLIC_SOURCES)
             reasons.append({"path": path, "impact": "R2", "sources": list(PUBLIC_SOURCES)})
+            continue
+
+        if _starts(path, ICIS_SHARED_PREFIXES):
+            sources.update(("PRTR", "CHEM_STATS"))
+            reasons.append({"path": path, "impact": "R2", "sources": ["PRTR", "CHEM_STATS"]})
+            continue
+
+        # Test/workflow-only changes are deterministic R1 unless matched by a stronger
+        # exact rule above (notably collect.yml).
+        if path.startswith("tests/") or path.startswith(".github/workflows/"):
+            reasons.append({"path": path, "impact": "R1"})
             continue
 
         matched = []
@@ -142,7 +160,7 @@ def classify_paths(paths: Iterable[str]) -> dict:
 
     required_tier = "R3" if r3 else ("R2" if sources else ("R1" if r1 else "NONE"))
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "required_tier": required_tier,
         "r1_required": r1,
         "r2_required": bool(sources),
@@ -153,7 +171,8 @@ def classify_paths(paths: Iterable[str]) -> dict:
         "policy": {
             "network_failure": "INFRA_RETRY_REQUIRED",
             "shared_change_resets_full_e2e": False,
-            "r3_release_rule": "archive/package structural change or explicit release milestone",
+            "request_data_change_triggers_regression": False,
+            "r3_release_rule": "archive/package structural change, master workflow change, or explicit release milestone",
         },
     }
 
