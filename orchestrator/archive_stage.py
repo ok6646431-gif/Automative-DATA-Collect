@@ -11,11 +11,13 @@ peak-disk penalty of keeping an undeduplicated tree and an undeduplicated ZIP at
 same time.
 
 The dedup pipeline performs strict PDF render-structure comparison for same-year
-sustainability-report copies, including ENV-INFO attachments. ``pypdf`` and
-``openpyxl`` are therefore archive-stage runtime dependencies. Legacy collection
-workflows did not install them explicitly, so this compatibility wrapper bootstraps
-missing dependencies before importing the stable archive core. Installation failure
-is fatal rather than silently disabling semantic deduplication or provenance updates.
+sustainability-report copies, including ENV-INFO attachments. ``pypdf``,
+``cryptography`` and ``openpyxl`` are therefore archive-stage runtime dependencies.
+``cryptography`` is required by pypdf when an attachment uses AES PDF encryption.
+Legacy collection workflows did not install these dependencies explicitly, so this
+compatibility wrapper bootstraps missing dependencies before importing the stable
+archive core. Installation failure is fatal rather than silently disabling semantic
+deduplication or provenance updates.
 """
 
 import importlib.util
@@ -29,6 +31,7 @@ from pathlib import Path
 def _ensure_archive_semantic_runtime():
     required = {
         'pypdf': 'pypdf',
+        'cryptography': 'cryptography>=3.1',
         'openpyxl': 'openpyxl',
     }
     missing = [package for module, package in required.items() if importlib.util.find_spec(module) is None]
