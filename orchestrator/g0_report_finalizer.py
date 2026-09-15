@@ -2,10 +2,9 @@
 
 Earlier stages intentionally inspect broad page context. A full annual-report PDF can
 therefore be demoted to a summary when the surrounding report page contains a section
-named "Highlight". The same broad context can also give a 2021 PDF a misleading title
-that begins with the current catalog year. This finalizer treats the concrete verified
-PDF target as the stronger representation/title signal when its filename itself carries
-full-report semantics and the requested report year.
+named "Highlight". The same broad context can also give a PDF a misleading annual year.
+This finalizer treats concrete verified route evidence as stronger than broad context,
+but fails closed when the route itself explicitly carries a conflicting year.
 
 When a verified digital/HTML representation and a verified full-report PDF exist for the
 same year, the concrete PDF wins annual coverage. The digital record is omitted from the
@@ -13,16 +12,18 @@ annual document set to avoid duplicate same-year coverage; its landing page rema
 PDF source locator and is still available in discovery audit evidence.
 
 The rule is company-agnostic and conservative. It never promotes a URL whose filename
-itself says highlight/summary/brief, and it never overrides an explicit issuer conflict.
+itself says highlight/summary/brief, never overrides an explicit issuer conflict, and
+never silently accepts an annual route whose explicit year excludes the claimed year.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from urllib.parse import unquote, urlparse
 
 from orchestrator import g0_report_entity_policy as entity_policy
+from orchestrator.document_year_guard import route_year_conflicts, strong_route_matches_year
 
 
 def _pdf_filename(url: str) -> str:
@@ -77,12 +78,58 @@ def _year(doc: Dict[str, Any]) -> int | None:
         return None
 
 
-def _promotable_pdf_years(discovery: Dict[str, Any], docs: List[Dict[str, Any]]) -> set[int]:
-    """Years with an explicit full-report PDF currently mislabeled as summary.
+def _repair_or_reject_route_year_conflict(doc: Dict[str, Any]) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None]:
+    """Replace a conflicting primary only with a strong explicitly matching fallback."""
+    year = _year(doc)
+    if year is None or not route_year_conflicts(doc, year):
+        return dict(doc), None
 
-    This is computed before the main pass so a broad DIGITAL_REPORT record for the same
-    year cannot pre-empt the more concrete PDF. Explicit issuer conflicts remain blocked.
-    """
+    conflict = {
+        "document_id": doc.get("document_id"),
+        "report_year": year,
+        "rejected_source_url": doc.get("source_url"),
+        "reason": "EXPLICIT_PRIMARY_ROUTE_YEAR_CONFLICT",
+        "action": "REJECTED",
+    }
+    for fallback in doc.get("fallback_sources", []) or []:
+        if not isinstance(fallback, dict) or not strong_route_matches_year(fallback, year):
+            continue
+        repaired = dict(doc)
+        for field in ("source_url", "source_locator", "expected_extension", "verification_status", "notes"):
+            if field in fallback:
+                repaired[field] = fallback.get(field)
+            elif field in {"source_locator", "expected_extension", "notes"}:
+                repaired.pop(field, None)
+        repaired["fallback_sources"] = [
+            dict(item) for item in (doc.get("fallback_sources", []) or [])
+            if isinstance(item, dict)
+            and str(item.get("source_url") or "") != str(fallback.get("source_url") or "")
+            and not route_year_conflicts(item, year)
+        ]
+        repaired["route_merge_status"] = "REPLACED_EXPLICIT_YEAR_CONFLICT_PRIMARY"
+        conflict["action"] = "REPLACED_WITH_MATCHING_VERIFIED_FALLBACK"
+        conflict["replacement_source_url"] = fallback.get("source_url")
+        return repaired, conflict
+    return None, conflict
+
+
+def _sanitize_route_year_conflicts(docs: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    out: List[Dict[str, Any]] = []
+    conflicts: List[Dict[str, Any]] = []
+    for doc in docs:
+        if doc.get("document_type") not in {"SUSTAINABILITY_REPORT", "SUSTAINABILITY_REPORT_SUMMARY"}:
+            out.append(doc)
+            continue
+        repaired, conflict = _repair_or_reject_route_year_conflict(doc)
+        if conflict:
+            conflicts.append(conflict)
+        if repaired is not None:
+            out.append(repaired)
+    return out, conflicts
+
+
+def _promotable_pdf_years(discovery: Dict[str, Any], docs: List[Dict[str, Any]]) -> set[int]:
+    """Years with an explicit full-report PDF currently mislabeled as summary."""
     years: set[int] = set()
     for doc in docs:
         if doc.get("document_type") != "SUSTAINABILITY_REPORT_SUMMARY":
@@ -99,14 +146,7 @@ def _promotable_pdf_years(discovery: Dict[str, Any], docs: List[Dict[str, Any]])
 
 
 def _verified_annual_pdf_years(docs: List[Dict[str, Any]]) -> set[int]:
-    """Years already represented by a verified annual PDF, including opaque endpoints.
-
-    Some official archives expose the real report through an opaque ``download.do`` URL
-    whose path has no ``.pdf`` or issuer name. Upstream recovery is responsible for the
-    annual-report semantics, same-organization boundary and PDF magic-byte verification.
-    Once that evidence has produced a SOURCE_VERIFIED annual PDF record, DIGITAL_REPORT
-    is only a fallback and must not remain as duplicate same-year coverage.
-    """
+    """Years already represented by a verified annual PDF, including opaque endpoints."""
     years: set[int] = set()
     for doc in docs:
         if doc.get("document_type") != "SUSTAINABILITY_REPORT":
@@ -127,13 +167,12 @@ def _verified_annual_pdf_years(docs: List[Dict[str, Any]]) -> set[int]:
 
 
 def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str, Any]) -> Dict[str, Any]:
-    docs = list(documents.get("documents", []) or [])
+    raw_docs = list(documents.get("documents", []) or [])
+    docs, route_year_conflicts_found = _sanitize_route_year_conflicts(raw_docs)
     pdf_override_years = _promotable_pdf_years(discovery, docs)
     verified_annual_pdf_years = _verified_annual_pdf_years(docs)
     pdf_preferred_years = pdf_override_years | verified_annual_pdf_years
 
-    # A DIGITAL_REPORT is a valid fallback when no concrete full-report file exists.
-    # It must not prevent a verified PDF for the same year from being promoted or kept.
     existing_full_years = {
         int(d.get("report_year"))
         for d in docs
@@ -236,6 +275,34 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
             continue
         gaps.append(gap)
 
+    covered_years = {
+        _year(doc) for doc in out
+        if doc.get("document_type") == "SUSTAINABILITY_REPORT" and _year(doc) is not None
+    }
+    existing_gap_years = {
+        int(g.get("year"))
+        for g in gaps
+        if isinstance(g, dict)
+        and g.get("document_type") == "SUSTAINABILITY_REPORT"
+        and str(g.get("year") or "").isdigit()
+    }
+    for conflict in route_year_conflicts_found:
+        if conflict.get("action") != "REJECTED":
+            continue
+        year = int(conflict["report_year"])
+        if year in covered_years or year in existing_gap_years:
+            continue
+        gaps.append({
+            "gap_id": f"AUTO_SUSTAINABILITY_{year}_EXPLICIT_ROUTE_YEAR_CONFLICT",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": year,
+            "blocking": True,
+            "status": "DISCOVERY_GAP",
+            "verification_status": "UNVERIFIED",
+            "reason": "EXPLICIT_ROUTE_YEAR_CONFLICT_NO_MATCHING_VERIFIED_ALTERNATIVE",
+        })
+        existing_gap_years.add(year)
+
     documents["documents"] = out
     documents["gaps"] = gaps
     documents["discovery_status"] = (
@@ -248,6 +315,7 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         "verified_annual_pdf_years": sorted(verified_annual_pdf_years),
         "superseded_digital_reports": superseded_digital,
         "normalized_pdf_titles": normalized_titles,
+        "route_year_conflicts": route_year_conflicts_found,
         "removed_resolved_gaps": removed_gaps,
     }
     return documents
