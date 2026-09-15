@@ -89,6 +89,26 @@ def terms_by_year(profile, years, include_predecessor=False):
             for year in years}
 
 
+def verified_sites(profile):
+    """Return verified current-entity sites as pre-download identity anchors.
+
+    Search metadata may be broad, but heavy/detail collection must not rely on a short
+    company substring alone.  These anchors are already verified by Discovery and are
+    used only to decide whether a source candidate may be opened/downloaded.  They do
+    not merge site identities and address-only matches remain insufficient downstream.
+    """
+    out=[]
+    for site in profile.get("site_candidates",[]) or []:
+        if not isinstance(site,dict): continue
+        if site.get("verification_state") not in {"VERIFIED","SOURCE_VERIFIED"}: continue
+        if site.get("identity_status") != "CONFIRMED": continue
+        name=str(site.get("site_name_raw") or "").strip()
+        address=str(site.get("address_raw") or "").strip()
+        if name or address:
+            out.append({"site_name":name,"address":address})
+    return out
+
+
 def verified_site_addresses(profile):
     """Return only first-party verified site addresses for source discovery hints.
 
@@ -97,13 +117,41 @@ def verified_site_addresses(profile):
     whether a source facility can be linked to a canonical site.
     """
     out=[]
-    for site in profile.get("site_candidates",[]) or []:
-        if not isinstance(site,dict): continue
-        if site.get("verification_state") not in {"VERIFIED","SOURCE_VERIFIED"}: continue
-        if site.get("identity_status") != "CONFIRMED": continue
-        address=str(site.get("address_raw") or "").strip()
+    for site in verified_sites(profile):
+        address=str(site.get("address") or "").strip()
         if address and address not in out: out.append(address)
     return out
+
+
+def detail_identity_gate(profile):
+    """Compile a fail-closed allowlist for heavy source collection.
+
+    Broad search terms may intentionally include a short requested name.  That is safe
+    for candidate discovery but unsafe for downloads because group affiliates can share
+    the same prefix.  Heavy collection therefore uses only the verified current legal
+    entity name plus verified site names/addresses.  Requested/brand aliases are not
+    promoted into this allowlist unless they are explicitly typed as legal names.
+    """
+    names=[]
+    display=str(profile.get("company_display_name") or "").strip()
+    if display:
+        names.append(display)
+    for alias in profile.get("aliases",[]) or []:
+        if not isinstance(alias,dict): continue
+        if alias.get("scope") == "predecessor": continue
+        if alias.get("verification_state") not in {None,"VERIFIED","SOURCE_VERIFIED"}: continue
+        if str(alias.get("alias_type") or "") not in LEGAL_QUERY_ALIAS_TYPES:
+            continue
+        term=str(alias.get("term") or "").strip()
+        if term and term not in names:
+            names.append(term)
+    return {
+        "enabled": True,
+        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+        "current_entity_names": names,
+        "verified_sites": verified_sites(profile),
+        "address_only_is_sufficient": False,
+    }
 
 
 def build(profile):
@@ -114,11 +162,12 @@ def build(profile):
     # not fuzzy identity rules and never create canonical site mappings.
     exclusions=list(profile.get("related_entity_exclusions",[]) or [])
     site_addresses=verified_site_addresses(profile)
+    identity_gate=detail_identity_gate(profile)
     req={"request_id":profile["request_id"],"company_display_name":company,"profile_version":profile.get("profile_version","1.0"),"related_entity_exclusions":exclusions,"sources":{}}
 
     p=plan["ENVINFO"]; s=int(p["start_year"]); e=int(p["end_year"])
     terms=_query_terms(aliases_for(profile,s,e))
-    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"exclude_terms":exclusions,"page_size":int(p.get("page_size",200)),"collect_details":True,"collect_attachments":bool(p.get("collect_attachments",True)),"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
+    req["sources"]["ENVINFO"]={"start_year":s,"end_year":e,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1)),"exclude_terms":exclusions,"identity_gate":identity_gate,"page_size":int(p.get("page_size",200)),"collect_details":True,"collect_attachments":bool(p.get("collect_attachments",True)),"max_details":int(p.get("max_details",500)),"request_delay_ms":int(p.get("request_delay_ms",80))}
 
     p=plan["PRTR"]; s=int(p["start_year"]); e=int(p["end_year"]); specs=[]
     seen_specs=set()
@@ -129,20 +178,20 @@ def build(profile):
             if key in seen_specs: continue
             seen_specs.add(key)
             specs.append({"term":term,"year_start":ys,"year_end":ye})
-    req["sources"]["PRTR"]={"start_year":s,"end_year":e,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True,"search_terms":specs,"exclude_terms":exclusions,"site_address_anchors":profile.get("site_address_anchors",{})}
+    req["sources"]["PRTR"]={"start_year":s,"end_year":e,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True,"search_terms":specs,"exclude_terms":exclusions,"identity_gate":identity_gate,"site_address_anchors":profile.get("site_address_anchors",{})}
 
     p=plan["CHEM_STATS"]; years=[int(x) for x in p["years"]]; s=min(years); e=max(years)
     terms=_query_terms(aliases_for(profile,s,e))
-    req["sources"]["CHEM_STATS"]={"years":years,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,years),"exclude_terms":exclusions,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True}
+    req["sources"]["CHEM_STATS"]={"years":years,"search_terms":terms,"search_terms_by_year":terms_by_year(profile,years),"exclude_terms":exclusions,"identity_gate":identity_gate,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True}
 
     p=plan["CLEANSYS_AIR"]; s=int(p["start_year"]); e=int(p["end_year"])
     terms=_query_terms(aliases_for(profile,s,e,include_predecessor=False))
-    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"exclude_terms":exclusions,"site_addresses":site_addresses,"start_year":s,"end_year":e}
+    req["sources"]["CLEANSYS_AIR"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,range(s,e+1),include_predecessor=False),"exclude_terms":exclusions,"identity_gate":identity_gate,"site_addresses":site_addresses,"start_year":s,"end_year":e}
 
     p=plan["SOOSIRO_WATER"]; annual=[int(x) for x in p["annual_years"]]; daily=[int(x) for x in p.get("daily_years",[])]
     s=min(annual); e=max(annual)
     terms=_query_terms(aliases_for(profile,s,e,include_predecessor=False))
-    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"exclude_terms":exclusions,"site_addresses":site_addresses,"annual_years":annual,"daily_years":daily}
+    req["sources"]["SOOSIRO_WATER"]={"search_terms":terms,"search_terms_by_year":terms_by_year(profile,sorted(set(annual+daily)),include_predecessor=False),"exclude_terms":exclusions,"identity_gate":identity_gate,"site_addresses":site_addresses,"annual_years":annual,"daily_years":daily}
     return req
 
 
