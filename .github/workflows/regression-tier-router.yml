@@ -101,9 +101,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  r1-fast:
+  r1_fast:
     needs: plan
-    if: ${{ needs.plan.outputs.r1_required == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
@@ -136,9 +135,9 @@ jobs:
           tests.test_application_material_from_archive
           -v
 
-  r2-source-checkpoint:
-    needs: [plan, r1-fast]
-    if: ${{ always() && needs.plan.outputs.r2_required == 'true' && (needs.r1-fast.result == 'success' || needs.r1-fast.result == 'skipped') }}
+  r2_source_checkpoint:
+    needs: [plan, r1_fast]
+    if: ${{ always() && needs.plan.outputs.r2_required == 'true' && needs.r1_fast.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -160,9 +159,9 @@ jobs:
             echo 'The old rule `shared change => reset all 3 full E2E regressions` is not used.'
           } >> "$GITHUB_STEP_SUMMARY"
 
-  r3-full-e2e-requirement:
-    needs: [plan, r1-fast]
-    if: ${{ always() && needs.plan.outputs.r3_required == 'true' && (needs.r1-fast.result == 'success' || needs.r1-fast.result == 'skipped') }}
+  r3_full_e2e_requirement:
+    needs: [plan, r1_fast]
+    if: ${{ always() && needs.plan.outputs.r3_required == 'true' && needs.r1_fast.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
