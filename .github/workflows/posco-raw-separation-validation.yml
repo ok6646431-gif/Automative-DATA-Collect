@@ -1,0 +1,27 @@
+name: POSCO raw separation validation
+
+on:
+  push:
+    branches:
+      - run/posco-raw-separation-test
+    paths:
+      - '.github/workflows/posco-raw-separation-validation.yml'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  validate-and-dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run raw-separation regression tests
+        run: python -m unittest tests.test_human_archive_raw_policy
+      - name: Dispatch existing zero-touch validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run zero-touch-discovery.yml --ref "${GITHUB_REF_NAME}"
