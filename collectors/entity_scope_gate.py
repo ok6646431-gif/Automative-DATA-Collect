@@ -1,6 +1,7 @@
 import re
 
 
+# This module is the shared pre-download identity boundary for all public-source collectors.
 LEGAL_FORM_PATTERNS = [
     r"주식회사", r"유한회사", r"유한책임회사", r"합자회사", r"합명회사",
     r"\(주\)", r"㈜", r"\(유\)",
