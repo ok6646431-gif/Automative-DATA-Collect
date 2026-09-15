@@ -125,7 +125,7 @@ def _post(url, *, data, headers, attempts=3, connect_timeout=5, read_timeout=20)
 
 
 def _response_contract_error(response, reason):
-    text=str(getattr(response,"text,","") or "")
+    text=str(getattr(response,"text","") or "")
     digest=hashlib.sha256(text.encode("utf-8",errors="replace")).hexdigest()[:16]
     return SoosiroResponseContractError(
         f"{reason}; status={getattr(response,'status_code',None)}; bytes={len(text.encode('utf-8',errors='replace'))}; sha256_16={digest}"
