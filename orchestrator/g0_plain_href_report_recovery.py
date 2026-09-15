@@ -75,6 +75,13 @@ def _nearest_report_context(tag: Any, start_year: int, current_year: int) -> Tup
     return fallback, None
 
 
+# Production imports this module before any generic-JS recovery stage runs. Reuse the
+# same boundary-safe nearest-year contract there so an out-of-window local report can
+# never be relabeled by a broader in-window ancestor, including opaque JS routes whose
+# URL carries no year that the downstream route guard could inspect.
+generic._local_report_context = _nearest_report_context
+
+
 def candidates_from_plain_href_page(
     http: Any,
     page_url: str,
