@@ -31,12 +31,35 @@ class EntityScopeGateTest(unittest.TestCase):
         self.assertTrue(result["allowed"])
         self.assertEqual(result["decision"], "ALLOW_VERIFIED_SITE_NAME")
 
+    def test_verified_location_alias_allowed(self):
+        for name, token in [("포스코(포항)", "포항"), ("포스코(광양)", "광양")]:
+            with self.subTest(name=name):
+                result = evaluate_candidate(name, "", GATE)
+                self.assertTrue(result["allowed"])
+                self.assertEqual(result["decision"], "ALLOW_CURRENT_ENTITY_LOCATION_ALIAS")
+                self.assertIn(token, result["reason"])
+
+    def test_location_alias_must_be_exact_suffix(self):
+        for name in ["포스코포항테크", "포스코광양서비스"]:
+            with self.subTest(name=name):
+                result = evaluate_candidate(name, "", GATE)
+                self.assertFalse(result["allowed"])
+
     def test_group_affiliate_prefix_is_rejected(self):
         for name in ["포스코퓨처엠", "포스코홀딩스 주식회사", "포스코인터내셔널", "포스코이앤씨"]:
             with self.subTest(name=name):
                 result = evaluate_candidate(name, "", GATE)
                 self.assertFalse(result["allowed"])
                 self.assertEqual(result["decision"], "REJECT_UNVERIFIED_ENTITY")
+
+    def test_group_affiliate_at_verified_address_is_still_rejected(self):
+        result = evaluate_candidate(
+            "(주)포스코퓨처엠 포항화학사업부",
+            "경상북도 포항시 남구 동해안로 6262",
+            GATE,
+        )
+        self.assertFalse(result["allowed"])
+        self.assertEqual(result["decision"], "REJECT_ADDRESS_ONLY")
 
     def test_address_alone_does_not_override_name_identity(self):
         result = evaluate_candidate("별도법인", "경상북도 포항시 남구 동해안로 6262", GATE)
