@@ -30,7 +30,7 @@ jobs:
   source_regression:
     name: R2 ${{ matrix.label }}
     runs-on: ubuntu-latest
-    timeout-minutes: 28
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       max-parallel: 3
@@ -69,14 +69,15 @@ jobs:
           --profile-out requests/runtime/company_profile.generated.json
           --request-out requests/current.generated.json
           --summary-out requests/runtime/Company_Discovery_Summary.json
-      - name: Run affected source lanes only
+      - name: Run affected source lanes only in R2 probe mode
         id: source_run
         continue-on-error: true
         env:
           SOURCES: ${{ inputs.sources || 'ENVINFO,PRTR,CHEM_STATS,CLEANSYS_AIR,SOOSIRO_WATER' }}
         run: >-
           python orchestrator/source_regression_runner.py
-          --company '${{ matrix.company }}'
+          --probe
+          --company '${{ matrix.label }}'
           --sources "$SOURCES"
           --output 'r2-${{ matrix.label }}.json'
       - name: Summarize company checkpoint
@@ -92,8 +93,11 @@ jobs:
           else:
               d=json.loads(p.read_text(encoding='utf-8'))
               print(f"- aggregate: **{d['aggregate_result']}**")
+              print(f"- probe mode: **{d.get('probe_mode', False)}**")
               for r in d['results']:
-                  print(f"- {r['source']}: {r['result']} / source_status={r['source_status']} / rows={r['rows']}")
+                  baseline=r.get('baseline_check','NOT_CONFIGURED')
+                  missing=','.join(r.get('baseline_missing_ids',[])) or 'none'
+                  print(f"- {r['source']}: {r['result']} / source_status={r['source_status']} / baseline={baseline} / missing={missing}")
           PY
       - uses: actions/upload-artifact@v4
         if: always()
@@ -109,7 +113,7 @@ jobs:
         if: always()
         run: |
           python - <<'PY'
-          import json, sys
+          import json
           from pathlib import Path
           p=Path('r2-${{ matrix.label }}.json')
           if not p.exists():
@@ -151,7 +155,7 @@ jobs:
               overall='INFRA_RETRY_REQUIRED'
           else:
               overall='PASS'
-          payload={'schema_version':'1.0','overall_result':overall,'companies':data}
+          payload={'schema_version':'1.1','overall_result':overall,'companies':data}
           Path('r2-representative-summary.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           print(json.dumps(payload,ensure_ascii=False,indent=2))
           if overall == 'REGRESSION_FAIL':
