@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from orchestrator.document_year_guard import route_year_conflicts
 from orchestrator.zero_touch_discovery import normalize_name
 
 VERIFICATION_RANK = {"UNVERIFIED": 0, "PARTIAL": 1, "SOURCE_VERIFIED": 2, "VERIFIED": 3}
@@ -56,10 +57,12 @@ def _semantic_key(doc: Dict[str, Any]) -> Tuple[str, Optional[int]]:
     return str(doc.get("document_type") or ""), _year(doc.get("report_year"))
 
 
-def _route(source: Dict[str, Any], role: str) -> Optional[Dict[str, Any]]:
+def _route(source: Dict[str, Any], role: str, expected_year: Optional[int] = None) -> Optional[Dict[str, Any]]:
     url = str(source.get("source_url") or "").strip()
     state = str(source.get("verification_status") or "")
     if not url.startswith(("http://", "https://")) or state not in STRONG_STATES:
+        return None
+    if expected_year is not None and route_year_conflicts(source, expected_year):
         return None
     out: Dict[str, Any] = {"source_url": url, "verification_status": state, "source_role": role}
     for key in ("source_locator", "expected_extension", "notes"):
@@ -129,7 +132,9 @@ def merge_document_routes(
 
     The persistent registry is applied first. The immediately previous current-company
     evidence is then applied if it is the same verified entity. A prior document can be
-    restored only when fresh Discovery contains an exact matching blocking gap.
+    restored only when fresh Discovery contains an exact matching blocking gap. A route
+    whose concrete URL carries an explicit year conflicting with the semantic report
+    year is never restored or preserved.
     """
     merged = copy.deepcopy(fresh_documents)
 
@@ -151,6 +156,8 @@ def merge_document_routes(
         key = _semantic_key(old)
         if not key[0] or key[1] is None:
             continue
+        if route_year_conflicts(old, key[1]):
+            continue
         previous = old_by_key.get(key)
         if previous is None or VERIFICATION_RANK.get(str(old.get("verification_status") or ""), 0) > VERIFICATION_RANK.get(str(previous.get("verification_status") or ""), 0):
             old_by_key[key] = old
@@ -166,12 +173,12 @@ def merge_document_routes(
         if not old:
             continue
 
-        old_primary = _route(old, "PREVIOUS_VERIFIED_PRIMARY")
-        fresh_primary = _route(fresh, "FRESH_DISCOVERY_PRIMARY")
+        old_primary = _route(old, "PREVIOUS_VERIFIED_PRIMARY", key[1])
+        fresh_primary = _route(fresh, "FRESH_DISCOVERY_PRIMARY", key[1])
         old_rank = VERIFICATION_RANK.get(str(old.get("verification_status") or ""), 0)
         fresh_rank = VERIFICATION_RANK.get(str(fresh.get("verification_status") or ""), 0)
-        old_fallbacks = [_route(x, "PREVIOUS_VERIFIED_FALLBACK") for x in (old.get("fallback_sources", []) or []) if isinstance(x, dict)]
-        fresh_fallbacks = [_route(x, str(x.get("source_role") or "FRESH_DISCOVERY_FALLBACK")) for x in (fresh.get("fallback_sources", []) or []) if isinstance(x, dict)]
+        old_fallbacks = [_route(x, "PREVIOUS_VERIFIED_FALLBACK", key[1]) for x in (old.get("fallback_sources", []) or []) if isinstance(x, dict)]
+        fresh_fallbacks = [_route(x, str(x.get("source_role") or "FRESH_DISCOVERY_FALLBACK"), key[1]) for x in (fresh.get("fallback_sources", []) or []) if isinstance(x, dict)]
 
         if old_primary and old_rank > fresh_rank:
             previous_fresh = fresh_primary
@@ -189,7 +196,8 @@ def merge_document_routes(
     gap_keys = _blocking_gap_keys(merged)
     restored_keys: set[Tuple[str, Optional[int]]] = set()
     for key, old in old_by_key.items():
-        if key in fresh_keys or key not in gap_keys or _route(old, "PREVIOUS_VERIFIED_PRIMARY") is None:
+        old_route = _route(old, "PREVIOUS_VERIFIED_PRIMARY", key[1])
+        if key in fresh_keys or key not in gap_keys or old_route is None:
             continue
         restored = copy.deepcopy(old)
         restored["route_merge_status"] = "RESTORED_PREVIOUS_VERIFIED_DOCUMENT"
