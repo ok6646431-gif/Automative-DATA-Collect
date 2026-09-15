@@ -7,15 +7,15 @@ opaque and even carry a broken content-type, so URL semantics alone are insuffic
 This adapter remains fail-closed:
 * the anchor must sit inside a nearest single-year annual-report DOM context;
 * the href must stay in the same official organization;
-* labels that clearly denote supporting derivatives (Factbook, Highlight, etc.) are
-  excluded; and
+* labels or concrete routes that clearly denote supporting derivatives (Factbook,
+  Compact Book, Highlight, etc.) are excluded; and
 * the target must return real PDF magic bytes under the official page Referer.
 """
 
 from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Tuple
-from urllib.parse import urljoin, urlparse
+from urllib.parse import unquote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -29,6 +29,7 @@ from orchestrator.document_year_guard import route_year_conflicts
 SUPPORTING_LABEL_TOKENS = (
     "factbook", "fact book", "appendix", "하이라이트", "highlight", "summary", "요약",
     "policybook", "policy book", "오디오북", "audiobook", "audio book", "data book", "databook",
+    "compact book", "compactbook", "compact_book", "컴팩트북", "컴팩트 북",
 )
 
 
@@ -41,8 +42,8 @@ def _dedupe(values: Iterable[str]) -> List[str]:
     return out
 
 
-def _supporting_label(label: str) -> bool:
-    low = str(label or "").casefold()
+def _supporting_derivative(value: str) -> bool:
+    low = unquote(str(value or "")).casefold().replace("-", " ")
     return any(token in low for token in SUPPORTING_LABEL_TOKENS)
 
 
@@ -50,8 +51,8 @@ def _nearest_report_context(tag: Any, start_year: int, current_year: int) -> Tup
     """Stop at the nearest single-year report block even when it is outside the request.
 
     Filtering years before choosing the nearest DOM block can turn the last pre-window
-    report into the first in-window year from an ancestor.  Example: a 2019 anchor under
-    a page requested from 2020 may otherwise be silently relabeled as 2020.  We inspect
+    report into the first in-window year from an ancestor. Example: a 2019 anchor under
+    a page requested from 2020 may otherwise be silently relabeled as 2020. We inspect
     all explicit 20xx years first; an out-of-window nearest block is terminal and is
     rejected instead of climbing to a broader ancestor.
     """
@@ -92,7 +93,7 @@ def candidates_from_plain_href_page(
             continue
         label = " ".join(anchor.stripped_strings).strip()
         attr_text = " ".join(str(v) for v in (anchor.attrs or {}).values()).casefold()
-        if _supporting_label(label):
+        if _supporting_derivative(label):
             continue
         if not generic._has_download_signal(anchor, label.casefold(), attr_text):
             continue
@@ -120,6 +121,9 @@ def candidates_from_plain_href_page(
         }
         diagnostics.append(diagnostic)
 
+        if _supporting_derivative(target):
+            diagnostic["rejected"] = "SUPPORTING_DERIVATIVE_ROUTE"
+            continue
         if route_year_conflicts({"source_url": target}, year):
             diagnostic["rejected"] = "EXPLICIT_ROUTE_YEAR_CONFLICT"
             continue
@@ -129,6 +133,9 @@ def candidates_from_plain_href_page(
         diagnostic["final_url"] = final_url
         diagnostic["content_type"] = content_type
         if not ok:
+            continue
+        if _supporting_derivative(final_url):
+            diagnostic["rejected"] = "FINAL_SUPPORTING_DERIVATIVE_ROUTE"
             continue
         if route_year_conflicts({"source_url": final_url}, year):
             diagnostic["rejected"] = "FINAL_ROUTE_YEAR_CONFLICT"
@@ -184,9 +191,6 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
         recovered.extend(candidates)
         diagnostics.extend(page_diagnostics)
 
-    # Keep all recovered candidates here. The downstream entity policy arbitrates
-    # issuer conflicts and same-year precedence, so a same-group report discovered
-    # elsewhere cannot block a requested-entity candidate at this stage.
     recovered.sort(key=lambda x: int(x.get("score") or 0), reverse=True)
     existing_keys = {
         (str(d.get("source_url") or ""), str(d.get("report_year") or ""))
@@ -210,7 +214,7 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
             "importance": "CORE",
             "notes": (
                 "Nearest single-year official report DOM context + ordinary same-org href + "
-                "supporting-label exclusion + streamed PDF magic verification."
+                "supporting-derivative exclusion + streamed PDF magic verification."
             ),
         }
         documents.setdefault("documents", []).append(item)
@@ -225,8 +229,4 @@ def enrich(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[str
     }
     audit.setdefault("http_attempts", []).extend(http.audit)
 
-    # Historical libraries can expose neighboring years through an inert JavaScript
-    # button that submits a same-page GET form rather than through href/data-* URLs.
-    # Run that contract as a separate audited adapter so plain-href semantics stay
-    # unchanged and the downstream entity/finalizer policies remain the sole arbiters.
     return g0_js_form_report_recovery.enrich(discovery, documents, audit)
