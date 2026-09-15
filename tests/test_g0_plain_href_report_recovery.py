@@ -24,10 +24,12 @@ class FakeHttp:
         self.audit = []
 
     def get(self, url, **kwargs):
-        if "fid=REPORT2025" in url:
+        if "fid=REPORT2025" in url or "SR_2025_kr.pdf" in url:
             return FakeResponse(url, b"%PDF-1.7\nannual-report")
         if "fid=FACTBOOK2025" in url:
             return FakeResponse(url, b"%PDF-1.7\nfactbook")
+        if "ESG_Compact_Book_EN.pdf" in url:
+            return FakeResponse(url, b"%PDF-1.7\ncompact-book")
         if "fid=REPORT2024" in url:
             return FakeResponse(url, b"%PDF-1.7\nannual-report-2024")
         if "fid=REPORT2020" in url or "report_2020.pdf" in url:
@@ -89,6 +91,21 @@ class PlainHrefReportRecoveryTests(unittest.TestCase):
         )
         self.assertEqual(found, [])
         self.assertEqual(diagnostics[0]["rejected"], "EXPLICIT_ROUTE_YEAR_CONFLICT")
+
+    def test_compact_book_url_is_supporting_even_when_anchor_label_is_only_language(self):
+        html = '''
+        <article><h3>2025 지속가능경영보고서</h3>
+          <a href="/assets/files/SR_2025_kr.pdf">KOR</a>
+          <a href="/assets/files/ESG_Compact_Book_EN.pdf">ENG</a>
+        </article>
+        '''
+        found, diagnostics = candidates_from_plain_href_page(
+            FakeHttp(), "https://official.example/reports", html, 2020, 2026
+        )
+        self.assertEqual([x["url"] for x in found], ["https://official.example/assets/files/SR_2025_kr.pdf"])
+        rejected = [x for x in diagnostics if x.get("rejected") == "SUPPORTING_DERIVATIVE_ROUTE"]
+        self.assertEqual(len(rejected), 1)
+        self.assertIn("Compact_Book", rejected[0]["target"])
 
     def test_factbook_is_excluded_even_when_pdf_bytes_are_valid(self):
         html = '''
