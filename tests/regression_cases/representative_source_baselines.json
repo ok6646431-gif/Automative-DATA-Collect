@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "description": "Must-keep source-native identity anchors from previously verified representative-company runs. These are conservative requested-scope anchors, not exhaustive historical result sets.",
+  "companies": {
+    "KUMHO": {
+      "snapshot_ref": "488ddccbb634cb7af181d2a81507883eb3291458",
+      "sources": {
+        "ENVINFO": {"must_include_ids": ["00000000000000182744", "00000000000000182856", "00000000000000183149", "00000000000000184636", "00000000000000185890", "00000000000000185895", "00000000000000194066", "00000000000000206500", "00000000000000213103"]},
+        "PRTR": {"must_include_ids": ["358", "359", "360", "361", "7055", "2001223", "2001961", "2003160"]},
+        "CHEM_STATS": {"must_include_ids": ["AAK661N", "AAK662N", "AAN175N", "AAN176N", "AAN177N", "AAN178N", "AAN395N", "AAN459N"]},
+        "CLEANSYS_AIR": {"must_include_ids": ["110120", "110027", "110044", "130602"]},
+        "SOOSIRO_WATER": {"must_include_ids": []}
+      }
+    },
+    "HANWHA_AEROSPACE": {
+      "snapshot_ref": "ccca0d9cc94a3849e8116a72015242c1eca89a8d",
+      "sources": {
+        "ENVINFO": {"must_include_ids": ["CM000000000000003232", "CM000000000000003233", "CM000000000000003234", "CM000000000000003355", "CM000000000000003356", "CM000000000000003357", "CM000000000000003360", "CM000000000000003361", "CT000000000000004982"]},
+        "PRTR": {"must_include_ids": ["293", "6336", "2022892"]},
+        "CHEM_STATS": {"must_include_ids": ["AAR874N", "AAW613N", "AAW717N", "AAZ143N", "ABC643N", "ACB366N", "ACC920N"]},
+        "CLEANSYS_AIR": {"must_include_ids": ["110071"]},
+        "SOOSIRO_WATER": {"must_include_ids": []}
+      }
+    },
+    "HYOSUNG_TNC": {
+      "snapshot_ref": "7e248b0717fe07bd7849c892bb8bb51a8f4fbe01",
+      "sources": {
+        "ENVINFO": {"must_include_ids": ["CM000000000000001975", "CM000000000000001977", "CM000000000000001978"]},
+        "PRTR": {"must_include_ids": ["300", "302", "1250145083732164944"]},
+        "CHEM_STATS": {"must_include_ids": ["AAL858N", "AAW784N", "ABB381N"]},
+        "CLEANSYS_AIR": {"must_include_ids": ["131037"]},
+        "SOOSIRO_WATER": {"must_include_ids": ["31F0081"]}
+      }
+    }
+  }
+}
