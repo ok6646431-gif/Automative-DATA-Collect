@@ -1,1 +1,1 @@
-strict-r3:hanwha-aerospace:coverage-semantics-fix:2026-09-16T14:31:00Z
+strict-r3:hanwha-aerospace:coverage-semantics-compat-fix:2026-09-16T14:37:00Z
