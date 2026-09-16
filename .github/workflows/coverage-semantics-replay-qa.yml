@@ -1,0 +1,141 @@
+name: Coverage semantics replay QA
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/coverage-semantics-replay-qa.yml'
+      - 'requests/coverage_semantics_replay_qa.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: coverage-semantics-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Read replay configuration
+        id: cfg
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          cfg=json.load(open('requests/coverage_semantics_replay_qa.json',encoding='utf-8'))
+          print('source_run_id='+str(cfg['source_run_id']))
+          print('public_artifact_name='+str(cfg.get('public_artifact_name') or 'stable-public-sources'))
+          print('icis_artifact_name='+str(cfg.get('icis_artifact_name') or 'icis-attempt-1'))
+          PY
+      - name: Bootstrap current Discovery inputs
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Download retained public sources
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.cfg.outputs.public_artifact_name }}
+          path: replay/output
+          run-id: ${{ steps.cfg.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Download retained ICIS sources
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.cfg.outputs.icis_artifact_name }}
+          path: replay/icis
+          run-id: ${{ steps.cfg.outputs.source_run_id }}
+          github-token: ${{ github.token }}
+      - name: Assemble retained source tree
+        run: |
+          set -euo pipefail
+          for source in PRTR CHEM_STATS; do
+            test -s "replay/icis/$source/status.json" || { echo "Missing retained $source status" >&2; exit 1; }
+            rm -rf "replay/output/$source"
+            cp -a "replay/icis/$source" "replay/output/$source"
+          done
+          for source in ENVINFO PRTR CHEM_STATS CLEANSYS_AIR SOOSIRO_WATER; do
+            test -s "replay/output/$source/status.json" || { echo "Missing replay source $source" >&2; exit 1; }
+          done
+      - name: Replay current integration semantics
+        run: |
+          rm -rf replay/integration
+          mkdir -p replay/integration
+          python - <<'PY'
+          from orchestrator.postprocess import run_integration
+          print(run_integration(
+              'replay/output',
+              'requests/runtime/company_profile.generated.json',
+              'replay/integration',
+          ))
+          PY
+      - name: Validate confirmed short-series semantics
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+
+          cfg=json.load(open('requests/coverage_semantics_replay_qa.json',encoding='utf-8'))
+          with open('replay/integration/Coverage_Status.csv',encoding='utf-8-sig',newline='') as f:
+              rows=list(csv.DictReader(f))
+          by_source={r['source_key']:r for r in rows}
+          expected=list(cfg.get('expect_confirmed_short_sources') or [])
+          failures=[]
+          for source in expected:
+              row=by_source.get(source)
+              if not row:
+                  failures.append(f'{source}: missing Coverage_Status row')
+                  continue
+              if row.get('coverage_status')!='SHORT_DATA_SERIES_CONFIRMED':
+                  failures.append(f"{source}: coverage_status={row.get('coverage_status')}")
+              if str(row.get('meets_minimum')).lower() not in {'false','0'}:
+                  failures.append(f"{source}: meets_minimum must remain false")
+              if 'no_data_confirmed=' not in str(row.get('rounds_or_detail') or ''):
+                  failures.append(f'{source}: no confirmed no-data audit detail')
+          unexpected=[r['source_key'] for r in rows if r.get('coverage_status')=='SHORT_COVERAGE' and r['source_key'] in expected]
+          if unexpected:
+              failures.append('expected confirmed-short sources still classified as collection gaps: '+','.join(unexpected))
+          if failures:
+              raise SystemExit('\n'.join(failures))
+
+          with open('replay/integration/Validation_Queue.csv',encoding='utf-8-sig',newline='') as f:
+              validation=list(csv.DictReader(f))
+          result={
+              'COVERAGE_SEMANTICS_REPLAY':'PASS',
+              'source_run_id':cfg['source_run_id'],
+              'expected_confirmed_short_sources':expected,
+              'coverage':{s:by_source.get(s) for s in expected},
+              'identity_review_count':sum(str(r.get('status') or '').upper()=='REVIEW_REQUIRED' for r in validation),
+              'integration_summary':json.load(open('replay/integration/Integration_Summary.json',encoding='utf-8')),
+          }
+          Path('replay/integration/Coverage_Semantics_Replay_Result.json').write_text(
+              json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8'
+          )
+          print(json.dumps(result,ensure_ascii=False))
+          PY
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-semantics-replay-qa
+          path: |
+            replay/integration/Coverage_Status.csv
+            replay/integration/Validation_Queue.csv
+            replay/integration/REVIEW_REQUIRED.json
+            replay/integration/Integration_Summary.json
+            replay/integration/Coverage_Semantics_Replay_Result.json
+            requests/runtime/Company_Discovery_Summary.json
+          if-no-files-found: warn
+          retention-days: 7
