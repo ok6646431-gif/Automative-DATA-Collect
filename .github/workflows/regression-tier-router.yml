@@ -131,6 +131,7 @@ jobs:
           tests.test_requested_scope_company_entity_filter
           tests.test_requested_scope_analysis_entity_filter
           tests.test_collection_completeness
+          tests.test_final_validation_semantics
           tests.test_soosiro_retry
           tests.test_application_material_from_archive
           -v
