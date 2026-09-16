@@ -149,5 +149,56 @@ class StagedOfficialRecoveryTests(unittest.TestCase):
         self.assertEqual(resolved_links, links)
 
 
+    def test_dart_auxiliary_official_seed_recovers_thin_primary_before_search(self):
+        start = "https://www.example-corp.com/"
+        ir_url = "https://www.example-corp.com/en/ir/activity"
+        shell = Page(start, "login", "<html></html>", 200)
+        deep_pages = [
+            Page(ir_url, "Example Corp company business sustainability copyright", "", 200),
+            Page("https://www.example-corp.com/company/location", "Example Corp location", "", 200),
+        ]
+        deep_links = [
+            (ir_url, "Company", "https://www.example-corp.com/company/about"),
+            (ir_url, "Location", "https://www.example-corp.com/company/location"),
+            (ir_url, "Sustainability", "https://www.example-corp.com/sustainability"),
+        ]
+
+        def crawl(_http, url, max_pages, deadline=None):
+            if url == start:
+                return [shell], []
+            if url == ir_url:
+                return deep_pages, deep_links
+            raise AssertionError(f"unexpected crawl: {url}")
+
+        legal = {
+            "korean_name": "Example Corp",
+            "website": "www.example-corp.com",
+            "raw_text": "Company Information Website www.example-corp.com IR Website www.example-corp.com/en/ir/activity Telephone 00-0000-0000",
+        }
+        with patch.object(staged, "_crawl_no_search", side_effect=crawl), \
+             patch.object(staged.base, "resolve_legal_identity", return_value=(legal, [legal])), \
+             patch.object(thin, "_first_party_bootstrap_candidates", side_effect=AssertionError("bootstrap must be skipped after DART auxiliary recovery")), \
+             patch.object(thin, "_anchored_domain_candidates", side_effect=AssertionError("search must be skipped after DART auxiliary recovery")), \
+             patch.object(recovery, "_locate_candidates", side_effect=AssertionError("replacement must be skipped after DART auxiliary recovery")):
+            pages, _ = staged.crawl_official(object(), start, "Example Corp")
+
+        self.assertEqual(pages[0].url, ir_url)
+        self.assertEqual(recovery.last_recovery["successful_stage"], "DART_AUXILIARY_OFFICIAL")
+        self.assertEqual(
+            recovery.last_recovery["method"],
+            "DART_HOST_DART_AUXILIARY_OFFICIAL",
+        )
+
+    def test_dart_auxiliary_official_seed_rejects_cross_org_url(self):
+        legal = {
+            "raw_text": "IR Website https://unrelated.example.net/investors",
+        }
+        with patch.object(staged.base, "resolve_legal_identity", return_value=(legal, [legal])):
+            candidates = staged._dart_auxiliary_official_candidates(
+                object(), "https://www.example-corp.com/", "Example Corp"
+            )
+        self.assertEqual(candidates, [])
+
+
 if __name__ == "__main__":
     unittest.main()

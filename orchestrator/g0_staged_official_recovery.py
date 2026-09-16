@@ -231,6 +231,57 @@ def _try_candidates(
     return None
 
 
+
+def _dart_auxiliary_official_candidates(
+    http: base.Http,
+    start_url: str,
+    company: str,
+) -> List[str]:
+    """Recover extra first-party seeds explicitly published by DART.
+
+    Some DART company records expose both a generic Website and a deeper
+    IR Website. A generic root can become a technically-live login/shell
+    while the DART-published IR URL still points into the current corporate
+    navigation. Only same-organization HTTP(S) URLs are retained, and this
+    helper is consulted only after the primary DART surface proved thin.
+    """
+    try:
+        legal, _ = base.resolve_legal_identity(http, company)
+    except Exception:
+        return []
+    if not isinstance(legal, dict):
+        return []
+
+    values: List[str] = []
+    for key in ("ir_website", "investor_website"):
+        value = str(legal.get(key) or "").strip()
+        if value:
+            values.append(value)
+
+    raw = str(legal.get("raw_text") or "")
+    patterns = (
+        r"(?i)\bIR\s+Website\s+((?:https?://)?[^\s]+)",
+        r"(?i)\bInvestor(?:\s+Relations)?\s+Website\s+((?:https?://)?[^\s]+)",
+    )
+    for pattern in patterns:
+        values.extend(re.findall(pattern, raw))
+
+    out: List[str] = []
+    for value in values:
+        candidate = str(value or "").strip().strip(" \t\r\n\"'()[]{}<>,.;")
+        if not candidate:
+            continue
+        if not candidate.startswith(("http://", "https://")):
+            candidate = "https://" + candidate
+        if not thin._safe_http_url(candidate):
+            continue
+        if not base._same_org_host(start_url, candidate):
+            continue
+        if candidate not in out:
+            out.append(candidate)
+    return out
+
+
 def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int = 90):
     deadline = time.monotonic() + MAX_OFFICIAL_RECOVERY_SECONDS
     original_pages, original_links = _initial_dart_surface(
@@ -249,6 +300,27 @@ def crawl_official(http: base.Http, start_url: str, company: str, max_pages: int
 
     if _deadline_exceeded(deadline):
         _mark_runtime_guard("INITIAL_SURFACE", deadline)
+        return (original_pages, original_links) if original_pages else ([], [])
+
+
+    # Before broad search, try additional official URLs that DART itself
+    # publishes for the same legal entity (for example an IR Website). These
+    # remain inside the DART-anchored organization boundary and are accepted only
+    # when their fetched navigation is strictly better than the thin primary surface.
+    dart_auxiliary = _dart_auxiliary_official_candidates(http, start_url, company)
+    recovery.last_recovery["stages_attempted"].append({
+        "stage": "DART_AUXILIARY_OFFICIAL",
+        "candidate_count": len(dart_auxiliary),
+        "sample_candidates": dart_auxiliary[:10],
+    })
+    resolved = _try_candidates(
+        http, start_url, company, dart_auxiliary, original_evidence,
+        "DART_AUXILIARY_OFFICIAL", max_pages, deadline,
+    )
+    if resolved:
+        return resolved
+    if _deadline_exceeded(deadline):
+        _mark_runtime_guard("DART_AUXILIARY_OFFICIAL", deadline)
         return (original_pages, original_links) if original_pages else ([], [])
 
     first_party = thin._first_party_bootstrap_candidates(http, start_url, original_pages)
