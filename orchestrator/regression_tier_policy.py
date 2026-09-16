@@ -63,10 +63,13 @@ ALL_SOURCE_R2_PREFIXES = (
 
 # Structural output changes need the full user-facing E2E contract. They do not, by
 # themselves, require re-downloading public sources; R3 should reuse verified inputs
-# where the workflow supports it.
+# where the workflow supports it. Postprocess is included because it controls the
+# canonical integration/coverage semantics that feed the manifest, review queue and
+# downstream Human Archive/Application Materials even when collectors are unchanged.
 R3_PREFIXES = (
     "orchestrator/archive",
     "orchestrator/package",
+    "orchestrator/postprocess",
     "orchestrator/master_",
     "orchestrator/collection_completeness.py",
     "tools/build_application_material",
@@ -177,7 +180,7 @@ def classify_paths(paths: Iterable[str]) -> dict:
             "network_failure": "INFRA_RETRY_REQUIRED",
             "shared_change_resets_full_e2e": False,
             "request_data_change_triggers_regression": False,
-            "r3_release_rule": "archive/package structural change, master workflow change, or explicit release milestone",
+            "r3_release_rule": "archive/package/postprocess structural change, master workflow change, or explicit release milestone",
         },
     }
 
