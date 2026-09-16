@@ -1,6 +1,7 @@
 import unittest
 
 from orchestrator.regression_tier_policy import classify_execution_failure, classify_paths
+from tests.test_coverage_semantics import CoverageSemanticsTests  # noqa: F401
 
 
 class RegressionTierPolicyTest(unittest.TestCase):
@@ -39,6 +40,12 @@ class RegressionTierPolicyTest(unittest.TestCase):
 
     def test_archive_change_requires_r3_without_live_source_redownload(self):
         plan = classify_paths(["orchestrator/archive_builder.py"])
+        self.assertEqual(plan["required_tier"], "R3")
+        self.assertTrue(plan["r3_required"])
+        self.assertEqual(plan["r2_sources"], [])
+
+    def test_postprocess_semantic_change_requires_r3(self):
+        plan = classify_paths(["orchestrator/postprocess.py"])
         self.assertEqual(plan["required_tier"], "R3")
         self.assertTrue(plan["r3_required"])
         self.assertEqual(plan["r2_sources"], [])
