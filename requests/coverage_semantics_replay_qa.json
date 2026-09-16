@@ -6,5 +6,6 @@
     "PRTR",
     "CLEANSYS_AIR"
   ],
-  "purpose": "Replay retained source evidence through current generic integration code and verify that fully queried no-data years are distinguished from true collection gaps."
+  "purpose": "Replay retained source evidence through current generic integration code and verify that fully queried no-data years are distinguished from true collection gaps.",
+  "replay_token": "postprocess-compatibility-fix-20260916"
 }
