@@ -29,6 +29,47 @@ def write_status(root, source, status="NO_MATCH", **extra):
 
 
 class TestPackageValidation(unittest.TestCase):
+    def test_declared_empty_scope_rejection_audits_are_valid(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for source in SOURCES:
+                write_status(root, source, scope_rejected_rows=0)
+                if source != "CLEANSYS_AIR":
+                    (root / source / "scope_rejected_rows.jsonl").write_text("", encoding="utf-8")
+            ok, results, review = validate(root)
+            self.assertTrue(ok)
+            self.assertEqual(review, [])
+            self.assertEqual(package_health(results, review), "PASS")
+
+    def test_empty_scope_audit_requires_declared_zero_and_known_source(self):
+        for source in ("ENVINFO", "PRTR", "CHEM_STATS", "SOOSIRO_WATER"):
+            for extra in ({}, {"scope_rejected_rows": 1}, {"scope_rejected_rows": None},
+                          {"scope_rejected_rows": "invalid"}):
+                with self.subTest(source=source, extra=extra), tempfile.TemporaryDirectory() as td:
+                    root = Path(td)
+                    for lane in SOURCES:
+                        write_status(root, lane, **(extra if lane == source else {}))
+                    (root / source / "scope_rejected_rows.jsonl").write_text("", encoding="utf-8")
+                    ok, results, review = validate(root)
+                    self.assertFalse(ok)
+                    self.assertEqual(package_health(results, review), "FAIL")
+        self.assertFalse(declared_empty_row_stream(
+            "CLEANSYS_AIR", Path("scope_rejected_rows.jsonl"), {"scope_rejected_rows": 0}
+        ))
+
+    def test_zero_scope_rejections_do_not_hide_empty_source_data(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for source in SOURCES:
+                write_status(root, source, scope_rejected_rows=0)
+            write_status(root, "PRTR", "DATA_FOUND", scope_rejected_rows=0, detail_table_rows=1)
+            (root / "PRTR" / "scope_rejected_rows.jsonl").write_text("", encoding="utf-8")
+            (root / "PRTR" / "detail_table_rows.jsonl").write_text("", encoding="utf-8")
+            ok, results, review = validate(root)
+            self.assertFalse(ok)
+            self.assertEqual(package_health(results, review), "FAIL")
+            self.assertIn("PRTR/detail_table_rows.jsonl", [p.replace("\\", "/") for p in review[0]["zero_byte"]])
+
     def test_declared_zero_row_stream_is_not_structural_failure(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
