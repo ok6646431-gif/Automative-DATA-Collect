@@ -164,6 +164,45 @@ def _meets_minimum_years(source, years):
     return len(years) >= 5 and all(years[i + 1] - years[i] == 1 for i in range(len(years) - 1))
 
 
+def _apply_verified_no_match_compat(rows, root):
+    """Preserve the established source-level verified no-match contract.
+
+    Some collectors can prove an empty result at source level even when no profile is
+    available to reconstruct a per-period completeness audit. This compatibility path
+    predates the richer mixed-period semantics and remains intentionally conservative:
+    only explicit collector terminal states are promoted from ``NO_DATA`` to
+    ``NO_DATA_CONFIRMED``.
+    """
+    root = Path(root)
+    for row in rows:
+        source = str(row.get("source_key") or "")
+        status = _core.read_json(root / source / "status.json", {}) or {}
+        state = str(status.get("status") or "").upper()
+        if row.get("coverage_status") != "NO_DATA" or state not in NO_MATCH_SOURCE_STATES:
+            continue
+
+        queried_years = []
+        for key in ("annual_years", "years", "requested_years"):
+            values = status.get(key)
+            if isinstance(values, list):
+                for value in values:
+                    year = _as_year(value)
+                    if year is not None:
+                        queried_years.append(year)
+        queried_years = sorted(set(queried_years))
+        if queried_years:
+            row["collected_start"] = min(queried_years)
+            row["collected_end"] = max(queried_years)
+        row["coverage_status"] = "NO_DATA_CONFIRMED"
+        row["meets_minimum"] = False
+        row["comparability_status"] = "NOT_APPLICABLE_NO_DATA"
+        row["rounds_or_detail"] = (
+            str(row.get("rounds_or_detail") or "") + f" | collector_state={state}"
+        ).strip(" |").strip()
+        row["next_action"] = "preserve verified no-match state; do not infer a trend series"
+    return rows
+
+
 def _audited_periods(root, profile):
     """Return evidence-backed per-year query states from the completeness auditor.
 
@@ -188,13 +227,15 @@ def _audited_periods(root, profile):
 
 
 def coverage_rows(root, company_id, id_rows, profile=None):
-    rows = _BASE_COVERAGE_ROWS(root, company_id, id_rows)
+    rows = _apply_verified_no_match_compat(
+        _BASE_COVERAGE_ROWS(root, company_id, id_rows), root
+    )
     if not profile:
         return rows
 
     # Fail conservative. If the evidence-aware audit cannot be reconstructed here,
-    # preserve the core SHORT_COVERAGE/NO_DATA states; archive-stage completeness will
-    # still run later and can block delivery on missing periods.
+    # preserve the core/legacy coverage states; archive-stage completeness will still
+    # run later and can block delivery on missing periods.
     try:
         audited = _audited_periods(root, profile)
     except Exception:
@@ -222,7 +263,7 @@ def coverage_rows(root, company_id, id_rows, profile=None):
             str(row.get("rounds_or_detail") or "") + " | " + audit_detail
         ).strip(" |")
 
-        if row.get("coverage_status") == "NO_DATA":
+        if row.get("coverage_status") in {"NO_DATA", "NO_DATA_CONFIRMED"}:
             if all_expected_complete and no_data_years and not data_years:
                 row["coverage_status"] = "NO_DATA_CONFIRMED"
                 row["meets_minimum"] = False
