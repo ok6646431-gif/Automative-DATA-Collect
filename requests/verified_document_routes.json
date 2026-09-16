@@ -429,7 +429,7 @@
       "current_legal_name": "한화에어로스페이스(주)",
       "company": {
         "schema_version": "1.0",
-        "request_id": "company-1b342a45-env-g0-20260913",
+        "request_id": "company-1b342a45-env-g0-20260916",
         "requested_company_name": "한화에어로스페이스",
         "current_legal_name": "한화에어로스페이스(주)",
         "current_legal_name_active_period": {
@@ -773,7 +773,7 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
@@ -797,7 +797,7 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
@@ -821,7 +821,7 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
@@ -845,7 +845,7 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
@@ -869,7 +869,7 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
@@ -893,7 +893,7 @@
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
@@ -945,7 +945,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "company-1b342a45-env-g0-20260913"
+        "request_id": "company-1b342a45-env-g0-20260916"
       }
     },
     "01316227": {
