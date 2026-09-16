@@ -1,0 +1,10 @@
+{
+  "source_run_id": 35105703539,
+  "public_artifact_name": "stable-public-sources",
+  "icis_artifact_name": "icis-attempt-1",
+  "expect_confirmed_short_sources": [
+    "PRTR",
+    "CLEANSYS_AIR"
+  ],
+  "purpose": "Replay retained source evidence through current generic integration code and verify that fully queried no-data years are distinguished from true collection gaps."
+}
