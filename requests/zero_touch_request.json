@@ -1,4 +1,4 @@
 {
-  "company_name": "한화에어로스페이스",
-  "rerun_reason": "strict Full E2E known-company regression after generic scope audit manifest fix c4c53b9d6f2a5900d8c500d484a15f944b6935ef and verified Kumho R3 PASS on 87b9986ae433931f7ff69b68458d628404d95542; verify current shared code through fail-closed G0 Discovery -> Collection COMPLETE -> Manifest PASS -> Human Archive COMPLETE/PASS -> Application Materials PASS"
+  "company_name": "롯데케미칼",
+  "rerun_reason": "unseen-company validation 1/3 after known-company strict R3 3/3 PASS; run fail-closed G0 Discovery from company name only and promote only on PASS, then verify Collection COMPLETE -> Manifest PASS -> Human Archive COMPLETE/PASS -> Application Materials PASS"
 }
