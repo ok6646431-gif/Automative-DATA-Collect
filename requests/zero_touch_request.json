@@ -1,4 +1,4 @@
 {
-  "company_name": "금호석유화학",
-  "rerun_reason": "strict Full E2E representative regression on shared code 7b277405c0c1cd674785d7a9c18cc887d37f2e66 after R2 3/3 PASS; verify Collection COMPLETE, Human Archive COMPLETE/PASS, Application Materials PASS, system_raw_absent_from_human_archive=true, raw evidence preserved externally"
+  "company_name": "한화에어로스페이스",
+  "rerun_reason": "strict Full E2E known-company regression after generic scope audit manifest fix c4c53b9d6f2a5900d8c500d484a15f944b6935ef and verified Kumho R3 PASS on 87b9986ae433931f7ff69b68458d628404d95542; verify current shared code through fail-closed G0 Discovery -> Collection COMPLETE -> Manifest PASS -> Human Archive COMPLETE/PASS -> Application Materials PASS"
 }
