@@ -1,1 +1,1 @@
-strict-r3:hanwha-aerospace:coverage-semantics-compat-fix:2026-09-16T14:37:00Z
+strict-r3:hyosung-tnc:known-company-final:2026-09-16T14:55:00Z
