@@ -1,3 +1,4 @@
+# retrigger: apply production fidelity patch after workflow became active
 name: Apply user source fidelity policy
 on:
   push:
