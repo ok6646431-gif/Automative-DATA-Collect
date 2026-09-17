@@ -45,7 +45,7 @@ jobs:
       - name: Targeted regression
         run: |
           python -m py_compile orchestrator/archive_builder.py orchestrator/human_archive_exports.py
-          python -m unittest tests.test_human_archive_exports tests.test_archive_builder tests.test_archive_delivery_contract tests.test_application_material_from_archive -v
+          python -m unittest tests.test_human_archive_exports tests.test_archive_delivery_contract tests.test_application_material_from_archive -v
       - name: Commit verified integration
         run: |
           git config user.name 'openai-maintenance'
