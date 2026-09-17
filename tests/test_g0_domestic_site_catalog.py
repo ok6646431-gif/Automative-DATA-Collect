@@ -314,5 +314,30 @@ class DomesticSiteCatalogTests(unittest.TestCase):
         self.assertEqual(catalog._operational_name("대한 공장", "대한"), "대한 공장")
 
 
+    def test_semantic_heading_does_not_borrow_address_across_business_heading_and_accepts_lot_address(self):
+        html = """<html><body>
+          <h2>국내 사업장</h2>
+          <section><h3>첨단소재 여수공장</h3><p>주소 전남 여수시 평여동 62</p></section>
+          <section><h3>별도 법인명</h3><p>주소 충남 서산시 대산읍 독곶1로 82</p></section>
+          <section><h3>울산공장</h3><p>주소 울산광역시 남구 사평로 119</p></section>
+        </body></html>"""
+        text = (
+            '국내 사업장 첨단소재 여수공장 주소 전남 여수시 평여동 62 '
+            '별도 법인명 주소 충남 서산시 대산읍 독곶1로 82 '
+            '울산공장 주소 울산광역시 남구 사평로 119'
+        )
+        result = catalog.discover(
+            '예시화학', [Page('https://official.example/company/network', text, html, 200)]
+        )
+        self.assertIsNotNone(result)
+        sites, scope, unresolved = result
+        by_name = {site['site_name_raw']: site['address_raw'] for site in sites}
+        self.assertEqual(by_name['첨단소재 여수공장'], '전남 여수시 평여동 62')
+        self.assertEqual(by_name['울산공장'], '울산광역시 남구 사평로 119')
+        self.assertNotIn('충남 서산시 대산읍 독곶1로 82', set(by_name.values()))
+        self.assertEqual(scope['mode'], 'SITE_SET')
+        self.assertEqual(unresolved, [])
+
+
 if __name__ == "__main__":
     unittest.main()

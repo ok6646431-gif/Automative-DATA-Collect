@@ -11,10 +11,42 @@ from __future__ import annotations
 
 from typing import Any, Dict, Tuple
 
+import re
+
 
 NONBLOCKING_PROMOTION_CODES = {
     "CORPORATE_DOCUMENT_COVERAGE_INCOMPLETE",
 }
+
+
+def _requested_start_year(discovery: Dict[str, Any]) -> int | None:
+    window = ((discovery.get("collection_policy") or {}).get("requested_history_window") or {})
+    try:
+        return int(window.get("start_year")) if window.get("start_year") is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _historical_name_issue_is_pre_window(
+    item: Dict[str, Any], discovery: Dict[str, Any], audit: Dict[str, Any]
+) -> bool:
+    if str(item.get("code") or "") != "HISTORICAL_LEGAL_NAME_PREDECESSOR_UNRESOLVED":
+        return False
+    requested_start = _requested_start_year(discovery)
+    if requested_start is None:
+        return False
+    recovery = (((audit.get("stages") or {}).get("official_site") or {}).get("recovery") or {})
+    signals = [x for x in recovery.get("rename_signals") or [] if isinstance(x, dict)]
+    if not signals:
+        return False
+    years = []
+    for signal in signals:
+        value = signal.get("year")
+        match = re.search(r"(?:19|20)\d{2}", str(value or ""))
+        if not match:
+            return False
+        years.append(int(match.group(0)))
+    return bool(years) and max(years) < requested_start
 
 
 def apply(
@@ -25,7 +57,8 @@ def apply(
     blocking = []
     deferred = []
     for item in discovery.get("unresolved_items", []) or []:
-        if str(item.get("code") or "") in NONBLOCKING_PROMOTION_CODES:
+        code = str(item.get("code") or "")
+        if code in NONBLOCKING_PROMOTION_CODES or _historical_name_issue_is_pre_window(item, discovery, audit):
             deferred.append(item)
         else:
             blocking.append(item)
@@ -39,8 +72,9 @@ def apply(
             1 for g in documents.get("gaps", []) or [] if g.get("blocking")
         ),
         "policy": (
-            "Verified identity/site discovery may be promoted with explicit document "
-            "coverage gaps; identity/scope/legal ambiguity remains fail-closed."
+            "Verified current-entity discovery may be promoted with explicit document "
+            "coverage gaps and historical-name ambiguity proven to predate the requested "
+            "history window; current-window identity/scope/legal ambiguity remains fail-closed."
         ),
     }
     audit["gate_status"] = "PASS" if not blocking else "REVIEW_REQUIRED"

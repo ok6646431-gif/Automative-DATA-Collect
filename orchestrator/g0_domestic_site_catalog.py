@@ -77,6 +77,12 @@ CATALOG_ROAD_ADDRESS_RE = re.compile(
     r"(?:[가-힣0-9]{1,24}(?:읍|면|동|리|구)\s+)?"
     r"[가-힣0-9·.\-]{1,36}(?:대로|로|길)\s*\d+(?:[-~]\d+)?(?:번길\s*\d+(?:[-~]\d+)?)?)"
 )
+CATALOG_LOT_ADDRESS_RE = re.compile(
+    rf"((?:(?:{CATALOG_REGION})\s+|[가-힣]{{2,24}}(?:특별자치도|특별자치시|광역시|특별시|도)\s+)"
+    r"[가-힣0-9]{1,24}(?:시|군|구)\s+"
+    r"(?:[가-힣0-9]{1,24}(?:읍|면)\s+)?"
+    r"[가-힣0-9·.\-]{1,36}(?:동|리)\s+\d+(?:-\d+)?)"
+)
 GENERIC_CELL_WORDS = {
     "category", "region", "name", "location", "location & contact", "map",
     "구분", "지역", "명칭", "이름", "소재지", "주소", "연락처", "대한민국", "korea",
@@ -198,12 +204,17 @@ def _operational_name(value: str, company: str) -> str:
     return name
 
 
-def _validated_address(value: str) -> str:
+def _address_matches(value: str):
     text = re.sub(r"\s+", " ", str(value or "")).strip()
-    match = CATALOG_ROAD_ADDRESS_RE.search(text)
-    if not match:
+    matches = [*CATALOG_ROAD_ADDRESS_RE.finditer(text), *CATALOG_LOT_ADDRESS_RE.finditer(text)]
+    return sorted(matches, key=lambda m: (m.start(), -(m.end() - m.start())))
+
+
+def _validated_address(value: str) -> str:
+    matches = _address_matches(value)
+    if not matches:
         return ""
-    return re.sub(r"\s+", " ", match.group(1)).strip()
+    return re.sub(r"\s+", " ", matches[0].group(1)).strip()
 
 
 def _clean_cell(value: str) -> str:
@@ -213,7 +224,8 @@ def _clean_cell(value: str) -> str:
 def _table_name(cells: Sequence[str], address_index: int, address_cell: str) -> str:
     """Choose the facility-name cell immediately before the address/contact cell."""
     candidates = list(cells[:address_index])
-    address_match = CATALOG_ROAD_ADDRESS_RE.search(address_cell)
+    address_matches = _address_matches(address_cell)
+    address_match = address_matches[0] if address_matches else None
     if address_match:
         prefix = _clean_cell(address_cell[:address_match.start()])
         if prefix:
@@ -356,6 +368,7 @@ def _semantic_heading_sites(company: str, page: base.Page) -> Dict[str, Dict[str
     soup = BeautifulSoup(html, "html.parser")
     found: Dict[str, Dict[str, Any]] = {}
     heading_names = {"h1", "h2", "h3", "h4", "h5", "h6", "dt", "strong"}
+    structural_heading_names = {"h1", "h2", "h3", "h4", "h5", "h6", "dt"}
 
     headings: List[Tuple[Any, str]] = []
     for tag in soup.find_all(True):
@@ -376,12 +389,19 @@ def _semantic_heading_sites(company: str, page: base.Page) -> Dict[str, Dict[str
                 break
             if tag is not heading:
                 role = str((getattr(tag, "attrs", {}) or {}).get("role") or "").casefold()
-                if getattr(tag, "name", "") in heading_names or role == "heading" or _class_matches(tag, NAME_CLASS_HINTS):
+                tag_name = getattr(tag, "name", "")
+                name_class = _class_matches(tag, NAME_CLASS_HINTS)
+                # A real structural heading starts a new catalog record even when the
+                # label is a business-unit/legal-entity name rather than ending in
+                # "공장" or "사업장". Never borrow an address across that boundary.
+                if tag_name in structural_heading_names or role == "heading" or name_class:
+                    break
+                if tag_name == "strong":
                     next_name = _operational_name(_clean_cell(" ".join(tag.stripped_strings)), company)
                     if next_name:
                         break
             value = _clean_cell(" ".join(tag.stripped_strings))
-            matches = list(CATALOG_ROAD_ADDRESS_RE.finditer(value))
+            matches = _address_matches(value)
             if len(matches) != 1:
                 continue
             candidate = _validated_address(value)
@@ -438,7 +458,7 @@ def _site_name(text: str, address_start: int, company: str) -> str:
 def _flattened_text_sites(company: str, page: base.Page) -> Dict[str, Dict[str, Any]]:
     text = str(page.text or "")
     found: Dict[str, Dict[str, Any]] = {}
-    for match in CATALOG_ROAD_ADDRESS_RE.finditer(text):
+    for match in _address_matches(text):
         address = re.sub(r"\s+", " ", match.group(1)).strip()
         context = text[max(0, match.start() - 220): min(len(text), match.end() + 80)]
         if not any(term in context for term in OPERATIONAL_SUFFIXES):

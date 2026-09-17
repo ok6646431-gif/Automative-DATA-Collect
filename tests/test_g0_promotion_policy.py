@@ -42,5 +42,30 @@ class G0PromotionPolicyTests(unittest.TestCase):
         self.assertEqual(a["stages"]["promotion_policy"]["deferred_review_count"], 1)
 
 
+    def test_pre_window_historical_name_ambiguity_is_deferred(self):
+        discovery = {
+            'collection_policy': {'requested_history_window': {'start_year': 2020, 'end_year': 2026}},
+            'unresolved_items': [{'code': 'HISTORICAL_LEGAL_NAME_PREDECESSOR_UNRESOLVED'}],
+        }
+        audit = {
+            'stages': {'official_site': {'recovery': {'rename_signals': [{'year': 2012}, {'year': 1997}]}}}
+        }
+        d, _, a = policy.apply(discovery, {'gaps': []}, audit)
+        self.assertEqual(d['unresolved_items'], [])
+        self.assertEqual(a['gate_status'], 'PASS')
+        self.assertEqual(a['stages']['promotion_policy']['deferred_review_count'], 1)
+
+    def test_current_or_unknown_historical_name_ambiguity_remains_blocking(self):
+        for signals in ([{'year': 2021}], [{'year': None}]):
+            discovery = {
+                'collection_policy': {'requested_history_window': {'start_year': 2020, 'end_year': 2026}},
+                'unresolved_items': [{'code': 'HISTORICAL_LEGAL_NAME_PREDECESSOR_UNRESOLVED'}],
+            }
+            audit = {'stages': {'official_site': {'recovery': {'rename_signals': signals}}}}
+            d, _, a = policy.apply(discovery, {'gaps': []}, audit)
+            self.assertEqual(len(d['unresolved_items']), 1)
+            self.assertEqual(a['gate_status'], 'REVIEW_REQUIRED')
+
+
 if __name__ == "__main__":
     unittest.main()
