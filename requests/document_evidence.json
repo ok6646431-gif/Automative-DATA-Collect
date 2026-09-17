@@ -3,221 +3,126 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_88ccf4ee66",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_ee2b26e0b4",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "효성티앤씨",
+      "title": "롯데케미칼",
       "report_year": 2026,
-      "source_url": "https://www.hyosungtnc.com/kr",
-      "source_locator": "https://www.hyosungtnc.com/kr",
+      "source_url": "https://www.lottechem.com/",
+      "source_locator": "https://www.lottechem.com/",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_374cb113f5",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_80b9b0f51b",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "효성티앤씨",
+      "title": "롯데케미칼",
       "report_year": 2026,
-      "source_url": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/ko/esg/management_system.do",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_system.do",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/kr",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hyosungtnc.com/kr",
-          "expected_extension": "html"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_72513f59d1",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_a0cfa6e4ad",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "ESG",
+      "title": "롯데케미칼",
       "report_year": 2026,
-      "source_url": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/esg-policy",
+      "source_url": "https://www.lottechem.com/ko/esg/management_report.do",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/kr",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hyosungtnc.com/kr",
-          "expected_extension": "html"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_929143cc20",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_97904a4d0b",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "효성티앤씨",
+      "title": "롯데케미칼",
       "report_year": 2026,
-      "source_url": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/governance/report/center",
+      "source_url": "https://www.lottechem.com/ko/esg/management_report.do?page=5",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do?page=5",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/kr",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hyosungtnc.com/kr",
-          "expected_extension": "html"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "importance": "SUPPORTING"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2020_12",
+      "document_id": "AUTO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2020 sustainability report ENG",
+      "title": "[2020년] 지속가능경영보고서 국문 영문",
       "report_year": 2020,
-      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2020_en.pdf",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_210910080913889&voNm=esgVo&category=ko",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do?page=2",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
       "entity_alignment": "UNKNOWN"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_11",
+      "document_id": "AUTO_SUSTAINABILITY_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 sustainability report ENG",
+      "title": "[2021년] 지속가능경영보고서 국문 영문",
       "report_year": 2021,
-      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_en.pdf",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_240806134952705&voNm=esgVo&category=ko",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_kr.pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-          "expected_extension": "pdf",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_10",
+      "document_id": "AUTO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 sustainability report ENG",
+      "title": "[2022년] ESG Report 국문 영문",
       "report_year": 2022,
-      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_en.pdf",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_240806135010740&voNm=esgVo&category=ko",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_kr.pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-          "expected_extension": "pdf",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_9",
+      "document_id": "AUTO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 sustainability report ENG",
+      "title": "[2023년] ESG Report 국문 영문",
       "report_year": 2023,
-      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_en.pdf",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_240628111836133&voNm=esgVo&category=ko",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_kr.pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-          "expected_extension": "pdf",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_8",
+      "document_id": "AUTO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 sustainability report ENG",
+      "title": "[2024년] ESG Report 국문 영문",
       "report_year": 2024,
-      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_en.pdf",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_250729103412393&voNm=esgVo&category=ko",
+      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_kr.pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-          "expected_extension": "pdf",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_7",
+      "document_id": "AUTO_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 sustainability report ENG",
+      "title": "2025 ESG Report",
       "report_year": 2025,
-      "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_en.pdf",
-      "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
+      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_260630110003165",
+      "source_locator": "https://www.lottechem.com/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hyosungtnc.com/assets/files/ESG_Compact_Book_EN.pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-          "expected_extension": "pdf",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
-        },
-        {
-          "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_kr.pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
-          "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
-          "expected_extension": "pdf",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type.",
+      "entity_alignment": "UNKNOWN"
     }
   ],
   "gaps": [
@@ -230,8 +135,8 @@
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "As of 2026-09-15, verified official report sources list reports through 2025, not 2026.",
-      "source_locator": "https://www.hyosungtnc.com/kr"
+      "reason": "As of 2026-09-17, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://www.lottechem.com/"
     }
   ],
   "discovery_scope": {
@@ -256,5 +161,5 @@
       "end_year": 2026
     }
   },
-  "request_id": "company-7b7146f1-env-g0-20260915"
+  "request_id": "company-91b81178-env-g0-20260917"
 }
