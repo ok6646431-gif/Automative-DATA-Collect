@@ -31,27 +31,24 @@ jobs:
           p=Path('orchestrator/archive_builder.py')
           s=p.read_text(encoding='utf-8')
           marker="def build_corporate_user(package_root,archive_root,company_name):\n"
-          helpers=r'''def _document_language_hint(*values):
-    text=' '.join(str(v or '') for v in values).casefold()
-    ko=bool(re.search(r'(?:^|[/_.?=&-])(kr|ko|kor)(?:[/_.?=&-]|$)|\\bkorean\\b|국문|한글|한국어',text,re.I))
-    en=bool(re.search(r'(?:^|[/_.?=&-])(en|eng)(?:[/_.?=&-]|$)|\\benglish\\b|영문|영어',text,re.I))
-    if ko and not en: return 'KO'
-    if en and not ko: return 'EN'
-    return 'UNKNOWN'
-
-
-def _korean_report_already_exposed(folder,year):
-    folder=Path(folder)
-    if not folder.exists(): return False
-    y=str(year or '')
-    for p in folder.iterdir():
-        if not p.is_file() or p.suffix.lower()!='.pdf': continue
-        if y and y not in p.name: continue
-        if _document_language_hint(p.name)=='KO': return True
-    return False
-
-
-'''
+          helpers=(
+              "def _document_language_hint(*values):\n"
+              "    text=' '.join(str(v or '') for v in values).casefold()\n"
+              "    ko=bool(re.search(r'(?:^|[/_.?=&-])(kr|ko|kor)(?:[/_.?=&-]|$)|\\\\bkorean\\\\b|국문|한글|한국어',text,re.I))\n"
+              "    en=bool(re.search(r'(?:^|[/_.?=&-])(en|eng)(?:[/_.?=&-]|$)|\\\\benglish\\\\b|영문|영어',text,re.I))\n"
+              "    if ko and not en: return 'KO'\n"
+              "    if en and not ko: return 'EN'\n"
+              "    return 'UNKNOWN'\n\n"
+              "def _korean_report_already_exposed(folder,year):\n"
+              "    folder=Path(folder)\n"
+              "    if not folder.exists(): return False\n"
+              "    y=str(year or '')\n"
+              "    for p in folder.iterdir():\n"
+              "        if not p.is_file() or p.suffix.lower()!='.pdf': continue\n"
+              "        if y and y not in p.name: continue\n"
+              "        if _document_language_hint(p.name)=='KO': return True\n"
+              "    return False\n\n\n"
+          )
           if '_korean_report_already_exposed' not in s:
               if marker not in s: raise SystemExit('corporate user marker missing')
               s=s.replace(marker,helpers+marker,1)
