@@ -1,0 +1,69 @@
+name: Inspect Hyosung SOOSIRO binding
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/inspect-hyosung-soosiro-binding.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download Hyosung stable sources
+        uses: actions/download-artifact@v4
+        with:
+          name: stable-public-sources
+          path: stable
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: '35112968790'
+          github-token: ${{ github.token }}
+      - name: Download Hyosung metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: enterprise-env-metadata
+          path: meta
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: '35112968790'
+          github-token: ${{ github.token }}
+      - name: Print SOOSIRO binding evidence
+        run: |
+          python - <<'PY'
+          import json, csv
+          from pathlib import Path
+
+          def show_json(path):
+              p=Path(path)
+              print(f'=== {p} ===')
+              if not p.exists():
+                  print('MISSING'); return
+              print(json.dumps(json.loads(p.read_text(encoding='utf-8')), ensure_ascii=False, indent=2))
+
+          show_json('stable/SOOSIRO_WATER/fact_candidates.json')
+          show_json('stable/SOOSIRO_WATER/status.json')
+
+          p=Path('meta/Source_Identity.csv')
+          print(f'=== {p} SOOSIRO ===')
+          if p.exists():
+              with p.open(encoding='utf-8-sig', newline='') as f:
+                  for r in csv.DictReader(f):
+                      if r.get('source_key') == 'SOOSIRO_WATER':
+                          print(json.dumps(r, ensure_ascii=False))
+          else:
+              print('MISSING')
+
+          p=Path('meta/Analysis_Scope.csv')
+          print(f'=== {p} SOOSIRO ===')
+          if p.exists():
+              with p.open(encoding='utf-8-sig', newline='') as f:
+                  for r in csv.DictReader(f):
+                      if r.get('source_key') == 'SOOSIRO_WATER':
+                          print(json.dumps(r, ensure_ascii=False))
+          else:
+              print('MISSING')
+          PY
