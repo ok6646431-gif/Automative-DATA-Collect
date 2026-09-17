@@ -4,6 +4,7 @@ from pathlib import Path
 
 from requested_scope import company_terms as _company_terms, source_id_scope as _resolved_source_id_scope
 from cross_entity_attachment_scope import match_envinfo_attachment
+from human_archive_exports import build_human_excels
 
 try:
     import xlsxwriter
@@ -521,7 +522,8 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     if base.exists(): shutil.rmtree(base)
     archive_root.mkdir(parents=True,exist_ok=True)
     scope,labels,tokens=source_id_scope(package_root,profile)
-    excels=build_user_excels(package_root,archive_root,scope)
+    excels=build_human_excels(package_root,archive_root,scope)
+    fidelity=read_json(archive_root/'00_자료목록'/'Human_Delivery_Fidelity.json',{}) or {}
     review_created,review_pdf_present=build_review_report_user(package_root,archive_root,company_name)
     env_created,env_failures,env_cross_entity=build_envinfo_user(package_root,archive_root,scope,labels)
     promoted=promote_envinfo_references(package_root,archive_root,scope,company_name)
@@ -541,7 +543,7 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     expected_env=sum(1 for r in read_csv(package_root/'output'/'ENVINFO'/'discovery.csv') if str(r.get('compId') or '') in scope['ENVINFO'])
     forbidden_user_suffixes={'.html','.htm','.json','.jsonl'}
     user_machine_formats_absent=not any(p.is_file() and p.suffix.lower() in forbidden_user_suffixes for p in (archive_root/USER_ROOT).rglob('*'))
-    checks={'user_excel_exports':len(excels)>=4,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present,'user_machine_formats_absent':user_machine_formats_absent}
+    checks={'user_excel_exports':len(excels)>=4,'human_delivery_fidelity':fidelity.get('pass') is True,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present,'user_machine_formats_absent':user_machine_formats_absent}
     completeness='COMPLETE' if all(checks.values()) else 'INCOMPLETE'; idx=archive_root/'00_자료목록'
     manifest={'schema_version':'2.0','company_id':company_id,'company_display_name':company_name,'created_at':datetime.now(timezone.utc).isoformat(),'archive_root':archive_root.name,'archive_completeness':completeness,'acceptance_checks':checks,'target_site_tokens':[x[0] for x in tokens],'target_source_ids':{k:sorted(v) for k,v in scope.items()},'user_files':len(user_files),'system_files':sum(1 for p in (archive_root/SYSTEM_ROOT).rglob('*') if p.is_file()),'xlsx_exports':len(excels),'envinfo_promoted_references':len(promoted),'envinfo_pdf_failures':env_failures,'envinfo_cross_entity_attachment_exclusions':len(env_cross_entity),'envinfo_cross_entity_attachment_exclusion_file':cross_entity_index,'principle':'01_사용자자료만으로 조사·비교가 가능해야 하며, 재현용 raw 자료는 90_시스템원본에 격리한다.'}
     (idx/'Archive_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
