@@ -50,7 +50,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm .github/workflows/apply-v1-review-boundary-final.yml .github/workflows/fix-v1-maintenance-quoting.yml .github/workflows/apply-v1-review-boundary.yml maintenance/apply_v1_review_boundary_patch.py
+          git rm -f .github/workflows/apply-v1-review-boundary-final.yml .github/workflows/fix-v1-maintenance-quoting.yml .github/workflows/apply-v1-review-boundary.yml maintenance/apply_v1_review_boundary_patch.py
           git add orchestrator/g0_domestic_site_catalog.py orchestrator/g0_promotion_policy.py tests/test_g0_domestic_site_catalog.py tests/test_g0_promotion_policy.py
           git diff --cached --check
           git commit -m 'Bound v1 site pairing and historical review scope'
