@@ -1,4 +1,4 @@
-# retrigger: apply production fidelity patch after workflow became active
+# retrigger: fix test import path and apply verified production fidelity patch
 name: Apply user source fidelity policy
 on:
   push:
@@ -52,8 +52,8 @@ jobs:
           PY
       - name: Targeted regression
         run: |
-          python -m py_compile orchestrator/document_language_preference.py orchestrator/g0_report_finalizer.py orchestrator/archive_builder.py
-          python -m unittest tests.test_document_language_preference tests.test_envinfo_user_fidelity tests.test_g0_report_finalizer tests.test_archive_delivery_contract -v
+          PYTHONPATH=.:orchestrator python -m py_compile orchestrator/document_language_preference.py orchestrator/g0_report_finalizer.py orchestrator/archive_builder.py
+          PYTHONPATH=.:orchestrator python -m unittest tests.test_document_language_preference tests.test_envinfo_user_fidelity tests.test_g0_report_finalizer tests.test_archive_delivery_contract -v
       - name: Commit verified changes
         run: |
           git config user.name 'openai-maintenance'
