@@ -1,0 +1,54 @@
+name: Fix and apply v1 review boundary patch
+
+on:
+  push:
+    branches:
+      - run/control-plane
+    paths:
+      - '.github/workflows/fix-v1-maintenance-quoting.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Repair maintenance script quoting
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('maintenance/apply_v1_review_boundary_patch.py')
+          s = p.read_text(encoding='utf-8')
+          old_open = "        html = '''<html><body>"
+          old_close = "        </body></html>'''"
+          if old_open not in s or old_close not in s:
+              raise SystemExit('expected nested html quoting markers not found')
+          s = s.replace(old_open, '        html = """<html><body>', 1)
+          s = s.replace(old_close, '        </body></html>"""', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Apply exact v1 patch
+        run: python maintenance/apply_v1_review_boundary_patch.py
+      - name: Run targeted regressions
+        run: |
+          python -m py_compile orchestrator/g0_domestic_site_catalog.py orchestrator/g0_promotion_policy.py
+          python -m unittest tests.test_g0_domestic_site_catalog tests.test_g0_promotion_policy -v
+      - name: Commit verified v1 patch and clean temporary files
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/fix-v1-maintenance-quoting.yml .github/workflows/apply-v1-review-boundary.yml maintenance/apply_v1_review_boundary_patch.py
+          git add orchestrator/g0_domestic_site_catalog.py orchestrator/g0_promotion_policy.py tests/test_g0_domestic_site_catalog.py tests/test_g0_promotion_policy.py
+          git diff --cached --check
+          git commit -m 'Bound v1 site pairing and historical review scope'
+          git push origin HEAD:run/control-plane
