@@ -41,14 +41,6 @@ jobs:
           elif "'human_delivery_fidelity':fidelity.get('pass') is True" not in s:
               raise SystemExit('archive acceptance checks anchor missing')
           p.write_text(s,encoding='utf-8')
-
-          w=Path('.github/workflows/source-regression-checkpoint.yml')
-          x=w.read_text(encoding='utf-8')
-          needle='tests.test_application_material_from_archive -v'
-          if 'tests.test_human_archive_exports' not in x:
-              if needle not in x: raise SystemExit('R1 test list anchor missing')
-              x=x.replace(needle,'tests.test_application_material_from_archive tests.test_human_archive_exports -v',1)
-          w.write_text(x,encoding='utf-8')
           PY
       - name: Targeted regression
         run: |
@@ -59,7 +51,7 @@ jobs:
           git config user.name 'openai-maintenance'
           git config user.email 'actions@users.noreply.github.com'
           git rm .github/workflows/apply-human-archive-fidelity.yml
-          git add orchestrator/archive_builder.py .github/workflows/source-regression-checkpoint.yml
+          git add orchestrator/archive_builder.py
           git diff --cached --check
           git commit -m 'Integrate human-facing source fidelity exports'
           git push origin HEAD:run/control-plane
