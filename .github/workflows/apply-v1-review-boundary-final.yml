@@ -31,6 +31,7 @@ jobs:
           s = p.read_text(encoding='utf-8')
           s = s.replace("        html = '''<html><body>", '        html = """<html><body>', 1)
           s = s.replace("        </body></html>'''", '        </body></html>"""', 1)
+          s = s.replace("'stages': {'official_site': {'recovery': {'rename_signals': [{'year': 2012}, {'year': 1997}]}}}}", "'stages': {'official_site': {'recovery': {'rename_signals': [{'year': 2012}, {'year': 1997}]}}}", 1)
           start_marker = "old = '''            if CATALOG_ROAD_ADDRESS_RE.search(value):"
           end_marker = "text = text.replace(old, new, 1)\n"
           if start_marker in s:
