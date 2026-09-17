@@ -70,7 +70,7 @@ def _promote_fallback(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, An
     chosen=candidates[0]
     item=dict(doc)
     old=_route_from_doc(doc)
-    for key in ("source_url","source_locator","expected_extension","verification_status","notes","original_filename"):
+    for key in ("source_url","source_locator","expected_extension","verification_status","notes","original_filename","title","source_report_title","label"):
         if key in chosen:
             item[key]=chosen.get(key)
     remaining=[x for x in fallbacks if str(x.get("source_url") or "")!=str(chosen.get("source_url") or "")]

@@ -470,6 +470,25 @@ def doc_user_folder(dtype,title=''):
     return '06_회사환경정책/기타_공식자료'
 
 
+def _document_language_hint(*values):
+    text=' '.join(str(v or '') for v in values).casefold()
+    ko=bool(re.search(r'(?:^|[/_.?=&-])(kr|ko|kor)(?:[/_.?=&-]|$)|\\bkorean\\b|국문|한글|한국어',text,re.I))
+    en=bool(re.search(r'(?:^|[/_.?=&-])(en|eng)(?:[/_.?=&-]|$)|\\benglish\\b|영문|영어',text,re.I))
+    if ko and not en: return 'KO'
+    if en and not ko: return 'EN'
+    return 'UNKNOWN'
+
+def _korean_report_already_exposed(folder,year):
+    folder=Path(folder)
+    if not folder.exists(): return False
+    y=str(year or '')
+    for p in folder.iterdir():
+        if not p.is_file() or p.suffix.lower()!='.pdf': continue
+        if y and y not in p.name: continue
+        if _document_language_hint(p.name)=='KO': return True
+    return False
+
+
 def build_corporate_user(package_root,archive_root,company_name):
     root=Path(package_root); user=Path(archive_root)/USER_ROOT; docs=root/'output'/'CORP_DOCS'; created=[]; rows=[]
     for doc in read_csv(docs/'document_index.csv'):
@@ -478,6 +497,10 @@ def build_corporate_user(package_root,archive_root,company_name):
         if not src.exists(): rows.append(doc); continue
         dtype=str(doc.get('document_type') or 'OTHER_OFFICIAL_DOCUMENT'); title=str(doc.get('title') or '')
         folder=user/doc_user_folder(dtype,title); year=str(doc.get('report_year') or '')
+        if dtype=='SUSTAINABILITY_REPORT' and year:
+            lang=_document_language_hint(doc.get('source_url'),doc.get('original_filename'),title)
+            if lang=='EN' and _korean_report_already_exposed(folder,year):
+                x=dict(doc); x['user_archive_status']='SKIPPED_ENGLISH_KOREAN_ALREADY_AVAILABLE'; rows.append(x); continue
         suffix=src.suffix or Path(str(doc.get('original_filename') or '')).suffix
         source_for_user=src; rendered_tmp=None
         if str(suffix).lower() in {'.html','.htm'}:
