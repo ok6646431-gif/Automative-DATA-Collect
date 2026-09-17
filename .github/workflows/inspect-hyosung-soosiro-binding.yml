@@ -23,6 +23,14 @@ jobs:
           repository: ok6646431-gif/Automative-DATA-Collect
           run-id: '35112968790'
           github-token: ${{ github.token }}
+      - name: Download Hyosung ICIS attempt
+        uses: actions/download-artifact@v4
+        with:
+          name: icis-attempt-2
+          path: icis
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: '35112968790'
+          github-token: ${{ github.token }}
       - name: Download Hyosung metadata
         uses: actions/download-artifact@v4
         with:
@@ -31,39 +39,57 @@ jobs:
           repository: ok6646431-gif/Automative-DATA-Collect
           run-id: '35112968790'
           github-token: ${{ github.token }}
-      - name: Print SOOSIRO binding evidence
+      - name: Print source shapes
         run: |
           python - <<'PY'
           import json, csv
           from pathlib import Path
 
-          def show_json(path):
+          def json_obj(path):
               p=Path(path)
-              print(f'=== {p} ===')
-              if not p.exists():
-                  print('MISSING'); return
-              print(json.dumps(json.loads(p.read_text(encoding='utf-8')), ensure_ascii=False, indent=2))
+              if not p.exists(): return None
+              return json.loads(p.read_text(encoding='utf-8'))
 
-          show_json('stable/SOOSIRO_WATER/fact_candidates.json')
-          show_json('stable/SOOSIRO_WATER/status.json')
+          def jsonl_samples(path, n=3):
+              p=Path(path); out=[]
+              if not p.exists(): return out
+              for line in p.read_text(encoding='utf-8', errors='replace').splitlines():
+                  if line.strip(): out.append(json.loads(line))
+                  if len(out)>=n: break
+              return out
+
+          for path in [
+              'stable/SOOSIRO_WATER/fact_candidates.json',
+              'stable/SOOSIRO_WATER/status.json',
+              'stable/CLEANSYS_AIR/candidates.json',
+              'stable/CLEANSYS_AIR/status.json',
+          ]:
+              print('===',path,'===')
+              print(json.dumps(json_obj(path),ensure_ascii=False,indent=2))
+
+          for path in [
+              'stable/SOOSIRO_WATER/annual_rows.jsonl',
+              'stable/SOOSIRO_WATER/daily_rows.jsonl',
+              'stable/CLEANSYS_AIR/annual_rows.jsonl',
+              'icis/PRTR/detail_table_rows.jsonl',
+              'icis/CHEM_STATS/detail_table_rows.jsonl',
+          ]:
+              print('=== SAMPLES',path,'===')
+              for r in jsonl_samples(path): print(json.dumps(r,ensure_ascii=False))
+
+          for path in ['icis/PRTR/discovery.csv','icis/CHEM_STATS/discovery.csv']:
+              print('=== SAMPLES',path,'===')
+              p=Path(path)
+              if p.exists():
+                  with p.open(encoding='utf-8-sig', newline='') as f:
+                      for i,r in enumerate(csv.DictReader(f)):
+                          print(json.dumps(r,ensure_ascii=False))
+                          if i>=2: break
 
           p=Path('meta/Source_Identity.csv')
-          print(f'=== {p} SOOSIRO ===')
+          print('=== Source_Identity SOOSIRO ===')
           if p.exists():
               with p.open(encoding='utf-8-sig', newline='') as f:
                   for r in csv.DictReader(f):
-                      if r.get('source_key') == 'SOOSIRO_WATER':
-                          print(json.dumps(r, ensure_ascii=False))
-          else:
-              print('MISSING')
-
-          p=Path('meta/Analysis_Scope.csv')
-          print(f'=== {p} SOOSIRO ===')
-          if p.exists():
-              with p.open(encoding='utf-8-sig', newline='') as f:
-                  for r in csv.DictReader(f):
-                      if r.get('source_key') == 'SOOSIRO_WATER':
-                          print(json.dumps(r, ensure_ascii=False))
-          else:
-              print('MISSING')
+                      if r.get('source_key') == 'SOOSIRO_WATER': print(json.dumps(r,ensure_ascii=False))
           PY
