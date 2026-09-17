@@ -9,44 +9,31 @@ permissions:
 jobs:
   qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install QA dependencies
-        run: python -m pip install --disable-pip-version-check xlsxwriter openpyxl
-      - name: Download verified Hyosung R3 package
+      - name: Install QA dependency
+        run: python -m pip install --disable-pip-version-check openpyxl
+      - name: Download regenerated Hyosung exports
         uses: actions/download-artifact@v4
         with:
-          name: enterprise-env-final
-          path: hyosung-old
+          name: hyosung-human-exports-qc
+          path: hyosung-qc
           repository: ${{ github.repository }}
-          run-id: 35112968790
+          run-id: 35223739218
           github-token: ${{ github.token }}
-      - name: Rebuild only human-facing structured exports
+      - name: Verify fidelity and workbook contents
         run: |
           python - <<'PY'
-          import json, sys
+          import json
           from pathlib import Path
           from openpyxl import load_workbook
-          sys.path.insert(0, 'orchestrator')
-          from archive_builder import source_id_scope, read_json
-          from human_archive_exports import build_human_excels
-
-          candidates=[]
-          for p in Path('hyosung-old').rglob('Company_Profile.json'):
-              if (p.parent/'output').is_dir() and (p.parent/'Source_Identity.csv').exists():
-                  candidates.append(p.parent)
-          if len(candidates) != 1:
-              raise SystemExit(f'expected exactly one assembled package root, got {candidates}')
-          root=candidates[0]
-          profile=read_json(root/'Company_Profile.json',{}) or {}
-          scope, labels, tokens = source_id_scope(root, profile)
           out=Path('hyosung-qc')
-          build_human_excels(root, out, scope)
           fidelity=json.loads((out/'00_자료목록'/'Human_Delivery_Fidelity.json').read_text(encoding='utf-8'))
+          print('FIDELITY=',json.dumps(fidelity,ensure_ascii=False,indent=2))
+          assert fidelity.get('pass') is True, fidelity
 
           specs={
               'PRTR': out/'01_사용자자료'/'02_화학물질'/'PRTR_배출이동량'/'PRTR_화학물질배출이동량_정리.xlsx',
@@ -54,43 +41,47 @@ jobs:
               'SOOSIRO_WATER': out/'01_사용자자료'/'01_TMS'/'수질_SOOSIRO'/'SOOSIRO_수질TMS_정리.xlsx',
               'CLEANSYS_AIR': out/'01_사용자자료'/'01_TMS'/'대기_CleanSYS'/'CleanSYS_대기TMS_정리.xlsx',
           }
-          qa={'package_root':str(root),'scope':{k:sorted(map(str,v)) for k,v in scope.items()},'fidelity':fidelity,'workbooks':{}}
+          qa={'fidelity':fidelity,'workbooks':{}}
           for source,path in specs.items():
               wb=load_workbook(path,read_only=True,data_only=True)
               sheets={}
               for ws in wb.worksheets:
-                  rows=max(ws.max_row-1,0)
                   headers=[c.value for c in next(ws.iter_rows(min_row=1,max_row=1))]
-                  sheets[ws.title]={'data_rows':rows,'headers':headers}
-              qa['workbooks'][source]={'path':str(path),'sheets':sheets}
-              print('\n###',source,path)
-              for name,item in sheets.items():
-                  print(name,'rows=',item['data_rows'],'headers=',item['headers'][:12])
+                  sheets[ws.title]={'data_rows':max(ws.max_row-1,0),'headers':headers}
+              qa['workbooks'][source]=sheets
+              print('\n###',source)
+              for n,v in sheets.items(): print(n,'rows=',v['data_rows'],'headers=',v['headers'][:14])
 
-          # Source-specific sanity checks: historical/source semantics must be visible.
           prtr=load_workbook(specs['PRTR'],read_only=True,data_only=True)
           ph=[c.value for c in next(prtr['확정_사업장연도'].iter_rows(min_row=1,max_row=1))]
-          assert ph[:4] == ['자료연도','원문 사업장명','원문 주소','PRTR 사업장ID'], ph
-          assert prtr['확정_사업장연도'].max_row > 1
+          assert ph[:4]==['자료연도','원문 사업장명','원문 주소','PRTR 사업장ID']
+          assert prtr['확정_사업장연도'].max_row-1 == 10
+          assert prtr['확정_원문표'].max_row-1 == 186
 
           chem=load_workbook(specs['CHEM_STATS'],read_only=True,data_only=True)
           ch=[c.value for c in next(chem['확정_사업장연도'].iter_rows(min_row=1,max_row=1))]
-          assert '해당연도 원문 주소' in ch and '동일사업장 확인기준 주소' in ch, ch
-          assert chem['확정_사업장연도'].max_row > 1
+          assert ch[:5]==['자료연도','해당연도 원문 사업장명','해당연도 원문 주소','화학물질통계 사업장ID','원문 업종']
+          assert chem['확정_사업장연도'].max_row-1 == 6
+          assert chem['확정_원문표'].max_row-1 == 664
 
-          # DATA_FOUND rows must never disappear from the human delivery.
-          if not fidelity.get('pass'):
-              raise SystemExit('Human_Delivery_Fidelity failed: '+json.dumps(fidelity,ensure_ascii=False))
+          water=load_workbook(specs['SOOSIRO_WATER'],read_only=True,data_only=True)
+          assert water['검토필요_연간'].max_row-1 == 6
+          assert water['검토필요_일자료'].max_row-1 == 370
+          wh=[c.value for c in next(water['검토필요_연간'].iter_rows(min_row=1,max_row=1))]
+          assert wh[:4]==['자료연도','원문 사업장명','원문 주소','SOOSIRO 사업장코드']
+
+          air=load_workbook(specs['CLEANSYS_AIR'],read_only=True,data_only=True)
+          assert air['확정_연간데이터'].max_row-1 == 5
+          ah=[c.value for c in next(air['확정_연간데이터'].iter_rows(min_row=1,max_row=1))]
+          assert ah[:4]==['자료연도','원문 사업장명','원문 주소','CleanSYS 사업장코드']
 
           (out/'QA_summary.json').write_text(json.dumps(qa,ensure_ascii=False,indent=2),encoding='utf-8')
-          print('\nFIDELITY PASS')
-          print(json.dumps(fidelity,ensure_ascii=False,indent=2))
+          print('\nVERIFIED PASS')
           PY
-      - name: Upload regenerated Hyosung workbooks
-        if: always()
+      - name: Upload verified workbooks
         uses: actions/upload-artifact@v4
         with:
-          name: hyosung-human-exports-qc
+          name: hyosung-human-exports-verified
           path: hyosung-qc/
           if-no-files-found: error
           retention-days: 7
