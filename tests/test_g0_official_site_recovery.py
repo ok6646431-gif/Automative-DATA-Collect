@@ -62,6 +62,22 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
         )
         self.assertEqual(["https://www.example-corp.com/about"], links)
 
+    def test_malformed_breadcrumb_search_candidate_is_ignored(self):
+        html = """<html><body>
+          <cite>www.unrelated.example › blog › posts › malformed title：detail</cite>
+          <cite>www.example-corp.com/company</cite>
+        </body></html>"""
+        links = recovery._search_result_links(
+            "https://www.google.com/search?q=corp", html
+        )
+        self.assertIn("https://www.example-corp.com/company", links)
+        self.assertFalse(any("›" in value for value in links))
+        self.assertTrue(
+            recovery._blocked(
+                "https://www.unrelated.example › blog › posts › malformed title：detail"
+            )
+        )
+
     def test_origin_variants_include_mobile_same_org_host(self):
         variants = recovery._origin_variants(
             "https://www.example-corp.com/legacy/index.do"

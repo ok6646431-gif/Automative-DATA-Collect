@@ -42,7 +42,13 @@ def _host(url: str) -> str:
 
 
 def _blocked(url: str) -> bool:
-    host = (urlparse(url).hostname or "").casefold()
+    # Search-result markup sometimes exposes breadcrumb/display text as if it were
+    # a URL. Treat a malformed locator as blocked instead of allowing one unrelated
+    # candidate to abort the entire G0 discovery run.
+    try:
+        host = (urlparse(url).hostname or "").casefold()
+    except ValueError:
+        return True
     return not host or any(part in host for part in BLOCKED_HOST_PARTS)
 
 
