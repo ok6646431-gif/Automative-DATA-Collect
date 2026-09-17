@@ -24,6 +24,7 @@ from urllib.parse import unquote, urlparse
 
 from orchestrator import g0_report_entity_policy as entity_policy
 from orchestrator.document_year_guard import route_year_conflicts, strong_route_matches_year
+from orchestrator.document_language_preference import prefer_korean_sustainability
 
 
 def _pdf_filename(url: str) -> str:
@@ -303,6 +304,7 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         })
         existing_gap_years.add(year)
 
+    out, language_preference = prefer_korean_sustainability(discovery, out)
     documents["documents"] = out
     documents["gaps"] = gaps
     documents["discovery_status"] = (
@@ -317,5 +319,6 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         "normalized_pdf_titles": normalized_titles,
         "route_year_conflicts": route_year_conflicts_found,
         "removed_resolved_gaps": removed_gaps,
+        "language_preference": language_preference,
     }
     return documents

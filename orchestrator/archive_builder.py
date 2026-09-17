@@ -327,10 +327,35 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
         matches=sorted((env/'raw_detail').glob(f'{year}_{safe(comp)}_*.html'))
         if not matches:
             failures.append({'site':display,'year':year,'reason':'raw detail HTML missing'}); continue
-        pdf=user/safe(display)/f'환경정보공개_{safe(display)}_{year}.pdf'
-        ok,err=render_html_pdf(matches[0],pdf)
-        if ok: created.append(pdf)
-        else: failures.append({'site':display,'year':year,'reason':err})
+        site_dir=user/safe(display)
+        live_url=f'https://www.env-info.kr/user/register/viewUserSearch2.do?YEAR={year}&COMP_ID={comp}&OPEN_YN=Y'
+        pdf=site_dir/f'환경정보공개_{safe(display)}_{year}_공식화면인쇄본.pdf'
+        ok,err=render_url_pdf(live_url,pdf)
+        render_mode='OFFICIAL_LIVE_PAGE'
+        if not ok:
+            pdf=site_dir/f'환경정보공개_{safe(display)}_{year}_수집HTML_재현본.pdf'
+            ok,local_err=render_html_pdf(matches[0],pdf)
+            render_mode='COLLECTED_HTML_FALLBACK'
+            err=f'live={err}; local={local_err}'
+        if ok:
+            created.append(pdf)
+            raw_path=_raw_archive_path(root,matches[0]) or '90_시스템원본/output/ENVINFO/raw_detail'
+            notice=site_dir/f'환경정보공개_{safe(display)}_{year}_출처안내.txt'
+            if render_mode=='OFFICIAL_LIVE_PAGE':
+                explanation='공식 ENV-INFO 상세화면을 실행 시점에 브라우저 인쇄한 화면 보존본입니다. 사이트에서 직접 배포한 원본 PDF 파일은 아닙니다.'
+            else:
+                explanation='공식 상세화면의 실시간 재현에 실패하여 수집 당시 HTML 응답을 다시 인쇄한 재현본이며 원문 자체가 아님을 명시합니다.'
+            notice.write_text(
+                'ENV-INFO 사용자자료 출처 안내\n\n'+explanation+'\n'
+                f'공식 상세 URL: {live_url}\n'
+                f'수집 당시 원문 HTML 보존 경로: {raw_path}\n'
+                f'표시 방식: {render_mode}\n'
+                '원자료 확인이 필요하면 90_시스템원본의 수집 HTML과 공식 상세 URL을 우선 기준으로 사용하십시오.\n',
+                encoding='utf-8'
+            )
+            created.append(notice)
+        else:
+            failures.append({'site':display,'year':year,'reason':err})
     for att in read_csv(env/'attachment_index.csv'):
         comp=str(att.get('compId') or '')
         if comp not in scope['ENVINFO'] or att.get('collection_status')!='DOWNLOADED': continue
