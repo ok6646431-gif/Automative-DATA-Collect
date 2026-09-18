@@ -116,6 +116,7 @@ class ArchiveUserDedupV2Tests(unittest.TestCase):
             write_blank_pdf(official, 595, 842, {'/Title': 'Official annual copy'})
             original = site/'2022_기업_지속가능경영보고서.pdf'
             original.write_bytes(promoted.read_bytes())
+            original_digest = hashlib.sha256(original.read_bytes()).hexdigest()
 
             self.assertNotEqual(
                 hashlib.sha256(promoted.read_bytes()).hexdigest(),
@@ -137,6 +138,9 @@ class ArchiveUserDedupV2Tests(unittest.TestCase):
             official_rel = official.relative_to(root).as_posix()
             source_row = next(r for r in rows if r['원래_사용자경로'] == original_rel)
             self.assertEqual(source_row['최종_보존경로'], official_rel)
+            self.assertEqual(source_row['SHA256'], original_digest)
+            self.assertEqual(source_row['최종_보존_SHA256'], hashlib.sha256(official.read_bytes()).hexdigest())
+            self.assertNotEqual(source_row['SHA256'], source_row['최종_보존_SHA256'])
             for row in rows:
                 final = row['최종_보존경로']
                 if final:
