@@ -1,0 +1,99 @@
+name: Verify KCC failed ENVINFO PDFs after font fix
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/verify-kcc-envinfo-font-fix.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runtime
+        run: |
+          python -m pip install --disable-pip-version-check beautifulsoup4 pypdf
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Download KCC stable public sources
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35323339919
+          name: stable-public-sources
+          path: stable
+          github-token: ${{ github.token }}
+      - name: Rerender and compare failed PDFs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from archive_builder import render_envinfo_static_pdf
+          from envinfo_content_qa import _source_text, _pdf_text, compare_text
+
+          root=Path('stable')
+          raw=root/'ENVINFO'/'raw_detail'
+          if not raw.exists():
+              matches=list(root.rglob('ENVINFO/raw_detail'))
+              if len(matches)!=1:
+                  raise SystemExit(f'raw_detail not found: {matches}')
+              raw=matches[0]
+
+          targets=[
+              ('울산공장','2021','00000000000000148321'),
+              ('안성공장','2022','CM000000000000000307'),
+          ]
+          results=[]
+          out=Path('probe-out'); out.mkdir()
+          for site,year,comp in targets:
+              htmls=sorted(raw.glob(f'{year}_{comp}_*.html'))
+              if len(htmls)!=1:
+                  raise SystemExit(f'{site} {year}: htmls={htmls}')
+              pdf=out/f'{site}_{year}.pdf'
+              ok,err=render_envinfo_static_pdf(htmls[0],pdf)
+              if not ok:
+                  raise SystemExit(f'{site} {year}: render failed: {err}')
+              source,sections=_source_text(htmls[0])
+              pdftext,pages=_pdf_text(pdf)
+              cmp=compare_text(source,pdftext)
+              row={
+                  'site':site,'year':year,'sections':sections,'pages':pages,
+                  'pdf_chars':len(pdftext.strip()),**cmp,
+              }
+              print('VERIFY='+json.dumps(row,ensure_ascii=False))
+              if cmp['verdict']!='PASS':
+                  raise SystemExit(f'{site} {year}: still not PASS: {row}')
+              results.append(row)
+          Path('KCC_Font_Fix_Verification.json').write_text(
+              json.dumps(results,ensure_ascii=False,indent=2),encoding='utf-8'
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kcc-envinfo-font-fix-verification
+          path: |
+            KCC_Font_Fix_Verification.json
+            probe-out/*.pdf
+          retention-days: 14
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/verify-kcc-envinfo-font-fix.yml
+          git commit -m 'Remove KCC font-fix verification workflow'
+          git push origin HEAD:run/control-plane
