@@ -1,0 +1,190 @@
+name: Final Hyosung ENV-INFO content QA regression
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/rebuild-hyosung-content-qa.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+
+      - name: Run focused content QA tests
+        run: python -m unittest tests.test_envinfo_content_qa -v
+
+      - name: Download retained Hyosung source package
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35112968790
+          name: enterprise-env-final
+          path: source
+          github-token: ${{ github.token }}
+
+      - name: Prepare replay lanes
+        run: |
+          set -euo pipefail
+          test -s source/Company_Profile.json
+          test -s source/output/ENVINFO/status.json
+          mkdir -p stable evidence delivery
+          cp -a source/output/CORP_DOCS stable/CORP_DOCS
+          if [ -s source/Document_Evidence.json ]; then
+            cp source/Document_Evidence.json evidence/Document_Evidence.json
+          fi
+          rm -rf source/Human_Archive source/Human_Archive.zip
+
+      - name: Rebuild Human Archive with current production code
+        run: |
+          python orchestrator/archive_stage.py \
+            --package source \
+            --stable stable \
+            --documents evidence/Document_Evidence.json
+
+      - name: Validate content QA and archive state
+        run: |
+          python - <<'PY'
+          import csv, io, json, zipfile
+          from pathlib import Path
+
+          zpath = Path('source/Human_Archive.zip')
+          summary = json.loads(Path('source/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest = json.loads(Path('source/Master_Manifest.json').read_text(encoding='utf-8'))
+          qa = summary.get('envinfo_content_qa') or {}
+
+          expected = {
+              'status': 'PASS',
+              'expected_items': 15,
+              'checked_items': 15,
+              'pass_items': 15,
+              'warn_items': 0,
+              'fail_items': 0,
+          }
+          mismatch = {k: {'expected': v, 'actual': qa.get(k)} for k, v in expected.items() if qa.get(k) != v}
+          if mismatch:
+              raise SystemExit(f'ENVINFO content QA mismatch: {mismatch}; qa={qa}')
+
+          blocking = summary.get('blocking_acceptance_checks') or {}
+          if blocking.get('envinfo_content_fidelity') is not True:
+              raise SystemExit(f'envinfo_content_fidelity gate failed: {blocking}')
+          if summary.get('archive_completeness') != 'COMPLETE':
+              raise SystemExit(f'archive incomplete: {blocking}')
+
+          human = manifest.get('human_archive') or {}
+          if human.get('status') != 'PASS' or human.get('archive_completeness') != 'COMPLETE':
+              raise SystemExit(f'manifest human state inconsistent: {human}')
+
+          coverage = summary.get('sustainability_coverage') or {}
+          expected_years = [2020, 2021, 2022, 2023, 2024, 2025]
+          delivered = sorted(int(x) for x in (coverage.get('delivered_report_years') or []))
+          if delivered != expected_years:
+              raise SystemExit(f'sustainability delivered years mismatch: {coverage}')
+          if coverage.get('missing_target_years'):
+              raise SystemExit(f'unexpected sustainability gaps: {coverage}')
+          if [int(x) for x in (coverage.get('resolved_without_file_years') or [])] != [2026]:
+              raise SystemExit(f'2026 not-published resolution missing: {coverage}')
+
+          with zipfile.ZipFile(zpath) as z:
+              bad = z.testzip()
+              if bad:
+                  raise SystemExit(f'ZIP integrity failure: {bad}')
+              names = z.namelist()
+              envinfo = [n for n in names if n.endswith('_전체내용정적재현본.pdf')]
+              qa_csvs = [n for n in names if n.endswith('/00_자료목록/ENVINFO_Content_QA.csv')]
+              if len(qa_csvs) != 1:
+                  raise SystemExit(f'expected exactly one ENVINFO_Content_QA.csv, got {qa_csvs}')
+              rows = list(csv.DictReader(io.StringIO(z.read(qa_csvs[0]).decode('utf-8-sig'))))
+
+          if len(envinfo) != 15:
+              raise SystemExit(f'expected 15 ENVINFO reconstructed PDFs, got {len(envinfo)}')
+          if len(rows) != 15:
+              raise SystemExit(f'expected 15 ENVINFO content QA rows, got {len(rows)}')
+          nonpass = [row for row in rows if row.get('판정') != 'PASS']
+          if nonpass:
+              raise SystemExit(f'non-PASS ENVINFO rows: {nonpass}')
+          coverages = [float(row['원문토큰_보존율']) for row in rows]
+          if min(coverages) < 0.97:
+              raise SystemExit(f'min ENVINFO content fidelity below 97%: {min(coverages)}')
+
+          result = {
+              'status': 'PASS',
+              'sustainability_report_years': expected_years,
+              'sustainability_resolved_without_file_years': [2026],
+              'envinfo_reconstructed_pdf_count': len(envinfo),
+              'envinfo_content_qa_rows': len(rows),
+              'envinfo_content_qa_pass': sum(row.get('판정') == 'PASS' for row in rows),
+              'envinfo_content_qa_warn': sum(row.get('판정') == 'WARN' for row in rows),
+              'envinfo_content_qa_fail': sum(row.get('판정') == 'FAIL' for row in rows),
+              'envinfo_content_qa_min_coverage': min(coverages),
+              'envinfo_content_qa_max_coverage': max(coverages),
+              'archive_completeness': summary.get('archive_completeness'),
+              'human_manifest_status': human.get('status'),
+              'zip_bytes': zpath.stat().st_size,
+          }
+          Path('source/Hyosung_Content_QA_Final.json').write_text(
+              json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print('FINAL_CONTENT_QA=' + json.dumps(result, ensure_ascii=False))
+          PY
+
+      - name: Build Application Materials from verified archive
+        run: |
+          python tools/build_application_material_from_archive.py \
+            --input source/Human_Archive.zip \
+            --output-dir delivery \
+            --source-run "${{ github.run_id }}" \
+            --package-label "효성티앤씨" \
+            --summary-out source/Application_Materials_Final.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('source/Application_Materials_Final.json').read_text(encoding='utf-8'))
+          if data.get('status') != 'PASS':
+              raise SystemExit(f'Application Materials did not PASS: {data}')
+          print('FINAL_APPLICATION_MATERIALS=' + json.dumps(data, ensure_ascii=False))
+          PY
+
+      - name: Upload final regenerated package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyosung-content-qa-final
+          path: |
+            source/Human_Archive.zip
+            source/Hyosung_Content_QA_Final.json
+            source/Application_Materials_Final.json
+            source/Archive_Summary.json
+            source/Master_Manifest.json
+            delivery/*.zip
+          retention-days: 7
+          compression-level: 0
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/rebuild-hyosung-content-qa.yml
+          git commit -m 'Remove final Hyosung content QA workflow'
+          git push origin HEAD:run/control-plane
