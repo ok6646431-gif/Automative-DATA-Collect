@@ -283,7 +283,9 @@ def _sync_metadata(package_root,archive_root,stats):
     human['system_files']=actual_system_files
     human['archive_completeness']=summary.get('archive_completeness')
     human['acceptance_checks']=summary.get('acceptance_checks') or {}
+    human['blocking_acceptance_checks']=summary.get('blocking_acceptance_checks') or {}
     human['sustainability_coverage']=summary.get('sustainability_coverage') or {}
+    human['status']='PASS' if summary.get('archive_completeness')=='COMPLETE' else 'INCOMPLETE'
     package_root.joinpath('Master_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
 
     idx=archive_root/'00_자료목록'; idx.mkdir(parents=True,exist_ok=True)
@@ -293,7 +295,9 @@ def _sync_metadata(package_root,archive_root,stats):
     archive_manifest['system_files']=actual_system_files
     archive_manifest['archive_completeness']=summary.get('archive_completeness')
     archive_manifest['acceptance_checks']=summary.get('acceptance_checks') or {}
+    archive_manifest['blocking_acceptance_checks']=summary.get('blocking_acceptance_checks') or {}
     archive_manifest['sustainability_coverage']=summary.get('sustainability_coverage') or {}
+    archive_manifest['status']='PASS' if summary.get('archive_completeness')=='COMPLETE' else 'INCOMPLETE'
     (idx/'Archive_Manifest.json').write_text(json.dumps(archive_manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     shutil.copy2(package_root/'Master_Manifest.json',idx/'Master_Manifest.json')
     system_manifest=archive_root/'90_시스템원본'/'control_plane'/'Master_Manifest.json'
