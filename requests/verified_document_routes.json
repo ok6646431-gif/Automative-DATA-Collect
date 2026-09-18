@@ -1417,7 +1417,7 @@
       "current_legal_name": "(주)케이씨씨",
       "company": {
         "schema_version": "1.0",
-        "request_id": "kcc-3a433285-env-g0-20260911",
+        "request_id": "kcc-3a433285-env-g0-20260918",
         "requested_company_name": "KCC",
         "current_legal_name": "(주)케이씨씨",
         "current_legal_name_active_period": {
@@ -1862,14 +1862,14 @@
           {
             "document_id": "AUTO_SUSTAINABILITY_2024",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": "2024년 지속가능경영보고서_국문",
+            "title": "2024 지속가능성보고서 국문 다운로드 영문 다운로드",
             "report_year": 2024,
             "source_url": "https://www.kccworld.co.kr/upload/boardQ/3540a621ca240d0ad0c.pdf",
             "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [],
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
@@ -1877,14 +1877,14 @@
           {
             "document_id": "AUTO_SUSTAINABILITY_2025",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": "2025 KCC지속가능성보고서 국문",
+            "title": "2025 지속가능성보고서 국문 다운로드 영문 다운로드",
             "report_year": 2025,
             "source_url": "https://www.kccworld.co.kr/upload/boardQ/27a0abb7b284f69a4b3.pdf",
             "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [],
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
@@ -1892,14 +1892,14 @@
           {
             "document_id": "AUTO_SUSTAINABILITY_2026",
             "document_type": "SUSTAINABILITY_REPORT",
-            "title": "2026 KCC 지속가능성보고서_KOR",
+            "title": "2026 지속가능성보고서 국문 다운로드 영문 다운로드",
             "report_year": 2026,
             "source_url": "https://www.kccworld.co.kr/upload/boardQ/067f45cb6a5467c9513.pdf",
             "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+            "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [],
             "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
@@ -1928,7 +1928,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "kcc-3a433285-env-g0-20260911"
+        "request_id": "kcc-3a433285-env-g0-20260918"
       }
     },
     "01620971": {

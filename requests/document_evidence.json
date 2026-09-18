@@ -3,142 +3,125 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_ee2b26e0b4",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_da6a66a660",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "롯데케미칼",
+      "title": "환경",
       "report_year": 2026,
-      "source_url": "https://www.lottechem.com/",
-      "source_locator": "https://www.lottechem.com/",
+      "source_url": "https://www.kccworld.co.kr/esg/environmental.do",
+      "source_locator": "https://www.kccworld.co.kr/esg/environmental.do",
       "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_80b9b0f51b",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "롯데케미칼",
-      "report_year": 2026,
-      "source_url": "https://www.lottechem.com/ko/esg/management_system.do",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_system.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_a0cfa6e4ad",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "롯데케미칼",
-      "report_year": 2026,
-      "source_url": "https://www.lottechem.com/ko/esg/management_report.do",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_97904a4d0b",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "롯데케미칼",
-      "report_year": 2026,
-      "source_url": "https://www.lottechem.com/ko/esg/management_report.do?page=5",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do?page=5",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "importance": "SUPPORTING",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "[2020년] 지속가능경영보고서 국문 영문",
+      "title": "2019_20년 지속가능경영보고서(국문)",
       "report_year": 2020,
-      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_210910080913889&voNm=esgVo&category=ko",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do?page=2",
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/d3aba716bf04122b051.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2021",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "[2021년] 지속가능경영보고서 국문 영문",
+      "title": "2020_21년 지속가능경영보고서(국문)",
       "report_year": 2021,
-      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_240806134952705&voNm=esgVo&category=ko",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/955d8658d0b46728404.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "[2022년] ESG Report 국문 영문",
+      "title": "2021_22년 지속가능경영보고서(국문)",
       "report_year": 2022,
-      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_240806135010740&voNm=esgVo&category=ko",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/5101b92f52b4e97978b.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "[2023년] ESG Report 국문 영문",
+      "title": "2022_23년 지속가능경영보고서(국문) (2)",
       "report_year": 2023,
-      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_240628111836133&voNm=esgVo&category=ko",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/c538b8a9fdb471ebc0d.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "[2024년] ESG Report 국문 영문",
+      "title": "2024 지속가능성보고서 국문 다운로드 영문 다운로드",
       "report_year": 2024,
-      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_250729103412393&voNm=esgVo&category=ko",
-      "source_locator": "https://www.lottechem.com/ko/esg/management_report.do",
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/3540a621ca240d0ad0c.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
       "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
-      "entity_alignment": "UNKNOWN"
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
       "document_id": "AUTO_SUSTAINABILITY_2025",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 ESG Report",
+      "title": "2025 지속가능성보고서 국문 다운로드 영문 다운로드",
       "report_year": 2025,
-      "source_url": "https://www.lottechem.com/pdfRead.do?fileId=FILE_260630110003165",
-      "source_locator": "https://www.lottechem.com/",
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/27a0abb7b284f69a4b3.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Automatically discovered from a DART-anchored official-company page and verified as PDF by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN"
-    }
-  ],
-  "gaps": [
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+    },
     {
-      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
-      "source_key": "CORP_DOCS",
+      "document_id": "AUTO_SUSTAINABILITY_2026",
       "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2026,
+      "title": "2026 지속가능성보고서 국문 다운로드 영문 다운로드",
+      "report_year": 2026,
+      "source_url": "https://www.kccworld.co.kr/upload/boardQ/067f45cb6a5467c9513.pdf",
+      "source_locator": "https://www.kccworld.co.kr/esg/sustainability.do",
+      "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
-      "status": "NOT_PUBLISHED",
-      "severity": "LOW",
-      "blocking": false,
-      "reason": "As of 2026-09-17, verified official report sources list reports through 2025, not 2026.",
-      "source_locator": "https://www.lottechem.com/"
+      "importance": "CORE",
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     }
   ],
+  "gaps": [],
   "discovery_scope": {
     "history_window": {
       "start_year": 2020,
@@ -161,5 +144,5 @@
       "end_year": 2026
     }
   },
-  "request_id": "company-91b81178-env-g0-20260917"
+  "request_id": "kcc-3a433285-env-g0-20260918"
 }
