@@ -1,0 +1,56 @@
+name: Probe ENV-INFO static print with production fonts
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/probe-envinfo-prod-font.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - name: Install production Korean fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+          fc-match "Noto Sans CJK KR"
+
+      - name: Download normalized HTML
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/10529888298/zip > prior.zip
+          mkdir -p probe
+          unzip -p prior.zip normalized.html > probe/normalized.html
+
+      - name: Render with production font environment
+        run: |
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          "$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --no-pdf-header-footer --virtual-time-budget=6000 --print-to-pdf="$PWD/probe/normalized-fonts.pdf" "file://$PWD/probe/normalized.html" || true
+          test -s probe/normalized-fonts.pdf
+          file probe/normalized-fonts.pdf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: envinfo-prod-font-probe
+          path: probe/normalized-fonts.pdf
+          retention-days: 2
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/probe-envinfo-prod-font.yml
+          git commit -m 'Remove ENV-INFO production font probe workflow'
+          git push origin HEAD:run/control-plane
