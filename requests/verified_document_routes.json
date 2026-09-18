@@ -952,7 +952,7 @@
       "current_legal_name": "효성티앤씨(주)",
       "company": {
         "schema_version": "1.0",
-        "request_id": "company-7b7146f1-env-g0-20260915",
+        "request_id": "company-7b7146f1-env-g0-20260918",
         "requested_company_name": "효성티앤씨",
         "current_legal_name": "효성티앤씨(주)",
         "current_legal_name_active_period": {
@@ -1243,135 +1243,142 @@
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
             "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-            "entity_alignment": "UNKNOWN"
+            "entity_alignment": "UNKNOWN",
+            "fallback_sources": [],
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_11",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2021 sustainability report ENG",
             "report_year": 2021,
-            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_en.pdf",
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_kr.pdf",
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
-                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_kr.pdf",
+                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2021_en.pdf",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+                "source_role": "LANGUAGE_FALLBACK",
                 "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
                 "expected_extension": "pdf",
-                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification."
               }
             ],
-            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
+            "language_preference": "KO_PREFERRED"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_10",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2022 sustainability report ENG",
             "report_year": 2022,
-            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_en.pdf",
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_kr.pdf",
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
-                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_kr.pdf",
+                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2022_en.pdf",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+                "source_role": "LANGUAGE_FALLBACK",
                 "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
                 "expected_extension": "pdf",
-                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification."
               }
             ],
-            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
+            "language_preference": "KO_PREFERRED"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_9",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2023 sustainability report ENG",
             "report_year": 2023,
-            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_en.pdf",
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_kr.pdf",
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
-                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_kr.pdf",
+                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2023_en.pdf",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+                "source_role": "LANGUAGE_FALLBACK",
                 "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
                 "expected_extension": "pdf",
-                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification."
               }
             ],
-            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
+            "language_preference": "KO_PREFERRED"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_8",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2024 sustainability report ENG",
             "report_year": 2024,
-            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_en.pdf",
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_kr.pdf",
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
-                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_kr.pdf",
+                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2024_en.pdf",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+                "source_role": "LANGUAGE_FALLBACK",
                 "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
                 "expected_extension": "pdf",
-                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification."
               }
             ],
-            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
+            "language_preference": "KO_PREFERRED"
           },
           {
             "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_7",
             "document_type": "SUSTAINABILITY_REPORT",
             "title": "2025 sustainability report ENG",
             "report_year": 2025,
-            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_en.pdf",
+            "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_kr.pdf",
             "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
             "expected_extension": "pdf",
             "verification_status": "SOURCE_VERIFIED",
             "importance": "CORE",
-            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+            "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification.",
             "entity_alignment": "UNKNOWN",
             "fallback_sources": [
               {
                 "source_url": "https://www.hyosungtnc.com/assets/files/ESG_Compact_Book_EN.pdf",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_PRIMARY",
+                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
                 "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
                 "expected_extension": "pdf",
                 "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
               },
               {
-                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_kr.pdf",
+                "source_url": "https://www.hyosungtnc.com/assets/files/SR_2025_en.pdf",
                 "verification_status": "SOURCE_VERIFIED",
-                "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+                "source_role": "LANGUAGE_FALLBACK",
                 "source_locator": "https://www.hyosungtnc.com/kr/sustainability/overview/report",
                 "expected_extension": "pdf",
-                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-label exclusion + streamed PDF magic verification."
+                "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification."
               }
             ],
-            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
+            "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
+            "language_preference": "KO_PREFERRED"
           }
         ],
         "gaps": [
@@ -1384,7 +1391,7 @@
             "status": "NOT_PUBLISHED",
             "severity": "LOW",
             "blocking": false,
-            "reason": "As of 2026-09-15, verified official report sources list reports through 2025, not 2026.",
+            "reason": "As of 2026-09-18, verified official report sources list reports through 2025, not 2026.",
             "source_locator": "https://www.hyosungtnc.com/kr"
           }
         ],
@@ -1410,7 +1417,7 @@
             "end_year": 2026
           }
         },
-        "request_id": "company-7b7146f1-env-g0-20260915"
+        "request_id": "company-7b7146f1-env-g0-20260918"
       }
     },
     "00105271": {
