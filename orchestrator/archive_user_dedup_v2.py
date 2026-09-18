@@ -78,11 +78,18 @@ def _year_from_name(name: str) -> str:
 
 
 def _canonical_rank(rel: str):
-    """Prefer canonical company-document locations over generated ENV-INFO copies."""
-    if rel.startswith(f"{USER_ROOT}/{SUSTAINABILITY_ROOT}/") and not _is_envinfo_generated_copy(rel):
-        return (0, len(rel), rel)
-    if rel.startswith(f"{USER_ROOT}/06_회사환경정책/") and "ENVINFO_공개근거" not in Path(rel).parts:
-        return (1, len(rel), rel)
+    """Prefer the folder a human expects to browse, then the centralized attachment store.
+
+    When an ENV-INFO attachment is promoted into sustainability/policy folders, the
+    promoted user-facing copy is the useful canonical location. The centralized
+    ENV-INFO attachment path remains represented by the reference table, so exact-byte
+    deduplication may retain the categorized copy without losing provenance.
+    """
+    p = Path(rel)
+    if rel.startswith(f"{USER_ROOT}/{SUSTAINABILITY_ROOT}/"):
+        return (0 if not _is_envinfo_generated_copy(rel) else 2, len(rel), rel)
+    if rel.startswith(f"{USER_ROOT}/06_회사환경정책/"):
+        return (1 if "ENVINFO_공개근거" not in p.parts else 2, len(rel), rel)
     if rel.startswith(f"{USER_ROOT}/05_사업보고서_공시/"):
         return (2, len(rel), rel)
     if rel.startswith(f"{USER_ROOT}/{ENVINFO_ROOT}/{CENTRAL_FOLDER}/"):
@@ -437,10 +444,11 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
     if readme.exists():
         text = readme.read_text(encoding="utf-8")
         note = (
-            "\n6) ENV-INFO 첨부 원문은 내용 SHA-256 기준으로 1회만 보존합니다. "
-            "공식 연차 지속가능경영보고서와 같은 연도의 ENV-INFO 승격 PDF는 "
-            "페이지 표시 구조까지 동일한 경우에만 공식 연차본으로 통합합니다. "
-            f"원래 위치와 최종 보존경로는 {REFERENCE_XLSX}에서 확인하십시오.\n"
+            "\n6) ENV-INFO 첨부파일은 내용 SHA-256 기준으로 1회만 물리 보존합니다. "
+            "지속가능경영보고서·환경정책처럼 사용자 분류 폴더로 승격된 파일은 04/06의 "
+            "분류된 위치를 우선 보존하고, ENV-INFO 원래 위치와 최종 보존경로는 "
+            f"{REFERENCE_XLSX}에서 확인하십시오. 같은 연도의 공식 연차본과 내용이 "
+            "페이지 표시 구조까지 동일한 경우에만 공식 연차본으로 통합합니다.\n"
         )
         marker = "6) ENV-INFO 첨부 원문은"
         if marker in text:
