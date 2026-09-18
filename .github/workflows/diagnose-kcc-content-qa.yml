@@ -1,0 +1,65 @@
+name: Diagnose KCC ENV-INFO content QA failures
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/diagnose-kcc-content-qa.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - name: Download KCC final package
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35323339919
+          name: enterprise-env-final
+          path: final
+          github-token: ${{ github.token }}
+
+      - name: Extract QA failures
+        run: |
+          python - <<'PY'
+          import csv, io, json, zipfile
+          from pathlib import Path
+          z=Path('final/Human_Archive.zip')
+          if not z.exists():
+              raise SystemExit(f'Human_Archive.zip missing; got {list(Path("final").iterdir())[:20]}')
+          with zipfile.ZipFile(z) as f:
+              names=f.namelist()
+              q=[n for n in names if n.endswith('/00_자료목록/ENVINFO_Content_QA.csv')]
+              if len(q)!=1:
+                  raise SystemExit(f'QA CSV mismatch: {q}')
+              rows=list(csv.DictReader(io.StringIO(f.read(q[0]).decode('utf-8-sig'))))
+          fail=[r for r in rows if r.get('판정')=='FAIL']
+          warn=[r for r in rows if r.get('판정')=='WARN']
+          result={'rows':len(rows),'fail':fail,'warn':warn}
+          Path('KCC_Content_QA_Failures.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print(json.dumps(result,ensure_ascii=False,indent=2))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kcc-content-qa-failures
+          path: KCC_Content_QA_Failures.json
+          retention-days: 14
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/diagnose-kcc-content-qa.yml
+          git commit -m 'Remove KCC content QA diagnostic workflow'
+          git push origin HEAD:run/control-plane
