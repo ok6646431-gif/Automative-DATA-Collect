@@ -2633,6 +2633,346 @@
         },
         "request_id": "company-91b81178-env-g0-20260917"
       }
+    },
+    "00481454": {
+      "current_legal_name": "금호타이어(주)",
+      "company": {
+        "schema_version": "1.0",
+        "request_id": "company-5c099e6d-env-g0-20260918",
+        "requested_company_name": "금호타이어",
+        "current_legal_name": "금호타이어(주)",
+        "current_legal_name_active_period": {
+          "start_year": 2003
+        },
+        "company_verification_state": "VERIFIED",
+        "confidence": "HIGH",
+        "requested_scope": {
+          "mode": "SITE_SET",
+          "label": "금호타이어(주) 국내 사업장",
+          "candidate_ids": [
+            "21521-77a933a3",
+            "658-b31d2d10",
+            "156-87-e796bab4",
+            "8563-17d015a5"
+          ],
+          "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
+          "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
+          "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+        },
+        "company_aliases": [
+          {
+            "name": "금호타이어",
+            "alias_type": "requested_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00481454",
+            "active_period": {
+              "start_year": 2003
+            }
+          },
+          {
+            "name": "KUMHO TIRE CO., INC.",
+            "alias_type": "english_legal_name",
+            "verification_state": "VERIFIED",
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00481454",
+            "active_period": {
+              "start_year": 2003
+            }
+          }
+        ],
+        "historical_legal_names": [],
+        "corporate_restructuring_evidence": [],
+        "domestic_site_candidates": [
+          {
+            "candidate_id": "21521-77a933a3",
+            "site_name_raw": "금호타이어 중앙연구소",
+            "address_raw": "경기도 용인시 기흥구 사은로 215-21",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "658-b31d2d10",
+            "site_name_raw": "금호타이어 광주공장",
+            "address_raw": "전남광주통합특별시 광산구 어등대로 658",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "156-87-e796bab4",
+            "site_name_raw": "금호타이어 평택공장",
+            "address_raw": "경기도 평택시 포승읍 평택항로156번길 87",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          },
+          {
+            "candidate_id": "8563-17d015a5",
+            "site_name_raw": "금호타이어 곡성공장",
+            "address_raw": "전남광주통합특별시 곡성군 입면 금호길 85-63",
+            "business_unit_raw": "official domestic-site catalog",
+            "source_locator": "https://www.kumhotire.com/ko/company/domeList.do",
+            "identity_status": "CONFIRMED",
+            "verification_state": "VERIFIED",
+            "discovery_evidence": {
+              "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+              "catalog_page": "https://www.kumhotire.com/ko/company/domeList.do",
+              "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
+            }
+          }
+        ],
+        "identity_evidence": [
+          {
+            "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00481454",
+            "source_value_raw": "금호타이어(주) / KUMHO TIRE CO., INC. / establishment 2003-06-30 / website www.kumhotire.co.kr",
+            "verification_state": "VERIFIED",
+            "confidence": "HIGH"
+          }
+        ],
+        "related_entity_exclusions": [],
+        "unresolved_items": [],
+        "event_evidence_references": [],
+        "collection_policy": {
+          "minimum_history_years": 5,
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "sources": {
+            "ENVINFO": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false,
+              "max_details": 500
+            },
+            "PRTR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2024
+              },
+              "prefer_full_history": false
+            },
+            "CHEM_STATS": {
+              "requested_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "available_survey_rounds": [
+                2020,
+                2022,
+                2024
+              ],
+              "prefer_full_history": true
+            },
+            "CLEANSYS_AIR": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "prefer_full_history": false
+            },
+            "SOOSIRO_WATER": {
+              "requested_window": {
+                "start_year": 2020,
+                "end_year": 2025
+              },
+              "daily_available_years": [
+                2024
+              ],
+              "prefer_full_history": false
+            }
+          }
+        },
+        "legal_entity_active_period": {
+          "start_year": 2003
+        }
+      },
+      "document_evidence": {
+        "schema_version": "1.0",
+        "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+        "documents": [
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_025c06386b",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "금호타이어",
+            "report_year": 2026,
+            "source_url": "https://www.kumhotire.com/ko/ESG/Environment/EcoProducts/",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Environment/EcoProducts/",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_4a1871e1d8",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "금호타이어",
+            "report_year": 2026,
+            "source_url": "https://www.kumhotire.com/ko/ESG/Environment/EcoWorkplace/",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Environment/EcoWorkplace/",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_543ad1bf19",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "금호타이어",
+            "report_year": 2026,
+            "source_url": "https://www.kumhotire.com/ko/ESG/Environment/Climate/",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Environment/Climate/",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_ENVIRONMENT_PAGE_3e0faa1d24",
+            "document_type": "ENVIRONMENTAL_MANAGEMENT",
+            "title": "금호타이어",
+            "report_year": 2026,
+            "source_url": "https://www.kumhotire.com/ko/ESG/Materials/Policy/",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Policy/",
+            "expected_extension": "html",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "SUPPORTING"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2020",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2020 SustainabilityReport KOR",
+            "report_year": 2020,
+            "source_url": "https://www.kumhotire.com/fileViewer/pdf/1672124186824_6560184506336613900/attr/company/2020_SustainabilityReport_KOR.pdf",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification.",
+            "entity_alignment": "UNKNOWN"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2022",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2022 SustainabilityReport KOR",
+            "report_year": 2022,
+            "source_url": "https://www.kumhotire.com/fileViewer/pdf/1672124240941_331497606090146824/attr/company/2022_SustainabilityReport_KOR.pdf",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification.",
+            "entity_alignment": "UNKNOWN"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2023",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2023 금호타이어 지속가능경영보고서",
+            "report_year": 2023,
+            "source_url": "https://www.kumhotire.com/fileViewer/pdf/1693265519698_3657843200394428294/attr/company/2023%20%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification.",
+            "entity_alignment": "ALIGNED"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2024",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2024 금호타이어 지속가능경영보고서",
+            "report_year": 2024,
+            "source_url": "https://www.kumhotire.com/fileViewer/pdf/1725004545692_1399769037652014379/attr/company/2024_%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4_%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification.",
+            "entity_alignment": "ALIGNED"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2025",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2025 금호타이어 지속가능경영보고서",
+            "report_year": 2025,
+            "source_url": "https://www.kumhotire.com/fileViewer/pdf/1782802484300_960348885600182088/attr/company/2025%20%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification.",
+            "entity_alignment": "ALIGNED"
+          },
+          {
+            "document_id": "AUTO_SUSTAINABILITY_2026",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "title": "2026 금호타이어 지속가능경영보고서",
+            "report_year": 2026,
+            "source_url": "https://www.kumhotire.com/fileViewer/pdf/1789115051549_3209055087965874915/attr/company/2026_%EA%B8%88%ED%98%B8%ED%83%80%EC%9D%B4%EC%96%B4_%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C.pdf",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/",
+            "expected_extension": "pdf",
+            "verification_status": "SOURCE_VERIFIED",
+            "importance": "CORE",
+            "notes": "Annual-report DOM semantics + same-page data-attribute click-handler reconstruction + streamed PDF byte verification.",
+            "entity_alignment": "ALIGNED"
+          }
+        ],
+        "gaps": [
+          {
+            "gap_id": "AUTO_SUSTAINABILITY_2021_NOT_LISTED",
+            "source_key": "CORP_DOCS",
+            "document_type": "SUSTAINABILITY_REPORT",
+            "year": 2021,
+            "verification_status": "SOURCE_VERIFIED",
+            "status": "NOT_PUBLISHED",
+            "severity": "LOW",
+            "blocking": false,
+            "reason": "A verified first-party sustainability-report catalog lists report years on both sides of 2021 but does not list a 2021 report; the gap is preserved as publisher cadence/non-publication rather than a collector failure.",
+            "source_locator": "https://www.kumhotire.com/ko/ESG/Materials/Report/"
+          }
+        ],
+        "discovery_scope": {
+          "history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "annual_series": [
+            "SUSTAINABILITY_REPORT"
+          ],
+          "current_public_document_categories": [
+            "SUSTAINABILITY_REPORT",
+            "ENVIRONMENTAL_MANAGEMENT"
+          ],
+          "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
+          "requested_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          },
+          "effective_current_entity_history_window": {
+            "start_year": 2020,
+            "end_year": 2026
+          }
+        },
+        "request_id": "company-5c099e6d-env-g0-20260918"
+      }
     }
   }
 }
