@@ -1,4 +1,4 @@
 {
-  "company_name": "롯데케미칼",
-  "rerun_reason": "v1 closeout rerun after malformed search URL guard 4cd6dce7f86fd588b2d3e73bdabb3d6d96c5eab7; ignore invalid locator candidates, retain v1 review-boundary policy, then promote verified evidence and run Collection -> Manifest -> Human Archive -> Application Materials"
+  "company_name": "KCC",
+  "rerun_reason": "new-company consecutive validation #1 after ENV-INFO content QA production closeout and golden-company strict replay PASS; run zero-touch Discovery -> Collection -> Human Archive with content fidelity gate -> Application Materials"
 }
