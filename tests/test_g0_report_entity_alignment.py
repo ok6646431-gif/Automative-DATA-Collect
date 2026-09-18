@@ -55,6 +55,25 @@ class ReportEntityAlignmentTests(unittest.TestCase):
                 self.assertEqual(status, "UNKNOWN")
                 self.assertEqual(issuers, [])
 
+    def test_korean_download_ui_prefix_is_not_mistaken_for_issuer(self):
+        for title in (
+            "국문 PDF 다운로드 2020 지속가능경영보고서",
+            "영문 PDF 다운로드 2022 지속가능경영보고서",
+        ):
+            with self.subTest(title=title):
+                status, issuers = entity_alignment(self.discovery, title, "")
+                self.assertEqual(status, "UNKNOWN")
+                self.assertEqual(issuers, [])
+
+    def test_download_ui_prefix_does_not_hide_actual_affiliate_issuer(self):
+        status, issuers = entity_alignment(
+            self.discovery,
+            "국문 PDF 다운로드 2022 Example Chemicals Energy Co., Ltd. Sustainability Report",
+            "",
+        )
+        self.assertEqual(status, "CONFLICT")
+        self.assertIn("examplechemicalsenergy", issuers)
+
     def test_range_year_cleanup_does_not_hide_actual_affiliate_issuer(self):
         status, issuers = entity_alignment(
             self.discovery,
