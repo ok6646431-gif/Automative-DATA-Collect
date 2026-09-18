@@ -1,0 +1,141 @@
+name: New company streak 1 - Lotte Chemical retry
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/new-streak-lotte-current-retry.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: orchestrator
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+
+      - name: Download exact retained Lotte source artifact
+        run: |
+          set -euo pipefail
+          mkdir -p source
+          gh api \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${GITHUB_REPOSITORY}/actions/artifacts/10493902968/zip \
+            > lotte-source.zip
+          unzip -q lotte-source.zip -d source
+          rm lotte-source.zip
+          test -s source/Company_Profile.json
+          test -s source/Collection_Completeness.json
+          test -s source/output/ENVINFO/status.json
+
+      - name: Prepare replay lanes
+        run: |
+          set -euo pipefail
+          mkdir -p stable evidence delivery
+          cp -a source/output/CORP_DOCS stable/CORP_DOCS
+          if [ -s source/Document_Evidence.json ]; then
+            cp source/Document_Evidence.json evidence/Document_Evidence.json
+          fi
+          rm -rf source/Human_Archive source/Human_Archive.zip
+          rm -rf source/Application_Materials source/Application_Materials.zip source/delivery
+
+      - name: Rebuild current Human Archive
+        run: |
+          python orchestrator/archive_stage.py \
+            --package source \
+            --stable stable \
+            --documents evidence/Document_Evidence.json
+
+      - name: Validate collection archive and content QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          collection=json.loads(Path('source/Collection_Completeness.json').read_text(encoding='utf-8'))
+          archive=json.loads(Path('source/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads(Path('source/Master_Manifest.json').read_text(encoding='utf-8'))
+          qa=archive.get('envinfo_content_qa') or {}
+          if collection.get('status') != 'COMPLETE':
+              raise SystemExit(f'Collection not COMPLETE: {collection}')
+          if archive.get('archive_completeness') != 'COMPLETE':
+              raise SystemExit(f'Human Archive not COMPLETE: {archive.get("blocking_acceptance_checks")}')
+          if qa.get('status') != 'PASS' or not qa.get('pass'):
+              raise SystemExit(f'ENVINFO Content QA failed: {qa}')
+          if int(qa.get('checked_items') or 0) != int(qa.get('expected_items') or 0) or int(qa.get('fail_items') or 0) != 0:
+              raise SystemExit(f'ENVINFO Content QA incomplete/failed: {qa}')
+          human=manifest.get('human_archive') or {}
+          if human.get('status') != 'PASS' or human.get('archive_completeness') != 'COMPLETE':
+              raise SystemExit(f'Manifest Human Archive invalid: {human}')
+          result={
+              'company':'롯데케미칼',
+              'source_run':'35203928278',
+              'source_artifact_id':'10493902968',
+              'collection':collection.get('status'),
+              'human_archive':archive.get('archive_completeness'),
+              'human_manifest_status':human.get('status'),
+              'envinfo_content_qa':qa,
+          }
+          Path('Lotte_PreApp.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('LOTTE_PREAPP='+json.dumps(result,ensure_ascii=False))
+          PY
+
+      - name: Build Application Materials
+        run: |
+          python tools/build_application_material_from_archive.py \
+            --input source/Human_Archive.zip \
+            --output-dir delivery \
+            --source-run "35203928278" \
+            --package-label "롯데케미칼" \
+            --summary-out Lotte_Application_Result.json
+
+      - name: Final streak verdict
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pre=json.loads(Path('Lotte_PreApp.json').read_text(encoding='utf-8'))
+          app=json.loads(Path('Lotte_Application_Result.json').read_text(encoding='utf-8'))
+          if app.get('status') != 'PASS':
+              raise SystemExit(f'Application Materials failed: {app}')
+          result={**pre,'application_materials':'PASS','application_validation_checks':app.get('validation_checks') or [],'classification':'KNOWN_CAPABILITY_PASS','streak_result':'PASS_1_OF_3'}
+          Path('New_Streak_Lotte_Result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('NEW_STREAK_RESULT='+json.dumps(result,ensure_ascii=False))
+          PY
+
+      - name: Upload compact evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-streak-1-lotte
+          path: |
+            New_Streak_Lotte_Result.json
+            Lotte_Application_Result.json
+            source/Archive_Summary.json
+          retention-days: 14
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/new-streak-lotte-current-retry.yml
+          git commit -m 'Remove Lotte current streak retry workflow'
+          git push origin HEAD:run/control-plane
