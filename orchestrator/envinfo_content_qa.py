@@ -27,7 +27,7 @@ FIELDS = [
 
 
 def _safe(value):
-    text = re.sub(r'[\\/:*?"<>|\\x00-\\x1f]+', "_", str(value or "")).strip(" ._")
+    text = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', "_", str(value or "")).strip(" ._")
     return text[:160] or "자료"
 
 
