@@ -1,4 +1,4 @@
 {
-  "company_name": "금호타이어",
-  "rerun_reason": "new-company consecutive validation #3 after Lotte Chemical and KCC strict PASS; validate legal-entity separation from Kumho Petrochemical and run zero-touch Discovery -> Collection -> Human Archive content fidelity QA -> Application Materials"
+  "company_name": "효성티앤씨",
+  "rerun_reason": "production-style operational run after acceptance closure; execute current-head zero-touch Discovery -> Collection -> Human Archive content QA -> Application Materials for job-application use"
 }
