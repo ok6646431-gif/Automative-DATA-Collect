@@ -408,6 +408,18 @@ jobs:
               raise SystemExit(f"Application Materials gate failed: {data}")
           print(json.dumps(data, ensure_ascii=False))
           PY
+      - name: Require Application Materials PASS
+        if: ${{ hashFiles('application-delivery/application_package_result.json') != '' }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('application-delivery/application_package_result.json')
+          data=json.loads(p.read_text(encoding='utf-8'))
+          if data.get('status') != 'PASS':
+              raise SystemExit(f"Application Materials gate failed: {data}")
+          print(json.dumps(data, ensure_ascii=False))
+          PY
       - name: Upload application materials
         id: application_upload
         if: ${{ always() && hashFiles('application-delivery/*.zip') != '' }}
