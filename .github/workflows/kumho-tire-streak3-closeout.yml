@@ -1,0 +1,179 @@
+name: Kumho Tire streak 3 closeout
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/kumho-tire-streak3-closeout.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+
+      - name: Run focused dedup and application regressions
+        run: |
+          python -m unittest tests.test_archive_user_dedup_v2 tests.test_application_material_package tests.test_application_material_package_validation -v
+
+      - name: Download completed Kumho Tire package
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35332121503
+          name: enterprise-env-final
+          path: source
+          github-token: ${{ github.token }}
+
+      - name: Prepare current-head replay
+        run: |
+          set -euo pipefail
+          test -s source/Collection_Completeness.json
+          test -s source/Company_Profile.json
+          mkdir -p stable evidence delivery
+          cp -a source/output/CORP_DOCS stable/CORP_DOCS
+          if [ -s source/Document_Evidence.json ]; then
+            cp source/Document_Evidence.json evidence/Document_Evidence.json
+          fi
+          rm -rf source/Human_Archive source/Human_Archive.zip
+          rm -rf delivery
+
+      - name: Rebuild Human Archive
+        run: |
+          python orchestrator/archive_stage.py \
+            --package source \
+            --stable stable \
+            --documents evidence/Document_Evidence.json
+
+      - name: Require collection archive and QA PASS
+        run: |
+          python - <<'PY'
+          import csv, io, json, zipfile
+          from pathlib import Path
+
+          collection=json.loads(Path('source/Collection_Completeness.json').read_text(encoding='utf-8'))
+          archive=json.loads(Path('source/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads(Path('source/Master_Manifest.json').read_text(encoding='utf-8'))
+          if collection.get('status')!='COMPLETE':
+              raise SystemExit(f'Collection not COMPLETE: {collection}')
+          if archive.get('archive_completeness')!='COMPLETE':
+              raise SystemExit(f'Archive not COMPLETE: {archive.get("blocking_acceptance_checks")}')
+          qa=archive.get('envinfo_content_qa') or {}
+          if qa.get('status')!='PASS' or qa.get('expected_items')!=15 or qa.get('checked_items')!=15 or qa.get('pass_items')!=15 or qa.get('fail_items')!=0:
+              raise SystemExit(f'ENVINFO content QA not 15/15 PASS: {qa}')
+          human=manifest.get('human_archive') or {}
+          if human.get('status')!='PASS' or human.get('archive_completeness')!='COMPLETE':
+              raise SystemExit(f'Manifest Human Archive invalid: {human}')
+          cov=archive.get('sustainability_coverage') or {}
+          delivered=sorted(int(x) for x in cov.get('delivered_report_years') or [])
+          if delivered != [2020,2022,2023,2024,2025,2026]:
+              raise SystemExit(f'Report years mismatch: {cov}')
+          if [int(x) for x in cov.get('resolved_without_file_years') or []] != [2021]:
+              raise SystemExit(f'2021 resolution mismatch: {cov}')
+
+          zpath=Path('source/Human_Archive.zip')
+          with zipfile.ZipFile(zpath) as z:
+              refs=[n for n in z.namelist() if n.endswith('/00_자료목록/ENVINFO_첨부자료_참조표.csv')]
+              if len(refs)!=1:
+                  raise SystemExit(f'ENVINFO reference table mismatch: {refs}')
+              rows=list(csv.DictReader(io.StringIO(z.read(refs[0]).decode('utf-8-sig'))))
+              names=set(z.namelist())
+              root=refs[0].split('/00_자료목록/')[0]
+              stale=[]
+              for row in rows:
+                  final=(row.get('최종_보존경로') or '').strip()
+                  if final and f'{root}/{final}' not in names:
+                      stale.append({'original':row.get('원래_사용자경로'),'final':final})
+              if stale:
+                  raise SystemExit(f'Stale Human Archive dedup references: {stale[:10]}')
+
+          pre={
+              'collection':'COMPLETE',
+              'archive':'COMPLETE',
+              'qa_status':qa.get('status'),
+              'qa_rows':qa.get('checked_items'),
+              'qa_pass':qa.get('pass_items'),
+              'human_manifest_status':human.get('status'),
+              'sustainability_years':delivered,
+              'resolved_without_file_years':[2021],
+              'reference_rows':len(rows),
+              'stale_reference_rows':0,
+          }
+          Path('KumhoTire_PreApp.json').write_text(json.dumps(pre,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('KUMHO_TIRE_PREAPP='+json.dumps(pre,ensure_ascii=False))
+          PY
+
+      - name: Build Application Materials
+        run: |
+          python tools/build_application_material_from_archive.py \
+            --input source/Human_Archive.zip \
+            --output-dir delivery \
+            --source-run "35332121503" \
+            --package-label "금호타이어" \
+            --summary-out KumhoTire_Application_Materials.json
+
+      - name: Require strict streak PASS
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pre=json.loads(Path('KumhoTire_PreApp.json').read_text(encoding='utf-8'))
+          app=json.loads(Path('KumhoTire_Application_Materials.json').read_text(encoding='utf-8'))
+          if app.get('status')!='PASS':
+              raise SystemExit(f'Application Materials not PASS: {app}')
+          result={
+              **pre,
+              'application_materials':'PASS',
+              'application_validation_checks':app.get('validation_checks') or [],
+              'result':'STRICT_PASS',
+              'new_company_streak':3,
+          }
+          Path('KumhoTire_Streak3_Result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('KUMHO_TIRE_STREAK3='+json.dumps(result,ensure_ascii=False))
+          PY
+
+      - name: Upload closeout evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-tire-streak3-closeout
+          path: |
+            KumhoTire_Streak3_Result.json
+            KumhoTire_Application_Materials.json
+            source/Archive_Summary.json
+          retention-days: 14
+
+      - name: Upload verified Application Materials
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-tire-application-materials-verified
+          path: delivery/*.zip
+          retention-days: 14
+          compression-level: 0
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/kumho-tire-streak3-closeout.yml
+          git commit -m 'Remove Kumho Tire streak 3 closeout workflow'
+          git push origin HEAD:run/control-plane
