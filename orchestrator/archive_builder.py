@@ -282,6 +282,88 @@ def render_url_pdf(url,pdf_path):
     except Exception as exc: return False,f'{type(exc).__name__}: {exc}'
 
 
+
+ENVINFO_STATIC_PRINT_CSS = r'''
+<style id="archive-static-print">
+@page { size: A4 portrait; margin: 10mm; }
+html, body { min-width:0 !important; width:auto !important; margin:0 !important; padding:0 !important; }
+.inquiry_wrap { width:100% !important; min-width:0 !important; height:auto !important; display:block !important; }
+.inquiry_wrap .colleft, .tbl_inquiry, #compSearchSelect, #totalInfoPopBtn,
+.btn_mtype1, .btn_wrap { display:none !important; }
+.inquiry_wrap .colright, .colright {
+    width:100% !important; max-width:none !important; float:none !important;
+    margin:0 !important; padding:0 !important; height:auto !important;
+}
+.inquiry_cont {
+    display:block !important; width:100% !important; margin:0 0 20px 0 !important;
+    page-break-inside:auto !important;
+}
+.inquiry_cont h3 {
+    display:block !important; font-size:17px !important; line-height:1.35 !important;
+    margin:18px 0 8px !important; padding:8px 10px !important;
+    word-break:keep-all !important; overflow-wrap:break-word !important;
+}
+.inquiry_cont h4, .tit_wrap {
+    word-break:keep-all !important; overflow-wrap:break-word !important;
+}
+table {
+    width:100% !important; max-width:100% !important; table-layout:auto !important;
+    border-collapse:collapse !important;
+}
+colgroup col { width:auto !important; }
+th, td {
+    width:auto !important; min-width:0 !important; max-width:none !important;
+    white-space:normal !important; word-break:keep-all !important;
+    overflow-wrap:break-word !important; vertical-align:top !important;
+}
+img { max-width:100% !important; height:auto !important; }
+a { color:#000 !important; text-decoration:none !important; }
+</style>
+'''
+
+
+def prepare_envinfo_static_html(html_path, output_path):
+    """Prepare a stable full-section ENV-INFO page for user-facing PDF output.
+
+    The live ENV-INFO page hides all but the active inquiry section. Its own print
+    JavaScript temporarily expands selected sections, so a plain browser print does
+    not represent the complete disclosure. The collected site/year HTML already
+    contains the disclosed inquiry sections; reconstruct those sections statically
+    for delivery while preserving the untouched response in 90_시스템원본.
+    """
+    src=Path(html_path); out=Path(output_path)
+    html=src.read_text(encoding='utf-8',errors='replace')
+    if 'inquiry_cont' not in html:
+        raise ValueError('ENVINFO inquiry sections missing from collected HTML')
+    html=re.sub(r'<script\b[^>]*>.*?</script\s*>','',html,flags=re.I|re.S)
+    html=html.replace('href="/','href="https://www.env-info.kr/')
+    html=html.replace("href='/","href='https://www.env-info.kr/")
+    html=html.replace('src="/','src="https://www.env-info.kr/')
+    html=html.replace("src='/","src='https://www.env-info.kr/")
+    if not re.search(r'</head>',html,re.I):
+        raise ValueError('ENVINFO collected HTML has no closing head element')
+    html=re.sub(r'</head>',ENVINFO_STATIC_PRINT_CSS+'</head>',html,count=1,flags=re.I)
+    out.parent.mkdir(parents=True,exist_ok=True)
+    out.write_text(html,encoding='utf-8')
+    return out
+
+
+def render_envinfo_static_pdf(html_path, pdf_path):
+    """Render every disclosed ENV-INFO inquiry section from captured source HTML."""
+    pdf_path=Path(pdf_path)
+    static_html=pdf_path.with_suffix('.envinfo-print.html')
+    try:
+        prepare_envinfo_static_html(html_path,static_html)
+        return render_html_pdf(static_html,pdf_path)
+    except Exception as exc:
+        return False,f'{type(exc).__name__}: {exc}'
+    finally:
+        try:
+            static_html.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def _declared_pdf_attachment(att, src):
     original=str(att.get('original_filename') or Path(src).name)
     return Path(original).suffix.lower()=='.pdf' or Path(src).suffix.lower()=='.pdf'
@@ -329,22 +411,19 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
             failures.append({'site':display,'year':year,'reason':'raw detail HTML missing'}); continue
         site_dir=user/safe(display)
         live_url=f'https://www.env-info.kr/user/register/viewUserSearch2.do?YEAR={year}&COMP_ID={comp}&OPEN_YN=Y'
-        pdf=site_dir/f'환경정보공개_{safe(display)}_{year}_공식화면인쇄본.pdf'
-        ok,err=render_url_pdf(live_url,pdf)
-        render_mode='OFFICIAL_LIVE_PAGE'
-        if not ok:
-            pdf=site_dir/f'환경정보공개_{safe(display)}_{year}_수집HTML_재현본.pdf'
-            ok,local_err=render_html_pdf(matches[0],pdf)
-            render_mode='COLLECTED_HTML_FALLBACK'
-            err=f'live={err}; local={local_err}'
+        pdf=site_dir/f'환경정보공개_{safe(display)}_{year}_전체내용정적재현본.pdf'
+        ok,err=render_envinfo_static_pdf(matches[0],pdf)
+        render_mode='COLLECTED_HTML_FULL_SECTION_RECONSTRUCTION'
         if ok:
             created.append(pdf)
             raw_path=_raw_archive_path(root,matches[0]) or '90_시스템원본/output/ENVINFO/raw_detail'
             notice=site_dir/f'환경정보공개_{safe(display)}_{year}_출처안내.txt'
-            if render_mode=='OFFICIAL_LIVE_PAGE':
-                explanation='공식 ENV-INFO 상세화면을 실행 시점에 브라우저 인쇄한 화면 보존본입니다. 사이트에서 직접 배포한 원본 PDF 파일은 아닙니다.'
-            else:
-                explanation='공식 상세화면의 실시간 재현에 실패하여 수집 당시 HTML 응답을 다시 인쇄한 재현본이며 원문 자체가 아님을 명시합니다.'
+            explanation=(
+                '수집 당시 공식 ENV-INFO 상세 HTML에 포함된 전체 등록 항목을, '
+                '사이트의 항목별 인쇄 구조에 맞춰 메뉴와 탭을 제거하고 모든 등록 항목을 펼쳐 '
+                '정적으로 재현한 PDF입니다. ENV-INFO가 직접 배포한 원본 PDF 파일은 아니며, '
+                '수집 당시 원문 HTML 바이트는 90_시스템원본에 그대로 보존됩니다.'
+            )
             notice.write_text(
                 'ENV-INFO 사용자자료 출처 안내\n\n'+explanation+'\n'
                 f'공식 상세 URL: {live_url}\n'
@@ -355,7 +434,16 @@ def build_envinfo_user(package_root,archive_root,scope,labels):
             )
             created.append(notice)
         else:
-            failures.append({'site':display,'year':year,'reason':err})
+            try:
+                pdf.unlink()
+            except FileNotFoundError:
+                pass
+            failures.append({
+                'site':display,
+                'year':year,
+                'issue_type':'ENVINFO_STATIC_RECONSTRUCTION_FAILED',
+                'reason':err,
+            })
     for att in read_csv(env/'attachment_index.csv'):
         comp=str(att.get('compId') or '')
         if comp not in scope['ENVINFO'] or att.get('collection_status')!='DOWNLOADED': continue
