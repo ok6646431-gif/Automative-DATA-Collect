@@ -315,7 +315,7 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                 if not canonical_attachment:
                     stats = envinfo_site_stats[site]
                     stats["attachment_references"] = int(stats["attachment_references"]) + 1
-                    stats["attachment_hashes"].add(stored_digest)
+                    stats["attachment_hashes"].add(digest)
                     if year:
                         stats["years"].add(year)
                     envinfo_attachment_references.append(
