@@ -1,4 +1,4 @@
 {
-  "company_name": "현대제철",
-  "rerun_reason": "new-company consecutive validation after Lotte Chemical and KCC strict PASS; verify zero-touch Discovery -> Collection -> ENV-INFO content QA -> Human Archive -> Application Materials with current production code"
+  "company_name": "금호타이어",
+  "rerun_reason": "new-company consecutive validation #3 after Lotte Chemical and KCC strict PASS; validate legal-entity separation from Kumho Petrochemical and run zero-touch Discovery -> Collection -> Human Archive content fidelity QA -> Application Materials"
 }
