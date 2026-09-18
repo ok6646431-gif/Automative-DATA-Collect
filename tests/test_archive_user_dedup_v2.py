@@ -98,6 +98,50 @@ class ArchiveUserDedupV2Tests(unittest.TestCase):
             targets={str(r.get('최종_보존경로') or '') for r in records}
             self.assertIn(promoted.relative_to(root).as_posix(),targets)
 
+    def test_chained_attachment_promotion_and_semantic_dedup_resolves_to_physical_report(self):
+        import csv
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / '기업_환경자료'
+            site = root/'01_사용자자료'/'03_환경정보공개시스템'/'광주공장'/'첨부자료'
+            report_dir = root/'01_사용자자료'/'04_지속가능경영보고서'
+            idx = root/'00_자료목록'
+            for p in [site, report_dir, idx]:
+                p.mkdir(parents=True, exist_ok=True)
+            (idx/'README_먼저읽기.txt').write_text('Archive v2 사용 안내\n', encoding='utf-8')
+
+            promoted = report_dir/'ENVINFO공개연도_2022_기업_지속가능경영보고서.pdf'
+            official = report_dir/'기업_지속가능경영보고서_2022.pdf'
+            write_blank_pdf(promoted, 595, 842, {'/Title': 'ENVINFO promoted copy'})
+            write_blank_pdf(official, 595, 842, {'/Title': 'Official annual copy'})
+            original = site/'2022_기업_지속가능경영보고서.pdf'
+            original.write_bytes(promoted.read_bytes())
+
+            self.assertNotEqual(
+                hashlib.sha256(promoted.read_bytes()).hexdigest(),
+                hashlib.sha256(official.read_bytes()).hexdigest(),
+            )
+
+            stats = canonicalize_user_envinfo(root)
+
+            self.assertEqual(stats['envinfo_generated_crossfolder_files_removed'], 1)
+            self.assertEqual(stats['sustainability_semantic_duplicate_files_removed'], 1)
+            self.assertFalse(promoted.exists())
+            self.assertTrue(official.exists())
+
+            ref = idx/'ENVINFO_첨부자료_참조표.csv'
+            with ref.open(encoding='utf-8-sig', newline='') as fh:
+                rows = list(csv.DictReader(fh))
+
+            original_rel = original.relative_to(root).as_posix()
+            official_rel = official.relative_to(root).as_posix()
+            source_row = next(r for r in rows if r['원래_사용자경로'] == original_rel)
+            self.assertEqual(source_row['최종_보존경로'], official_rel)
+            for row in rows:
+                final = row['최종_보존경로']
+                if final:
+                    self.assertTrue((root/final).is_file(), f'stale final path: {final}')
+
     def test_same_year_semantic_pdf_duplicate_prefers_official_annual_report(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td) / '기업_환경자료'
