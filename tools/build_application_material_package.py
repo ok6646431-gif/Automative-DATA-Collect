@@ -315,7 +315,7 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                 if not canonical_attachment:
                     stats = envinfo_site_stats[site]
                     stats["attachment_references"] = int(stats["attachment_references"]) + 1
-                    stats["attachment_hashes"].add(digest)
+                    stats["attachment_hashes"].add(stored_digest)
                     if year:
                         stats["years"].add(year)
                     envinfo_attachment_references.append(
@@ -377,19 +377,21 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                 mapped_retained = map_relative_path(retained_source)
                 if mapped_retained and mapped_retained in taken:
                     stored_path = mapped_retained
-            digest = str(ref.get("SHA256") or "")
+            source_digest = str(ref.get("SHA256") or "")
+            stored_digest = str(ref.get("최종_보존_SHA256") or source_digest)
             if not stored_path or stored_path not in taken:
                 raise RuntimeError(
                     "Human Archive ENVINFO reference points to a file not copied into support package: "
                     f"{retained_source}"
                 )
-            if not digest or taken[stored_path] != digest:
+            if not stored_digest or taken[stored_path] != stored_digest:
                 raise RuntimeError(
-                    "Human Archive ENVINFO reference digest mismatch: "
-                    f"stored={stored_path} expected={digest} actual={taken.get(stored_path)}"
+                    "Human Archive ENVINFO retained-file digest mismatch: "
+                    f"stored={stored_path} expected={stored_digest} actual={taken.get(stored_path)} "
+                    f"source_digest={source_digest}"
                 )
-            if digest not in envinfo_attachment_by_sha:
-                envinfo_attachment_by_sha[digest] = stored_path
+            if stored_digest not in envinfo_attachment_by_sha:
+                envinfo_attachment_by_sha[stored_digest] = stored_path
                 envinfo_unique_attachment_bytes += final_path_bytes.get(stored_path, 0)
             site = envinfo_site(logical_path)
             year = str(ref.get("공개연도") or path_year(logical_path))
@@ -406,8 +408,13 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                     "site": site,
                     "year": year,
                     "bytes": byte_count,
-                    "sha256": digest,
-                    "reference_type": "HUMAN_ARCHIVE_CANONICAL_REFERENCE",
+                    "sha256": stored_digest,
+                    "source_sha256": source_digest,
+                    "reference_type": (
+                        "HUMAN_ARCHIVE_SEMANTIC_CANONICAL_REFERENCE"
+                        if source_digest and source_digest != stored_digest
+                        else "HUMAN_ARCHIVE_CANONICAL_REFERENCE"
+                    ),
                     "source_archive_path": original,
                 }
             )
@@ -517,6 +524,7 @@ def build(input_zip: str, output_zip: str, root_name: str, company: str, source_
                 "year",
                 "bytes",
                 "sha256",
+                "source_sha256",
                 "reference_type",
                 "source_archive_path",
             ],
