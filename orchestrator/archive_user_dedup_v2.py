@@ -314,6 +314,45 @@ def _semantic_sustainability_dedup(user: Path, archive_root: Path, refs: list[di
     }
 
 
+def _collapse_reference_redirects(archive_root: Path, refs: list[dict]) -> None:
+    """Resolve chained dedup redirects so every reference ends at a physical file.
+
+    ENV-INFO material can move more than once: a site attachment may first be
+    canonicalized to a promoted user-facing copy and that promoted copy may later be
+    proven semantically identical to the official annual report.  Reference rows
+    created by the first pass must follow the later redirect instead of retaining an
+    intermediate path that no longer exists.
+    """
+    redirects: dict[str, str] = {}
+    for row in refs:
+        original = str(row.get("원래_사용자경로") or "").strip()
+        final = str(row.get("최종_보존경로") or "").strip()
+        if not original or not final or original == final:
+            continue
+        prior = redirects.get(original)
+        if prior and prior != final:
+            raise RuntimeError(
+                f"conflicting user dedup redirects for {original}: {prior} vs {final}"
+            )
+        redirects[original] = final
+
+    for row in refs:
+        current = str(row.get("최종_보존경로") or "").strip()
+        seen: set[str] = set()
+        while current in redirects:
+            if current in seen:
+                chain = " -> ".join([*seen, current])
+                raise RuntimeError(f"cyclic user dedup redirect: {chain}")
+            seen.add(current)
+            current = redirects[current]
+        row["최종_보존경로"] = current
+        if current and not (archive_root / current).is_file():
+            raise RuntimeError(
+                "user dedup reference does not resolve to a physical file: "
+                f"{row.get('원래_사용자경로')} -> {current}"
+            )
+
+
 def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
     archive_root = Path(archive_root)
     user = archive_root / USER_ROOT
@@ -431,6 +470,7 @@ def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
             row["최종_보존경로"] = current
 
     semantic_stats = _semantic_sustainability_dedup(user, archive_root, refs)
+    _collapse_reference_redirects(archive_root, refs)
 
     _remove_empty_dirs(user)
     refs.sort(key=lambda r: (str(r["사업장"]), str(r["공개연도"]), str(r["원래_사용자경로"])))
