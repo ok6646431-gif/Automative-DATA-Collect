@@ -298,6 +298,9 @@ html, body { min-width:0 !important; width:auto !important; margin:0 !important;
     display:block !important; width:100% !important; margin:0 0 20px 0 !important;
     page-break-inside:auto !important;
 }
+.inquiry_cont, .inquiry_cont * {
+    font-family:"Noto Sans CJK KR","NanumGothic",sans-serif !important;
+}
 .inquiry_cont h3 {
     display:block !important; font-size:17px !important; line-height:1.35 !important;
     margin:18px 0 8px !important; padding:8px 10px !important;
