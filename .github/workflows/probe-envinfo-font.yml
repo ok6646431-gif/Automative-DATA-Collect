@@ -1,0 +1,60 @@
+name: Probe ENV-INFO font fidelity
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/probe-envinfo-font.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - name: Download prior normalized HTML
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/${{ github.repository }}/actions/artifacts/10529888298/zip > prior.zip
+          mkdir -p probe
+          unzip -p prior.zip normalized.html > probe/fontfix.html
+          echo "Korean font match:"
+          fc-match 'sans:lang=ko' || true
+          fc-list ':lang=ko' family | head -20 || true
+
+      - name: Force system Korean font and render
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('probe/fontfix.html')
+          s=p.read_text(encoding='utf-8',errors='replace')
+          s=s.replace('<style id="archive-static-print">', '<style id="archive-static-print">\n* { font-family: "Noto Sans CJK KR", "Noto Sans KR", "NanumGothic", sans-serif !important; }', 1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          "$CHROME" --headless=new --disable-gpu --no-sandbox --allow-file-access-from-files --no-pdf-header-footer --virtual-time-budget=6000 --print-to-pdf="$PWD/probe/fontfix.pdf" "file://$PWD/probe/fontfix.html" || true
+          test -s probe/fontfix.pdf
+          file probe/fontfix.pdf
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: envinfo-font-probe
+          path: probe/fontfix.pdf
+          retention-days: 2
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/probe-envinfo-font.yml
+          git commit -m 'Remove ENV-INFO font probe workflow'
+          git push origin HEAD:run/control-plane
