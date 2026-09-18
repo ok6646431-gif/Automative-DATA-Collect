@@ -57,6 +57,7 @@ import archive_stage_core as _core
 from archive_stage_core import *  # preserve public helper contract
 from archive_user_dedup_pipeline import run as _deduplicate_user_archive
 from bat_archive import expose as _expose_bat_references
+from envinfo_content_qa import evaluate as _evaluate_envinfo_content_qa
 from human_archive_raw_policy import (
     assert_human_archive_raw_separated as _assert_human_archive_raw_separated,
     raw_preservation_stats as _raw_preservation_stats,
@@ -88,6 +89,22 @@ def _build_archive_with_bat(package_root, contract_path=_core.archive_builder.CO
     summary = _BASE_BUILD_ARCHIVE(package_root, contract_path)
     root = Path(package_root).resolve()
     archive_root = root / 'Human_Archive' / summary['archive_root']
+
+    # Lightweight semantic fidelity check: compare every scoped ENV-INFO captured
+    # disclosure with the reconstructed PDF before final archive classification.
+    profile = json.loads((root / 'Company_Profile.json').read_text(encoding='utf-8')) if (root / 'Company_Profile.json').exists() else {}
+    resolved_scope, labels, site_tokens = _core.archive_builder.source_id_scope(root, profile)
+    envinfo_qa = _evaluate_envinfo_content_qa(
+        root,
+        archive_root,
+        (resolved_scope or {}).get('ENVINFO', set()),
+        labels,
+        site_tokens,
+    )
+    summary['envinfo_content_qa'] = envinfo_qa
+    checks = dict(summary.get('acceptance_checks') or {})
+    checks['envinfo_content_fidelity'] = bool(envinfo_qa.get('pass'))
+    summary['acceptance_checks'] = checks
 
     # The raw collector tree remains under root/output.  Remove stale wording from
     # user-facing notices and fail closed before any BAT/reference material is added.
