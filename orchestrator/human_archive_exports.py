@@ -91,8 +91,8 @@ def _years(values):
 
 
 def _sort_token(value):
-    """Deterministic ascending token that treats plain integers numerically."""
-    text = str(value or "").strip()
+    """Deterministic ascending token that treats zero and plain integers numerically."""
+    text = "" if value is None else str(value).strip()
     if text.isdigit():
         return (0, int(text))
     return (1, text.casefold())
@@ -189,6 +189,18 @@ def _source_table_row(row, id_key):
     return out
 
 
+def _clean_candidate_summary(row):
+    return {
+        "CleanSYS 사업장코드": row.get("fact_code", ""),
+        "원문 사업장명": row.get("fact_manage_nm") or row.get("company_name_raw", ""),
+        "범위 판정": (
+            "요청한 현재 법인/사업장 범위로 확인됨"
+            if str(row.get("detail_scope_decision") or "").startswith("ALLOW_")
+            else row.get("detail_scope_decision", "")
+        ),
+    }
+
+
 def _clean_summary(row):
     return {
         "자료연도": row.get("examin_year", ""),
@@ -254,15 +266,24 @@ def _water_daily(row):
 
 
 def _review_row(identity):
+    basis = str(identity.get("match_basis") or "")
+    basis_label = {
+        "SINGLE_OR_CONFLICTING_SOURCE_ADDRESS": "사업장명은 대응하지만 원문 주소가 다른 공식 주소와 일치하지 않아 자동 결합을 보류함",
+        "SINGLE_SOURCE_ADDRESS": "주소 근거가 한 개 공개원천에만 있어 동일 사업장으로 자동 확정하지 않음",
+        "NAME_ONLY": "사업장명만 유사하고 주소 근거가 충분하지 않아 자동 결합하지 않음",
+    }.get(basis, basis)
+    note = str(identity.get("notes") or "")
+    if note == "address/name pair not independently confirmed":
+        note = "사업장명과 주소의 조합이 독립된 다른 공개원천에서 추가 확인되지 않음"
     return {
         "사업장코드": identity.get("source_site_id", ""),
         "원문 사업장명": identity.get("source_site_name_raw", ""),
         "원문 주소": identity.get("source_address_raw", ""),
         "수집기간": f"{identity.get('valid_from','')} ~ {identity.get('valid_to','')}",
-        "검토상태": identity.get("match_status", ""),
-        "검토사유": identity.get("match_basis", ""),
-        "설명": identity.get("notes", ""),
-        "사용원칙": "자료는 보존·열람하되 canonical 사업장에 자동 결합하거나 분석값으로 사용하지 않음",
+        "검토상태": "검토 필요" if identity.get("match_status") == "REVIEW_REQUIRED" else identity.get("match_status", ""),
+        "검토사유": basis_label,
+        "설명": note,
+        "사용원칙": "자료는 보존·열람하되 동일 사업장 여부가 확인되기 전에는 확정 분석값으로 사용하지 않음",
     }
 
 
@@ -293,11 +314,17 @@ def build_human_excels(package_root, archive_root, scope):
     review_ids = set(review) - confirmed_ids
     confirmed = [r for r in raw if _source_id(r, source) in confirmed_ids]
     review_rows = [r for r in raw if _source_id(r, source) in review_ids]
-    confirmed_candidates = _sorted_rows([r for r in candidates if str(r.get("fact_code") or "") in confirmed_ids], "fact_manage_nm", "fact_code")
-    review_candidates = _sorted_rows([r for r in candidates if str(r.get("fact_code") or "") in review_ids], "fact_manage_nm", "fact_code")
+    confirmed_candidates = _sorted_rows(
+        [_clean_candidate_summary(r) for r in candidates if str(r.get("fact_code") or "") in confirmed_ids],
+        "CleanSYS 사업장코드", "원문 사업장명"
+    )
+    review_candidates = _sorted_rows(
+        [_clean_candidate_summary(r) for r in candidates if str(r.get("fact_code") or "") in review_ids],
+        "CleanSYS 사업장코드", "원문 사업장명"
+    )
     status = _status(root, source)
-    clean_confirmed = _sorted_rows([_clean_summary(r) for r in confirmed], "원문 사업장명", "CleanSYS 사업장코드", "자료연도")
-    clean_review = _sorted_rows([_clean_summary(r) for r in review_rows], "원문 사업장명", "CleanSYS 사업장코드", "자료연도")
+    clean_confirmed = _sorted_rows([_clean_summary(r) for r in confirmed], "CleanSYS 사업장코드", "자료연도", "원문 사업장명")
+    clean_review = _sorted_rows([_clean_summary(r) for r in review_rows], "CleanSYS 사업장코드", "자료연도", "원문 사업장명")
     review_sites = _sorted_rows([_review_row(review[i]) for i in sorted(review_ids) if i in review], "원문 사업장명", "사업장코드") + review_candidates
     p = user/"01_TMS"/"대기_CleanSYS"/"CleanSYS_대기TMS_정리.xlsx"
     _write_xlsx(p, [
@@ -321,10 +348,10 @@ def build_human_excels(package_root, archive_root, scope):
     annual_review = [r for r in annual if _source_id(r, source) in review_ids]
     daily_review = [r for r in daily if _source_id(r, source) in review_ids]
     status = _status(root, source)
-    water_annual_confirmed = _sorted_rows([_water_annual(r) for r in annual_confirmed], "원문 사업장명", "SOOSIRO 사업장코드", "자료연도", "방류구번호")
-    water_daily_confirmed = _sorted_rows([_water_daily(r) for r in daily_confirmed], "원문 사업장명", "SOOSIRO 사업장코드", "자료연도", "일자", "분기", "방류구번호")
-    water_annual_review = _sorted_rows([_water_annual(r) for r in annual_review], "원문 사업장명", "SOOSIRO 사업장코드", "자료연도", "방류구번호")
-    water_daily_review = _sorted_rows([_water_daily(r) for r in daily_review], "원문 사업장명", "SOOSIRO 사업장코드", "자료연도", "일자", "분기", "방류구번호")
+    water_annual_confirmed = _sorted_rows([_water_annual(r) for r in annual_confirmed], "SOOSIRO 사업장코드", "자료연도", "방류구번호", "원문 사업장명")
+    water_daily_confirmed = _sorted_rows([_water_daily(r) for r in daily_confirmed], "SOOSIRO 사업장코드", "자료연도", "일자", "분기", "방류구번호", "원문 사업장명")
+    water_annual_review = _sorted_rows([_water_annual(r) for r in annual_review], "SOOSIRO 사업장코드", "자료연도", "방류구번호", "원문 사업장명")
+    water_daily_review = _sorted_rows([_water_daily(r) for r in daily_review], "SOOSIRO 사업장코드", "자료연도", "일자", "분기", "방류구번호", "원문 사업장명")
     water_review_sites = _sorted_rows([_review_row(review[i]) for i in sorted(review_ids) if i in review], "원문 사업장명", "사업장코드")
     p = user/"01_TMS"/"수질_SOOSIRO"/"SOOSIRO_수질TMS_정리.xlsx"
     _write_xlsx(p, [
@@ -349,9 +376,9 @@ def build_human_excels(package_root, archive_root, scope):
     disc_review = [r for r in discovery if _source_id(r, source) in review_ids]
     detail_review = [r for r in detail if _source_id(r, source) in review_ids]
     status = _status(root, source)
-    prtr_confirmed = _sorted_rows([_prtr_summary(r) for r in disc_confirmed], "원문 사업장명", "PRTR 사업장ID", "자료연도")
+    prtr_confirmed = _sorted_rows([_prtr_summary(r) for r in disc_confirmed], "PRTR 사업장ID", "자료연도", "원문 사업장명")
     prtr_detail_confirmed = _sorted_rows([_source_table_row(r,'entrps_id') for r in detail_confirmed], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
-    prtr_review = _sorted_rows([_prtr_summary(r) for r in disc_review], "원문 사업장명", "PRTR 사업장ID", "자료연도")
+    prtr_review = _sorted_rows([_prtr_summary(r) for r in disc_review], "PRTR 사업장ID", "자료연도", "원문 사업장명")
     prtr_detail_review = _sorted_rows([_source_table_row(r,'entrps_id') for r in detail_review], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
     p = user/"02_화학물질"/"PRTR_배출이동량"/"PRTR_화학물질배출이동량_정리.xlsx"
     _write_xlsx(p, [
@@ -375,9 +402,9 @@ def build_human_excels(package_root, archive_root, scope):
     disc_review = [r for r in discovery if _source_id(r, source) in review_ids]
     detail_review = [r for r in detail if _source_id(r, source) in review_ids]
     status = _status(root, source)
-    chem_confirmed = _sorted_rows([_chem_summary(r) for r in disc_confirmed], "해당연도 원문 사업장명", "화학물질통계 사업장ID", "자료연도")
+    chem_confirmed = _sorted_rows([_chem_summary(r) for r in disc_confirmed], "화학물질통계 사업장ID", "자료연도", "해당연도 원문 사업장명")
     chem_detail_confirmed = _sorted_rows([_source_table_row(r,'bplcId') for r in detail_confirmed], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
-    chem_review = _sorted_rows([_chem_summary(r) for r in disc_review], "해당연도 원문 사업장명", "화학물질통계 사업장ID", "자료연도")
+    chem_review = _sorted_rows([_chem_summary(r) for r in disc_review], "화학물질통계 사업장ID", "자료연도", "해당연도 원문 사업장명")
     chem_detail_review = _sorted_rows([_source_table_row(r,'bplcId') for r in detail_review], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
     p = user/"02_화학물질"/"화학물질통계"/"화학물질통계_정리.xlsx"
     _write_xlsx(p, [
