@@ -64,6 +64,41 @@ class ArchiveUserDedupV2Tests(unittest.TestCase):
             readme = (idx/'README_먼저읽기.txt').read_text(encoding='utf-8')
             self.assertIn('ENVINFO_첨부자료_참조표.xlsx', readme)
 
+
+    def test_promoted_envinfo_report_is_retained_in_sustainability_folder(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / '기업_환경자료'
+            site = root/'01_사용자자료'/'03_환경정보공개시스템'/'본사'/'첨부자료'
+            report_dir = root/'01_사용자자료'/'04_지속가능경영보고서'
+            idx = root/'00_자료목록'
+            for p in [site, report_dir, idx]:
+                p.mkdir(parents=True, exist_ok=True)
+            (idx/'README_먼저읽기.txt').write_text('Archive v2 사용 안내\n', encoding='utf-8')
+
+            payload = b'%PDF-' + b'R'*5000 + b'%%EOF'
+            original = site/'2020_SR_2020_kr.pdf'
+            promoted = report_dir/'ENVINFO공개연도_2020_SR_2020_kr.pdf'
+            original.write_bytes(payload)
+            promoted.write_bytes(payload)
+
+            stats = canonicalize_user_envinfo(root)
+
+            self.assertTrue(promoted.exists(), 'Human-facing sustainability folder must keep the categorized copy')
+            central = root/'01_사용자자료'/'03_환경정보공개시스템'/'첨부자료_원문'
+            self.assertFalse(any(p.is_file() and p.read_bytes()==payload for p in central.iterdir()))
+            self.assertEqual(stats['envinfo_generated_crossfolder_files_removed'], 1)
+
+            ref = idx/'ENVINFO_첨부자료_참조표.xlsx'
+            self.assertTrue(ref.exists())
+            from openpyxl import load_workbook
+            wb=load_workbook(ref,read_only=True,data_only=True)
+            ws=wb.active
+            rows=list(ws.iter_rows(values_only=True))
+            headers=[str(v or '') for v in rows[0]]
+            records=[dict(zip(headers,row)) for row in rows[1:]]
+            targets={str(r.get('최종_보존경로') or '') for r in records}
+            self.assertIn(promoted.relative_to(root).as_posix(),targets)
+
     def test_same_year_semantic_pdf_duplicate_prefers_official_annual_report(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td) / '기업_환경자료'
