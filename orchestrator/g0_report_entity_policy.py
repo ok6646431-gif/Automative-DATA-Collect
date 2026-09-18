@@ -32,6 +32,8 @@ SUMMARY_TOKENS = ("하이라이트", "highlight", "요약", "summary", "brief", 
 GENERIC_PREFIX_TOKENS = {
     "annual", "esg", "corporate", "citizenship", "report", "reports", "sustainability",
     "integrated", "kor", "eng", "kr", "en", "korean", "english",
+    "국문", "영문", "중문", "한글", "한국어", "영어", "pdf", "다운로드", "download",
+    "파일", "file",
 }
 TERMINAL_ENGLISH_LEGAL_SUFFIX_RE = re.compile(
     r"(?:\s|,|\.)+(?:(?:co(?:mpany)?\.?\s*,?\s*(?:ltd|limited)\.?)|"
