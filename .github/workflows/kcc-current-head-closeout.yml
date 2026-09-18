@@ -1,0 +1,138 @@
+name: KCC current-head archive closeout
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/kcc-current-head-closeout.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  closeout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+
+      - name: Run focused fallback tests
+        run: python -m unittest tests.test_envinfo_user_fidelity tests.test_envinfo_content_qa -v
+
+      - name: Download KCC completed collection
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35323339919
+          name: enterprise-env-final
+          path: source
+          github-token: ${{ github.token }}
+
+      - name: Prepare replay lanes
+        run: |
+          set -euo pipefail
+          test -s source/Collection_Completeness.json
+          test -s source/Company_Profile.json
+          mkdir -p stable evidence delivery
+          cp -a source/output/CORP_DOCS stable/CORP_DOCS
+          if [ -s source/Document_Evidence.json ]; then
+            cp source/Document_Evidence.json evidence/Document_Evidence.json
+          fi
+          rm -rf source/Human_Archive source/Human_Archive.zip
+
+      - name: Rebuild KCC Human Archive with current HEAD
+        run: |
+          python orchestrator/archive_stage.py             --package source             --stable stable             --documents evidence/Document_Evidence.json
+
+      - name: Require KCC Content QA and Human Archive PASS
+        run: |
+          python - <<'PY'
+          import csv, io, json, zipfile
+          from pathlib import Path
+
+          collection=json.loads(Path('source/Collection_Completeness.json').read_text(encoding='utf-8'))
+          summary=json.loads(Path('source/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads(Path('source/Master_Manifest.json').read_text(encoding='utf-8'))
+          qa=summary.get('envinfo_content_qa') or {}
+          if collection.get('status')!='COMPLETE':
+              raise SystemExit(f'Collection not COMPLETE: {collection}')
+          if summary.get('archive_completeness')!='COMPLETE':
+              raise SystemExit(f'Archive not COMPLETE: {summary.get("blocking_acceptance_checks")}')
+          if qa.get('status')!='PASS' or qa.get('expected_items')!=30 or qa.get('checked_items')!=30:
+              raise SystemExit(f'Content QA coverage mismatch: {qa}')
+          if qa.get('pass_items')!=30 or qa.get('warn_items')!=0 or qa.get('fail_items')!=0:
+              raise SystemExit(f'Content QA verdict mismatch: {qa}')
+          if (summary.get('blocking_acceptance_checks') or {}).get('envinfo_content_fidelity') is not True:
+              raise SystemExit(f'Content QA blocking gate not PASS: {summary.get("blocking_acceptance_checks")}')
+          human=manifest.get('human_archive') or {}
+          if human.get('status')!='PASS' or human.get('archive_completeness')!='COMPLETE':
+              raise SystemExit(f'Human manifest not PASS: {human}')
+
+          with zipfile.ZipFile('source/Human_Archive.zip') as z:
+              q=[n for n in z.namelist() if n.endswith('/00_자료목록/ENVINFO_Content_QA.csv')]
+              if len(q)!=1:
+                  raise SystemExit(f'QA CSV mismatch: {q}')
+              rows=list(csv.DictReader(io.StringIO(z.read(q[0]).decode('utf-8-sig'))))
+          if len(rows)!=30 or any(r.get('판정')!='PASS' for r in rows):
+              raise SystemExit(f'QA CSV non-PASS rows: {[r for r in rows if r.get("판정")!="PASS"]}')
+          cov=[float(r['원문토큰_보존율']) for r in rows]
+          result={
+              'collection':'COMPLETE',
+              'archive':'COMPLETE',
+              'qa_status':'PASS',
+              'qa_rows':len(rows),
+              'qa_pass':30,
+              'qa_min_coverage':min(cov),
+              'qa_max_coverage':max(cov),
+              'human_manifest_status':human.get('status'),
+          }
+          Path('KCC_Closeout_PreApp.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('KCC_PREAPP='+json.dumps(result,ensure_ascii=False))
+          PY
+
+      - name: Build and require Application Materials PASS
+        run: |
+          python tools/build_application_material_from_archive.py             --input source/Human_Archive.zip             --output-dir delivery             --source-run "35323339919"             --package-label "KCC"             --summary-out KCC_Application_Materials.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          pre=json.loads(Path('KCC_Closeout_PreApp.json').read_text(encoding='utf-8'))
+          app=json.loads(Path('KCC_Application_Materials.json').read_text(encoding='utf-8'))
+          if app.get('status')!='PASS':
+              raise SystemExit(f'Application Materials not PASS: {app}')
+          result={**pre,'application_materials':'PASS','validation_checks':app.get('validation_checks') or [],'result':'STRICT_PASS'}
+          Path('KCC_Closeout_Result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('KCC_CLOSEOUT='+json.dumps(result,ensure_ascii=False))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kcc-current-head-closeout
+          path: |
+            KCC_Closeout_Result.json
+            KCC_Application_Materials.json
+            source/Archive_Summary.json
+          retention-days: 14
+
+      - name: Remove temporary workflow
+        if: always()
+        run: |
+          git config user.name 'openai-maintenance'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/kcc-current-head-closeout.yml
+          git commit -m 'Remove KCC current-head closeout workflow'
+          git push origin HEAD:run/control-plane
