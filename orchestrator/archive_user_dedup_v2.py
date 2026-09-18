@@ -119,7 +119,7 @@ def _write_reference_xlsx(path: Path, rows: list[dict]) -> None:
     ws = wb.add_worksheet("ENVINFO 첨부자료")
     header = wb.add_format({"bold": True, "bg_color": "#E7E6E6", "border": 1, "align": "center", "valign": "vcenter"})
     text = wb.add_format({"valign": "top", "text_wrap": True})
-    fields = ["사업장", "공개연도", "원래_사용자경로", "최종_보존경로", "파일명", "용량_bytes", "SHA256", "처리"]
+    fields = ["사업장", "공개연도", "원래_사용자경로", "최종_보존경로", "파일명", "용량_bytes", "SHA256", "최종_보존_SHA256", "처리"]
     for c, field in enumerate(fields):
         ws.write(0, c, field, header)
     for r_idx, row in enumerate(rows, 1):
@@ -127,7 +127,7 @@ def _write_reference_xlsx(path: Path, rows: list[dict]) -> None:
             ws.write(r_idx, c, row.get(field, ""), text)
     ws.freeze_panes(1, 0)
     ws.autofilter(0, 0, max(1, len(rows)), len(fields) - 1)
-    widths = [24, 12, 78, 78, 52, 16, 68, 42]
+    widths = [24, 12, 78, 78, 52, 16, 68, 68, 42]
     for c, width in enumerate(widths):
         ws.set_column(c, c, width)
     wb.close()
@@ -135,7 +135,7 @@ def _write_reference_xlsx(path: Path, rows: list[dict]) -> None:
 
 def _write_reference_csv(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    fields = ["사업장", "공개연도", "원래_사용자경로", "최종_보존경로", "파일명", "용량_bytes", "SHA256", "처리"]
+    fields = ["사업장", "공개연도", "원래_사용자경로", "최종_보존경로", "파일명", "용량_bytes", "SHA256", "최종_보존_SHA256", "처리"]
     with path.open("w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
@@ -351,6 +351,7 @@ def _collapse_reference_redirects(archive_root: Path, refs: list[dict]) -> None:
                 "user dedup reference does not resolve to a physical file: "
                 f"{row.get('원래_사용자경로')} -> {current}"
             )
+        row["최종_보존_SHA256"] = core.sha256(archive_root / current) if current else ""
 
 
 def canonicalize_user_envinfo(archive_root: str | Path) -> dict:
