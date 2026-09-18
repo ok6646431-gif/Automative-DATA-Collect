@@ -90,14 +90,11 @@ class ArchiveUserDedupV2Tests(unittest.TestCase):
             )
             self.assertEqual(stats['envinfo_generated_crossfolder_files_removed'], 1)
 
-            ref = idx/'ENVINFO_첨부자료_참조표.xlsx'
+            ref = idx/'ENVINFO_첨부자료_참조표.csv'
             self.assertTrue(ref.exists())
-            from openpyxl import load_workbook
-            wb=load_workbook(ref,read_only=True,data_only=True)
-            ws=wb.active
-            rows=list(ws.iter_rows(values_only=True))
-            headers=[str(v or '') for v in rows[0]]
-            records=[dict(zip(headers,row)) for row in rows[1:]]
+            import csv
+            with ref.open(encoding='utf-8-sig', newline='') as fh:
+                records=list(csv.DictReader(fh))
             targets={str(r.get('최종_보존경로') or '') for r in records}
             self.assertIn(promoted.relative_to(root).as_posix(),targets)
 
