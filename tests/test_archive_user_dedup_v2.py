@@ -85,7 +85,9 @@ class ArchiveUserDedupV2Tests(unittest.TestCase):
 
             self.assertTrue(promoted.exists(), 'Human-facing sustainability folder must keep the categorized copy')
             central = root/'01_사용자자료'/'03_환경정보공개시스템'/'첨부자료_원문'
-            self.assertFalse(any(p.is_file() and p.read_bytes()==payload for p in central.iterdir()))
+            self.assertFalse(
+                central.exists() and any(p.is_file() and p.read_bytes()==payload for p in central.iterdir())
+            )
             self.assertEqual(stats['envinfo_generated_crossfolder_files_removed'], 1)
 
             ref = idx/'ENVINFO_첨부자료_참조표.xlsx'
