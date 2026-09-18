@@ -324,6 +324,33 @@ a { color:#000 !important; text-decoration:none !important; }
 </style>
 '''
 
+ENVINFO_CLEAN_PRINT_CSS = r'''
+@page { size:A4 portrait; margin:10mm; }
+* { box-sizing:border-box; }
+body {
+    margin:0; color:#111;
+    font-family:"Noto Sans CJK KR","NanumGothic",sans-serif;
+    font-size:10pt; line-height:1.45;
+}
+.inquiry_cont { display:block; width:100%; margin:0 0 14px 0; }
+h1,h2,h3,h4,h5 { color:#111; margin:12px 0 6px; page-break-after:avoid; }
+h3 {
+    font-size:15pt; padding:6px 8px;
+    border-top:2px solid #245a9b; border-bottom:1px solid #9fb2ca;
+}
+h4 { font-size:12pt; }
+table { width:100%; border-collapse:collapse; table-layout:auto; margin:4px 0 10px; }
+th,td {
+    border:1px solid #b7c1ce; padding:4px 6px; vertical-align:top;
+    white-space:normal; overflow-wrap:anywhere;
+}
+th { background:#eef2f7; font-weight:600; }
+img { max-width:100%; height:auto; }
+ul,ol { margin:4px 0 8px 20px; padding:0; }
+a { color:#111; text-decoration:none; }
+input,button,select,textarea { display:none !important; }
+'''
+
 
 def prepare_envinfo_static_html(html_path, output_path):
     """Prepare a stable full-section ENV-INFO page for user-facing PDF output.
@@ -332,7 +359,7 @@ def prepare_envinfo_static_html(html_path, output_path):
     JavaScript temporarily expands selected sections, so a plain browser print does
     not represent the complete disclosure. The collected site/year HTML already
     contains the disclosed inquiry sections; reconstruct those sections statically
-    for delivery while preserving the untouched response in 90_시스템원본.
+    for delivery while preserving the untouched response in the package raw layer.
     """
     src=Path(html_path); out=Path(output_path)
     html=src.read_text(encoding='utf-8',errors='replace')
@@ -351,20 +378,106 @@ def prepare_envinfo_static_html(html_path, output_path):
     return out
 
 
+def _envinfo_source_text_chars(html_path):
+    """Return non-whitespace text size inside disclosed inquiry sections."""
+    from bs4 import BeautifulSoup
+
+    html=Path(html_path).read_text(encoding='utf-8',errors='replace')
+    soup=BeautifulSoup(html,'html.parser')
+    sections=soup.select('.inquiry_cont')
+    text=' '.join(section.get_text(' ',strip=True) for section in sections)
+    return len(re.sub(r'\s+','',text))
+
+
+def _pdf_extractable_text_chars(pdf_path):
+    """Return extractable PDF text size, or None when the extractor is unavailable."""
+    try:
+        from pypdf import PdfReader
+        reader=PdfReader(str(pdf_path),strict=False)
+        text=''.join((page.extract_text() or '') for page in reader.pages)
+        return len(re.sub(r'\s+','',text))
+    except Exception:
+        return None
+
+
+def prepare_envinfo_clean_html(html_path, output_path):
+    """Build a clean semantic fallback that is independent of ENV-INFO site CSS.
+
+    Some historical ENV-INFO pages contain stylesheet combinations that make
+    Chromium print table borders while dropping every glyph/font from the PDF.
+    The captured inquiry sections still contain the disclosed text.  This fallback
+    keeps only those sections and semantic table/content markup, strips page/runtime
+    styling, and applies a deterministic archive stylesheet.
+    """
+    from bs4 import BeautifulSoup
+
+    src=Path(html_path); out=Path(output_path)
+    html=src.read_text(encoding='utf-8',errors='replace')
+    html=html.replace('href="/','href="https://www.env-info.kr/')
+    html=html.replace("href='/","href='https://www.env-info.kr/")
+    html=html.replace('src="/','src="https://www.env-info.kr/')
+    html=html.replace("src='/","src='https://www.env-info.kr/")
+    soup=BeautifulSoup(html,'html.parser')
+    sections=soup.select('.inquiry_cont')
+    if not sections:
+        raise ValueError('ENVINFO inquiry sections missing from collected HTML')
+    for section in sections:
+        for tag in list(section.find_all(['script','style','link','button','input','select','textarea'])):
+            tag.decompose()
+        for tag in section.find_all(True):
+            for attr in ['style','class','id','onclick','onmouseover','onmouseout','hidden','aria-hidden']:
+                tag.attrs.pop(attr,None)
+    body='\n'.join(str(section) for section in sections)
+    clean=(
+        '<!doctype html><html><head><meta charset="utf-8"><style>'
+        +ENVINFO_CLEAN_PRINT_CSS+
+        '</style></head><body>'+body+'</body></html>'
+    )
+    out.parent.mkdir(parents=True,exist_ok=True)
+    out.write_text(clean,encoding='utf-8')
+    return out
+
+
+def _needs_envinfo_clean_fallback(html_path, pdf_path):
+    source_chars=_envinfo_source_text_chars(html_path)
+    pdf_chars=_pdf_extractable_text_chars(pdf_path)
+    if pdf_chars is None or source_chars < 200:
+        return False
+    return pdf_chars < max(50, int(source_chars*0.10))
+
+
 def render_envinfo_static_pdf(html_path, pdf_path):
-    """Render every disclosed ENV-INFO inquiry section from captured source HTML."""
+    """Render every disclosed ENV-INFO section, with a fail-safe clean rerender.
+
+    Normal pages retain the original site styling plus archive print overrides.
+    If that render is structurally valid but loses nearly all extractable text,
+    rerender only the inquiry sections under a deterministic clean stylesheet.
+    """
     pdf_path=Path(pdf_path)
     static_html=pdf_path.with_suffix('.envinfo-print.html')
+    clean_html=pdf_path.with_suffix('.envinfo-clean.html')
     try:
         prepare_envinfo_static_html(html_path,static_html)
-        return render_html_pdf(static_html,pdf_path)
+        ok,err=render_html_pdf(static_html,pdf_path)
+        if not ok:
+            return ok,err
+        if not _needs_envinfo_clean_fallback(html_path,pdf_path):
+            return True,err
+        prepare_envinfo_clean_html(html_path,clean_html)
+        ok2,err2=render_html_pdf(clean_html,pdf_path)
+        if not ok2:
+            return False,'clean fallback failed after severe text collapse: '+err2
+        if _needs_envinfo_clean_fallback(html_path,pdf_path):
+            return False,'clean fallback remained severely text-deficient'
+        return True,'clean semantic fallback used after severe text collapse'
     except Exception as exc:
         return False,f'{type(exc).__name__}: {exc}'
     finally:
-        try:
-            static_html.unlink()
-        except FileNotFoundError:
-            pass
+        for temp in [static_html,clean_html]:
+            try:
+                temp.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def _declared_pdf_attachment(att, src):
