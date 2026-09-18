@@ -1,0 +1,180 @@
+name: Golden company archive strict replay
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/golden-company-archive-strict-replay.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: kumho
+            company: 금호석유화학
+            source_run: 35099857670
+          - key: hanwha
+            company: 한화에어로스페이스
+            source_run: 35109675322
+          - key: hyosung
+            company: 효성티앤씨
+            source_run: 35112968790
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: orchestrator
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+
+      - name: Download retained strict R3 source package
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ matrix.source_run }}
+          name: enterprise-env-final
+          path: source
+          github-token: ${{ github.token }}
+
+      - name: Prepare replay package
+        run: |
+          set -euo pipefail
+          test -s source/Company_Profile.json
+          test -s source/Collection_Completeness.json
+          test -s source/output/ENVINFO/status.json
+          mkdir -p stable evidence delivery
+          cp -a source/output/CORP_DOCS stable/CORP_DOCS
+          if [ -s source/Document_Evidence.json ]; then
+            cp source/Document_Evidence.json evidence/Document_Evidence.json
+          fi
+          rm -rf source/Human_Archive source/Human_Archive.zip
+          rm -rf source/Application_Materials source/Application_Materials.zip source/delivery
+          df -h .
+
+      - name: Rebuild Human Archive with current HEAD
+        run: |
+          python orchestrator/archive_stage.py \
+            --package source \
+            --stable stable \
+            --documents evidence/Document_Evidence.json
+
+      - name: Validate strict replay gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          company = ${{ toJSON(matrix.company) }}
+          source_run = str(${{ matrix.source_run }})
+          collection = json.loads(Path('source/Collection_Completeness.json').read_text(encoding='utf-8'))
+          archive = json.loads(Path('source/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest = json.loads(Path('source/Master_Manifest.json').read_text(encoding='utf-8'))
+          qa = archive.get('envinfo_content_qa') or {}
+
+          if collection.get('status') != 'COMPLETE':
+              raise SystemExit(f'{company}: Collection not COMPLETE: {collection}')
+          if archive.get('archive_completeness') != 'COMPLETE':
+              raise SystemExit(f'{company}: Human Archive not COMPLETE: {archive.get("blocking_acceptance_checks")}')
+          blocking = archive.get('blocking_acceptance_checks') or {}
+          if blocking.get('envinfo_content_fidelity') is not True:
+              raise SystemExit(f'{company}: ENVINFO content fidelity gate failed: {qa}')
+          if qa.get('status') != 'PASS' or int(qa.get('fail_items') or 0) != 0:
+              raise SystemExit(f'{company}: ENVINFO content QA failed: {qa}')
+          if int(qa.get('checked_items') or 0) != int(qa.get('expected_items') or 0):
+              raise SystemExit(f'{company}: ENVINFO content QA coverage incomplete: {qa}')
+          human = manifest.get('human_archive') or {}
+          if human.get('status') != 'PASS' or human.get('archive_completeness') != 'COMPLETE':
+              raise SystemExit(f'{company}: Master Manifest Human Archive state invalid: {human}')
+
+          result = {
+              'company': company,
+              'source_run': source_run,
+              'collection': collection.get('status'),
+              'human_archive': archive.get('archive_completeness'),
+              'human_manifest_status': human.get('status'),
+              'envinfo_content_qa': qa,
+          }
+          Path('Regression_PreApp.json').write_text(
+              json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print('PRE_APP=' + json.dumps(result, ensure_ascii=False))
+          PY
+
+      - name: Build Application Materials
+        run: |
+          python tools/build_application_material_from_archive.py \
+            --input source/Human_Archive.zip \
+            --output-dir delivery \
+            --source-run "${{ matrix.source_run }}" \
+            --package-label "${{ matrix.company }}" \
+            --summary-out Application_Materials_Result.json
+
+      - name: Finalize regression result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          pre = json.loads(Path('Regression_PreApp.json').read_text(encoding='utf-8'))
+          app = json.loads(Path('Application_Materials_Result.json').read_text(encoding='utf-8'))
+          if app.get('status') != 'PASS':
+              raise SystemExit(f"{pre['company']}: Application Materials failed: {app}")
+          result = {
+              **pre,
+              'application_materials': app.get('status'),
+              'application_validation_checks': app.get('validation_checks') or [],
+              'result': 'STRICT_PASS',
+          }
+          Path('Golden_Regression_Result.json').write_text(
+              json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8'
+          )
+          print('GOLDEN_RESULT=' + json.dumps(result, ensure_ascii=False))
+          PY
+
+      - name: Upload compact regression evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-regression-${{ matrix.key }}
+          path: |
+            Golden_Regression_Result.json
+            Application_Materials_Result.json
+            source/Archive_Summary.json
+          retention-days: 14
+
+  cleanup:
+    needs: replay
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - name: Remove temporary workflow
+        run: |
+          if [ -f .github/workflows/golden-company-archive-strict-replay.yml ]; then
+            git config user.name 'openai-maintenance'
+            git config user.email 'actions@users.noreply.github.com'
+            git rm .github/workflows/golden-company-archive-strict-replay.yml
+            git commit -m 'Remove golden company strict replay workflow'
+            git push origin HEAD:run/control-plane
+          fi
