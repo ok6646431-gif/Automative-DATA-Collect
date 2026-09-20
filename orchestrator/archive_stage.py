@@ -31,6 +31,7 @@ from archive_stage_core import *  # preserve public helper contract
 from archive_user_dedup_pipeline import run as _deduplicate_user_archive
 from bat_archive import expose as _expose_bat_references
 from envinfo_content_qa import evaluate as _evaluate_envinfo_content_qa
+from envinfo_zero_qa_gate import reconcile as _reconcile_envinfo_zero_qa
 from sustainability_korean_delivery_guard import evaluate as _evaluate_korean_annual_delivery
 from human_archive_raw_policy import (
     assert_human_archive_raw_separated as _assert_human_archive_raw_separated,
@@ -72,17 +73,25 @@ def _build_archive_with_bat(package_root, contract_path=_core.archive_builder.CO
 
     profile = json.loads((root / 'Company_Profile.json').read_text(encoding='utf-8')) if (root / 'Company_Profile.json').exists() else {}
     resolved_scope, labels, site_tokens = _core.archive_builder.source_id_scope(root, profile)
+    envinfo_ids = (resolved_scope or {}).get('ENVINFO', set())
     envinfo_qa = _evaluate_envinfo_content_qa(
         root,
         archive_root,
-        (resolved_scope or {}).get('ENVINFO', set()),
+        envinfo_ids,
         labels,
         site_tokens,
     )
+    envinfo_qa = _reconcile_envinfo_zero_qa(root, envinfo_ids, envinfo_qa)
     summary['envinfo_content_qa'] = envinfo_qa
     checks = dict(summary.get('acceptance_checks') or {})
     checks['envinfo_content_fidelity'] = bool(envinfo_qa.get('pass'))
     summary['acceptance_checks'] = checks
+    if not envinfo_qa.get('pass'):
+        (root / 'Archive_Summary.json').write_text(
+            json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8'
+        )
+        raise RuntimeError('ENVINFO scoped content QA failed or empty without verified no-data evidence: '
+                           + json.dumps(envinfo_qa, ensure_ascii=False))
 
     _rewrite_human_archive_raw_references(archive_root)
     _assert_human_archive_raw_separated(archive_root)
