@@ -23,6 +23,9 @@ from bat_stage import run as _run_bat_stage
 for _audit_name in ("source_id_backfill_attempts.jsonl", "source_id_backfill_audit.jsonl"):
     _core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})[_audit_name] = "source_id_backfill_attempts"
 
+# This audit stream is empty only if every discovered detail passed validation.
+_core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})["invalid_detail_rows.jsonl"] = "detail_fail"
+
 _BASE_APPLY_REQUESTED_SCOPE = _core.apply_requested_scope
 _BASE_RUN_CROSS_LAYER_REVIEW = _core.run_cross_layer_review
 
