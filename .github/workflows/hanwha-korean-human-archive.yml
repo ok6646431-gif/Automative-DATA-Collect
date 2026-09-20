@@ -1,0 +1,149 @@
+name: Hanwha Korean Human Archive
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/hanwha-korean-human-archive.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  korean_archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Download corrected September 20 public sources
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35482930612
+          name: stable-public-sources
+          path: collected/stable
+          github-token: ${{ github.token }}
+      - name: Download verified Korean September 20 official documents
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35480886754
+          name: stable-corporate-documents
+          path: collected/stable
+          github-token: ${{ github.token }}
+      - name: Download corrected fresh ICIS
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35482930612
+          name: icis-attempt-2
+          path: collected/icis/icis-attempt-2
+          github-token: ${{ github.token }}
+      - name: Bootstrap matching verified entity and scope
+        run: >-
+          python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Require actual Korean annual report text and verified source hashes
+        run: |
+          python - <<'PY'
+          import csv,hashlib,json,re
+          from pathlib import Path
+          from pypdf import PdfReader
+          root=Path('collected/stable/CORP_DOCS')
+          st=json.loads((root/'status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader((root/'document_index.csv').open(encoding='utf-8-sig',newline='')))
+          assert st['status']=='DATA_FOUND' and st['downloaded']==9 and st['failed']==0,st
+          assert st['request_id']==json.loads(Path('requests/runtime/company_profile.generated.json').read_text(encoding='utf-8'))['request_id']
+          annual={}
+          for r in rows:
+            if r['document_type']!='SUSTAINABILITY_REPORT': continue
+            assert r['collection_status']=='DOWNLOADED' and r['verification_status']=='SOURCE_VERIFIED',r
+            rel=Path(r['stored_path']);assert rel.parts[:2]==('output','CORP_DOCS'),rel
+            p=root.joinpath(*rel.parts[2:]);assert p.is_file(),p
+            data=p.read_bytes();assert len(data)==int(r['bytes']) and hashlib.sha256(data).hexdigest()==r['sha256'],p
+            year=int(r['report_year']);assert year not in annual,year
+            reader=PdfReader(str(p));text=' '.join((page.extract_text() or '') for page in reader.pages[:6])
+            ko=len(re.findall('[가-힣]',text));assert ko>=100,(year,ko,p)
+            assert str(year) in text or str(year) in p.name,(year,p)
+            annual[year]={'sha256':r['sha256'],'bytes':len(data),'source_url':r['source_url'],'retrieved_at':r['retrieved_at'],'original_filename':r['original_filename'],'korean_chars_first_6_pages':ko}
+          assert set(annual)==set(range(2021,2027)),sorted(annual)
+          gap=json.loads((root/'discovery_gaps.json').read_text(encoding='utf-8'))
+          assert any(str(x.get('report_year') or x.get('year'))=='2020' and x.get('document_type')=='SUSTAINABILITY_REPORT' for x in gap),gap
+          Path('Korean_Reports_Source_QA.json').write_text(json.dumps({'status':'PASS','source_run':35480886754,'report_years':annual,'excluded_2020':'NOT_PUBLISHED'},ensure_ascii=False,indent=2),encoding='utf-8')
+          print('KOREAN_SOURCE_REPORTS_PASS',sorted(annual))
+          PY
+      - name: Confirm corrected chemical detail count
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          root=Path('collected/icis/icis-attempt-2/CHEM_STATS')
+          status=json.loads((root/'status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader((root/'discovery.csv').open(encoding='utf-8-sig',newline='')))
+          assert status['rows']==19 and status['detail_ok']==19 and status['detail_fail']==0 and len(rows)==19,status
+          print('CHEMICAL_STATISTICS_CORRECTED_19_PASS')
+          PY
+      - name: Assemble and validate new sources
+        run: >-
+          python orchestrator/package_run.py --stable collected/stable --icis collected/icis --profile requests/runtime/company_profile.generated.json --out assembled
+      - name: Build Korean Human Archive
+        run: >-
+          python orchestrator/archive_stage.py --package assembled --stable collected/stable --documents requests/document_evidence.json
+      - name: Strict archive and Korean PDF hash validation
+        run: |
+          python - <<'PY'
+          import json,zipfile,hashlib,re
+          from pathlib import Path
+          from pypdf import PdfReader
+          root=Path('assembled');collection=json.loads((root/'Collection_Completeness.json').read_text(encoding='utf-8'))
+          summary=json.loads((root/'Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads((root/'Master_Manifest.json').read_text(encoding='utf-8'))
+          qa=summary.get('envinfo_content_qa') or {};cov=summary.get('sustainability_coverage') or {}
+          assert collection.get('status')=='COMPLETE',collection
+          assert summary.get('archive_completeness')=='COMPLETE',summary.get('blocking_acceptance_checks')
+          assert manifest.get('human_archive',{}).get('status')=='PASS'
+          assert qa.get('status')=='PASS' and qa.get('fail_items')==0 and qa.get('checked_items')==qa.get('expected_items'),qa
+          assert cov.get('coverage_sufficient') is True,cov
+          assert set(cov.get('delivered_report_years') or [])==set(range(2021,2027)),cov
+          assert 2020 in set(cov.get('resolved_without_file_years') or []),cov
+          source=json.loads(Path('Korean_Reports_Source_QA.json').read_text(encoding='utf-8'))['report_years']
+          p=root/'Human_Archive.zip';assert p.is_file() and p.stat().st_size>0
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            for year in range(2021,2027):
+              matching=[x for x in z.namelist() if x.endswith('/04_지속가능경영보고서/한화에어로스페이스(주)_지속가능경영보고서_'+str(year)+'.pdf')]
+              assert len(matching)==1,(year,matching)
+              pdf=z.read(matching[0]); assert hashlib.sha256(pdf).hexdigest()==source[str(year)]['sha256'],year
+              from io import BytesIO
+              text=' '.join((page.extract_text() or '') for page in PdfReader(BytesIO(pdf)).pages[:6])
+              assert len(re.findall('[가-힣]',text))>=100,year
+          evidence={'status':'PASS','collection':collection['status'],'human_archive':summary['archive_completeness'],'envinfo_qa':qa,'annual_coverage':cov,'korean_source_run':35480886754,'corrected_public_run':35482930612,'report_source_provenance':source,'archive_bytes':p.stat().st_size}
+          (root/'Korean_Archive_QA.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('HANWHA_KOREAN_HUMAN_ARCHIVE_PASS',p.stat().st_size)
+          PY
+      - name: Upload Korean Human Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanwha-korean-human-archive
+          path: assembled/Human_Archive.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload provenance and strict QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanwha-korean-human-qa
+          path: |
+            Korean_Reports_Source_QA.json
+            assembled/Korean_Archive_QA.json
+            assembled/Collection_Completeness.json
+            assembled/Archive_Summary.json
+          if-no-files-found: warn
+          retention-days: 14
