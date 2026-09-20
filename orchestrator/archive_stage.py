@@ -32,7 +32,10 @@ from archive_user_dedup_pipeline import run as _deduplicate_user_archive
 from bat_archive import expose as _expose_bat_references
 from envinfo_content_qa import evaluate as _evaluate_envinfo_content_qa
 from envinfo_zero_qa_gate import reconcile as _reconcile_envinfo_zero_qa
-from envinfo_reference_lane import keep_envinfo_out_of_official_annual_lane
+from envinfo_reference_lane import (
+    keep_envinfo_out_of_official_annual_lane,
+    provenance_specific_user_guide,
+)
 from sustainability_korean_delivery_guard import evaluate as _evaluate_korean_annual_delivery
 from human_archive_raw_policy import (
     assert_human_archive_raw_separated as _assert_human_archive_raw_separated,
@@ -51,6 +54,9 @@ _core.archive_builder.copy_system_raw = _suppress_system_raw_copy
 # must all agree that ENV-INFO attachments are NOT corporate annual originals.
 _core.archive_builder.promote_envinfo_references = keep_envinfo_out_of_official_annual_lane(
     _core.archive_builder.promote_envinfo_references
+)
+_core.archive_builder.write_user_indexes = provenance_specific_user_guide(
+    _core.archive_builder.write_user_indexes
 )
 
 _BASE_BUILD_ARCHIVE = _core.build_archive
