@@ -56,7 +56,7 @@ jobs:
       - name: Rebuild human archive using production gate
         run: >-
           python orchestrator/archive_stage.py --package assembled --stable collected/stable --documents requests/document_evidence.json
-      - name: Verify real Korean report acceptance and archive
+      - name: Verify provenance-classified original Korean reports and archive
         run: |
           python - <<'PY'
           import json
@@ -66,8 +66,9 @@ jobs:
           qa=summary['sustainability_korean_delivery_qa']
           assert qa['status']=='PASS' and qa['checked']==6 and qa['pass'], qa
           assert set(x['report_year'] for x in qa['items'])==set(range(2021,2027)), qa
+          assert len(qa['separately_classified_envinfo_attachments']) >= 3, qa
           assert summary['archive_completeness']=='COMPLETE', summary.get('blocking_acceptance_checks')
-          print('REAL_HANWHA_KOREAN_GATE_PASS', qa['checked'], sorted(x['report_year'] for x in qa['items']))
+          print('REAL_HANWHA_KOREAN_GATE_PASS', qa['checked'], 'ENVINFO_ATTACHMENTS_SEPARATE', len(qa['separately_classified_envinfo_attachments']))
           PY
       - name: Upload lightweight regression receipt
         if: always()
