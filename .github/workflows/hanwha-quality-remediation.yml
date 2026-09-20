@@ -4,7 +4,6 @@ on:
   push:
     branches: [run/control-plane]
     paths:
-      - 'tools/hanwha_quality_remediation.py'
       - '.github/workflows/hanwha-quality-remediation.yml'
   workflow_dispatch:
 
@@ -34,7 +33,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh run download 35480886754 --repo "$GITHUB_REPOSITORY" --name icis-attempt-1 --dir /tmp/hanwha-icis-fixture
       - name: Apply guarded shared-source fixes
-        run: python tools/hanwha_quality_remediation.py --apply --test-source-root /tmp/hanwha-icis-fixture
+        run: python tools/hanwha_quality_runner.py --test-source-root /tmp/hanwha-icis-fixture
       - name: Run focused and full archive regressions
         run: |
           python -m compileall -q collectors/chem_stats_collect.py orchestrator/archive_zip_dedup.py orchestrator/archive_builder.py
@@ -44,7 +43,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add collectors/chem_stats_collect.py orchestrator/archive_zip_dedup.py orchestrator/archive_builder.py
+          git add collectors/chem_stats_collect.py orchestrator/archive_zip_dedup.py orchestrator/archive_builder.py tools/hanwha_quality_remediation.py
           git diff --cached --quiet && { echo 'No staged remediation'; exit 1; }
           git commit -m 'Reject empty ICIS details and require official annual report evidence'
           git pull --rebase origin run/control-plane
