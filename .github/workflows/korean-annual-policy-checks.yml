@@ -2,7 +2,11 @@ name: Korean annual report policy tests
 on:
   push:
     branches: [run/control-plane]
-    paths: ['.github/workflows/korean-annual-policy-checks.yml']
+    paths:
+      - '.github/workflows/korean-annual-policy-checks.yml'
+      - 'orchestrator/document_language_preference.py'
+      - 'tests/test_document_language_preference.py'
+      - 'tests/test_document_korean_only_policy.py'
 permissions:
   contents: read
 jobs:
