@@ -1,0 +1,101 @@
+name: Hanwha postfix golden three company strict replay
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/hanwha-postfix-golden-replay.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: kumho
+            company: 금호석유화학
+            source_run: 35099857670
+          - key: hanwha
+            company: 한화에어로스페이스
+            source_run: 35109675322
+          - key: hyosung
+            company: 효성티앤씨
+            source_run: 35112968790
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Download retained historical raw source package
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ matrix.source_run }}
+          name: enterprise-env-final
+          path: source
+          github-token: ${{ github.token }}
+      - name: Prepare source and current archive inputs
+        run: |
+          set -euo pipefail
+          test -s source/Company_Profile.json
+          test -s source/Collection_Completeness.json
+          test -s source/output/ENVINFO/status.json
+          mkdir -p stable evidence delivery
+          cp -a source/output/CORP_DOCS stable/CORP_DOCS
+          if [ -s source/Document_Evidence.json ]; then cp source/Document_Evidence.json evidence/Document_Evidence.json; fi
+          rm -rf source/Human_Archive source/Human_Archive.zip
+          rm -rf source/Application_Materials source/Application_Materials.zip source/delivery
+      - name: Rebuild Human Archive with current common HEAD
+        run: python orchestrator/archive_stage.py --package source --stable stable --documents evidence/Document_Evidence.json
+      - name: Require source, manifest, content and official-report QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          collection=json.loads(Path('source/Collection_Completeness.json').read_text(encoding='utf-8'))
+          archive=json.loads(Path('source/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads(Path('source/Master_Manifest.json').read_text(encoding='utf-8'))
+          qa=archive.get('envinfo_content_qa') or {}
+          cov=archive.get('sustainability_coverage') or {}
+          assert collection.get('status')=='COMPLETE',collection
+          assert archive.get('archive_completeness')=='COMPLETE',archive.get('blocking_acceptance_checks')
+          assert archive.get('blocking_acceptance_checks',{}).get('envinfo_content_fidelity') is True,qa
+          assert qa.get('status')=='PASS' and qa.get('fail_items')==0 and qa.get('expected_items')==qa.get('checked_items'),qa
+          assert manifest.get('human_archive',{}).get('status')=='PASS',manifest.get('human_archive')
+          assert cov.get('coverage_sufficient') is True,cov
+          assert not (set(cov.get('delivered_report_years') or []) & set(cov.get('resolved_without_file_years') or [])),cov
+          Path('PreApp.json').write_text(json.dumps({'collection':collection.get('status'),'archive':archive.get('archive_completeness'),'qa':qa,'annual_coverage':cov},ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Build and validate Application Materials
+        run: |
+          python tools/build_application_material_from_archive.py --input source/Human_Archive.zip --output-dir delivery --source-run "${{ matrix.source_run }}" --package-label "${{ matrix.company }}" --summary-out Application_Materials_Result.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('Application_Materials_Result.json').read_text(encoding='utf-8'))
+          assert result.get('status')=='PASS',result
+          print('GOLDEN_STRICT_PASS='+json.dumps({'company':result['company'],'source_run_id':result['source_run_id'],'archive':'COMPLETE','application_materials':result['status']},ensure_ascii=False))
+          PY
+      - name: Upload compact replay audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanwha-postfix-golden-${{ matrix.key }}
+          path: |
+            PreApp.json
+            Application_Materials_Result.json
+            source/Archive_Summary.json
+          if-no-files-found: warn
+          retention-days: 14
