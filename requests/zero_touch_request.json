@@ -1,4 +1,4 @@
 {
-  "company_name": "효성티앤씨",
-  "rerun_reason": "production-style operational run after acceptance closure; execute current-head zero-touch Discovery -> Collection -> Human Archive content QA -> Application Materials for job-application use"
+  "company_name": "한화에어로스페이스",
+  "rerun_reason": "Fresh production collection and independent physical QA: completeness by year/site/source, original-to-output fidelity, stale DOM false positives, malformed PDFs/tables, cross-entity contamination and reference integrity"
 }
