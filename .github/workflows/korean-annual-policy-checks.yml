@@ -7,11 +7,13 @@ on:
       - 'orchestrator/document_language_preference.py'
       - 'orchestrator/sustainability_korean_delivery_guard.py'
       - 'orchestrator/envinfo_zero_qa_gate.py'
+      - 'orchestrator/envinfo_reference_lane.py'
       - 'orchestrator/archive_stage.py'
       - 'tests/test_document_language_preference.py'
       - 'tests/test_document_korean_only_policy.py'
       - 'tests/test_sustainability_korean_delivery_guard.py'
       - 'tests/test_envinfo_zero_qa_gate.py'
+      - 'tests/test_envinfo_reference_lane.py'
 permissions:
   contents: read
 jobs:
@@ -30,5 +32,6 @@ jobs:
           python -m unittest discover -s tests -p 'test_document_korean_only_policy.py' -v
           python -m unittest discover -s tests -p 'test_sustainability_korean_delivery_guard.py' -v
           python -m unittest discover -s tests -p 'test_envinfo_zero_qa_gate.py' -v
+          python -m unittest discover -s tests -p 'test_envinfo_reference_lane.py' -v
       - name: Full regression suite
         run: python -m unittest discover -s tests -p 'test_*.py' -q
