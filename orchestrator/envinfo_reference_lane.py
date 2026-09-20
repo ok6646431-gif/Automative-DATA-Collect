@@ -1,6 +1,6 @@
 """Keep ENV-INFO report attachments distinct from original corporate annual reports.
 
-The ENV-INFO user folder already contains the original attached files.  Promoted
+The ENV-INFO user folder already contains the original attached files. Promoted
 copies of these same files must not occupy the corporate annual-report lane or
 inflate its minimum-five-files acceptance gate.
 """
@@ -16,9 +16,11 @@ def keep_envinfo_out_of_official_annual_lane(original_promoter):
         for path in created:
             promoted = Path(path)
             if promoted.parent == official_lane:
-                # Provenance is established by the ENV-INFO promoter, not by the
-                # file name or title. The 03 lane has the original attachment.
-                promoted.unlink()
+                # The promoter is the source of provenance, not the file name.
+                # unique_copy can return the same path for several source rows.
+                # Never delete the original attachment in the 03 provenance lane.
+                if promoted.exists():
+                    promoted.unlink()
                 continue
             kept.append(path)
         return kept
