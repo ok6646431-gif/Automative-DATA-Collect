@@ -1,0 +1,187 @@
+name: Hanwha corrected Human Archive recovery
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/hanwha-archive-recovery.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run/control-plane
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Accept declared-empty invalid ICIS detail audit only when failures are zero
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('orchestrator/package_run.py')
+          s=p.read_text(encoding='utf-8')
+          needle='    _core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})[_audit_name] = "source_id_backfill_attempts"\n'
+          assert s.count(needle)==1, 'unexpected core wrapper version'
+          addition='_core.DECLARED_ROW_STREAM_COUNTS.setdefault("CHEM_STATS", {})["invalid_detail_rows.jsonl"] = "detail_fail"\n'
+          assert addition not in s
+          p.write_text(s.replace(needle, needle+'\n# This audit stream is empty only if every discovered detail passed validation.\n'+addition), encoding='utf-8')
+          PY
+          python - <<'PY'
+          import sys
+          sys.path.insert(0,'orchestrator')
+          import package_run
+          from package_run_core import declared_empty_row_stream
+          assert declared_empty_row_stream('CHEM_STATS','invalid_detail_rows.jsonl',{'detail_fail':0})
+          assert not declared_empty_row_stream('CHEM_STATS','invalid_detail_rows.jsonl',{'detail_fail':1})
+          assert not declared_empty_row_stream('PRTR','invalid_detail_rows.jsonl',{'detail_fail':0})
+          print('EMPTY_INVALID_DETAIL_AUDIT_CONTRACT_PASS')
+          PY
+          python -m compileall -q orchestrator/package_run.py
+          python -m unittest discover -s tests -p 'test_*.py' -q
+          git diff --check
+      - name: Commit tested zero-length audit contract to common code
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add orchestrator/package_run.py
+          git commit -m 'Treat empty rejected-detail audit as expected when detail failures are zero'
+          git pull --rebase origin run/control-plane
+          git push origin HEAD:run/control-plane
+      - name: Download corrected fresh stable public sources
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35482930612
+          name: stable-public-sources
+          path: collected/stable
+          github-token: ${{ github.token }}
+      - name: Reuse verified official documents from September 16 collection
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35109675322
+          name: stable-corporate-documents
+          path: collected/stable
+          github-token: ${{ github.token }}
+      - name: Validate retained report provenance and content hashes
+        run: |
+          python - <<'PY'
+          import csv,hashlib,json
+          from pathlib import Path
+          root=Path('collected/stable/CORP_DOCS')
+          st=json.loads((root/'status.json').read_text(encoding='utf-8'))
+          assert st['status']=='DATA_FOUND' and st['downloaded']==9 and st['failed']==0,st
+          rows=list(csv.DictReader((root/'document_index.csv').open(encoding='utf-8-sig',newline='')))
+          annual={}
+          for r in rows:
+              assert r['collection_status']=='DOWNLOADED' and r['verification_status']=='SOURCE_VERIFIED',r
+              rel=Path(r['stored_path'])
+              assert rel.parts[:2]==('output','CORP_DOCS'),rel
+              p=root.joinpath(*rel.parts[2:]); assert p.is_file(),p
+              assert p.stat().st_size==int(r['bytes']),p
+              assert hashlib.sha256(p.read_bytes()).hexdigest()==r['sha256'],p
+              if r['document_type']=='SUSTAINABILITY_REPORT': annual[int(r['report_year'])]=p
+          assert set(annual)==set(range(2021,2027)),sorted(annual)
+          gap=json.loads((root/'discovery_gaps.json').read_text(encoding='utf-8'))
+          assert any(str(x.get('report_year') or x.get('year'))=='2020' and str(x.get('document_type')).upper()=='SUSTAINABILITY_REPORT' for x in gap),gap
+          print('RETAINED_CORP_DOCS_VERIFIED: origin_run=35109675322, downloaded=2026-09-16, official_annual=2021..2026, 2020=separate_gap')
+          PY
+      - name: Download corrected fresh ICIS attempt
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35482930612
+          name: icis-attempt-2
+          path: collected/icis/icis-attempt-2
+          github-token: ${{ github.token }}
+      - name: Bootstrap current same-company scope
+        run: >-
+          python orchestrator/bootstrap_inputs.py
+          --profile-out requests/runtime/company_profile.generated.json
+          --request-out requests/current.generated.json
+          --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Check corrected ICIS row count and site evidence
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          d=Path('collected/icis/icis-attempt-2/CHEM_STATS')
+          s=json.loads((d/'status.json').read_text(encoding='utf-8'))
+          rows=list(csv.DictReader((d/'discovery.csv').open(encoding='utf-8-sig',newline='')))
+          assert s['detail_fail']==0 and s['detail_ok']==19 and s['rows']==19 and len(rows)==19,s
+          assert s['source_id_no_data_confirmed']==5,s
+          assert (d/'invalid_detail_rows.jsonl').exists() and (d/'invalid_detail_rows.jsonl').stat().st_size==0
+          print('CORRECTED_CHEM_STATS_19_PASS')
+          PY
+      - name: Assemble new sources with retained verified reports
+        run: >-
+          python orchestrator/package_run.py
+          --stable collected/stable
+          --icis collected/icis
+          --profile requests/runtime/company_profile.generated.json
+          --out assembled
+      - name: Build human archive
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents requests/document_evidence.json
+      - name: Strictly verify corrected archive acceptance and year coverage
+        run: |
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          root=Path('assembled')
+          collection=json.loads((root/'Collection_Completeness.json').read_text(encoding='utf-8'))
+          summary=json.loads((root/'Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads((root/'Master_Manifest.json').read_text(encoding='utf-8'))
+          qa=summary.get('envinfo_content_qa') or {}
+          cov=summary.get('sustainability_coverage') or {}
+          assert collection.get('status')=='COMPLETE',collection
+          assert summary.get('archive_completeness')=='COMPLETE',summary.get('blocking_acceptance_checks')
+          assert manifest.get('human_archive',{}).get('status')=='PASS',manifest.get('human_archive')
+          assert qa.get('status')=='PASS' and qa.get('fail_items')==0 and qa.get('checked_items')==qa.get('expected_items'),qa
+          assert cov.get('coverage_sufficient') is True,cov
+          assert set(range(2021,2027)).issubset(set(cov.get('delivered_report_years') or [])),cov
+          assert 2020 not in set(cov.get('delivered_report_years') or []),cov
+          assert 2020 in set(cov.get('resolved_without_file_years') or []),cov
+          p=root/'Human_Archive.zip';assert p.is_file() and p.stat().st_size>0,p
+          with zipfile.ZipFile(p) as z: assert z.testzip() is None
+          evidence={'status':'PASS','company':'한화에어로스페이스','corrected_public_source_run':35482930612,'retained_official_document_run':35109675322,'retained_official_document_retrieved_date':'2026-09-16','collection':collection['status'],'archive':summary['archive_completeness'],'envinfo_qa':qa,'annual_coverage':cov,'human_archive_bytes':p.stat().st_size}
+          (root/'Recovery_Validation.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('HANWHA_CORRECTED_HUMAN_ARCHIVE_PASS='+json.dumps(evidence,ensure_ascii=False))
+          PY
+      - name: Upload corrected Human Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanwha-corrected-human-archive
+          path: assembled/Human_Archive.zip
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload provenance and strict QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanwha-corrected-human-qa
+          path: |
+            assembled/Recovery_Validation.json
+            assembled/Archive_Summary.json
+            assembled/Collection_Completeness.json
+            assembled/REVIEW_REQUIRED.json
+          retention-days: 14
+          if-no-files-found: warn
