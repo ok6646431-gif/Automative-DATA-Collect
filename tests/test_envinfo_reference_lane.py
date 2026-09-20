@@ -46,6 +46,21 @@ class EnvinfoReferenceLaneTests(unittest.TestCase):
             self.assertEqual(fn(None, root, {}, ''), [])
             self.assertFalse(copied.exists())
 
+    def test_repeated_source_rows_share_one_promoted_path_without_double_unlink(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            official = root / '01_사용자자료' / '04_지속가능경영보고서'
+            original = root / '01_사용자자료' / '03_환경정보공개시스템' / '사업장' / '첨부자료' / '보고서.pdf'
+            official.mkdir(parents=True)
+            original.parent.mkdir(parents=True)
+            original.write_bytes(b'original preserved')
+            copied = official / 'ENVINFO공개연도_2022_보고서.pdf'
+            copied.write_bytes(original.read_bytes())
+            fn = keep_envinfo_out_of_official_annual_lane(lambda *_: [copied, copied])
+            self.assertEqual(fn(None, root, {}, ''), [])
+            self.assertFalse(copied.exists())
+            self.assertTrue(original.exists())
+
 
 if __name__ == '__main__':
     unittest.main()
