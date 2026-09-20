@@ -20,9 +20,9 @@ class DocumentLanguagePreferenceTests(unittest.TestCase):
         }]
         out,audit=prefer_korean_sustainability(discovery,docs)
         self.assertEqual(out[0]['source_url'],'https://issuer.example/kr/SR_2024_kr.pdf')
-        self.assertEqual(out[0]['language_preference'],'KO_PREFERRED')
-        self.assertTrue(any(x.get('source_url','').endswith('_en.pdf') for x in out[0]['fallback_sources']))
-        self.assertEqual(audit['changes'][0]['action'],'PROMOTED_KOREAN_FALLBACK')
+        self.assertEqual(out[0]['language_preference'],'KO_REQUIRED_VERIFIED_ROUTE')
+        self.assertFalse(any(x.get('source_url','').endswith('_en.pdf') for x in out[0]['fallback_sources']))
+        self.assertEqual(audit['changes'][0]['action'],'PROMOTED_KOREAN_PRIMARY_DROPPED_NON_KOREAN_FALLBACKS')
 
     def test_dedupes_same_year_to_korean_verified_primary(self):
         discovery={'requested_company_name':'예시회사'}
@@ -34,15 +34,15 @@ class DocumentLanguagePreferenceTests(unittest.TestCase):
         annual=[d for d in out if d.get('document_type')=='SUSTAINABILITY_REPORT']
         self.assertEqual(len(annual),1)
         self.assertEqual(route_language(annual[0]),'KO')
-        self.assertTrue(any(x.get('source_url','').endswith('_en.pdf') for x in annual[0].get('fallback_sources',[])))
+        self.assertFalse(any(x.get('source_url','').endswith('_en.pdf') for x in annual[0].get('fallback_sources',[])))
         self.assertTrue(any(x['action']=='DEDUPED_TO_KOREAN_PRIMARY' for x in audit['changes']))
 
-    def test_non_korean_issuer_is_unchanged(self):
+    def test_english_only_non_korean_issuer_is_not_an_exception_to_user_preference(self):
         discovery={'current_legal_name':'Example Corp.'}
         docs=[{'document_type':'SUSTAINABILITY_REPORT','report_year':2024,'verification_status':'VERIFIED','source_url':'https://issuer.example/en/report_en.pdf'}]
         out,audit=prefer_korean_sustainability(discovery,docs)
-        self.assertEqual(out,docs)
-        self.assertEqual(audit['status'],'NOT_APPLICABLE_NON_KOREAN_ISSUER')
+        self.assertEqual(out[0]['verification_status'],'LANGUAGE_REVIEW_REQUIRED')
+        self.assertEqual(audit['korean_route_unverified_years'],[2024])
 
 
 if __name__=='__main__':
