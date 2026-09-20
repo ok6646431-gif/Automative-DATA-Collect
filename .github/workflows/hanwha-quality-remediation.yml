@@ -54,3 +54,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run collect.yml --repo "$GITHUB_REPOSITORY" --ref run/control-plane
+# Fixture update: synthetic official source files must exist before report coverage QA.
