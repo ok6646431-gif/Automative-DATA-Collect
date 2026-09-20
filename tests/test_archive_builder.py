@@ -1,8 +1,11 @@
 import csv, json, sys, tempfile, unittest
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"orchestrator"))
+import archive_builder
 from archive_builder import build_archive
+from envinfo_reference_lane import keep_envinfo_out_of_official_annual_lane
 
 
 def write_csv(path, rows):
@@ -63,11 +66,15 @@ class ArchiveBuilderTests(unittest.TestCase):
                 "source_locator":"https://official.example/report.pdf","retrieved_at":"2025-06-02T00:00:00Z","bytes":str(pdf.stat().st_size),"sha256":"dummy2","content_type":"application/pdf","verification_status":"VERIFIED","collection_status":"DOWNLOADED","notes":""
             }])
 
-            summary=build_archive(root)
+            # Exercise the production provenance contract in isolation, independent
+            # of other tests importing the archive_stage module in a different order.
+            segregated = keep_envinfo_out_of_official_annual_lane(archive_builder.promote_envinfo_references)
+            with patch.object(archive_builder, 'promote_envinfo_references', segregated):
+                summary=build_archive(root)
             archive=root/"Human_Archive"/"테스트화학_환경자료"
             self.assertTrue((archive/"01_사용자자료"/"03_환경정보공개시스템"/"테스트공장"/"첨부자료"/"2024_조직도.png").exists())
             self.assertTrue((archive/"01_사용자자료"/"03_환경정보공개시스템"/"테스트공장"/"첨부자료"/"2024_지속가능경영보고서.pdf").exists())
-            self.assertTrue((archive/"01_사용자자료"/"04_지속가능경영보고서"/"ENVINFO공개연도_2024_지속가능경영보고서.pdf").exists())
+            self.assertFalse((archive/"01_사용자자료"/"04_지속가능경영보고서"/"ENVINFO공개연도_2024_지속가능경영보고서.pdf").exists())
             # Collector raw evidence remains externally preserved under output/ and must
             # never be copied into the human-facing archive.
             self.assertTrue((root/"output"/"ENVINFO"/"raw_detail"/"2024_C1_테스트공장.html").exists())
@@ -80,7 +87,7 @@ class ArchiveBuilderTests(unittest.TestCase):
             self.assertTrue((root/"Human_Archive.zip").exists())
             self.assertEqual(summary["schema_version"],"2.0")
             self.assertEqual(summary["downloaded_documents"],1)
-            self.assertEqual(summary["envinfo_promoted_references"],1)
+            self.assertEqual(summary["envinfo_promoted_references"],0)
 
 
 if __name__=="__main__": unittest.main()
