@@ -229,7 +229,27 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
     profile=read_json(package_root/'Company_Profile.json',{}) or {}
     docs=read_csv(package_root/'output'/'CORP_DOCS'/'document_index.csv')
     folder=archive_root/'01_사용자자료'/'04_지속가능경영보고서'
-    paths=[p for p in sorted(folder.rglob('*')) if p.is_file()] if folder.exists() else []
+    # Only a verified, downloaded official annual report can satisfy annual coverage.
+    # ENV-INFO attachments (e.g. an ESG rating brief) may be stored in the same
+    # user folder but must not masquerade as an official annual report.
+    official={}
+    for row in docs:
+        if str(row.get('document_type') or '').upper()!='SUSTAINABILITY_REPORT': continue
+        if str(row.get('collection_status') or '').upper()!='DOWNLOADED': continue
+        if str(row.get('verification_status') or '').upper() not in STRONG_VERIFICATION: continue
+        year=_gap_year(row.get('report_year'))
+        src=package_root/str(row.get('stored_path') or '')
+        if year is None or not src.is_file(): continue
+        official.setdefault(year,[]).append((src.suffix.lower(),sha256(src)))
+    paths=[]
+    for p in sorted(folder.rglob('*')) if folder.exists() else []:
+        if not p.is_file() or p.suffix.lower()!='.pdf': continue
+        year=_gap_year(p.name)
+        if year not in official: continue
+        digest=sha256(p)
+        matches=any(digest==source_hash for _,source_hash in official[year])
+        rendered=any(ext in {'.html','.htm'} for ext,_ in official[year]) and re.search(r'_지속가능경영보고서_'+str(year)+r'\.pdf$',p.name)
+        if matches or rendered: paths.append(p)
     coverage=evaluate_sustainability_coverage(profile,docs,paths)
 
     resolved=set(_resolved_sustainability_gap_years(package_root))
@@ -237,11 +257,13 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
     delivered=set(coverage.get('delivered_report_years') or [])
     resolved_in_target=sorted(target & resolved)
     missing=sorted(target - delivered - set(resolved_in_target))
+    overlap=sorted(delivered & set(resolved_in_target))
     coverage['resolved_without_file_years']=resolved_in_target
+    coverage['conflicting_delivered_and_unpublished_years']=overlap
     coverage['missing_target_years']=missing
     if coverage.get('state') in {'FILE_COVERAGE_COMPLETE','FILE_COVERAGE_PARTIAL'}:
-        coverage['coverage_sufficient']=not missing
-        coverage['state']='FILE_COVERAGE_COMPLETE' if not missing else 'FILE_COVERAGE_PARTIAL'
+        coverage['coverage_sufficient']=not missing and not overlap
+        coverage['state']='FILE_COVERAGE_COMPLETE' if not missing and not overlap else 'FILE_COVERAGE_PARTIAL'
     coverage['principle']=(
         'Every year in the verified/requested annual series must be delivered or explicitly resolved; '
         'verified non-blocking NOT_PUBLISHED/NO_PUBLIC_DOCUMENT/NO_DATA_CONFIRMED years are resolved '

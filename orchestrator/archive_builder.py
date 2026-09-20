@@ -618,7 +618,7 @@ def promote_envinfo_references(package_root,archive_root,scope,company_name):
         year=str(att.get('year') or '연도미상')
         folder=None
         if src.suffix.lower()=='.pdf' and (section_id=='inquiry26' or '환경(지속가능)보고서' in section_title):
-            folder=user/'04_지속가능경영보고서'
+            folder=(user/'06_회사환경정책'/'기타_공식자료'/'ENVINFO_평가자료' if 'ESG평가' in original else user/'04_지속가능경영보고서')
         elif category=='CHEMICAL_MANAGEMENT':
             folder=user/'06_회사환경정책'/'화학물질관리'/'ENVINFO_공개근거'
         elif category=='ENV_POLICY_GOAL' or section_id=='inquiry03':

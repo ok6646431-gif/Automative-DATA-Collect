@@ -70,7 +70,7 @@ def source_detail_identity(html):
 '''
     text = text[:begin] + after + text[end:]
     collector.write_text(text, encoding='utf-8')
-    replace_once(collector, '"search_year":y,"bplcId":bid,"bplcNm":"","locplcAdres":"', '"search_year":y,"bplcId":bid,**source_detail_identity(txt)')
+    replace_once(collector, '"search_year":y,"bplcId":bid,"bplcNm":"","locplcAdres":"",', '"search_year":y,"bplcId":bid,**source_detail_identity(txt),')
     # Do not expose unvalidated discovery candidates to identity/scope builders.
     path = collector
     text = path.read_text(encoding='utf-8')

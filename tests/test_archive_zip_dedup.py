@@ -105,14 +105,18 @@ class ArchiveZipDedupTests(unittest.TestCase):
                 'requested_history_window':{'start_year':2020,'end_year':2026},
             }),encoding='utf-8')
             rows=[]
+            official=docs/'raw_documents'; official.mkdir()
             for year in [2022,2023,2024,2025]:
-                (reports/f'기업_지속가능경영보고서_{year}.pdf').write_bytes(b'%PDF-test')
+                payload=b'%PDF-test'
+                (reports/f'기업_지속가능경영보고서_{year}.pdf').write_bytes(payload)
+                (official/f'{year}.pdf').write_bytes(payload)
                 rows.append({
                     'document_type':'SUSTAINABILITY_REPORT','title':f'report {year}','report_year':str(year),
                     'verification_status':'VERIFIED','collection_status':'DOWNLOADED',
+                    'stored_path':f'output/CORP_DOCS/raw_documents/{year}.pdf',
                 })
             with (docs/'document_index.csv').open('w',encoding='utf-8-sig',newline='') as f:
-                w=csv.DictWriter(f,fieldnames=['document_type','title','report_year','verification_status','collection_status'])
+                w=csv.DictWriter(f,fieldnames=['document_type','title','report_year','verification_status','collection_status','stored_path'])
                 w.writeheader(); w.writerows(rows)
             (docs/'discovery_gaps.json').write_text(json.dumps([{
                 'document_type':'SUSTAINABILITY_REPORT','report_year':2026,

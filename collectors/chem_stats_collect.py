@@ -47,22 +47,41 @@ def generic_tables(html,year,bid):
 
 
 def substantive_detail(html,bid):
-    """Return true only when a facility/year detail page contains real disclosed rows.
-
-    ICIS returns the same page shell even for an invented/nonexistent bplcId.  Length
-    and hidden bplcId therefore cannot validate a record.  A real disclosed survey
-    record must contain at least one non-empty data row in the product/chemical tables
-    (tables 3+ in the current source markup).
-    """
+    """An ICIS shell/empty-product row is not survey data, even at HTTP 200."""
     if str(bid) not in html:
         return False,0
-    soup=BeautifulSoup(html,"html.parser"); count=0
-    for table in soup.find_all("table")[2:]:
+    soup=BeautifulSoup(html,"html.parser"); tables=soup.find_all("table"); count=0
+    # First two tables contain facility metadata, not disclosed products/substances.
+    for table in tables[2:]:
         for tr in table.find_all("tr"):
             tds=tr.find_all("td")
-            if tds and any(td.get_text(" ",strip=True) for td in tds):
-                count+=1
+            if not tds: continue
+            cells=[td.get_text(" ",strip=True) for td in tds]
+            substantive=" ".join(cells).strip()
+            normalized=re.sub(r"[\s\.。]+", "", substantive)
+            # The source serves these placeholders as ordinary <td> cells.
+            if not normalized or normalized in {"제품이없습니다", "물질이없습니다", "해당사항없음", "자료가없습니다", "정보가없습니다"}:
+                continue
+            if not re.search(r"[0-9A-Za-z가-힣]", substantive):
+                continue
+            count+=1
     return count>0,count
+
+
+def source_detail_identity(html):
+    """Preserve year-native legal/facility names separately from a newer ID anchor."""
+    soup=BeautifulSoup(html,"html.parser")
+    tables=soup.find_all("table")
+    result={"bplcNm":"", "locplcAdres":""}
+    if not tables: return result
+    labels={"업체명":"bplcNm", "소재지":"locplcAdres"}
+    for tr in tables[0].find_all("tr"):
+        parts=tr.find_all(["th","td"],recursive=False)
+        for idx,cell in enumerate(parts[:-1]):
+            label=re.sub(r"\s+","",cell.get_text(" ",strip=True))
+            if cell.name=="th" and label in labels and parts[idx+1].name=="td":
+                result[labels[label]]=parts[idx+1].get_text(" ",strip=True)
+    return result
 
 
 def write_jsonl(path,rows):
@@ -145,7 +164,7 @@ def main(req_path):
                         if valid:
                             target=details/f"{y}_{safe(bid)}.html"; target.write_text(txt,encoding="utf-8"); detail_cache[(y,bid)]=txt
                             dedup[(y,bid)]={
-                                "search_year":y,"bplcId":bid,"bplcNm":"","locplcAdres":"",
+                                "search_year":y,"bplcId":bid,**source_detail_identity(txt),
                                 "search_terms_hit":"SOURCE_NATIVE_ID_BACKFILL","discovery_basis":"SOURCE_NATIVE_ID_BACKFILL",
                                 "identity_anchor_year":anchor.get("search_year"),
                                 "identity_anchor_bplcNm":field_ci(anchor,"bplcnm",""),
@@ -159,10 +178,6 @@ def main(req_path):
                     time.sleep(float(cfg.get("request_delay_ms",80))/1000)
 
         rows=list(dedup.values())
-        if rows:
-            keys=sorted({k for r in rows for k in r})
-            with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f: w=csv.DictWriter(f,fieldnames=keys,extrasaction="ignore"); w.writeheader(); w.writerows(rows)
-            write_jsonl(out/"discovery.jsonl",rows)
         write_jsonl(out/"excluded_rows.jsonl",excluded_rows)
         write_jsonl(out/"scope_rejected_rows.jsonl",scope_rejected_rows)
         write_jsonl(out/"source_id_backfill_audit.jsonl",backfill_audit)
@@ -170,7 +185,7 @@ def main(req_path):
         # 3) Collect/validate the actual detail artifact for every discovered or
         # source-ID-backfilled facility-round. The same substantive-table validation
         # is used here, so a generic empty ICIS shell cannot count as success.
-        detail_ok=0; detail_fail=0; table_rows=[]
+        detail_ok=0; detail_fail=0; table_rows=[]; valid_pairs=set()
         if cfg.get("collect_details",True):
             for source_row in rows:
                 y=int(source_row["search_year"]); bid=str(field_ci(source_row,"bplcid",None) or source_row.get("bplcId") or ""); term=str(source_row.get("search_terms_hit","")).split("|")[0]
@@ -181,13 +196,29 @@ def main(req_path):
                         d=s.get(DETAIL,params=detail_params(y,bid,"" if term=="SOURCE_NATIVE_ID_BACKFILL" else term),headers={"Referer":BASE+"/pageLink.do"},timeout=(8,25)); d.raise_for_status(); txt=d.text
                         (details/f"{y}_{safe(bid)}.html").write_text(txt,encoding="utf-8")
                     valid,_=substantive_detail(txt,bid)
-                    if valid: detail_ok+=1; table_rows.extend(generic_tables(txt,y,bid))
+                    if valid:
+                        detail_ok+=1; valid_pairs.add((y,bid)); table_rows.extend(generic_tables(txt,y,bid))
+                        native=source_detail_identity(txt)
+                        if native["bplcNm"]: source_row["bplcNm"]=native["bplcNm"]
+                        if native["locplcAdres"]: source_row["locplcAdres"]=native["locplcAdres"]
                     else:
                         detail_fail+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DETAIL_INVALID\t{y}\t{bid}\tempty_or_shell_response\n")
                 except Exception as e:
                     detail_fail+=1; status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DETAIL\t{y}\t{bid}\t{type(e).__name__}\t{e}\n")
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
 
+        accepted=[r for r in rows if (int(r["search_year"]), str(field_ci(r,"bplcid",None) or r.get("bplcId") or "")) in valid_pairs]
+        rejected=[r for r in rows if (int(r["search_year"]), str(field_ci(r,"bplcid",None) or r.get("bplcId") or "")) not in valid_pairs]
+        write_jsonl(out/"invalid_detail_rows.jsonl",rejected)
+        if accepted:
+            keys=sorted({k for r in accepted for k in r})
+            with (out/"discovery.csv").open("w",newline="",encoding="utf-8-sig") as f:
+                w=csv.DictWriter(f,fieldnames=keys,extrasaction="ignore"); w.writeheader(); w.writerows(accepted)
+            write_jsonl(out/"discovery.jsonl",accepted)
+        else:
+            (out/"discovery.csv").unlink(missing_ok=True)
+            write_jsonl(out/"discovery.jsonl",[])
+        rows=accepted
         write_jsonl(out/"detail_table_rows.jsonl",table_rows)
         ids={str(field_ci(r,"bplcid","") or r.get("bplcId") or "") for r in rows}
         status.update({

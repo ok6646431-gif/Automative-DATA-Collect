@@ -20,18 +20,22 @@ class ScopeConsistencyFinalTests(unittest.TestCase):
             archive = root / "archive"
             reports = archive / "01_사용자자료" / "04_지속가능경영보고서"
             reports.mkdir(parents=True)
+            official = root / 'output' / 'CORP_DOCS' / 'raw_documents'
+            official.mkdir(parents=True)
             for y in range(2020, 2027):
-                (reports / f"report_{y}.pdf").write_bytes(b"%PDF-1.4\n" + b"x" * 300)
+                payload=b"%PDF-1.4\n" + b"x" * 300
+                (reports / f"report_{y}.pdf").write_bytes(payload)
+                (official / f"report_{y}.pdf").write_bytes(payload)
             (root / "Company_Profile.json").write_text(json.dumps({
                 "requested_history_window": {"start_year": 2020, "end_year": 2026}
             }), encoding="utf-8")
             docs_dir = root / "output" / "CORP_DOCS"
-            docs_dir.mkdir(parents=True)
+            docs_dir.mkdir(parents=True,exist_ok=True)
             docs = [
-                "document_id,document_type,report_year,collection_status,stored_path\n"
+                "document_id,document_type,report_year,collection_status,verification_status,stored_path\n"
             ]
             for y in range(2020, 2027):
-                docs.append(f"D{y},SUSTAINABILITY_REPORT,{y},DOWNLOADED,report_{y}.pdf\n")
+                docs.append(f"D{y},SUSTAINABILITY_REPORT,{y},DOWNLOADED,VERIFIED,output/CORP_DOCS/raw_documents/report_{y}.pdf\n")
             (docs_dir / "document_index.csv").write_text("".join(docs), encoding="utf-8-sig")
             summary = {
                 "acceptance_checks": {
