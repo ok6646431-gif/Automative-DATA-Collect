@@ -59,10 +59,10 @@ jobs:
       - name: Rebuild human archive using production gate
         run: >-
           python orchestrator/archive_stage.py --package assembled --stable collected/stable --documents requests/document_evidence.json
-      - name: Verify official Korean reports and distinct ENVINFO attachment folder in final ZIP
+      - name: Verify official Korean originals and central ENVINFO source references in final ZIP
         run: |
           python - <<'PY'
-          import json, zipfile
+          import csv, io, json, zipfile
           from pathlib import Path
           root = Path('assembled')
           summary = json.loads((root/'Archive_Summary.json').read_text(encoding='utf-8'))
@@ -71,14 +71,22 @@ jobs:
           assert set(x['report_year'] for x in qa['items']) == set(range(2021, 2027)), qa
           assert not qa['separately_classified_envinfo_attachments'], qa
           assert summary['archive_completeness'] == 'COMPLETE', summary.get('blocking_acceptance_checks')
+          prefix = summary['archive_root'] + '/'
           with zipfile.ZipFile(root/'Human_Archive.zip') as z:
-              names = z.namelist()
-              annual = [n for n in names if '/01_사용자자료/04_지속가능경영보고서/' in n and n.endswith('.pdf')]
-              envinfo = [n for n in names if '/01_사용자자료/03_환경정보공개시스템/' in n and '/첨부자료/' in n and n.endswith('.pdf')]
+              names = set(z.namelist())
+              annual = [n for n in names if n.startswith(prefix+'01_사용자자료/04_지속가능경영보고서/') and n.endswith('.pdf')]
+              originals = [n for n in names if n.startswith(prefix+'01_사용자자료/03_환경정보공개시스템/첨부자료_원문/') and n.endswith('.pdf')]
               assert len(annual) == 6, annual
               assert all('ENVINFO공개연도_' not in n for n in annual), annual
-              assert envinfo, 'original ENVINFO attachments disappeared'
-          print('REAL_HANWHA_DISTINCT_REPORT_LANES_PASS official=',len(annual),'envinfo=',len(envinfo))
+              assert originals, 'canonical ENVINFO original PDFs absent from centralized source folder'
+              refs_path = prefix+'00_자료목록/ENVINFO_첨부자료_참조표.csv'
+              assert refs_path in names, 'ENVINFO source-to-canonical path reference table missing'
+              with z.open(refs_path) as raw:
+                  refs = list(csv.DictReader(io.TextIOWrapper(raw, encoding='utf-8-sig')))
+              assert refs, 'ENVINFO reference table is empty'
+              missing = [r['최종_보존경로'] for r in refs if prefix+r['최종_보존경로'] not in names]
+              assert not missing, ('ENVINFO reference target missing', missing[:10])
+          print('REAL_HANWHA_DISTINCT_REPORT_LANES_PASS official=',len(annual), 'envinfo_originals=',len(originals), 'references=',len(refs))
           PY
       - name: Upload lightweight regression receipt
         if: always()
