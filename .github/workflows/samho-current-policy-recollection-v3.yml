@@ -1,0 +1,155 @@
+name: HD Samho six-year verified Korean source recollection
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/samho-current-policy-recollection-v3.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  collect_and_deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source and archive dependencies
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Restore Samho entity discovery and independently located official Korean original URLs
+        run: |
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/company_discovery.json > requests/company_discovery.json
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/document_evidence.json > requests/document_evidence.json
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/event_evidence.json > requests/event_evidence.json
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path('requests/document_evidence.json'); d=json.loads(p.read_text())
+          by_id={x['document_id']:x for x in d['documents']}
+          r=by_id['HSHI_SUSTAINABILITY_2024']
+          r.update(source_url='https://esg.hd.com/upload/admin/report/1751269469350/2024%20HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%20%28KOR%29.pdf',source_locator='https://esg.hd.com/ko/esg-library/report',notes='Official KOR report candidate; real PDF body must pass archive QA.')
+          r=by_id['HSHI_INTEGRATED_2020']
+          r.update(source_url='https://www.hd-samho.com/download.do?path=%2FAttachUP%2FREPORT&rn=1606291030474.pdf&dn=2020_KSOE_IR_KR.pdf',source_locator='https://www.hd-samho.com/bbs/report_policy1/list.do',notes='Original listed as 2020 publication; do not equate report publication year with FY2020 performance.')
+          r=by_id['HSHI_ESG_HIGHLIGHTS_2021']
+          original_highlight=dict(r)
+          r.update(document_id='HSHI_INTEGRATED_2021',title='2021 한국조선해양 통합보고서 (2022년 발간) - 현대삼호중공업 포함',source_url='https://www.hd-samho.com/download.do?path=%2FAttachUP%2FREPORT&rn=1664850287608.pdf&dn=2021%EB%85%84+%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91+%ED%86%B5%ED%95%A9%EB%B3%B4%EA%B3%A0%EC%84%9C-2022%EB%85%84+%EB%B0%9C%EA%B0%84.pdf',notes='Official full Korean integrated annual report; reporting year 2021, publication year 2022.')
+          original_highlight.update(document_type='ENVIRONMENTAL_MANAGEMENT',importance='SUPPORTING',notes='Company ESG highlights, a supplementary booklet, NOT an independent annual integrated report.')
+          d['documents'].append(original_highlight)
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          p=Path('requests/company_discovery.json'); c=json.loads(p.read_text())
+          assert c['requested_company_name']=='HD현대삼호' and len(c['requested_scope']['candidate_ids'])==1
+          s=next(x for x in c['domestic_site_candidates'] if x['candidate_id']==c['requested_scope']['candidate_ids'][0])
+          assert '대불로 93' in s['address_raw']
+          s['original_site_name_raw']=s['site_name_raw']
+          s['site_name_raw']='에이치디현대삼호'
+          s['source_locator']='https://www.hd-samho.com/'
+          p.write_text(json.dumps(c,ensure_ascii=False,indent=2)+'\n')
+          PY
+          python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Collect fresh public environment and company source documents
+        run: |
+          python collectors/envinfo_collect.py requests/current.generated.json || true
+          python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root . || true
+          python collectors/soosiro_collect.py requests/current.generated.json || true
+          python collectors/cleansys_collect.py requests/current.generated.json || true
+          mkdir -p collected/stable
+          for source in ENVINFO SOOSIRO_WATER CLEANSYS_AIR; do
+            test -s "output/$source/status.json" || exit 1
+            cp -a "output/$source" collected/stable/
+          done
+          python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json || true
+          test -s output/CORP_DOCS/status.json
+          cp -a output/CORP_DOCS collected/stable/
+      - name: Collect latest PRTR and chemical statistical disclosures
+        run: |
+          python collectors/prtr_collect.py requests/current.generated.json || true
+          python collectors/chem_stats_collect.py requests/current.generated.json || true
+          mkdir -p collected/icis/icis-attempt-1
+          for source in PRTR CHEM_STATS; do
+            test -s "output/$source/status.json" || exit 1
+            cp -a "output/$source" collected/icis/icis-attempt-1/
+          done
+      - name: Preserve new collector originals for retry and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v3-original-collections
+          path: |
+            collected/stable/
+            collected/icis/
+            requests/document_evidence.json
+            requests/company_discovery.json
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+      - name: Assemble master evidence and enforce one resolved canonical Yeongam site
+        run: |
+          python orchestrator/package_run.py --stable collected/stable --icis collected/icis --profile requests/runtime/company_profile.generated.json --out assembled
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('assembled/Requested_Scope.json').read_text())
+          assert len(s['target_canonical_site_ids'])==1 and not s['unresolved_candidates'],s
+          assert all(s['target_source_ids'].get(x) for x in ('ENVINFO','PRTR','CHEM_STATS')),s
+          print('SAMHO_VERIFIED_CANONICAL_SITE',s['target_canonical_site_ids'])
+          PY
+      - name: Build user-facing archive with real Korean PDF and ENVINFO original checks
+        run: >-
+          python orchestrator/archive_stage.py --package assembled --stable collected/stable --documents requests/document_evidence.json
+      - name: Build application materials and verify strict final archive acceptance
+        run: |
+          python tools/build_application_material_from_archive.py --input assembled/Human_Archive.zip --output-dir application-delivery --source-run '${{ github.run_id }}' --summary-out application-delivery/application_package_result.json
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          s=json.loads(Path('assembled/Archive_Summary.json').read_text()); q=s.get('sustainability_korean_delivery_qa') or {}
+          assert q.get('pass') is True and set(x['report_year'] for x in q['items'])==set(range(2020,2026)),q
+          assert s.get('archive_completeness')=='COMPLETE',s.get('acceptance_checks')
+          assert (s.get('envinfo_content_qa') or {}).get('pass') is True,s.get('envinfo_content_qa')
+          a=json.loads(Path('application-delivery/application_package_result.json').read_text())
+          assert a['status']=='PASS',a
+          with zipfile.ZipFile('assembled/Human_Archive.zip') as z:
+            assert z.testzip() is None
+            annual=[n for n in z.namelist() if '/01_사용자자료/04_지속가능경영보고서/' in n and n.lower().endswith('.pdf')]
+            assert len(annual)==6 and all('ENVINFO공개연도_' not in n for n in annual),annual
+          print('SAMHO_2020_2025_KOREAN_ORIGINALS_PASS',len(annual),'APPLICATION_PASS')
+          PY
+      - name: Upload independently inspectable QA results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v3-qa-receipt
+          path: |
+            assembled/*.json
+            assembled/*.csv
+            output/CORP_DOCS/document_index.csv
+            application-delivery/application_package_result.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Upload only strictly validated Korean Human Archive
+        if: ${{ success() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v3-verified-human-archive
+          path: assembled/Human_Archive.zip
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload only strictly validated application dataset
+        if: ${{ success() && hashFiles('application-delivery/*.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v3-verified-application-materials
+          path: application-delivery/
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
