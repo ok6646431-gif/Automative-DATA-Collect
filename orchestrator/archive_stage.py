@@ -36,6 +36,7 @@ from envinfo_reference_lane import (
     keep_envinfo_out_of_official_annual_lane,
     provenance_specific_user_guide,
 )
+from human_archive_site_scope_guard import guard_build_human_excels as _guard_site_scope_excels
 from sustainability_korean_delivery_guard import evaluate as _evaluate_korean_annual_delivery
 from human_archive_raw_policy import (
     assert_human_archive_raw_separated as _assert_human_archive_raw_separated,
@@ -50,13 +51,19 @@ from requested_scope_candidate_guard import (
 _core.deduplicate_archive_zip = _deduplicate_user_archive
 _core.audit_collection_for_requested_scope = _strict_scope_audit
 _core.archive_builder.copy_system_raw = _suppress_system_raw_copy
-# Apply at source-materialization time: indexes, coverage counts and the final ZIP
-# must all agree that ENV-INFO attachments are NOT corporate annual originals.
+# Apply at source materialization: indexes, coverage and final ZIP agree that
+# ENV-INFO attachments are not corporate annual originals.
 _core.archive_builder.promote_envinfo_references = keep_envinfo_out_of_official_annual_lane(
     _core.archive_builder.promote_envinfo_references
 )
 _core.archive_builder.write_user_indexes = provenance_specific_user_guide(
     _core.archive_builder.write_user_indexes
+)
+# Source collectors preserve company-wide evidence; SITE_SET human review sheets
+# must only admit source-native IDs authorized for the requested site. Without
+# this guard, an unresolved sibling factory enters user-facing PRTR workbooks.
+_core.archive_builder.build_human_excels = _guard_site_scope_excels(
+    _core.archive_builder.build_human_excels
 )
 
 _BASE_BUILD_ARCHIVE = _core.build_archive
@@ -67,8 +74,7 @@ def _build_archive_with_bat(package_root, contract_path=_core.archive_builder.CO
     root = Path(package_root).resolve()
     archive_root = root / 'Human_Archive' / summary['archive_root']
 
-    # Inspect the delivered, materialized official PDFs, never just a Discovery
-    # label or the filename. This also protects replay of old EN-first evidence.
+    # Inspect delivered, materialized official PDFs, never only the discovery label.
     korean_annual_qa = _evaluate_korean_annual_delivery(root, archive_root)
     summary['sustainability_korean_delivery_qa'] = korean_annual_qa
     checks = dict(summary.get('acceptance_checks') or {})
