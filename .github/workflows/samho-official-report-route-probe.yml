@@ -1,0 +1,26 @@
+name: Probe Samho 2020 and 2021 official Korean integrated-report locators
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/samho-official-report-route-probe.yml']
+permissions:
+  contents: read
+jobs:
+  official_landing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Print only official report-list 2020 and 2021 download link context
+        run: |
+          python - <<'PY'
+          import html,re,urllib.request
+          u='https://www.hd-samho.com/bbs/report_policy1/list.do'
+          try:
+            q=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0','Accept-Language':'ko-KR,ko;q=0.9'})
+            with urllib.request.urlopen(q,timeout=35) as r: t=r.read().decode('utf-8','replace')
+            for year in ('2020년 현대중공업그룹 통합보고서','2021년 한국조선해양 통합보고서','2021년 현대중공업그룹 통합보고서'):
+              m=re.search(re.escape(year),t)
+              print('OFFICIAL_REPORT_ITEM',year,'found',bool(m))
+              if m: print(html.unescape(t[max(0,m.start()-1300):m.end()+1800]).replace('\n',' ')[:3200])
+          except Exception as e:print('OFFICIAL_LIST_FETCH_ERROR',type(e).__name__,str(e)[:400])
+          PY
