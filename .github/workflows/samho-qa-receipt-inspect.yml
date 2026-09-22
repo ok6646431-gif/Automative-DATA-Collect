@@ -1,0 +1,50 @@
+name: HD Samho source and identity QA receipt inspection
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/samho-qa-receipt-inspect.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: 35709737351
+          name: hd-samho-current-policy-qa-receipt
+          github-token: ${{ github.token }}
+          path: receipt
+      - name: Print bounded identity and document diagnostics
+        run: |
+          python - <<'PY'
+          import csv,json
+          from pathlib import Path
+          root=Path('receipt')
+          for name in ('Archive_Summary.json','Company_Profile.json','Requested_Scope.json','Collection_Completeness.json','Master_Manifest.json'):
+              matches=list(root.rglob(name))
+              if matches:
+                  data=json.loads(matches[0].read_text(encoding='utf-8'))
+                  print('RECEIPT',name,'keys',list(data)[:30])
+                  if name=='Archive_Summary.json':
+                      for field in ('sustainability_korean_delivery_qa','requested_scope','acceptance_checks','archive_completeness'):
+                          print('FIELD',field,json.dumps(data.get(field),ensure_ascii=False)[:4000])
+                  elif name=='Requested_Scope.json':
+                      print('SCOPE',json.dumps(data,ensure_ascii=False)[:5000])
+          for name in ('Source_Identity.csv','document_index.csv','Analysis_Scope.csv'):
+              matches=list(root.rglob(name))
+              for path in matches[:1]:
+                  print('FILE',path)
+                  with path.open(encoding='utf-8-sig',newline='') as f:
+                      for row in list(csv.DictReader(f))[:20]:
+                          if name=='document_index.csv':
+                              if row.get('document_type')!='SUSTAINABILITY_REPORT':continue
+                              row={k:row.get(k) for k in ('document_id','report_year','collection_status','original_filename','stored_path','source_url','sha256')}
+                          elif name=='Source_Identity.csv':
+                              row={k:row.get(k) for k in ('source_key','source_site_id','source_site_name_raw','source_address_raw','canonical_site_id','identity_status')}
+                          print(json.dumps(row,ensure_ascii=False)[:1200])
+          PY
