@@ -1,0 +1,143 @@
+name: HD Samho scope-safe delivery replay v4
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/samho-current-policy-replay-v4.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reconstruct_validate_deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install archive and spreadsheet dependencies
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Restore retained independently collected Samho original sources
+        uses: actions/download-artifact@v4
+        with:
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 35712066346
+          name: samho-v3-original-collections
+          github-token: ${{ github.token }}
+          path: .
+      - name: Restore Samho event evidence and compile exact request
+        run: |
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/event_evidence.json > requests/event_evidence.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('requests/company_discovery.json').read_text())
+          d=json.loads(Path('requests/document_evidence.json').read_text())
+          assert c['requested_company_name']=='HD현대삼호'
+          assert c['requested_scope']['mode']=='SITE_SET'
+          assert len(c['requested_scope']['candidate_ids'])==1
+          assert set(int(x['report_year']) for x in d['documents'] if x['document_type']=='SUSTAINABILITY_REPORT')==set(range(2020,2026))
+          for source in ('ENVINFO','CORP_DOCS','CLEANSYS_AIR','SOOSIRO_WATER'):
+            assert (Path('collected/stable')/source/'status.json').is_file(), source
+          for source in ('PRTR','CHEM_STATS'):
+            assert (Path('collected/icis/icis-attempt-1')/source/'status.json').is_file(), source
+          print('SAMHO_PRESERVED_ORIGINALS_RESTORED')
+          PY
+          python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Assemble identity and scoped master manifest
+        run: |
+          python orchestrator/package_run.py --stable collected/stable --icis collected/icis --profile requests/runtime/company_profile.generated.json --out assembled
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('assembled/Requested_Scope.json').read_text())
+          assert s['mode']=='SITE_SET' and len(s['target_canonical_site_ids'])==1 and not s['unresolved_candidates'],s
+          assert s['target_source_ids']['PRTR']==['618'],s
+          assert s['target_source_ids']['ENVINFO'] and s['target_source_ids']['CHEM_STATS'],s
+          print('SAMHO_REQUESTED_SITE_IDENTITY_PASS',s['target_canonical_site_ids'])
+          PY
+      - name: Build scope-safe Human Archive from preserved originals
+        run: >-
+          python orchestrator/archive_stage.py --package assembled --stable collected/stable --documents requests/document_evidence.json
+      - name: Verify scope-safe Human Archive workbook before application delivery
+        run: |
+          python - <<'PY'
+          import json,zipfile,io
+          from pathlib import Path
+          from openpyxl import load_workbook
+          summary=json.loads(Path('assembled/Archive_Summary.json').read_text())
+          q=summary.get('sustainability_korean_delivery_qa') or {}
+          assert summary['archive_completeness']=='COMPLETE',summary.get('acceptance_checks')
+          assert q.get('pass') is True and {x['report_year'] for x in q['items']}==set(range(2020,2026)),q
+          assert (summary.get('envinfo_content_qa') or {}).get('pass') is True
+          with zipfile.ZipFile('assembled/Human_Archive.zip') as z:
+            assert z.testzip() is None
+            names=z.namelist()
+            annual=[n for n in names if '/01_사용자자료/04_지속가능경영보고서/' in n and n.lower().endswith('.pdf')]
+            assert len(annual)==6,annual
+            prtr=[n for n in names if n.endswith('/PRTR_화학물질배출이동량_정리.xlsx')]
+            assert len(prtr)==1,prtr
+            wb=load_workbook(io.BytesIO(z.read(prtr[0])),read_only=True,data_only=True)
+            values=[str(cell) for ws in wb for row in ws.values for cell in row if cell is not None]
+            assert not any('2021775' in cell or '대불3공장' in cell for cell in values), 'Excluded sibling site still present in user-facing PRTR workbook'
+            assert any(cell=='618' for cell in values),'Selected Yeongam PRTR site absent'
+            print('SAMHO_HUMAN_ARCHIVE_SCOPE_PASS',len(annual),'KOREAN_REPORTS',len(values),'PRTR_CELLS')
+          PY
+      - name: Build application materials and require validator PASS
+        run: |
+          python tools/build_application_material_from_archive.py --input assembled/Human_Archive.zip --output-dir application-delivery --source-run '${{ github.run_id }}' --summary-out application-delivery/application_package_result.json
+          python - <<'PY'
+          import json,zipfile,io
+          from pathlib import Path
+          from openpyxl import load_workbook
+          result=json.loads(Path('application-delivery/application_package_result.json').read_text())
+          assert result['status']=='PASS',result
+          assert 'VERIFIED_EXCLUSION_RECHECK' in result['validation_checks'],result
+          p=Path(result['output_zip'])
+          assert p.is_file() and p.stat().st_size>0
+          with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None
+            matches=[n for n in z.namelist() if n.endswith('/PRTR_화학물질배출이동량_정리.xlsx')]
+            assert len(matches)==1,matches
+            w=load_workbook(io.BytesIO(z.read(matches[0])),read_only=True,data_only=True)
+            assert not any('2021775' in str(v) or '대불3공장' in str(v) for s in w for row in s.values for v in row if v is not None)
+          print('SAMHO_FINAL_PASS',result['output_zip'])
+          PY
+      - name: Upload independently inspectable QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v4-qa-receipt
+          path: |
+            assembled/*.json
+            assembled/*.csv
+            application-delivery/application_package_result.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload final verified HD Samho Human Archive
+        if: ${{ success() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v4-verified-human-archive
+          path: assembled/Human_Archive.zip
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
+      - name: Upload final verified HD Samho application materials
+        if: ${{ success() && hashFiles('application-delivery/*.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-v4-verified-application-materials
+          path: application-delivery/
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
