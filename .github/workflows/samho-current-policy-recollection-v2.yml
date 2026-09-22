@@ -1,0 +1,156 @@
+name: HD Samho corrected Korean source and scope regression
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/samho-current-policy-recollection-v2.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source_and_delivery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install verified PDF and archive dependencies
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+      - name: Restore verified Samho company input and replace incorrectly selected 2024 English PDF
+        run: |
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/company_discovery.json > requests/company_discovery.json
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/document_evidence.json > requests/document_evidence.json
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/event_evidence.json > requests/event_evidence.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('requests/document_evidence.json')
+          d=json.loads(p.read_text())
+          report=next(x for x in d['documents'] if x['document_id']=='HSHI_SUSTAINABILITY_2024')
+          report['source_url']='https://esg.hd.com/upload/admin/report/1751269469350/2024%20HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%20%28KOR%29.pdf'
+          report['source_locator']='https://esg.hd.com/ko/esg-library/report'
+          report['notes']='Company official KOR download candidate; actual PDF body must pass the independently enforced archive language check.'
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          # Original company profile names its verified requested site as 영암 조선소;
+          # the official public source names that exact address as 에이치디현대삼호.
+          # Retain the user-facing requested scope label but use the source-native
+          # address/name for deterministic canonical identity resolution.
+          p=Path('requests/company_discovery.json')
+          d=json.loads(p.read_text())
+          assert d['requested_company_name']=='HD현대삼호'
+          assert len(d['requested_scope']['candidate_ids'])==1
+          candidate=next(x for x in d['site_candidates'] if x['candidate_id']==d['requested_scope']['candidate_ids'][0])
+          assert '대불로 93' in candidate['address_raw']
+          candidate['original_site_name_raw']=candidate['site_name_raw']
+          candidate['site_name_raw']='에이치디현대삼호'
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+          PY
+          python orchestrator/bootstrap_inputs.py --profile-out requests/runtime/company_profile.generated.json --request-out requests/current.generated.json --summary-out requests/runtime/Company_Discovery_Summary.json
+      - name: Fresh official environmental source collection
+        run: |
+          python collectors/envinfo_collect.py requests/current.generated.json || true
+          python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root . || true
+          python collectors/soosiro_collect.py requests/current.generated.json || true
+          python collectors/cleansys_collect.py requests/current.generated.json || true
+          for source in ENVINFO SOOSIRO_WATER CLEANSYS_AIR; do
+            test -s "output/$source/status.json" || exit 1
+            mkdir -p collected/stable
+            cp -a "output/$source" collected/stable/
+          done
+      - name: Fresh official company documents and national chemical source collection
+        run: |
+          python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json || true
+          test -s output/CORP_DOCS/status.json
+          cp -a output/CORP_DOCS collected/stable/
+          python collectors/prtr_collect.py requests/current.generated.json || true
+          python collectors/chem_stats_collect.py requests/current.generated.json || true
+          mkdir -p collected/icis/icis-attempt-1
+          for source in PRTR CHEM_STATS; do
+            test -s "output/$source/status.json" || exit 1
+            cp -a "output/$source" collected/icis/icis-attempt-1/
+          done
+      - name: Persist fresh source artifacts for independent retry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-fresh-sources-current-policy
+          path: |
+            collected/stable/
+            collected/icis/
+            requests/document_evidence.json
+            requests/company_discovery.json
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+      - name: Assemble full evidence and independently verify site scope
+        run: |
+          python orchestrator/package_run.py --stable collected/stable --icis collected/icis --profile requests/runtime/company_profile.generated.json --out assembled
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s=json.loads(Path('assembled/Requested_Scope.json').read_text())
+          assert len(s['target_canonical_site_ids'])==1 and not s['unresolved_candidates'], s
+          assert s['target_source_ids']['ENVINFO'] and s['target_source_ids']['PRTR'] and s['target_source_ids']['CHEM_STATS'],s
+          print('SAMHO_CANONICAL_SITE_SCOPE_PASS',json.dumps(s,ensure_ascii=False)[:1600])
+          PY
+      - name: Rebuild Human Archive with real PDF language and source fidelity QA
+        run: >-
+          python orchestrator/archive_stage.py --package assembled --stable collected/stable --documents requests/document_evidence.json
+      - name: Verify archive QA and build final application dataset
+        run: |
+          python tools/build_application_material_from_archive.py --input assembled/Human_Archive.zip --output-dir application-delivery --source-run '${{ github.run_id }}' --summary-out application-delivery/application_package_result.json
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          s=json.loads(Path('assembled/Archive_Summary.json').read_text())
+          q=s.get('sustainability_korean_delivery_qa') or {}
+          assert q.get('pass') is True and q.get('checked',0)>=5, q
+          assert s.get('archive_completeness')=='COMPLETE',s.get('acceptance_checks')
+          assert (s.get('envinfo_content_qa') or {}).get('pass') is True,s.get('envinfo_content_qa')
+          a=json.loads(Path('application-delivery/application_package_result.json').read_text())
+          assert a['status']=='PASS',a
+          with zipfile.ZipFile('assembled/Human_Archive.zip') as z:
+            assert z.testzip() is None
+            annual=[n for n in z.namelist() if '/01_사용자자료/04_지속가능경영보고서/' in n and n.lower().endswith('.pdf')]
+            assert len(annual)>=5 and all('ENVINFO공개연도_' not in n for n in annual),annual
+          print('SAMHO_VERIFIED_DELIVERY_PASS',len(annual),a['status'])
+          PY
+      - name: Upload QA evidence even if validation fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-current-policy-v2-qa
+          path: |
+            assembled/*.json
+            assembled/*.csv
+            output/CORP_DOCS/document_index.csv
+            application-delivery/application_package_result.json
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Upload strictly verified Human Archive
+        if: ${{ success() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-current-policy-v2-human-archive
+          path: assembled/Human_Archive.zip
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload strictly verified application materials
+        if: ${{ success() && hashFiles('application-delivery/*.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-current-policy-v2-application-materials
+          path: application-delivery/
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
