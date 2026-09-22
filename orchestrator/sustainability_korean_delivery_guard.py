@@ -55,7 +55,10 @@ def evaluate(package_root, archive_root):
     archive_root = Path(archive_root)
     sources = _annual_source_rows(package_root)
     folders = [p for p in archive_root.rglob('04_지속가능경영보고서') if p.is_dir()]
-    all_pdfs = sorted(p for d in folders for p in d.rglob('*.pdf') if p.is_file())
+    # Original publishers may use .PDF or mixed-case suffixes. A case-sensitive
+    # glob falsely reported collected original files as absent on Linux.
+    all_pdfs = sorted(p for d in folders for p in d.rglob('*')
+                      if p.is_file() and p.suffix.casefold() == '.pdf')
     # Files copied out of ENV-INFO carry this generated source prefix. They are
     # disclosed attachments, not independent corporate annual-report originals.
     # Record them separately; NEVER use them to satisfy corporate annual coverage.
