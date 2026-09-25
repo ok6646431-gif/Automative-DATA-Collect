@@ -323,6 +323,13 @@ def audit_cleansys(output, cfg):
         if terminal or errors:
             rows.append(query_row(source, year, False, True, year in data_years,
                                   f"range={cfg.get('start_year')}..{cfg.get('end_year')}; candidate_errors={len(errors)}; status={status.get('status')}"))
+        elif status.get("status") == "NO_FACILITY_MATCH_CONFIRMED":
+            rows.append(row(
+                source, "YEAR", year, "NO_FACILITY_MATCH_CONFIRMED",
+                query_state="REGISTRY_SCAN_COMPLETE", data=False,
+                evidence=f"selectable_facilities={status.get('index_selectable_option_count',0)}; verified_matches=0; status={status.get('status')}",
+                note="공식 CleanSYS 시설목록을 전수 확인했으나 검증된 요청 법인/사업장과 매칭되는 공개 시설이 확인되지 않음",
+            ))
         else:
             rows.append(query_row(source, year, True, False, year in data_years,
                                   f"range_query_complete; candidates={status.get('candidate_count',0)}; status={status.get('status')}"))
@@ -340,8 +347,16 @@ def audit_soosiro(output, cfg):
         term_files = [root/"raw_annual"/f"{year}_{collector_term_key(source, term)}.json" for term in terms]
         complete = bool(terms) and all(p.exists() and p.stat().st_size > 0 for p in term_files)
         failed = year in annual_fail or (status.get("status") in TERMINAL_FAILURES and not complete)
-        r = query_row(source, year, complete, failed, year in annual_data,
-                      f"annual_terms={len(terms)}; term_responses={sum(p.exists() for p in term_files)}; annual_error={year in annual_fail}; status={status.get('status')}")
+        if status.get("status") == "NO_FACILITY_MATCH_CONFIRMED" and complete and not failed:
+            r = row(
+                source, "YEAR", year, "NO_FACILITY_MATCH_CONFIRMED",
+                query_state="REGISTRY_AND_TERM_SCAN_COMPLETE", data=False,
+                evidence=f"registry_facilities={status.get('fact_list_rows',0)}; annual_terms={len(terms)}; term_responses={sum(p.exists() for p in term_files)}; status={status.get('status')}",
+                note="공식 SOOSIRO 시설목록과 해당 연도 검색을 완료했으나 검증된 요청 법인/사업장과 매칭되는 공개 시설이 확인되지 않음",
+            )
+        else:
+            r = query_row(source, year, complete, failed, year in annual_data,
+                          f"annual_terms={len(terms)}; term_responses={sum(p.exists() for p in term_files)}; annual_error={year in annual_fail}; status={status.get('status')}")
         rows.append(r); annual_state[year] = r["completeness_state"]
 
     candidates = read_json(root/"fact_candidates.json", []) or []
@@ -351,10 +366,19 @@ def audit_soosiro(output, cfg):
     for year in [as_year(x) for x in cfg.get("daily_years", [])]:
         if year is None: continue
         if not fact_codes:
-            complete = annual_state.get(year) in {"DATA_PRESENT", "NO_DATA_CONFIRMED"}
-            failed = annual_state.get(year) in {"QUERY_FAILED", "UNQUERIED_PERIOD"}
+            annual_status = annual_state.get(year)
+            if annual_status == "NO_FACILITY_MATCH_CONFIRMED":
+                rows.append(row(
+                    "SOOSIRO_WATER_DAILY", "YEAR", year, "NO_FACILITY_MATCH_CONFIRMED",
+                    query_state="NOT_APPLICABLE_NO_MATCHED_FACILITY", data=False,
+                    evidence=f"fact_codes=0; annual_state={annual_status}",
+                    note="공개 시설 자체가 요청 사업장과 매칭되지 않아 일자료 source ID 조회 대상이 생성되지 않음",
+                ))
+                continue
+            complete = annual_status in {"DATA_PRESENT", "NO_DATA_CONFIRMED"}
+            failed = annual_status in {"QUERY_FAILED", "UNQUERIED_PERIOD"}
             state_row = query_row("SOOSIRO_WATER_DAILY", year, complete, failed, False,
-                                  f"fact_codes=0; annual_state={annual_state.get(year,'UNKNOWN')}")
+                                  f"fact_codes=0; annual_state={annual_status or 'UNKNOWN'}")
             rows.append(state_row); continue
         expected_files = [root/"raw_daily"/f"{year}_{fc}_{q}.json" for fc in fact_codes for q in QUARTERS]
         complete = all(p.exists() and p.stat().st_size > 0 for p in expected_files)
@@ -518,21 +542,27 @@ def audit(package_root, profile_path, request_path=None, evidence_path=None):
     rows += requested_scope_binding_rows(package, public)
     incomplete = [x for x in rows if x["completeness_state"] in INCOMPLETE_STATES]
     no_data = [x for x in rows if x["completeness_state"] == "NO_DATA_CONFIRMED"]
-    complete = [x for x in rows if x["completeness_state"] in {"DATA_PRESENT", "NO_DATA_CONFIRMED", "OUTSIDE_CURRENT_ENTITY_PERIOD"}]
+    no_facility = [x for x in rows if x["completeness_state"] == "NO_FACILITY_MATCH_CONFIRMED"]
+    complete_states = {"DATA_PRESENT", "NO_DATA_CONFIRMED", "NO_FACILITY_MATCH_CONFIRMED", "OUTSIDE_CURRENT_ENTITY_PERIOD"}
+    complete = [x for x in rows if x["completeness_state"] in complete_states]
     outside_entity = [x for x in rows if x["completeness_state"] == "OUTSIDE_CURRENT_ENTITY_PERIOD"]
 
     write_csv(package/"Collection_Completeness.csv", rows)
     write_csv(package/"Collection_No_Data.csv", no_data)
+    write_csv(package/"Collection_No_Facility_Match.csv", no_facility)
     summary = {
-        "schema_version": "1.0", "status": "REVIEW_REQUIRED" if incomplete else "COMPLETE",
+        "schema_version": "1.1", "status": "REVIEW_REQUIRED" if incomplete else "COMPLETE",
         "checked_items": len(rows), "complete_items": len(complete), "incomplete_items": len(incomplete),
         "no_data_confirmed_items": len(no_data),
+        "no_facility_match_confirmed_items": len(no_facility),
         "outside_current_entity_items": len(outside_entity),
         "incomplete_keys": [f"{x['source']}:{x['period_kind']}:{x['period']}:{x['completeness_state']}" for x in incomplete],
         "no_data_confirmed": [{"source":x["source"], "period_kind":x["period_kind"], "period":x["period"], "note":x["user_note"]} for x in no_data],
+        "no_facility_match_confirmed": [{"source":x["source"], "period_kind":x["period_kind"], "period":x["period"], "note":x["user_note"]} for x in no_facility],
         "principles": [
             "Every selected period must have successful query evidence or an explicit failure state.",
-            "A successful query with no disclosed row is NO_DATA_CONFIRMED and is reported separately.",
+            "A successful source-native facility query with no disclosed row is NO_DATA_CONFIRMED.",
+            "A complete public facility-registry scan with no verified requested-entity/site match is NO_FACILITY_MATCH_CONFIRMED and is not interpreted as zero emissions or zero discharge.",
             "Years outside a verified current legal-entity active period are preserved as historical references but are not blocking current-entity completeness obligations.",
             "Every strongly verified declared official document must have a real delivered file.",
             "Annual official-document series must cover the full requested history window; latest-N is not sufficient.",
