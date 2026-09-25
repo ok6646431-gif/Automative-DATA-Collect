@@ -145,6 +145,65 @@ class CollectionAcceptanceTests(unittest.TestCase):
             result = evaluate(root / "output", root / "request.json")
             self.assertEqual(result["status"], "PASS")
 
+    def test_cleansys_complete_registry_miss_is_resolved(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {
+                "sources": {
+                    "CLEANSYS_AIR": {
+                        "start_year": 2024,
+                        "end_year": 2024,
+                        "search_terms": ["테스트회사"],
+                    }
+                }
+            })
+            write_json(root / "output/CLEANSYS_AIR/status.json", {
+                "source_key": "CLEANSYS_AIR",
+                "status": "NO_FACILITY_MATCH_CONFIRMED",
+                "registry_scan_complete": True,
+                "index_selectable_option_count": 900,
+                "candidate_count": 0,
+                "annual_rows": 0,
+                "errors": [],
+                "tls_verification": True,
+            })
+            (root / "output/CLEANSYS_AIR/annual_rows.jsonl").write_text("", encoding="utf-8")
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "PASS")
+
+    def test_soosiro_complete_registry_and_term_miss_is_resolved(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {
+                "sources": {
+                    "SOOSIRO_WATER": {
+                        "annual_years": [2024],
+                        "daily_years": [],
+                        "search_terms": ["테스트회사"],
+                    }
+                }
+            })
+            write_json(root / "output/SOOSIRO_WATER/status.json", {
+                "source_key": "SOOSIRO_WATER",
+                "status": "NO_FACILITY_MATCH_CONFIRMED",
+                "registry_scan_complete": True,
+                "fact_list_rows": 1000,
+                "fact_list_query_success": True,
+                "annual_rows": 0,
+                "fact_codes": 0,
+                "address_seeded_fact_codes": [],
+                "registry_seeded_fact_codes": [],
+                "errors": 0,
+            })
+            write_json(root / "output/SOOSIRO_WATER/fact_candidates.json", [])
+            raw = root / "output/SOOSIRO_WATER/raw_annual/2024_테스트회사.json"
+            raw.parent.mkdir(parents=True, exist_ok=True)
+            raw.write_text('{"list":[]}', encoding="utf-8")
+            (root / "output/SOOSIRO_WATER/annual_rows.jsonl").write_text("", encoding="utf-8")
+            (root / "output/SOOSIRO_WATER/daily_rows.jsonl").write_text("", encoding="utf-8")
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "PASS")
+
 
 if __name__ == "__main__":
     unittest.main()
