@@ -186,6 +186,7 @@ def main(req_path):
     headers={"User-Agent":UA,"Referer":BASE+"/open/web/annual?pMENU_NO=410","Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","Accept":"application/json,text/plain,*/*"}
     status={"source_key":"SOOSIRO_WATER","status":"RUNNING","annual_years":years,"daily_years":daily_years,"terms":terms,"requests":0,"errors":0}
     dedup={}; candidates={}; excluded_rows=[]; scope_rejected_rows=[]
+    annual_fact_success=0; annual_term_success=0
 
     def absorb_rows(rows,y,hit):
         for row in rows:
@@ -210,6 +211,8 @@ def main(req_path):
     try:
         rf,fact_obj,fact_rows=_post_list_json(FACTS,data={"pDoCode":""},headers=headers)
         (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
+        status["fact_list_rows"]=len(fact_rows)
+        status["fact_list_query_success"]=True
         seeded=address_seed_candidates(fact_rows,site_addresses)
         seeded_codes=[]
         for fact in seeded:
@@ -233,6 +236,7 @@ def main(req_path):
                 try:
                     r,obj,rows=_post_list_json(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=headers)
                     (raw/f"{y}_FACT_{fc}.json").write_text(r.text,encoding="utf-8")
+                    annual_fact_success+=1
                     absorb_rows(rows,y,"OFFICIAL_ADDRESS")
                 except Exception as e:
                     status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"ANNUAL_FACT\t{y}\t{fc}\t{type(e).__name__}\t{e}\n")
@@ -243,6 +247,7 @@ def main(req_path):
                 try:
                     r,obj,rows=_post_list_json(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":"","pSearchWord":term},headers=headers)
                     fn=re.sub(r"[^0-9A-Za-z가-힣]+","_",term).strip("_"); (raw/f"{y}_{fn}.json").write_text(r.text,encoding="utf-8")
+                    annual_term_success+=1
                     absorb_rows(rows,y,term)
                 except Exception as e:
                     status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"ANNUAL\t{y}\t{term}\t{type(e).__name__}\t{e}\n")
@@ -272,9 +277,17 @@ def main(req_path):
                             status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DAILY\t{y}\t{fc}\t{q}\t{type(e).__name__}\t{e}\n")
         with (out/"daily_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in daily_rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
-        status.update({"status":"DATA_FOUND" if annual_rows else "NO_MATCH","annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
+        if status["errors"]:
+            final_status="PARTIAL_FAILURE" if (annual_rows or candidates) else "REQUEST_OR_PARSE_FAILED"
+        elif annual_rows:
+            final_status="DATA_FOUND"
+        elif candidates:
+            final_status="NO_DATA_CONFIRMED"
+        else:
+            final_status="DISCOVERY_UNRESOLVED"
+        status.update({"status":final_status,"annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"annual_fact_requests_success":annual_fact_success,"annual_term_requests_success":annual_term_success,"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows)})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
-    return 0 if status["status"]!="REQUEST_OR_PARSE_FAILED" else 31
+    return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE"} else 31
 
 if __name__=="__main__": sys.exit(main(sys.argv[1] if len(sys.argv)>1 else "requests/current.json"))
