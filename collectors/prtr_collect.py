@@ -68,11 +68,12 @@ def main(req_path):
     start=int(cfg.get("start_year",2018)); end=cfg.get("end_year"); exclude_terms=cfg.get("exclude_terms",[])
     if end in (None,"auto"): status.update({"status":"CONFIG_ERROR","fatal_error":"end_year must be resolved"}); write_status(out,status); return 20
     end=int(end); years=list(range(start,end+1)); first_term=cfg["search_terms"][0]["term"]
+    s=session()
     try:
-        r0=requests.post(SEARCH,data=form(end,first_term,1),headers={"User-Agent":UA,"Referer":SEARCH},timeout=(8,20)); r0.raise_for_status()
+        r0=s.post(SEARCH,data=form(end,first_term,1),headers={"Referer":SEARCH},timeout=(8,20)); r0.raise_for_status()
     except Exception as e:
-        status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"}); write_status(out,status); return 22
-    s=session(); dedup={}; successful=0; excluded_rows=[]; scope_rejected_rows=[]
+        status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}","preflight_retry_policy":"session connect/read retry total=2 with exponential backoff"}); write_status(out,status); return 22
+    dedup={}; successful=0; excluded_rows=[]; scope_rejected_rows=[]
     try:
         for spec in cfg["search_terms"]:
             ys=int(spec.get("year_start",start)); ye=spec.get("year_end",end); ye=end if ye=="auto" else int(ye); term=spec["term"]
