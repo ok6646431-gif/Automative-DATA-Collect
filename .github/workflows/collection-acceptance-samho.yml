@@ -1,0 +1,138 @@
+name: Collection-only acceptance - HD Samho
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/collection-acceptance-samho.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  collect_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install collector dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+
+      - name: Restore verified HD Samho discovery inputs
+        run: |
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/company_discovery.json > requests/company_discovery.json
+          git show 0cd4f040d056c44925346b580d33b2c7fcb9a092:requests/document_evidence.json > requests/document_evidence.json
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          p=Path('requests/document_evidence.json')
+          d=json.loads(p.read_text())
+          by_id={x['document_id']:x for x in d['documents']}
+
+          by_id['HSHI_SUSTAINABILITY_2024'].update(
+              source_url='https://esg.hd.com/upload/admin/report/1751269469350/2024%20HD%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%20%28KOR%29.pdf',
+              source_locator='https://esg.hd.com/ko/esg-library/report',
+          )
+          by_id['HSHI_INTEGRATED_2020'].update(
+              source_url='https://www.hd-samho.com/download.do?path=%2FAttachUP%2FREPORT&rn=1606291030474.pdf&dn=2020_KSOE_IR_KR.pdf',
+              source_locator='https://www.hd-samho.com/bbs/report_policy1/list.do',
+          )
+          r=by_id['HSHI_ESG_HIGHLIGHTS_2021']
+          original=dict(r)
+          r.update(
+              document_id='HSHI_INTEGRATED_2021',
+              title='2021 한국조선해양 통합보고서 (2022년 발간) - 현대삼호중공업 포함',
+              source_url='https://www.hd-samho.com/download.do?path=%2FAttachUP%2FREPORT&rn=1664850287608.pdf&dn=2021%EB%85%84+%ED%95%9C%EA%B5%AD%EC%A1%B0%EC%84%A0%ED%95%B4%EC%96%91+%ED%86%B5%ED%95%A9%EB%B3%B4%EA%B3%A0%EC%84%9C-2022%EB%85%84+%EB%B0%9C%EA%B0%84.pdf',
+          )
+          original.update(
+              document_type='ENVIRONMENTAL_MANAGEMENT',
+              importance='SUPPORTING',
+              notes='Supplementary ESG highlights; not an annual integrated report.',
+          )
+          d['documents'].append(original)
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+
+          p=Path('requests/company_discovery.json')
+          c=json.loads(p.read_text())
+          assert c['requested_company_name']=='HD현대삼호'
+          assert c['requested_scope']['mode']=='SITE_SET'
+          assert len(c['requested_scope']['candidate_ids'])==1
+          s=next(x for x in c['domestic_site_candidates'] if x['candidate_id']==c['requested_scope']['candidate_ids'][0])
+          assert '대불로 93' in s['address_raw']
+          s['original_site_name_raw']=s['site_name_raw']
+          s['site_name_raw']='에이치디현대삼호'
+          s['source_locator']='https://www.hd-samho.com/'
+          p.write_text(json.dumps(c,ensure_ascii=False,indent=2)+'\n')
+          PY
+
+          python orchestrator/bootstrap_inputs.py             --profile-out requests/runtime/company_profile.generated.json             --request-out requests/current.generated.json             --summary-out requests/runtime/Company_Discovery_Summary.json
+
+      - name: Collect all public source lanes only
+        run: |
+          set +e
+          python collectors/envinfo_collect.py requests/current.generated.json
+          python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root .
+          python collectors/prtr_collect.py requests/current.generated.json
+          python collectors/chem_stats_collect.py requests/current.generated.json
+          python collectors/cleansys_collect.py requests/current.generated.json
+          python collectors/soosiro_collect.py requests/current.generated.json
+          python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+          exit 0
+
+      - name: Run deterministic collection acceptance tests
+        run: python -m unittest tests.test_collection_acceptance -v
+
+      - name: Evaluate strict collection-only acceptance
+        id: acceptance
+        continue-on-error: true
+        run: |
+          python orchestrator/collection_acceptance.py             --output-root output             --request requests/current.generated.json             --summary-out Collection_Acceptance.json
+
+      - name: Upload collection QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: samho-collection-only-acceptance
+          path: |
+            Collection_Acceptance.json
+            requests/runtime/Company_Discovery_Summary.json
+            output/*/status.json
+            output/*/errors.log
+            output/CLEANSYS_AIR/candidates.json
+            output/CLEANSYS_AIR/scope_rejected_candidates.json
+            output/SOOSIRO_WATER/fact_candidates.json
+            output/SOOSIRO_WATER/scope_rejected_rows.jsonl
+            output/CORP_DOCS/document_index.csv
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce collection acceptance
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('Collection_Acceptance.json')
+          if not p.exists():
+              raise SystemExit('Collection_Acceptance.json missing')
+          d=json.loads(p.read_text())
+          print(json.dumps({
+              'status':d['status'],
+              'blocking_issue_count':d['blocking_issue_count'],
+              'source_results':d['source_results'],
+              'blocking_issues':d['blocking_issues'],
+          },ensure_ascii=False,indent=2))
+          if d['status']!='PASS':
+              raise SystemExit('collection-only acceptance is not PASS')
+          PY
