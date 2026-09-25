@@ -44,7 +44,11 @@ def main(req_path):
             r=requests.get(INDEX,headers={"User-Agent":UA},timeout=(5,10),verify=False); r.raise_for_status()
         (out/"index_raw.html").write_text(r.text,encoding="utf-8")
         soup=BeautifulSoup(r.text,"html.parser"); candidates=[]; excluded_candidates=[]; scope_rejected_candidates=[]
-        for opt in soup.find_all("option"):
+        all_options=soup.find_all("option")
+        selectable_options=[opt for opt in all_options if (opt.get("value") or "").strip()]
+        if not selectable_options:
+            raise RuntimeError("CleanSYS index parse contract failed: no selectable facility options found")
+        for opt in all_options:
             name=opt.get_text(" ",strip=True); fact=(opt.get("value") or "").strip()
             if not fact or not any(term_matches_option(t,name) for t in terms):
                 continue
@@ -60,14 +64,19 @@ def main(req_path):
                     scope_rejected_candidates.append({**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
         seen=set(); candidates=[x for x in candidates if not ((x["fact_code"],x["company_name_raw"]) in seen or seen.add((x["fact_code"],x["company_name_raw"])))]
         seen_ex=set(); excluded_candidates=[x for x in excluded_candidates if not ((x["fact_code"],x["company_name_raw"],x["excluded_by"]) in seen_ex or seen_ex.add((x["fact_code"],x["company_name_raw"],x["excluded_by"])))]
-        rows=[]; errors=[]
+        rows=[]; errors=[]; candidate_query_attempts=0; candidate_query_success=0
         headers={"User-Agent":UA,"Referer":BASE+"/statAnnual.do","Content-Type":"application/x-www-form-urlencoded; charset=UTF-8","Accept":"application/json,text/plain,*/*"}
         for c in candidates:
+            candidate_query_attempts+=1
             try:
                 ra=requests.post(ANNUAL,data={"s_year":str(y1),"e_year":str(y2),"selectArea":"","selectComp":"","selectCompDrop":c["fact_code"],"selectOrder":"","type":"json"},headers=headers,timeout=(5,15),verify=verify); ra.raise_for_status()
                 fn=re.sub(r"[^0-9A-Za-z가-힣]+","_",c["company_name_raw"]).strip("_")
                 (raw/f"{c['fact_code']}_{fn}.json").write_text(ra.text,encoding="utf-8")
-                obj=ra.json(); rr=obj.get("ResultList",[]) if isinstance(obj,dict) else []
+                obj=ra.json()
+                if not isinstance(obj,dict) or "ResultList" not in obj or not isinstance(obj.get("ResultList"),list):
+                    raise RuntimeError("CleanSYS annual response contract failed: expected JSON object with ResultList list")
+                candidate_query_success+=1
+                rr=obj["ResultList"]
                 for row in rr:
                     z=dict(row); z["source_fact_code"]=c["fact_code"]; z["source_candidate_name"]=c["company_name_raw"]; rows.append(z)
             except Exception as e: errors.append({**c,"error":f"{type(e).__name__}: {e}"})
@@ -76,9 +85,17 @@ def main(req_path):
         (out/"scope_rejected_candidates.json").write_text(json.dumps(scope_rejected_candidates,ensure_ascii=False,indent=2),encoding="utf-8")
         with (out/"annual_rows.jsonl").open("w",encoding="utf-8") as f:
             for row in rows: f.write(json.dumps(row,ensure_ascii=False)+"\n")
-        status.update({"status":"DATA_FOUND" if rows else ("RESPONSE_OK_NO_TERM_MATCH" if not candidates else "REQUEST_OR_PARSE_FAILED"),"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
+        if errors:
+            final_status="PARTIAL_FAILURE" if rows else "REQUEST_OR_PARSE_FAILED"
+        elif rows:
+            final_status="DATA_FOUND"
+        elif candidates and candidate_query_success==candidate_query_attempts:
+            final_status="NO_DATA_CONFIRMED"
+        else:
+            final_status="DISCOVERY_UNRESOLVED"
+        status.update({"status":final_status,"index_option_count":len(all_options),"index_selectable_option_count":len(selectable_options),"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"candidate_query_attempts":candidate_query_attempts,"candidate_query_success":candidate_query_success,"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
-    return 0 if status["status"]!="REQUEST_OR_PARSE_FAILED" else 41
+    return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE"} else 41
 
 if __name__=="__main__": sys.exit(main(sys.argv[1] if len(sys.argv)>1 else "requests/current.json"))
