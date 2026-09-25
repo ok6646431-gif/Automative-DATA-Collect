@@ -98,8 +98,8 @@ def main(req_path):
         elif candidates and candidate_query_success==candidate_query_attempts:
             final_status="NO_DATA_CONFIRMED"
         else:
-            final_status="DISCOVERY_UNRESOLVED"
-        status.update({"status":final_status,"index_option_count":len(all_options),"index_selectable_option_count":len(selectable_options),"registry_identity_matches":registry_identity_matches,"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"candidate_query_attempts":candidate_query_attempts,"candidate_query_success":candidate_query_success,"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
+            final_status="NO_FACILITY_MATCH_CONFIRMED"
+        status.update({"status":final_status,"registry_scan_complete":True,"index_option_count":len(all_options),"index_selectable_option_count":len(selectable_options),"registry_identity_matches":registry_identity_matches,"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"candidate_query_attempts":candidate_query_attempts,"candidate_query_success":candidate_query_success,"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE"} else 41
