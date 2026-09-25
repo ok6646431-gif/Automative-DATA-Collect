@@ -69,12 +69,17 @@ def _validate_soosiro_no_data(status: dict) -> list[dict]:
         return []
     fact_codes = int(status.get("fact_codes") or 0)
     address_seeded = [str(x) for x in status.get("address_seeded_fact_codes") or [] if str(x)]
+    registry_seeded = [str(x) for x in status.get("registry_seeded_fact_codes") or [] if str(x)]
+    seeded = sorted(set(address_seeded) | set(registry_seeded))
     fact_list_ok = status.get("fact_list_query_success") is True
-    if fact_codes <= 0 or not address_seeded or not fact_list_ok:
+    years = [x for x in status.get("annual_years") or []]
+    expected_fact_queries = fact_codes * len(years)
+    fact_success = int(status.get("annual_fact_requests_success") or 0)
+    if fact_codes <= 0 or not seeded or not fact_list_ok or fact_success != expected_fact_queries:
         return [issue(
             "SOOSIRO_WATER",
             "UNSUPPORTED_NO_DATA_CONFIRMATION",
-            f"fact_codes={fact_codes}; address_seeded_fact_codes={len(address_seeded)}; fact_list_query_success={fact_list_ok}",
+            f"fact_codes={fact_codes}; seeded_fact_codes={len(seeded)}; fact_list_query_success={fact_list_ok}; annual_fact_requests_success={fact_success}/{expected_fact_queries}",
         )]
     return []
 
