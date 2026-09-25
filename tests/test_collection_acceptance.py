@@ -170,6 +170,11 @@ class CollectionAcceptanceTests(unittest.TestCase):
             (root / "output/CLEANSYS_AIR/annual_rows.jsonl").write_text("", encoding="utf-8")
             result = evaluate(root / "output", root / "request.json")
             self.assertEqual(result["status"], "PASS")
+            self.assertTrue(result["period_audit"])
+            self.assertTrue(all(
+                row["completeness_state"] == "NO_FACILITY_MATCH_CONFIRMED"
+                for row in result["period_audit"]
+            ))
 
     def test_soosiro_complete_registry_and_term_miss_is_resolved(self):
         with tempfile.TemporaryDirectory() as td:
@@ -204,6 +209,11 @@ class CollectionAcceptanceTests(unittest.TestCase):
             (root / "output/SOOSIRO_WATER/daily_rows.jsonl").write_text("", encoding="utf-8")
             result = evaluate(root / "output", root / "request.json")
             self.assertEqual(result["status"], "PASS")
+            self.assertTrue(result["period_audit"])
+            self.assertTrue(all(
+                row["completeness_state"] == "NO_FACILITY_MATCH_CONFIRMED"
+                for row in result["period_audit"]
+            ))
 
 
 if __name__ == "__main__":
