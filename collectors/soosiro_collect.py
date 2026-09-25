@@ -213,6 +213,22 @@ def main(req_path):
         (out/"fact_list_raw.json").write_text(rf.text,encoding="utf-8")
         status["fact_list_rows"]=len(fact_rows)
         status["fact_list_query_success"]=True
+        # The FACTS endpoint is the source-native public facility registry. Scan
+        # the complete registry through the same fail-closed verified entity/site gate
+        # before falling back to annual free-text search. This catches source-native
+        # facility labels that differ from the legal company query spelling.
+        registry_seeded_codes=[]
+        for fact in fact_rows:
+            fc=str(fact.get("FACT_CODE") or "")
+            source_name=" ".join(str(fact.get(k) or "") for k in ("FACT_NAME","FACT_FNAME"))
+            if not fc or matching_exclusion(source_name,exclude_terms):
+                continue
+            decision=source_name_scope_decision(fact,cfg.get("identity_gate"))
+            if not decision["allowed"]:
+                continue
+            candidates[fc]={"FACT_CODE":fc,"FACT_NAME":fact.get("FACT_NAME"),"FACT_FNAME":fact.get("FACT_FNAME"),"FACT_ADDR":fact.get("FACT_ADDR"),"discovery_basis":"SOURCE_REGISTRY_IDENTITY_GATE","detail_scope_decision":decision["decision"]}
+            registry_seeded_codes.append(fc)
+
         seeded=address_seed_candidates(fact_rows,site_addresses)
         seeded_codes=[]
         for fact in seeded:
@@ -227,17 +243,18 @@ def main(req_path):
             candidates[fc]={"FACT_CODE":fc,"FACT_NAME":fact.get("FACT_NAME"),"FACT_FNAME":fact.get("FACT_FNAME"),"FACT_ADDR":fact.get("FACT_ADDR"),"discovery_basis":"OFFICIAL_ADDRESS","detail_scope_decision":decision["decision"]}
             seeded_codes.append(fc)
 
-        # Query unambiguous source fact codes found from verified official addresses.
-        # This is essential when SOOSIRO's source-native facility name omits the legal
-        # company name.  Name queries still run below to preserve broader discovery.
+        # Query source-native facility codes established either from the complete
+        # source registry identity scan or from an exact verified official address.
+        # Name queries still run below to preserve broader discovery evidence.
+        source_id_codes=sorted(set(registry_seeded_codes)|set(seeded_codes))
         for y in years:
-            for fc in sorted(set(seeded_codes)):
+            for fc in source_id_codes:
                 status["requests"]+=1
                 try:
                     r,obj,rows=_post_list_json(ANNUAL,data={"pSYear":str(y),"pEYear":str(y),"pDoCode":"","pFactCode":fc,"pSearchWord":""},headers=headers)
                     (raw/f"{y}_FACT_{fc}.json").write_text(r.text,encoding="utf-8")
                     annual_fact_success+=1
-                    absorb_rows(rows,y,"OFFICIAL_ADDRESS")
+                    absorb_rows(rows,y,candidates.get(fc,{}).get("discovery_basis") or "SOURCE_ID")
                 except Exception as e:
                     status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"ANNUAL_FACT\t{y}\t{fc}\t{type(e).__name__}\t{e}\n")
 
@@ -285,7 +302,7 @@ def main(req_path):
             final_status="NO_DATA_CONFIRMED"
         else:
             final_status="DISCOVERY_UNRESOLVED"
-        status.update({"status":final_status,"annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"annual_fact_requests_success":annual_fact_success,"annual_term_requests_success":annual_term_success,"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
+        status.update({"status":final_status,"annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"registry_seeded_fact_codes":sorted(set(registry_seeded_codes)),"annual_fact_requests_success":annual_fact_success,"annual_term_requests_success":annual_term_success,"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows)})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE"} else 31
