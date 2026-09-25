@@ -193,6 +193,7 @@ class CollectionAcceptanceTests(unittest.TestCase):
                 "fact_codes": 0,
                 "address_seeded_fact_codes": [],
                 "registry_seeded_fact_codes": [],
+                "annual_term_requests_success": 1,
                 "errors": 0,
             })
             write_json(root / "output/SOOSIRO_WATER/fact_candidates.json", [])
