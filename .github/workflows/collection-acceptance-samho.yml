@@ -136,3 +136,5 @@ jobs:
           if d['status']!='PASS':
               raise SystemExit('collection-only acceptance is not PASS')
           PY
+
+# source-registry hardening replay
