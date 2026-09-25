@@ -3,6 +3,8 @@ from pathlib import Path
 
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 try:
     from .name_filter import matching_exclusion
@@ -15,6 +17,14 @@ BASE="https://icis.mcee.go.kr"
 DISCOVERY=BASE+"/iprtr/cdrInfoDetailListJson.do"
 DETAIL=BASE+"/iprtr/cdrInfoView.do"
 UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/151 Safari/537.36"
+
+
+def session():
+    s=requests.Session()
+    retry=Retry(total=2,connect=2,read=2,backoff_factor=0.8,status_forcelist=(429,500,502,503,504),allowed_methods=frozenset(["GET","POST"]))
+    s.mount("https://",HTTPAdapter(max_retries=retry))
+    s.headers.update({"User-Agent":UA,"X-Requested-With":"XMLHttpRequest","Accept":"application/json,text/javascript,*/*;q=0.01","Referer":BASE+"/pageLink.do"})
+    return s
 
 
 def walk(obj):
@@ -93,14 +103,14 @@ def main(req_path):
     req=json.loads(Path(req_path).read_text(encoding="utf-8")); cfg=req.get("sources",{}).get("CHEM_STATS",{})
     years=sorted({int(x) for x in cfg.get("years",[2024])}); terms=cfg.get("search_terms") or [req.get("company_display_name","")]; max_pages=int(cfg.get("max_pages",10)); exclude_terms=cfg.get("exclude_terms",[])
     out=Path("output/CHEM_STATS"); raw=out/"raw_discovery"; details=out/"raw_detail"; raw.mkdir(parents=True,exist_ok=True); details.mkdir(parents=True,exist_ok=True)
-    s=requests.Session(); s.headers.update({"User-Agent":UA,"X-Requested-With":"XMLHttpRequest","Accept":"application/json,text/javascript,*/*;q=0.01","Referer":BASE+"/pageLink.do"})
+    s=session()
     status={"source_key":"CHEM_STATS","status":"RUNNING","requests":0,"errors":0,"years":years,"terms":terms}; dedup={}; successful=0; excluded_rows=[]; scope_rejected_rows=[]
     detail_cache={}; backfill_audit=[]
     try:
         try:
             p=s.post(DISCOVERY,data={"searchYear":str(max(years)),"bplcNm":terms[0],"pageNo":"1"},timeout=(8,20)); p.raise_for_status()
         except Exception as e:
-            status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}"}); (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False)); return 72
+            status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}","preflight_retry_policy":"session connect/read retry total=2 with exponential backoff"}); (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False)); return 72
 
         # 1) Normal source-native name discovery for every disclosed survey round.
         for y in years:
