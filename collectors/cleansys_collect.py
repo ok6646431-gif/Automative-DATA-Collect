@@ -48,20 +48,26 @@ def main(req_path):
         selectable_options=[opt for opt in all_options if (opt.get("value") or "").strip()]
         if not selectable_options:
             raise RuntimeError("CleanSYS index parse contract failed: no selectable facility options found")
+        registry_identity_matches=0
         for opt in all_options:
             name=opt.get_text(" ",strip=True); fact=(opt.get("value") or "").strip()
-            if not fact or not any(term_matches_option(t,name) for t in terms):
+            if not fact:
+                continue
+            term_hit=any(term_matches_option(t,name) for t in terms)
+            decision=evaluate_candidate(name,"",cfg.get("identity_gate"))
+            if not term_hit and not decision["allowed"]:
                 continue
             exclusion=matching_exclusion(name,exclude_terms)
             row={"fact_code":fact,"company_name_raw":name}
             if exclusion:
                 excluded_candidates.append({**row,"excluded_by":exclusion})
-            else:
-                decision=evaluate_candidate(name,"",cfg.get("identity_gate"))
-                if decision["allowed"]:
-                    candidates.append({**row,"detail_scope_decision":decision["decision"]})
-                else:
-                    scope_rejected_candidates.append({**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
+            elif decision["allowed"]:
+                basis="SEARCH_TERM_AND_IDENTITY_GATE" if term_hit else "SOURCE_REGISTRY_IDENTITY_GATE"
+                if not term_hit:
+                    registry_identity_matches+=1
+                candidates.append({**row,"detail_scope_decision":decision["decision"],"discovery_basis":basis})
+            elif term_hit:
+                scope_rejected_candidates.append({**row,"detail_scope_decision":decision["decision"],"detail_scope_reason":decision["reason"]})
         seen=set(); candidates=[x for x in candidates if not ((x["fact_code"],x["company_name_raw"]) in seen or seen.add((x["fact_code"],x["company_name_raw"])))]
         seen_ex=set(); excluded_candidates=[x for x in excluded_candidates if not ((x["fact_code"],x["company_name_raw"],x["excluded_by"]) in seen_ex or seen_ex.add((x["fact_code"],x["company_name_raw"],x["excluded_by"])))]
         rows=[]; errors=[]; candidate_query_attempts=0; candidate_query_success=0
@@ -93,7 +99,7 @@ def main(req_path):
             final_status="NO_DATA_CONFIRMED"
         else:
             final_status="DISCOVERY_UNRESOLVED"
-        status.update({"status":final_status,"index_option_count":len(all_options),"index_selectable_option_count":len(selectable_options),"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"candidate_query_attempts":candidate_query_attempts,"candidate_query_success":candidate_query_success,"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
+        status.update({"status":final_status,"index_option_count":len(all_options),"index_selectable_option_count":len(selectable_options),"registry_identity_matches":registry_identity_matches,"candidate_count":len(candidates),"scope_rejected_candidates":len(scope_rejected_candidates),"excluded_candidates":len(excluded_candidates),"candidate_query_attempts":candidate_query_attempts,"candidate_query_success":candidate_query_success,"annual_rows":len(rows),"annual_years":sorted({str(r.get('examin_year')) for r in rows}),"errors":errors,"tls_verification":verify,"tls_verification_exception":tls_error})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}"})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE"} else 41
