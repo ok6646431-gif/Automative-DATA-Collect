@@ -79,6 +79,28 @@ def _validate_soosiro_no_data(status: dict) -> list[dict]:
     return []
 
 
+def _validate_registry_miss(source: str, status: dict) -> list[dict]:
+    if str(status.get("status") or "") != "NO_FACILITY_MATCH_CONFIRMED":
+        return []
+    if status.get("registry_scan_complete") is not True:
+        return [issue(source, "UNSUPPORTED_REGISTRY_MISS", "registry_scan_complete is not true")]
+    if source == "CLEANSYS_AIR":
+        count = int(status.get("index_selectable_option_count") or 0)
+        if count <= 0:
+            return [issue(source, "UNSUPPORTED_REGISTRY_MISS", f"index_selectable_option_count={count}")]
+    if source == "SOOSIRO_WATER":
+        count = int(status.get("fact_list_rows") or 0)
+        fact_list_ok = status.get("fact_list_query_success") is True
+        term_success = int(status.get("annual_term_requests_success") or 0)
+        if count <= 0 or not fact_list_ok or term_success <= 0:
+            return [issue(
+                source,
+                "UNSUPPORTED_REGISTRY_MISS",
+                f"fact_list_rows={count}; fact_list_query_success={fact_list_ok}; annual_term_requests_success={term_success}",
+            )]
+    return []
+
+
 def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
     output = Path(output_root)
     request = read_json(request_path, {}) or {}
@@ -113,6 +135,7 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
 
         if source == "CLEANSYS_AIR":
             issues.extend(_validate_cleansys_no_data(status))
+            issues.extend(_validate_registry_miss(source, status))
             if status.get("tls_verification") is False:
                 warnings.append(issue(
                     source,
@@ -122,6 +145,7 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
                 ))
         elif source == "SOOSIRO_WATER":
             issues.extend(_validate_soosiro_no_data(status))
+            issues.extend(_validate_registry_miss(source, status))
         elif source == "CORP_DOCS":
             discovery_status = str(status.get("discovery_status") or "").upper()
             if discovery_status not in {
@@ -183,7 +207,7 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
         "principles": [
             "Source execution success is not the same as collection acceptance.",
             "Facility-indexed TMS no-data requires a source-native facility ID and a successful ID-bound query.",
-            "A name/address discovery miss remains DISCOVERY_UNRESOLVED and blocks a COMPLETE collection claim.",
+            "A discovery miss is resolved only when the source-native public facility registry was completely scanned and the selected-period query evidence is retained.",
             "Any failed selected-period query blocks collection acceptance even if other periods returned data.",
             "Declared official corporate documents must be fully downloaded or explicitly skipped under a complete discovery scope.",
         ],
