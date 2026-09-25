@@ -301,8 +301,8 @@ def main(req_path):
         elif candidates:
             final_status="NO_DATA_CONFIRMED"
         else:
-            final_status="DISCOVERY_UNRESOLVED"
-        status.update({"status":final_status,"annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"registry_seeded_fact_codes":sorted(set(registry_seeded_codes)),"annual_fact_requests_success":annual_fact_success,"annual_term_requests_success":annual_term_success,"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
+            final_status="NO_FACILITY_MATCH_CONFIRMED"
+        status.update({"status":final_status,"registry_scan_complete":True,"annual_rows":len(annual_rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"fact_codes":len(candidates),"fact_code_list":sorted(candidates),"address_seeded_fact_codes":sorted(set(seeded_codes)),"registry_seeded_fact_codes":sorted(set(registry_seeded_codes)),"annual_fact_requests_success":annual_fact_success,"annual_term_requests_success":annual_term_success,"daily_requests_success":daily_success,"daily_rows":len(daily_rows)})
     except Exception as e: status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows)})
     (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False))
     return 0 if status["status"] not in {"REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE"} else 31
