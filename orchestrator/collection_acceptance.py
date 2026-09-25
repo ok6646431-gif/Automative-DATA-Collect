@@ -83,6 +83,8 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
     output = Path(output_root)
     request = read_json(request_path, {}) or {}
     configured = list((request.get("sources") or {}).keys())
+    if (output / "CORP_DOCS" / "status.json").exists() and "CORP_DOCS" not in configured:
+        configured.append("CORP_DOCS")
     rows = public_rows(output, request)
 
     issues: list[dict] = []
@@ -120,6 +122,28 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
                 ))
         elif source == "SOOSIRO_WATER":
             issues.extend(_validate_soosiro_no_data(status))
+        elif source == "CORP_DOCS":
+            discovery_status = str(status.get("discovery_status") or "").upper()
+            if discovery_status not in {
+                "COMPLETE",
+                "VERIFIED_COMPLETE",
+                "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+            }:
+                issues.append(issue(
+                    source,
+                    "DOCUMENT_DISCOVERY_INCOMPLETE",
+                    f"discovery_status={discovery_status or 'MISSING'}",
+                ))
+            declared = int(status.get("documents_declared") or 0)
+            downloaded = int(status.get("downloaded") or 0)
+            failed = int(status.get("failed") or 0)
+            skipped = int(status.get("skipped") or 0)
+            if failed or declared != downloaded + skipped:
+                issues.append(issue(
+                    source,
+                    "DOCUMENT_COLLECTION_INCOMPLETE",
+                    f"declared={declared}; downloaded={downloaded}; skipped={skipped}; failed={failed}",
+                ))
 
     for item in rows:
         state = str(item.get("completeness_state") or "")
@@ -161,6 +185,7 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
             "Facility-indexed TMS no-data requires a source-native facility ID and a successful ID-bound query.",
             "A name/address discovery miss remains DISCOVERY_UNRESOLVED and blocks a COMPLETE collection claim.",
             "Any failed selected-period query blocks collection acceptance even if other periods returned data.",
+            "Declared official corporate documents must be fully downloaded or explicitly skipped under a complete discovery scope.",
         ],
     }
     return result
