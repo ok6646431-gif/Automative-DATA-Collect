@@ -1,4 +1,5 @@
 name: Collection-only acceptance - HD Samho
+# validation-trigger: facility-registry-semantics-v2
 
 on:
   workflow_dispatch:
