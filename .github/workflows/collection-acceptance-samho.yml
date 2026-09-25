@@ -137,4 +137,4 @@ jobs:
               raise SystemExit('collection-only acceptance is not PASS')
           PY
 
-# source-registry hardening replay v2
+# collection retry hardening replay v3
