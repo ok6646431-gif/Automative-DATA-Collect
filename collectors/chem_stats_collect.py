@@ -217,8 +217,16 @@ def main(req_path):
                     detail_fail+=1; status["errors"]+=1; (out/"errors.log").open("a",encoding="utf-8").write(f"DETAIL\t{y}\t{bid}\t{type(e).__name__}\t{e}\n")
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
 
-        accepted=[r for r in rows if (int(r["search_year"]), str(field_ci(r,"bplcid",None) or r.get("bplcId") or "")) in valid_pairs]
-        rejected=[r for r in rows if (int(r["search_year"]), str(field_ci(r,"bplcid",None) or r.get("bplcId") or "")) not in valid_pairs]
+        if cfg.get("collect_details",True):
+            accepted=[r for r in rows if (int(r["search_year"]), str(field_ci(r,"bplcid",None) or r.get("bplcId") or "")) in valid_pairs]
+            rejected=[r for r in rows if (int(r["search_year"]), str(field_ci(r,"bplcid",None) or r.get("bplcId") or "")) not in valid_pairs]
+        else:
+            # R2 probe mode intentionally skips heavy detail payloads. Preserve
+            # source-native discovery identities so the regression baseline can test
+            # whether must-keep facility IDs disappeared. Production/full collection
+            # still requires substantive detail validation above.
+            accepted=list(rows)
+            rejected=[]
         write_jsonl(out/"invalid_detail_rows.jsonl",rejected)
         if accepted:
             keys=sorted({k for r in accepted for k in r})
