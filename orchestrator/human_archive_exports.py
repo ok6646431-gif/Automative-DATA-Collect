@@ -77,15 +77,32 @@ def _identity_review_map(package_root, source):
     return out
 
 
-def _identity_out_of_scope_ids(package_root, source):
-    """Return source IDs explicitly retained outside the requested SITE_SET.
+def _identity_out_of_scope_ids(package_root, source, confirmed_ids):
+    """Return source IDs explicitly outside the requested SITE_SET.
 
-    package_run demotes identity-review rows to OUT_OF_SCOPE_RETAINED only when
-    they cannot belong to any selected requested-scope candidate. Those rows
-    remain in company-wide raw evidence by policy, but must not be exposed in
-    the user-facing requested-scope workbook or mistaken for silent data loss.
+    Two evidence paths are authoritative:
+    1) an identity is confirmed, but its source ID is not in the resolved
+       requested-scope source-ID set; it is a real company/site identity that
+       belongs only to company-wide raw preservation;
+    2) package_run explicitly demoted a review identity to
+       OUT_OF_SCOPE_RETAINED after proving it cannot belong to any selected
+       requested-scope candidate.
+
+    Neither category may be exposed as requested-scope data, but neither is
+    silent loss.
     """
+    confirmed_ids = set(map(str, confirmed_ids))
     out = set()
+
+    for row in _csv(Path(package_root) / "Source_Identity.csv"):
+        if row.get("source_key") != source:
+            continue
+        source_id = str(row.get("source_site_id") or "").strip()
+        if not source_id or source_id in confirmed_ids:
+            continue
+        if row.get("match_status") == "CONFIRMED":
+            out.add(source_id)
+
     prefix = f"{source}:"
     for row in _csv(Path(package_root) / "Validation_Queue.csv"):
         if row.get("object_type") != "SOURCE_IDENTITY":
@@ -96,7 +113,7 @@ def _identity_out_of_scope_ids(package_root, source):
         if not key.startswith(prefix):
             continue
         source_id = key[len(prefix):].strip()
-        if source_id:
+        if source_id and source_id not in confirmed_ids:
             out.add(source_id)
     return out
 
@@ -351,8 +368,8 @@ def build_human_excels(package_root, archive_root, scope):
     candidates = _json(root/source/"candidates.json", []) or []
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
-    review_ids = set(review) - confirmed_ids
-    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source, confirmed_ids)
+    review_ids = set(review) - confirmed_ids - out_of_scope_ids
     confirmed = [r for r in raw if _source_id(r, source) in confirmed_ids]
     review_rows = [r for r in raw if _source_id(r, source) in review_ids]
     fidelity_counts = _fidelity_counts(raw, source, confirmed_ids, review_ids, out_of_scope_ids)
@@ -384,8 +401,8 @@ def build_human_excels(package_root, archive_root, scope):
     daily = _jsonl(root/source/"daily_rows.jsonl")
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
-    review_ids = set(review) - confirmed_ids
-    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source, confirmed_ids)
+    review_ids = set(review) - confirmed_ids - out_of_scope_ids
     annual_confirmed = [r for r in annual if _source_id(r, source) in confirmed_ids]
     daily_confirmed = [r for r in daily if _source_id(r, source) in confirmed_ids]
     annual_review = [r for r in annual if _source_id(r, source) in review_ids]
@@ -414,8 +431,8 @@ def build_human_excels(package_root, archive_root, scope):
     detail = _jsonl(root/source/"detail_table_rows.jsonl")
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
-    review_ids = set(review) - confirmed_ids
-    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source, confirmed_ids)
+    review_ids = set(review) - confirmed_ids - out_of_scope_ids
     disc_confirmed = [r for r in discovery if _source_id(r, source) in confirmed_ids]
     detail_confirmed = [r for r in detail if _source_id(r, source) in confirmed_ids]
     disc_review = [r for r in discovery if _source_id(r, source) in review_ids]
@@ -442,8 +459,8 @@ def build_human_excels(package_root, archive_root, scope):
     detail = _jsonl(root/source/"detail_table_rows.jsonl")
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
-    review_ids = set(review) - confirmed_ids
-    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source, confirmed_ids)
+    review_ids = set(review) - confirmed_ids - out_of_scope_ids
     disc_confirmed = [r for r in discovery if _source_id(r, source) in confirmed_ids]
     detail_confirmed = [r for r in detail if _source_id(r, source) in confirmed_ids]
     disc_review = [r for r in discovery if _source_id(r, source) in review_ids]
