@@ -153,3 +153,4 @@ jobs:
           retention-days: 14
           if-no-files-found: error
           compression-level: 0
+# latest-code fresh E2E revalidation: 2026-09-27
