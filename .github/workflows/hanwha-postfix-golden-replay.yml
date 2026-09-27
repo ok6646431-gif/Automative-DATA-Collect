@@ -91,12 +91,11 @@ jobs:
             cp -a "$RAW/output/$source" "collected/stable/$source"
           done
 
-          # Hanwha's corrected 2026-09-20 baseline has the verified Korean
-          # corporate originals; Kumho/Hyosung CORP_DOCS are refreshed below.
-          if [ "${{ matrix.corp_mode }}" = "keep_base" ]; then
-            test -s base/output/CORP_DOCS/status.json
-            cp -a base/output/CORP_DOCS collected/stable/CORP_DOCS
-          fi
+          # Preserve the validated baseline corporate-document lane for every
+          # company. Refresh modes replace only the annual PDFs that actually need
+          # Korean-language remediation instead of re-downloading the whole series.
+          test -s base/output/CORP_DOCS/status.json
+          cp -a base/output/CORP_DOCS collected/stable/CORP_DOCS
 
           for source in PRTR CHEM_STATS; do
             test -s "$RAW/output/$source/status.json"
@@ -120,7 +119,7 @@ jobs:
           PY
           fi
 
-      - name: Refresh strict Korean annual-report originals when required
+      - name: Refresh only Korean annual-report originals that need remediation
         if: ${{ matrix.corp_mode != 'keep_base' }}
         env:
           CORP_MODE: ${{ matrix.corp_mode }}
@@ -129,10 +128,10 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
+
           p=Path('evidence/Document_Evidence.json')
           d=json.loads(p.read_text(encoding='utf-8'))
           mode=os.environ['CORP_MODE']
-          docs=[x for x in d.get('documents',[]) if x.get('document_type')=='SUSTAINABILITY_REPORT']
 
           if mode=='refresh_kumho_kor':
               kor={
@@ -140,15 +139,18 @@ jobs:
                   2024:'https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822',
               }
           elif mode=='refresh_hyosung_kor':
-              kor={year:f'https://www.hyosungtnc.com/assets/files/SR_{year}_kr.pdf' for year in range(2020,2026)}
+              kor={2020:'https://www.hyosungtnc.com/assets/files/SR_2020_kr.pdf'}
           else:
               raise SystemExit(f'unknown CORP_MODE={mode}')
 
-          seen=set()
-          for doc in docs:
+          selected=[]
+          for doc in d.get('documents',[]):
+              if doc.get('document_type')!='SUSTAINABILITY_REPORT':
+                  continue
               try: year=int(doc.get('report_year'))
               except (TypeError,ValueError): continue
-              if year not in kor: continue
+              if year not in kor:
+                  continue
               old_url=str(doc.get('source_url') or '')
               old={
                   'source_url':old_url,
@@ -166,31 +168,95 @@ jobs:
                   fallbacks.append(old)
               doc['fallback_sources']=[x for x in fallbacks if str(x.get('source_url') or '')!=kor[year]]
               doc['notes']=(str(doc.get('notes') or '')+' | Golden replay requires the verified official Korean annual-report original.').strip(' |')
-              seen.add(year)
+              selected.append(doc)
 
-          missing=set(kor)-seen
-          if missing:
-              raise SystemExit(f'missing annual-report evidence years for Korean refresh: {sorted(missing)}')
+          if {int(x.get('report_year')) for x in selected} != set(kor):
+              raise SystemExit(f'missing annual-report evidence years for Korean refresh: expected={sorted(kor)} got={[x.get("report_year") for x in selected]}')
+
+          # Keep the full evidence file for downstream archive semantics.
           p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-          print('KOREAN_REPORT_REFRESH',mode,sorted(seen))
+          # Collector receives only the files that actually require replacement.
+          refresh=dict(d)
+          refresh['documents']=selected
+          refresh['gaps']=[]
+          Path('evidence/Document_Evidence.refresh.json').write_text(
+              json.dumps(refresh,ensure_ascii=False,indent=2)+'\n',encoding='utf-8'
+          )
+          print('KOREAN_REPORT_TARGETED_REFRESH',mode,sorted(kor))
           PY
 
           rm -rf output/CORP_DOCS
-          python collectors/corporate_docs_collect.py evidence/Document_Evidence.json evidence/Company_Profile.json
+          python collectors/corporate_docs_collect.py evidence/Document_Evidence.refresh.json evidence/Company_Profile.json
           test -s output/CORP_DOCS/status.json
-          rm -rf collected/stable/CORP_DOCS
-          cp -a output/CORP_DOCS collected/stable/CORP_DOCS
 
           python - <<'PY'
-          import csv,json
+          import csv, json, shutil
           from pathlib import Path
-          st=json.loads(Path('collected/stable/CORP_DOCS/status.json').read_text(encoding='utf-8'))
-          rows=list(csv.DictReader(Path('collected/stable/CORP_DOCS/document_index.csv').open(encoding='utf-8-sig',newline='')))
-          annual=[r for r in rows if str(r.get('document_type') or '')=='SUSTAINABILITY_REPORT']
-          if st.get('failed') not in (0,'0') or st.get('status')!='DATA_FOUND':
-              raise SystemExit(f'corporate document refresh failed: {st}')
-          print('CORPDOC_REFRESH_STATUS',json.dumps(st,ensure_ascii=False))
-          print('ANNUAL_REPORT_ROWS',[(r.get('report_year'),r.get('source_url'),r.get('collection_status')) for r in annual])
+
+          base=Path('collected/stable/CORP_DOCS')
+          fresh=Path('output/CORP_DOCS')
+
+          def read_csv(path):
+              if not path.exists() or path.stat().st_size==0: return []
+              with path.open(encoding='utf-8-sig',newline='') as f:
+                  return list(csv.DictReader(f))
+
+          def write_csv(path,rows):
+              fields=[]
+              for row in rows:
+                  for key in row:
+                      if key not in fields: fields.append(key)
+              if not fields: fields=['value']
+              with path.open('w',encoding='utf-8-sig',newline='') as f:
+                  w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore')
+                  w.writeheader(); w.writerows(rows)
+
+          fresh_status=json.loads((fresh/'status.json').read_text(encoding='utf-8'))
+          if fresh_status.get('status')!='DATA_FOUND' or int(fresh_status.get('failed') or 0)!=0:
+              raise SystemExit(f'targeted corporate document refresh failed: {fresh_status}')
+
+          base_index=read_csv(base/'document_index.csv')
+          fresh_index=read_csv(fresh/'document_index.csv')
+          refresh_ids={r.get('document_id') for r in fresh_index if r.get('document_id')}
+          if not refresh_ids or any(r.get('collection_status')!='DOWNLOADED' for r in fresh_index):
+              raise SystemExit(f'targeted refresh did not deliver all replacement documents: {fresh_index}')
+
+          # New raw files overwrite same-name baseline payloads where applicable.
+          if (fresh/'raw_documents').exists():
+              shutil.copytree(fresh/'raw_documents',base/'raw_documents',dirs_exist_ok=True)
+
+          merged_index=[r for r in base_index if r.get('document_id') not in refresh_ids] + fresh_index
+          write_csv(base/'document_index.csv',merged_index)
+
+          base_attempts=read_csv(base/'download_attempts.csv')
+          fresh_attempts=read_csv(fresh/'download_attempts.csv')
+          merged_attempts=[r for r in base_attempts if r.get('document_id') not in refresh_ids] + fresh_attempts
+          write_csv(base/'download_attempts.csv',merged_attempts)
+
+          status=json.loads((base/'status.json').read_text(encoding='utf-8'))
+          downloaded=[r for r in merged_index if r.get('collection_status')=='DOWNLOADED']
+          failed=[r for r in merged_index if r.get('collection_status')=='FAILED']
+          skipped=[r for r in merged_index if r.get('collection_status')=='SKIPPED']
+          status.update({
+              'status':'DATA_FOUND' if downloaded and not failed else status.get('status'),
+              'documents_declared':len(merged_index),
+              'downloaded':len(downloaded),
+              'failed':len(failed),
+              'skipped':len(skipped),
+              'bytes':sum(int(r.get('bytes') or 0) for r in downloaded),
+              'source_attempt_rows':len(merged_attempts),
+          })
+          (base/'status.json').write_text(json.dumps(status,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          if failed or skipped or len(downloaded)!=len(merged_index):
+              raise SystemExit(f'merged corporate-document lane is incomplete: status={status}')
+
+          print('TARGETED_CORPDOC_MERGE_PASS',json.dumps({
+              'refresh_ids':sorted(refresh_ids),
+              'documents':len(merged_index),
+              'downloaded':len(downloaded),
+              'bytes':status['bytes'],
+          },ensure_ascii=False))
           PY
 
       - name: Reassemble current package from preserved raw sources
