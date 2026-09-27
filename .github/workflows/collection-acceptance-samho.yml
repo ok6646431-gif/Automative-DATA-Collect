@@ -1,5 +1,5 @@
 name: Collection-only acceptance - HD Samho
-# validation-trigger: facility-registry-semantics-v2
+# validation-trigger: bounded-icis-retry-v1
 
 on:
   workflow_dispatch:
@@ -79,16 +79,34 @@ jobs:
 
           python orchestrator/bootstrap_inputs.py             --profile-out requests/runtime/company_profile.generated.json             --request-out requests/current.generated.json             --summary-out requests/runtime/Company_Discovery_Summary.json
 
-      - name: Collect all public source lanes only
+      - name: Collect stable public source lanes
         run: |
           set +e
           python collectors/envinfo_collect.py requests/current.generated.json
           python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root .
-          python collectors/prtr_collect.py requests/current.generated.json
-          python collectors/chem_stats_collect.py requests/current.generated.json
           python collectors/cleansys_collect.py requests/current.generated.json
           python collectors/soosiro_collect.py requests/current.generated.json
           python collectors/corporate_docs_collect.py requests/document_evidence.json requests/runtime/company_profile.generated.json
+          exit 0
+
+      - name: Collect ICIS lanes with bounded source-only retry
+        run: |
+          set +e
+          ICIS_OK=0
+          for ATTEMPT in 1 2 3; do
+            echo "ICIS collection attempt $ATTEMPT/3"
+            rm -rf output/PRTR output/CHEM_STATS
+            python collectors/prtr_collect.py requests/current.generated.json
+            python collectors/chem_stats_collect.py requests/current.generated.json
+            if python collectors/icis_gate.py; then
+              ICIS_OK=1
+              break
+            fi
+            if [ "$ATTEMPT" -lt 3 ]; then
+              sleep 3
+            fi
+          done
+          echo "icis_collection_ok=$ICIS_OK"
           exit 0
 
       - name: Run deterministic collection acceptance tests
