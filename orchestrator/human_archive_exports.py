@@ -77,6 +77,45 @@ def _identity_review_map(package_root, source):
     return out
 
 
+def _identity_out_of_scope_ids(package_root, source):
+    """Return source IDs explicitly retained outside the requested SITE_SET.
+
+    package_run demotes identity-review rows to OUT_OF_SCOPE_RETAINED only when
+    they cannot belong to any selected requested-scope candidate. Those rows
+    remain in company-wide raw evidence by policy, but must not be exposed in
+    the user-facing requested-scope workbook or mistaken for silent data loss.
+    """
+    out = set()
+    prefix = f"{source}:"
+    for row in _csv(Path(package_root) / "Validation_Queue.csv"):
+        if row.get("object_type") != "SOURCE_IDENTITY":
+            continue
+        if row.get("status") != "OUT_OF_SCOPE_RETAINED":
+            continue
+        key = str(row.get("object_key") or "")
+        if not key.startswith(prefix):
+            continue
+        source_id = key[len(prefix):].strip()
+        if source_id:
+            out.add(source_id)
+    return out
+
+
+def _fidelity_counts(rows, source, confirmed_ids, review_ids, out_of_scope_ids):
+    counts = {"confirmed_rows": 0, "review_rows": 0, "out_of_scope_rows": 0, "unclassified_rows": 0}
+    for row in rows:
+        source_id = _source_id(row, source)
+        if source_id in confirmed_ids:
+            counts["confirmed_rows"] += 1
+        elif source_id in review_ids:
+            counts["review_rows"] += 1
+        elif source_id in out_of_scope_ids:
+            counts["out_of_scope_rows"] += 1
+        else:
+            counts["unclassified_rows"] += 1
+    return counts
+
+
 def _status(root, source):
     return _json(Path(root) / source / "status.json", {}) or {}
 
@@ -287,13 +326,14 @@ def _review_row(identity):
     }
 
 
-def _status_sheet(source, status, raw_rows, in_scope_rows, review_rows, years, note=""):
+def _status_sheet(source, status, raw_rows, in_scope_rows, review_rows, years, note="", out_of_scope_rows=0):
     return [{
         "소스": source,
         "수집상태": status.get("status", "UNKNOWN"),
         "원자료 행수": raw_rows,
         "확정범위 표시행수": in_scope_rows,
         "검토필요 표시행수": review_rows,
+        "범위외 원본보존행수": out_of_scope_rows,
         "수집연도": ", ".join(map(str, years)) if years else "",
         "설명": note,
     }]
@@ -312,8 +352,10 @@ def build_human_excels(package_root, archive_root, scope):
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
     review_ids = set(review) - confirmed_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
     confirmed = [r for r in raw if _source_id(r, source) in confirmed_ids]
     review_rows = [r for r in raw if _source_id(r, source) in review_ids]
+    fidelity_counts = _fidelity_counts(raw, source, confirmed_ids, review_ids, out_of_scope_ids)
     confirmed_candidates = _sorted_rows(
         [_clean_candidate_summary(r) for r in candidates if str(r.get("fact_code") or "") in confirmed_ids],
         "CleanSYS 사업장코드", "원문 사업장명"
@@ -328,14 +370,14 @@ def build_human_excels(package_root, archive_root, scope):
     review_sites = _sorted_rows([_review_row(review[i]) for i in sorted(review_ids) if i in review], "원문 사업장명", "사업장코드") + review_candidates
     p = user/"01_TMS"/"대기_CleanSYS"/"CleanSYS_대기TMS_정리.xlsx"
     _write_xlsx(p, [
-        ("수집상태", _status_sheet(source,status,len(raw),len(confirmed),len(review_rows),_years([r.get('examin_year') for r in raw]),"배출량 단위는 원문 source 정의를 확인하며 이 파일에서 임의 환산하지 않음")),
+        ("수집상태", _status_sheet(source,status,len(raw),len(confirmed),len(review_rows),_years([r.get('examin_year') for r in raw]),"배출량 단위는 원문 source 정의를 확인하며 이 파일에서 임의 환산하지 않음",fidelity_counts["out_of_scope_rows"])),
         ("확정_연간데이터", clean_confirmed),
         ("확정_사업장목록", confirmed_candidates),
         ("검토필요_연간", clean_review),
         ("검토필요_사업장", review_sites),
     ])
     created.append(p)
-    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(raw),"confirmed_rows":len(confirmed),"review_rows":len(review_rows),"silent_drop":bool(raw and not confirmed and not review_rows)}
+    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(raw),**fidelity_counts,"silent_drop":fidelity_counts["unclassified_rows"] > 0}
 
     source = "SOOSIRO_WATER"
     annual = _jsonl(root/source/"annual_rows.jsonl")
@@ -343,10 +385,12 @@ def build_human_excels(package_root, archive_root, scope):
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
     review_ids = set(review) - confirmed_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
     annual_confirmed = [r for r in annual if _source_id(r, source) in confirmed_ids]
     daily_confirmed = [r for r in daily if _source_id(r, source) in confirmed_ids]
     annual_review = [r for r in annual if _source_id(r, source) in review_ids]
     daily_review = [r for r in daily if _source_id(r, source) in review_ids]
+    fidelity_counts = _fidelity_counts(annual + daily, source, confirmed_ids, review_ids, out_of_scope_ids)
     status = _status(root, source)
     water_annual_confirmed = _sorted_rows([_water_annual(r) for r in annual_confirmed], "SOOSIRO 사업장코드", "자료연도", "방류구번호", "원문 사업장명")
     water_daily_confirmed = _sorted_rows([_water_daily(r) for r in daily_confirmed], "SOOSIRO 사업장코드", "자료연도", "일자", "분기", "방류구번호", "원문 사업장명")
@@ -355,7 +399,7 @@ def build_human_excels(package_root, archive_root, scope):
     water_review_sites = _sorted_rows([_review_row(review[i]) for i in sorted(review_ids) if i in review], "원문 사업장명", "사업장코드")
     p = user/"01_TMS"/"수질_SOOSIRO"/"SOOSIRO_수질TMS_정리.xlsx"
     _write_xlsx(p, [
-        ("수집상태", _status_sheet(source,status,len(annual)+len(daily),len(annual_confirmed)+len(daily_confirmed),len(annual_review)+len(daily_review),_years([r.get('YEAR') for r in annual]),"농도·배출량 단위는 원문 source 정의를 확인하며 이 파일에서 임의 환산하지 않음")),
+        ("수집상태", _status_sheet(source,status,len(annual)+len(daily),len(annual_confirmed)+len(daily_confirmed),len(annual_review)+len(daily_review),_years([r.get('YEAR') for r in annual]),"농도·배출량 단위는 원문 source 정의를 확인하며 이 파일에서 임의 환산하지 않음",fidelity_counts["out_of_scope_rows"])),
         ("확정_연간데이터", water_annual_confirmed),
         ("확정_일자료", water_daily_confirmed),
         ("검토필요_연간", water_annual_review),
@@ -363,7 +407,7 @@ def build_human_excels(package_root, archive_root, scope):
         ("검토필요_사업장", water_review_sites),
     ])
     created.append(p)
-    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(annual)+len(daily),"confirmed_rows":len(annual_confirmed)+len(daily_confirmed),"review_rows":len(annual_review)+len(daily_review),"silent_drop":bool((annual or daily) and not (annual_confirmed or daily_confirmed) and not (annual_review or daily_review))}
+    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(annual)+len(daily),**fidelity_counts,"silent_drop":fidelity_counts["unclassified_rows"] > 0}
 
     source = "PRTR"
     discovery = _csv(root/source/"discovery.csv")
@@ -371,10 +415,12 @@ def build_human_excels(package_root, archive_root, scope):
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
     review_ids = set(review) - confirmed_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
     disc_confirmed = [r for r in discovery if _source_id(r, source) in confirmed_ids]
     detail_confirmed = [r for r in detail if _source_id(r, source) in confirmed_ids]
     disc_review = [r for r in discovery if _source_id(r, source) in review_ids]
     detail_review = [r for r in detail if _source_id(r, source) in review_ids]
+    fidelity_counts = _fidelity_counts(discovery, source, confirmed_ids, review_ids, out_of_scope_ids)
     status = _status(root, source)
     prtr_confirmed = _sorted_rows([_prtr_summary(r) for r in disc_confirmed], "PRTR 사업장ID", "자료연도", "원문 사업장명")
     prtr_detail_confirmed = _sorted_rows([_source_table_row(r,'entrps_id') for r in detail_confirmed], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
@@ -382,14 +428,14 @@ def build_human_excels(package_root, archive_root, scope):
     prtr_detail_review = _sorted_rows([_source_table_row(r,'entrps_id') for r in detail_review], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
     p = user/"02_화학물질"/"PRTR_배출이동량"/"PRTR_화학물질배출이동량_정리.xlsx"
     _write_xlsx(p, [
-        ("수집상태", _status_sheet(source,status,len(discovery),len(disc_confirmed),len(disc_review),_years([r.get('search_year') for r in discovery]),"요약값과 원문 상세표를 분리해 보존함")),
+        ("수집상태", _status_sheet(source,status,len(discovery),len(disc_confirmed),len(disc_review),_years([r.get('search_year') for r in discovery]),"요약값과 원문 상세표를 분리해 보존함",fidelity_counts["out_of_scope_rows"])),
         ("확정_사업장연도", prtr_confirmed),
         ("확정_원문표", prtr_detail_confirmed),
         ("검토필요_사업장연도", prtr_review),
         ("검토필요_원문표", prtr_detail_review),
     ])
     created.append(p)
-    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(discovery),"confirmed_rows":len(disc_confirmed),"review_rows":len(disc_review),"silent_drop":bool(discovery and not disc_confirmed and not disc_review)}
+    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(discovery),**fidelity_counts,"silent_drop":fidelity_counts["unclassified_rows"] > 0}
 
     source = "CHEM_STATS"
     discovery = _csv(root/source/"discovery.csv")
@@ -397,10 +443,12 @@ def build_human_excels(package_root, archive_root, scope):
     review = _identity_review_map(package_root, source)
     confirmed_ids = set(map(str, scope.get(source, set())))
     review_ids = set(review) - confirmed_ids
+    out_of_scope_ids = _identity_out_of_scope_ids(package_root, source) - confirmed_ids - review_ids
     disc_confirmed = [r for r in discovery if _source_id(r, source) in confirmed_ids]
     detail_confirmed = [r for r in detail if _source_id(r, source) in confirmed_ids]
     disc_review = [r for r in discovery if _source_id(r, source) in review_ids]
     detail_review = [r for r in detail if _source_id(r, source) in review_ids]
+    fidelity_counts = _fidelity_counts(discovery, source, confirmed_ids, review_ids, out_of_scope_ids)
     status = _status(root, source)
     chem_confirmed = _sorted_rows([_chem_summary(r) for r in disc_confirmed], "화학물질통계 사업장ID", "자료연도", "해당연도 원문 사업장명")
     chem_detail_confirmed = _sorted_rows([_source_table_row(r,'bplcId') for r in detail_confirmed], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
@@ -408,20 +456,20 @@ def build_human_excels(package_root, archive_root, scope):
     chem_detail_review = _sorted_rows([_source_table_row(r,'bplcId') for r in detail_review], "사업장ID", "자료연도", "원문 테이블번호", "원문 행번호")
     p = user/"02_화학물질"/"화학물질통계"/"화학물질통계_정리.xlsx"
     _write_xlsx(p, [
-        ("수집상태", _status_sheet(source,status,len(discovery),len(disc_confirmed),len(disc_review),_years([r.get('search_year') or r.get('reportYear') for r in discovery]),"해당연도 원문 identity와 별도 identity anchor를 구분함")),
+        ("수집상태", _status_sheet(source,status,len(discovery),len(disc_confirmed),len(disc_review),_years([r.get('search_year') or r.get('reportYear') for r in discovery]),"해당연도 원문 identity와 별도 identity anchor를 구분함",fidelity_counts["out_of_scope_rows"])),
         ("확정_사업장연도", chem_confirmed),
         ("확정_원문표", chem_detail_confirmed),
         ("검토필요_사업장연도", chem_review),
         ("검토필요_원문표", chem_detail_review),
     ])
     created.append(p)
-    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(discovery),"confirmed_rows":len(disc_confirmed),"review_rows":len(disc_review),"silent_drop":bool(discovery and not disc_confirmed and not disc_review)}
+    fidelity["sources"][source] = {"collector_status":status.get("status"),"raw_rows":len(discovery),**fidelity_counts,"silent_drop":fidelity_counts["unclassified_rows"] > 0}
 
     for source, item in fidelity["sources"].items():
-        if item["collector_status"] == "DATA_FOUND" and item["raw_rows"] > 0 and item["confirmed_rows"] + item["review_rows"] == 0:
+        if item["collector_status"] == "DATA_FOUND" and item["unclassified_rows"] > 0:
             item["silent_drop"] = True
             fidelity["pass"] = False
-    fidelity["principle"] = "DATA_FOUND rows must remain visible either as confirmed requested-scope data or explicitly quarantined REVIEW_REQUIRED data; never silently disappear."
+    fidelity["principle"] = "Every DATA_FOUND raw row must be accounted for as requested-scope confirmed data, REVIEW_REQUIRED data, or explicitly OUT_OF_SCOPE_RETAINED raw evidence; only unclassified rows are silent loss."
     idx = Path(archive_root)/"00_자료목록"
     idx.mkdir(parents=True, exist_ok=True)
     (idx/"Human_Delivery_Fidelity.json").write_text(json.dumps(fidelity,ensure_ascii=False,indent=2),encoding="utf-8")
