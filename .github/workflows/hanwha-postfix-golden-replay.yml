@@ -3,7 +3,10 @@ name: Golden three-company strict raw replay
 on:
   push:
     branches: [run/control-plane]
-    paths: ['.github/workflows/hanwha-postfix-golden-replay.yml']
+    paths:
+      - '.github/workflows/hanwha-postfix-golden-replay.yml'
+      - 'orchestrator/human_archive_exports.py'
+      - 'tests/test_human_archive_exports.py'
 
 permissions:
   contents: read
@@ -266,3 +269,4 @@ jobs:
             collected/stable/CORP_DOCS/document_index.csv
           if-no-files-found: warn
           retention-days: 14
+# rerun after out-of-scope fidelity accounting fix: 2026-09-27
