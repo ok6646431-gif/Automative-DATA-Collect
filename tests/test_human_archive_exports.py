@@ -64,6 +64,50 @@ class HumanArchiveExportsTest(unittest.TestCase):
             self.assertEqual(fidelity["sources"]["SOOSIRO_WATER"]["review_rows"],2)
             self.assertFalse(fidelity["sources"]["SOOSIRO_WATER"]["silent_drop"])
 
+    def test_explicit_out_of_scope_soosiro_is_accounted_not_silent_drop(self):
+        with tempfile.TemporaryDirectory() as td:
+            package=Path(td)/"assembled"; out=package/"output"; archive=package/"Human"
+            self._csv(package/"Source_Identity.csv", [{
+                "source_key":"SOOSIRO_WATER","source_site_id":"31F0081","source_site_name_raw":"효성티앤씨(주) 울산공장",
+                "source_address_raw":"울산광역시 남구 매암동 583-1","match_status":"REVIEW_REQUIRED",
+                "match_basis":"SINGLE_OR_CONFLICTING_SOURCE_ADDRESS","review_required":"True"
+            }])
+            self._csv(package/"Validation_Queue.csv", [{
+                "object_type":"SOURCE_IDENTITY","object_key":"SOOSIRO_WATER:31F0081",
+                "status":"OUT_OF_SCOPE_RETAINED","severity":"INFO"
+            }])
+            annual={"YEAR":"2020","FACT_CODE":"31F0081","FACT_FNAME":"효성티앤씨(주) 울산공장","FACT_ADDR":"울산광역시 남구 매암동 583-1","WAST_NO":1}
+            daily={**annual,"YEAR":"2024","DAY":"01월01일","QUARTER":"1분기","AMOUNT_FLOW":"2098.7","source_fact_code":"31F0081"}
+            self._jsonl(out/"SOOSIRO_WATER"/"annual_rows.jsonl",[annual])
+            self._jsonl(out/"SOOSIRO_WATER"/"daily_rows.jsonl",[daily])
+            self._json(out/"SOOSIRO_WATER"/"fact_candidates.json",[{"FACT_CODE":"31F0081","FACT_FNAME":"효성티앤씨(주) 울산공장"}])
+            self._json(out/"SOOSIRO_WATER"/"status.json",{"status":"DATA_FOUND"})
+            for src in ["CLEANSYS_AIR","PRTR","CHEM_STATS"]:
+                self._json(out/src/"status.json",{"status":"NO_MATCH"})
+            self._jsonl(out/"CLEANSYS_AIR"/"annual_rows.jsonl",[])
+            self._json(out/"CLEANSYS_AIR"/"candidates.json",[])
+            self._csv(out/"PRTR"/"discovery.csv",[]); self._jsonl(out/"PRTR"/"detail_table_rows.jsonl",[])
+            self._csv(out/"CHEM_STATS"/"discovery.csv",[]); self._jsonl(out/"CHEM_STATS"/"detail_table_rows.jsonl",[])
+
+            build_human_excels(package,archive,{s:set() for s in ["CLEANSYS_AIR","SOOSIRO_WATER","PRTR","CHEM_STATS"]})
+            fidelity=json.loads((archive/"00_자료목록"/"Human_Delivery_Fidelity.json").read_text(encoding="utf-8"))
+            water=fidelity["sources"]["SOOSIRO_WATER"]
+            self.assertTrue(fidelity["pass"])
+            self.assertEqual(water["raw_rows"],2)
+            self.assertEqual(water["confirmed_rows"],0)
+            self.assertEqual(water["review_rows"],0)
+            self.assertEqual(water["out_of_scope_rows"],2)
+            self.assertEqual(water["unclassified_rows"],0)
+            self.assertFalse(water["silent_drop"])
+
+            book=load_workbook(archive/"01_사용자자료"/"01_TMS"/"수질_SOOSIRO"/"SOOSIRO_수질TMS_정리.xlsx",read_only=True,data_only=True)
+            ws=book["수집상태"]
+            headers=[c.value for c in next(ws.iter_rows(min_row=1,max_row=1))]
+            self.assertEqual(ws.cell(2,headers.index("범위외 원본보존행수")+1).value,2)
+            # Explicitly out-of-scope raw rows stay out of requested-scope user sheets.
+            self.assertEqual(book["확정_연간데이터"].max_row,2)
+            self.assertEqual(book["검토필요_연간"].max_row,2)
+
     def test_prtr_and_chem_headers_preserve_source_semantics(self):
         with tempfile.TemporaryDirectory() as td:
             package=Path(td)/"assembled"; out=package/"output"; archive=package/"Human"
