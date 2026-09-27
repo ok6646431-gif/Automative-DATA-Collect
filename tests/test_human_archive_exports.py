@@ -108,6 +108,50 @@ class HumanArchiveExportsTest(unittest.TestCase):
             self.assertEqual(book["확정_연간데이터"].max_row,2)
             self.assertEqual(book["검토필요_연간"].max_row,2)
 
+    def test_confirmed_non_target_source_ids_are_accounted_out_of_scope(self):
+        with tempfile.TemporaryDirectory() as td:
+            package=Path(td)/"assembled"; out=package/"output"; archive=package/"Human"
+            self._csv(package/"Source_Identity.csv", [
+                {"source_key":"PRTR","source_site_id":"300","match_status":"CONFIRMED","review_required":"False"},
+                {"source_key":"PRTR","source_site_id":"1250145083732164944","match_status":"CONFIRMED","review_required":"False"},
+                {"source_key":"CHEM_STATS","source_site_id":"AAW784N","match_status":"CONFIRMED","review_required":"False"},
+                {"source_key":"CHEM_STATS","source_site_id":"ABB381N","match_status":"CONFIRMED","review_required":"False"},
+            ])
+            self._csv(package/"Validation_Queue.csv",[])
+            for src in ["CLEANSYS_AIR","SOOSIRO_WATER"]:
+                self._json(out/src/"status.json",{"status":"NO_MATCH"})
+            self._jsonl(out/"CLEANSYS_AIR"/"annual_rows.jsonl",[])
+            self._json(out/"CLEANSYS_AIR"/"candidates.json",[])
+            self._jsonl(out/"SOOSIRO_WATER"/"annual_rows.jsonl",[])
+            self._jsonl(out/"SOOSIRO_WATER"/"daily_rows.jsonl",[])
+            self._json(out/"SOOSIRO_WATER"/"fact_candidates.json",[])
+
+            self._json(out/"PRTR"/"status.json",{"status":"DATA_FOUND"})
+            self._csv(out/"PRTR"/"discovery.csv",[
+                {"search_year":"2024","entrps_id":"300","company_name_raw":"효성티앤씨 구미공장","address_raw":"구미"},
+                {"search_year":"2024","entrps_id":"1250145083732164944","company_name_raw":"효성티앤씨 울산공장","address_raw":"울산"},
+            ])
+            self._jsonl(out/"PRTR"/"detail_table_rows.jsonl",[])
+
+            self._json(out/"CHEM_STATS"/"status.json",{"status":"DATA_FOUND"})
+            self._csv(out/"CHEM_STATS"/"discovery.csv",[
+                {"search_year":"2024","bplcId":"AAW784N","bplcNm":"효성티앤씨 구미공장","locplcAdres":"구미"},
+                {"search_year":"2024","bplcId":"ABB381N","bplcNm":"효성티앤씨 울산공장","locplcAdres":"울산"},
+            ])
+            self._jsonl(out/"CHEM_STATS"/"detail_table_rows.jsonl",[])
+
+            scope={"CLEANSYS_AIR":set(),"SOOSIRO_WATER":set(),"PRTR":{"300"},"CHEM_STATS":{"AAW784N"}}
+            build_human_excels(package,archive,scope)
+            fidelity=json.loads((archive/"00_자료목록"/"Human_Delivery_Fidelity.json").read_text(encoding="utf-8"))
+
+            self.assertTrue(fidelity["pass"])
+            self.assertEqual(fidelity["sources"]["PRTR"]["confirmed_rows"],1)
+            self.assertEqual(fidelity["sources"]["PRTR"]["out_of_scope_rows"],1)
+            self.assertEqual(fidelity["sources"]["PRTR"]["unclassified_rows"],0)
+            self.assertEqual(fidelity["sources"]["CHEM_STATS"]["confirmed_rows"],1)
+            self.assertEqual(fidelity["sources"]["CHEM_STATS"]["out_of_scope_rows"],1)
+            self.assertEqual(fidelity["sources"]["CHEM_STATS"]["unclassified_rows"],0)
+
     def test_prtr_and_chem_headers_preserve_source_semantics(self):
         with tempfile.TemporaryDirectory() as td:
             package=Path(td)/"assembled"; out=package/"output"; archive=package/"Human"
