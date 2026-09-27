@@ -1,7 +1,7 @@
 import json, sys
 from pathlib import Path
 
-bad={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","CONFIG_ERROR"}
+bad={"REMOTE_HOST_UNREACHABLE","REQUEST_OR_PARSE_FAILED","PARTIAL_FAILURE","CONFIG_ERROR"}
 problems=[]
 for p in [Path("output/PRTR/status.json"),Path("output/CHEM_STATS/status.json")]:
     if not p.exists():
