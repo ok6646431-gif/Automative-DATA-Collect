@@ -41,7 +41,8 @@ class DocumentLanguagePreferenceTests(unittest.TestCase):
         discovery={'current_legal_name':'Example Corp.'}
         docs=[{'document_type':'SUSTAINABILITY_REPORT','report_year':2024,'verification_status':'VERIFIED','source_url':'https://issuer.example/en/report_en.pdf'}]
         out,audit=prefer_korean_sustainability(discovery,docs)
-        self.assertEqual(out[0]['verification_status'],'LANGUAGE_REVIEW_REQUIRED')
+        self.assertEqual(out[0]['verification_status'],'UNVERIFIED')
+        self.assertEqual(out[0]['language_preference'],'KO_REQUIRED_NOT_VERIFIED')
         self.assertEqual(audit['korean_route_unverified_years'],[2024])
 
 
