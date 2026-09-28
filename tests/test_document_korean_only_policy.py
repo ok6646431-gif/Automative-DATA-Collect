@@ -16,7 +16,8 @@ class KoreanAnnualReportPolicyTest(unittest.TestCase):
         doc = self.doc(2024, 'https://issuer.example/Hanwha_2024_ENG.pdf', title='2024 지속가능경영보고서 국문')
         self.assertEqual(route_language(doc), 'EN')
         result, meta = prefer_korean_sustainability({}, [doc])
-        self.assertEqual(result[0]['verification_status'], 'LANGUAGE_REVIEW_REQUIRED')
+        self.assertEqual(result[0]['verification_status'], 'UNVERIFIED')
+        self.assertEqual(result[0]['language_preference'], 'KO_REQUIRED_NOT_VERIFIED')
         self.assertEqual(meta['korean_route_unverified_years'], [2024])
 
     def test_korean_fallback_promoted_but_english_never_used_as_fallback(self):
@@ -31,7 +32,8 @@ class KoreanAnnualReportPolicyTest(unittest.TestCase):
 
     def test_only_english_never_counts_as_verified_annual_report(self):
         out, metadata = prefer_korean_sustainability({}, [self.doc(2026, 'https://issuer.example/2026_ENG.pdf')])
-        self.assertEqual(out[0]['verification_status'], 'LANGUAGE_REVIEW_REQUIRED')
+        self.assertEqual(out[0]['verification_status'], 'UNVERIFIED')
+        self.assertEqual(out[0]['language_preference'], 'KO_REQUIRED_NOT_VERIFIED')
         self.assertEqual(out[0]['fallback_sources'], [])
         self.assertEqual(metadata['status'], 'REVIEW_REQUIRED')
 
