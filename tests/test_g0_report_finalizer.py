@@ -19,7 +19,7 @@ class ReportFinalizerTests(unittest.TestCase):
                 "document_type": "SUSTAINABILITY_REPORT_SUMMARY",
                 "title": "2023 Sustainability Report ESG Management Highlight Environmental",
                 "report_year": 2023,
-                "source_url": "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_eng.pdf",
+                "source_url": "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_kor.pdf",
                 "source_locator": "https://sustainability.example.com/reports",
                 "expected_extension": "pdf",
                 "importance": "SUPPORTING",
@@ -36,7 +36,7 @@ class ReportFinalizerTests(unittest.TestCase):
         out = finalizer.finalize(discovery, documents, audit)
         self.assertEqual(out["documents"][0]["document_type"], "SUSTAINABILITY_REPORT")
         self.assertEqual(out["documents"][0]["importance"], "CORE")
-        self.assertEqual(out["documents"][0]["title"], "TEST Sustainability Report 2023 eng")
+        self.assertEqual(out["documents"][0]["title"], "TEST Sustainability Report 2023 kor")
         self.assertNotIn("coverage_role", out["documents"][0])
         self.assertEqual(out["gaps"], [])
         self.assertEqual(out["discovery_status"], "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE")
