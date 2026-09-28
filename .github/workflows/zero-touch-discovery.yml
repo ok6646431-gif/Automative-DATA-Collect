@@ -156,7 +156,11 @@ jobs:
           --max-pages 90
 
       - name: Run fresh-process annual document recovery
-        if: steps.request.outputs.run_live == 'true' && steps.live.outcome == 'success'
+        if: >-
+          steps.request.outputs.run_live == 'true' && always() &&
+          hashFiles('generated-discovery/company_discovery.json') != '' &&
+          hashFiles('generated-discovery/document_evidence.json') != '' &&
+          hashFiles('generated-discovery/Discovery_Audit.json') != ''
         run: >-
           python orchestrator/g0_document_recovery_runner.py
           --out-dir generated-discovery
