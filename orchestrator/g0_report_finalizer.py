@@ -305,6 +305,45 @@ def finalize(discovery: Dict[str, Any], documents: Dict[str, Any], audit: Dict[s
         existing_gap_years.add(year)
 
     out, language_preference = prefer_korean_sustainability(discovery, out)
+
+    language_missing_years = {
+        int(year) for year in (language_preference.get("korean_route_unverified_years") or [])
+    }
+    if language_missing_years:
+        # A byte-verified English report proves that a report exists, but it does
+        # not satisfy the Korean-original delivery contract. Replace any weaker
+        # same-year annual gap with one explicit blocking Korean-route gap so the
+        # fresh-process recovery stage gets a concrete target year.
+        gaps = [
+            gap for gap in gaps
+            if not (
+                isinstance(gap, dict)
+                and gap.get("document_type") == "SUSTAINABILITY_REPORT"
+                and str(gap.get("year") or "").isdigit()
+                and int(gap.get("year")) in language_missing_years
+            )
+        ]
+        for year in sorted(language_missing_years):
+            source_locator = next((
+                str(doc.get("source_locator") or doc.get("source_url") or "")
+                for doc in out
+                if doc.get("document_type") == "SUSTAINABILITY_REPORT"
+                and _year(doc) == year
+                and str(doc.get("language_preference") or "") == "KO_REQUIRED_NOT_VERIFIED"
+            ), "")
+            gaps.append({
+                "gap_id": f"AUTO_SUSTAINABILITY_{year}_KOREAN_ROUTE_UNVERIFIED",
+                "source_key": "CORP_DOCS",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "year": year,
+                "verification_status": "UNVERIFIED",
+                "status": "DISCOVERY_GAP",
+                "severity": "MEDIUM",
+                "blocking": True,
+                "reason": "KOREAN_REPORT_ROUTE_NOT_VERIFIED",
+                "source_locator": source_locator,
+            })
+
     documents["documents"] = out
     documents["gaps"] = gaps
     documents["discovery_status"] = (
