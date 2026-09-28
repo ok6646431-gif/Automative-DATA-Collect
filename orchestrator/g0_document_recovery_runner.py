@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from orchestrator import document_language_preference
 from orchestrator import g0_data_attr_report_recovery
 from orchestrator import g0_entity_window_normalization
 from orchestrator import g0_first_publication_recovery
@@ -215,6 +216,9 @@ def run(out_dir: str | Path, budget_seconds: int = DEFAULT_RECOVERY_BUDGET_SECON
 
     documents = g0_report_entity_policy.normalize(discovery, documents, audit)
     documents = runtime._merge_verified_document_routes(discovery, documents, audit)
+    documents = document_language_preference.recover_verified_korean_siblings(
+        discovery, documents, audit
+    )
     documents = g0_report_finalizer.finalize(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(discovery, documents, audit)
     documents = g0_first_publication_recovery.recover(discovery, documents, audit)
