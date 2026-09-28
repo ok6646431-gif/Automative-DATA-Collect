@@ -1,28 +1,21 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-1b342a45-env-g0-20260920",
-  "requested_company_name": "한화에어로스페이스",
-  "current_legal_name": "한화에어로스페이스(주)",
+  "request_id": "company-890833b4-env-g0-20260928",
+  "requested_company_name": "포스코",
+  "current_legal_name": "주식회사 포스코",
   "current_legal_name_active_period": {
-    "start_year": 1977
+    "start_year": 2022
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "한화에어로스페이스(주) 국내 사업장",
+    "label": "주식회사 포스코 국내 사업장",
     "candidate_ids": [
-      "86-76d24dfd",
-      "rd-319-6-403161d6",
-      "cs-108-81506521",
-      "rd-1366-10-82399adc",
-      "8-99-7b9141ac",
-      "857-3f988ff6",
-      "144-2b97ba86",
-      "1-1204-76525a65",
-      "2-799-18c9169a",
-      "3-rd-69-39eed559",
-      "411-2ecadaf7"
+      "6261-b923b0cc",
+      "2026-22dbf39a",
+      "440-ec07c1ed",
+      "6262-58eb3fe7"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -30,21 +23,21 @@
   },
   "company_aliases": [
     {
-      "name": "한화에어로스페이스",
+      "name": "포스코",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
       "active_period": {
-        "start_year": 1977
+        "start_year": 2022
       }
     },
     {
-      "name": "HANWHA AEROSPACE CO., LTD.",
+      "name": "POSCO",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
       "active_period": {
-        "start_year": 1977
+        "start_year": 2022
       }
     }
   ],
@@ -52,164 +45,66 @@
   "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "86-76d24dfd",
-      "site_name_raw": "서울 본사",
-      "address_raw": "서울특별시 중구 청계천로 86",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "candidate_id": "6261-b923b0cc",
+      "site_name_raw": "포항본사",
+      "address_raw": "경상북도 포항시 남구 동해안로 6261",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "rd-319-6-403161d6",
-      "site_name_raw": "판교 R&D 캠퍼스",
-      "address_raw": "경기도 성남시 분당구 판교로 319번길 6",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "candidate_id": "2026-22dbf39a",
+      "site_name_raw": "광양제철소",
+      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "cs-108-81506521",
-      "site_name_raw": "양주 CS센터",
-      "address_raw": "경기도 양주시 백석읍 꿈나무로 108",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "candidate_id": "440-ec07c1ed",
+      "site_name_raw": "포스코센터",
+      "address_raw": "서울특별시 강남구 테헤란로 440",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     },
     {
-      "candidate_id": "rd-1366-10-82399adc",
-      "site_name_raw": "대전 R&D 캠퍼스",
-      "address_raw": "대전광역시 유성구 유성대로 1366번길 10",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
+      "candidate_id": "6262-58eb3fe7",
+      "site_name_raw": "포항제철소",
+      "address_raw": "경상북도 포항시 남구 동해안로 6262",
+      "business_unit_raw": "official domestic location navigation",
+      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
       "identity_status": "CONFIRMED",
       "verification_state": "VERIFIED",
       "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "8-99-7b9141ac",
-      "site_name_raw": "대전 사업장",
-      "address_raw": "대전광역시 유성구 외삼로 8번길 99",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "857-3f988ff6",
-      "site_name_raw": "보은 사업장",
-      "address_raw": "충북 보은군 내북면 회인내북로 857",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "144-2b97ba86",
-      "site_name_raw": "아산 사업장",
-      "address_raw": "충청남도 아산시 아산밸리남로 144",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "1-1204-76525a65",
-      "site_name_raw": "창원 1사업장/한국사업장",
-      "address_raw": "경상남도 창원시 성산구 창원대로 1204",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "2-799-18c9169a",
-      "site_name_raw": "창원 2사업장",
-      "address_raw": "경상남도 창원시 성산구 공단로 799",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "3-rd-69-39eed559",
-      "site_name_raw": "창원 3사업장 / R&D 캠퍼스",
-      "address_raw": "경상남도 창원시 성산구 공단로 69",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "411-2ecadaf7",
-      "site_name_raw": "여수 사업장",
-      "address_raw": "전남 여수시 신월로 411",
-      "business_unit_raw": "official domestic-site catalog",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
-        "catalog_page": "https://www.hanwhaaerospace.com/kor/whoweare/location/domestic.do",
-        "extraction_contract": "SEMANTIC_HEADING_ADDRESS_PAIR"
+        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
+        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
+        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
       }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00126566",
-      "source_value_raw": "한화에어로스페이스(주) / HANWHA AEROSPACE CO., LTD. / establishment 1977-08-01 / website www.hanwhaaerospace.com",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
+      "source_value_raw": "주식회사 포스코 / POSCO / establishment 2022-03-02 / website www.posco.co.kr",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -272,6 +167,6 @@
     }
   },
   "legal_entity_active_period": {
-    "start_year": 1977
+    "start_year": 2022
   }
 }

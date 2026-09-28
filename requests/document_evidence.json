@@ -3,230 +3,132 @@
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_f12e16efa8",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "지속가능경영",
-      "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-      "expected_extension": "html",
+      "document_id": "AUTO_SUSTAINABILITY_2022",
+      "document_type": "SUSTAINABILITY_REPORT_SUMMARY",
+      "title": "하이라이트",
+      "report_year": 2022,
+      "source_url": "https://sustainability.posco.co.kr/assets/file/POSCO_Sustainability_Report_2022_highlight.pdf",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
+      "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING",
+      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+      "coverage_role": "SUPPORTING_SUMMARY_ONLY",
       "fallback_sources": [],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_58f0fe5ab2",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "환경안전보건경영",
-      "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/program.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "html"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
-    },
-    {
-      "document_id": "AUTO_ENVIRONMENT_PAGE_eda4c8fe23",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "환경안전보건경영",
-      "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/ehs/introduce.do",
-      "expected_extension": "html",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "verification_status": "SOURCE_VERIFIED",
-          "source_role": "PREVIOUS_VERIFIED_PRIMARY",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "html"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
-    },
-    {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2021_6",
+      "document_id": "AUTO_SUSTAINABILITY_2020",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 sustainability report 2021 지속가능경영보고서 영문",
+      "title": "2020 sustainability Report kor",
+      "report_year": 2020,
+      "source_url": "https://sustainability.posco.co.kr/assets/file/sustainability_old/2020_sustainability_Report_kor.pdf",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official report-page year/file semantics + same-host JavaScript download contract + streamed PDF byte verification. Report year predates the verified current legal-entity start (2022); preserved as historical reference only. Report year predates the verified current legal-entity start (2022); preserved as historical reference only.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE",
+      "coverage_role": "PRE_ENTITY_HISTORICAL_REFERENCE"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2021",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "POSCO Sustainability Report 2021 kor",
       "report_year": 2021,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c8af89b6-ac6f-46cb-9d00-96fc8f58f2be",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://sustainability.posco.co.kr/assets/file/POSCO_Sustainability_Report_2021_kor.pdf",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=ae89a69e-aadf-434f-a3c6-e079017fa15d",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-          "title": "2021 sustainability report 2021 지속가능경영보고서 영문",
-          "source_role": "LANGUAGE_FALLBACK"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
-      "language_preference": "KO_PREFERRED"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification. Report year predates the verified current legal-entity start (2022); preserved as historical reference only. Report year predates the verified current legal-entity start (2022); preserved as historical reference only.; Korean route recovered from byte-verified same-host language sibling of an already verified annual PDF. Report year predates the verified current legal-entity start (2022); preserved as historical reference only.",
+      "entity_alignment": "ALIGNED",
+      "coverage_role": "PRE_ENTITY_HISTORICAL_REFERENCE",
+      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2022_5",
+      "document_id": "AUTO_SUSTAINABILITY_2022",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 sustainability report 2022 지속가능경영보고서 영문",
+      "title": "POSCO Sustainability Report 2022 kor",
       "report_year": 2022,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=c454e213-56dc-44db-a912-94b7e2401e1d",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://sustainability.posco.co.kr/assets/file/POSCO_Sustainability_Report_2022_kor.pdf",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=9e4954b9-c17a-45b4-b751-d849fe8864e7",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-          "title": "2022 sustainability report 2022 지속가능경영보고서 영문",
-          "source_role": "LANGUAGE_FALLBACK"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
-      "language_preference": "KO_PREFERRED"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.; Korean route recovered from byte-verified same-host language sibling of an already verified annual PDF.",
+      "entity_alignment": "ALIGNED",
+      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_4",
+      "document_id": "AUTO_SUSTAINABILITY_2023",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 sustainability report 2023 지속가능경영보고서 영문",
+      "title": "POSCO Sustainability Report 2023 kor",
       "report_year": 2023,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=010c9815-b2d3-4004-a344-839ab0cb1a6d",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://sustainability.posco.co.kr/assets/file/POSCO_Sustainability_Report_2023_kor.pdf",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=b9227131-cc1f-4fe6-b713-f8467e4dae96",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-          "title": "2023 sustainability report 2023 지속가능경영보고서 영문",
-          "source_role": "LANGUAGE_FALLBACK"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
-      "language_preference": "KO_PREFERRED"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification. Final representation arbitration: explicit full-report PDF target overrides incidental summary/highlight words in surrounding page context.; Korean route recovered from byte-verified same-host language sibling of an already verified annual PDF.",
+      "document_category": "SUSTAINABILITY_REPORT",
+      "entity_alignment": "ALIGNED",
+      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_3",
+      "document_id": "AUTO_SUSTAINABILITY_2024",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 sustainability report 2024 지속가능경영보고서 영문",
+      "title": "POSCO Sustainability Report 2024 kor",
       "report_year": 2024,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=1772e31b-cc5b-46e6-8d8e-23ca8865886d",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://sustainability.posco.co.kr/assets/file/POSCO_Sustainability_Report_2024_kor.pdf",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=2677fcfa-2c0a-48ea-809f-4ba93bef128c",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-          "title": "2024 sustainability report 2024 지속가능경영보고서 영문",
-          "source_role": "LANGUAGE_FALLBACK"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
-      "language_preference": "KO_PREFERRED"
+      "notes": "Annual-report DOM semantics + local-year evidence + statically reconstructed same-org JavaScript download contract + streamed PDF byte verification.; Korean route recovered from byte-verified same-host language sibling of an already verified annual PDF.",
+      "entity_alignment": "ALIGNED",
+      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
     },
     {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_2",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 sustainability report 2025 지속가능경영보고서 영문",
+      "title": "2025 sustainability report KOR",
       "report_year": 2025,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=6dbe86fc-e967-4769-a69e-de586349a9fe",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
+      "source_url": "https://sustainability.posco.co.kr/S91/S91F10/download.do?fid=260000065&pid=123",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
       "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=65225506-bd6a-433e-87b6-d1f1f34ac4a9",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-          "title": "2025 sustainability report 2025 지속가능경영보고서 영문",
-          "source_role": "LANGUAGE_FALLBACK"
-        }
-      ],
+      "fallback_sources": [],
       "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
-      "language_preference": "KO_PREFERRED"
-    },
-    {
-      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2026_1",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2026 sustainability report 2026 지속가능경영보고서 영문",
-      "report_year": 2026,
-      "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=506d56b7-09c6-4f53-833c-7842311b2582",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type.",
-      "entity_alignment": "UNKNOWN",
-      "fallback_sources": [
-        {
-          "source_url": "https://www.hanwhaaerospace.com/files/down.do?id=bd997741-ba0b-41f0-9169-6c70ed688f82",
-          "source_locator": "https://www.hanwhaaerospace.com/kor/esg/sustain-business.do",
-          "expected_extension": "pdf",
-          "verification_status": "SOURCE_VERIFIED",
-          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
-          "title": "2026 sustainability report 2026 지속가능경영보고서 영문",
-          "source_role": "LANGUAGE_FALLBACK"
-        }
-      ],
-      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES",
-      "language_preference": "KO_PREFERRED"
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
     }
   ],
   "gaps": [
     {
-      "gap_id": "AUTO_SUSTAINABILITY_2020_PRE_FIRST_PUBLICATION",
+      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
       "source_key": "CORP_DOCS",
       "document_type": "SUSTAINABILITY_REPORT",
-      "year": 2020,
+      "year": 2026,
       "verification_status": "SOURCE_VERIFIED",
       "status": "NOT_PUBLISHED",
       "severity": "LOW",
       "blocking": false,
-      "reason": "A verified first-party source explicitly identifies 2021 as the first annual sustainability/ESG report publication.",
-      "source_locator": "https://www.hanwhaaerospace.com/kor/media/newsroom/list.do?param1=%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C",
-      "evidence_type": "PRE_FIRST_PUBLICATION_YEAR"
+      "reason": "As of 2026-09-28, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://sustainability.posco.co.kr/S91/S91F10/kor/cmspage.do?mmcd=2645996979005381"
     }
   ],
   "discovery_scope": {
@@ -247,9 +149,9 @@
       "end_year": 2026
     },
     "effective_current_entity_history_window": {
-      "start_year": 2020,
+      "start_year": 2022,
       "end_year": 2026
     }
   },
-  "request_id": "company-1b342a45-env-g0-20260920"
+  "request_id": "company-890833b4-env-g0-20260928"
 }
