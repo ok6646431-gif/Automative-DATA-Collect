@@ -1,21 +1,20 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-890833b4-env-g0-20260928",
-  "requested_company_name": "포스코",
-  "current_legal_name": "주식회사 포스코",
+  "request_id": "company-kia-env-20260928",
+  "requested_company_name": "기아",
+  "current_legal_name": "기아 주식회사",
   "current_legal_name_active_period": {
-    "start_year": 2022
+    "start_year": 2021
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "주식회사 포스코 국내 사업장",
+    "label": "기아 국내 AutoLand",
     "candidate_ids": [
-      "6261-b923b0cc",
-      "2026-22dbf39a",
-      "440-ec07c1ed",
-      "6262-58eb3fe7"
+      "kia-gwangmyeong",
+      "kia-hwaseong",
+      "kia-gwangju"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -23,88 +22,93 @@
   },
   "company_aliases": [
     {
-      "name": "포스코",
+      "name": "기아",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
+      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
       "active_period": {
-        "start_year": 2022
+        "start_year": 2021
       }
     },
     {
-      "name": "POSCO",
+      "name": "Kia Corporation",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
+      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
       "active_period": {
-        "start_year": 2022
+        "start_year": 2021
       }
     }
   ],
-  "historical_legal_names": [],
-  "corporate_restructuring_evidence": [],
+  "historical_legal_names": [
+    {
+      "name": "기아자동차",
+      "alias_type": "historical_legal_name",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
+      "active_period": {
+        "end_year": 2020
+      }
+    },
+    {
+      "name": "기아자동차(주)",
+      "alias_type": "historical_search_alias",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
+      "active_period": {
+        "end_year": 2020
+      }
+    }
+  ],
+  "corporate_restructuring_evidence": [
+    {
+      "event_type": "rename",
+      "effective_period": {
+        "start_year": 2021
+      },
+      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
+      "verification_state": "VERIFIED"
+    }
+  ],
   "domestic_site_candidates": [
     {
-      "candidate_id": "6261-b923b0cc",
-      "site_name_raw": "포항본사",
-      "address_raw": "경상북도 포항시 남구 동해안로 6261",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
+      "candidate_id": "kia-gwangmyeong",
+      "site_name_raw": "AutoLand 광명",
+      "address_raw": "경기도 광명시 기아자동차로 113",
+      "business_unit_raw": "AutoLand",
+      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000010c.jsp",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
+      "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "2026-22dbf39a",
-      "site_name_raw": "광양제철소",
-      "address_raw": "전라남도 광양시 폭포사랑길 20-26",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
+      "candidate_id": "kia-hwaseong",
+      "site_name_raw": "AutoLand 화성",
+      "address_raw": "경기도 화성시 우정읍 기아로 95",
+      "business_unit_raw": "AutoLand",
+      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000030c.jsp",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
+      "verification_state": "VERIFIED"
     },
     {
-      "candidate_id": "440-ec07c1ed",
-      "site_name_raw": "포스코센터",
-      "address_raw": "서울특별시 강남구 테헤란로 440",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
+      "candidate_id": "kia-gwangju",
+      "site_name_raw": "AutoLand 광주",
+      "address_raw": "광주광역시 서구 화운로 277",
+      "business_unit_raw": "AutoLand",
+      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000020c.jsp",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
-    },
-    {
-      "candidate_id": "6262-58eb3fe7",
-      "site_name_raw": "포항제철소",
-      "address_raw": "경상북도 포항시 남구 동해안로 6262",
-      "business_unit_raw": "official domestic location navigation",
-      "source_locator": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED",
-      "discovery_evidence": {
-        "evidence_type": "MULTI_PAGE_OFFICIAL_LOCATION_NAVIGATION",
-        "location_page": "https://www.posco.co.kr/homepage/docs/kor7/jsp/common/posco/s91a1000012c.jsp",
-        "extraction_contract": "STRUCTURED_DOM_NAME_ADDRESS_PAIR"
-      }
+      "verification_state": "VERIFIED"
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=01620971",
-      "source_value_raw": "주식회사 포스코 / POSCO / establishment 2022-03-02 / website www.posco.co.kr",
+      "source_locator": "https://dart.fss.or.kr/navi/searchNavi.do?naviCode=A002&naviCrpCik=00106641&naviCrpNm=%EA%B8%B0%EC%95%84",
+      "source_value_raw": "기아 / DART CIK 00106641",
+      "verification_state": "VERIFIED",
+      "confidence": "HIGH"
+    },
+    {
+      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "source_value_raw": "AutoLand 광명, 화성, 광주 및 주소",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -165,8 +169,5 @@
         "prefer_full_history": false
       }
     }
-  },
-  "legal_entity_active_period": {
-    "start_year": 2022
   }
 }
