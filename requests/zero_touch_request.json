@@ -1,4 +1,4 @@
 {
-  "company_name": "한화에어로스페이스",
-  "rerun_reason": "Fresh production collection and independent physical QA: completeness by year/site/source, original-to-output fidelity, stale DOM false positives, malformed PDFs/tables, cross-entity contamination and reference integrity"
+  "company_name": "포스코",
+  "rerun_reason": "Blind zero-touch acceptance after Golden 3/3 and live-source R2 3/3; company-name-only Discovery must fail closed or promote without company-specific manual patches"
 }
