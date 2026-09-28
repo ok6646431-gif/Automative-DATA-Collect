@@ -24,6 +24,10 @@ class ArchiveBuilderTests(unittest.TestCase):
                 "site_candidates":[{"site_name_raw":"테스트공장","identity_status":"CONFIRMED","verification_state":"VERIFIED"}]
             }
             (root/"Company_Profile.json").write_text(json.dumps(profile,ensure_ascii=False),encoding="utf-8")
+            (root/"Requested_Scope.json").write_text(
+                json.dumps({"mode":"COMPANY","label":"테스트화학"},ensure_ascii=False),
+                encoding="utf-8",
+            )
             (root/"Integration_Summary.json").write_text(json.dumps({"company_id":"COMP1"}),encoding="utf-8")
             for name in ["Master_Manifest.json","REVIEW_REQUIRED.json"]:
                 (root/name).write_text("{}" if name.endswith("Manifest.json") else "[]",encoding="utf-8")
