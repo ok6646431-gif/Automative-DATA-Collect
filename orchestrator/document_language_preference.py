@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Tuple
+from urllib.parse import urlparse, urlunparse
+
+from orchestrator import zero_touch_discovery as base
 
 STRONG = {"VERIFIED", "SOURCE_VERIFIED"}
 ROUTE_FIELDS = (
@@ -90,6 +93,146 @@ def _promote_fallback(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, An
     return item, {"document_id": doc.get("document_id"), "report_year": _year(doc),
                   "old_language": primary_language, "old_url": doc.get("source_url"),
                   "new_url": None, "action": "KOREAN_REPORT_NOT_VERIFIED_BLOCKED"}
+
+
+_ENGLISH_PATH_TOKEN = re.compile(r"(?i)(?P<prefix>^|[/_.-])(?P<token>eng|en)(?=(?:[/_.-]|$))")
+
+
+def _korean_sibling_candidates(url: str) -> List[str]:
+    """Derive same-host Korean PDF siblings only from explicit EN path tokens.
+
+    This is deliberately narrow: it never searches another host, changes a report
+    year, or guesses a filename that has no explicit language token. Candidate URLs
+    are evidence only until their response bytes verify as PDF.
+    """
+    parsed = urlparse(str(url or ""))
+    path = parsed.path or ""
+    if not parsed.scheme.startswith("http") or not parsed.netloc or not path.lower().endswith(".pdf"):
+        return []
+    if not _ENGLISH_PATH_TOKEN.search(path):
+        return []
+    out: List[str] = []
+    for replacement in ("kor", "kr"):
+        candidate_path = _ENGLISH_PATH_TOKEN.sub(
+            lambda m: f"{m.group('prefix')}{replacement}", path, count=1
+        )
+        candidate = urlunparse(parsed._replace(path=candidate_path))
+        if candidate != url and candidate not in out:
+            out.append(candidate)
+    return out
+
+
+def _verified_pdf(http: Any, url: str, source_locator: str = "") -> Tuple[bool, str]:
+    headers = {"Range": "bytes=0-15", "Accept-Encoding": "identity"}
+    if source_locator:
+        headers["Referer"] = source_locator
+    response = http.get(url, headers=headers, stream=True)
+    if not response or int(getattr(response, "status_code", 599) or 599) >= 400:
+        return False, ""
+    try:
+        head = next(response.iter_content(chunk_size=16), b"")
+        ctype = str(response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        ok = head.startswith(b"%PDF") or ctype == "application/pdf"
+        return ok, str(getattr(response, "url", "") or url)
+    except Exception:
+        return False, ""
+    finally:
+        try:
+            response.close()
+        except Exception:
+            pass
+
+
+def recover_verified_korean_siblings(
+    discovery: Dict[str, Any],
+    documents: Dict[str, Any],
+    audit: Dict[str, Any],
+    *,
+    http: Any = None,
+) -> Dict[str, Any]:
+    """Promote a byte-verified same-host Korean sibling of a strong English PDF.
+
+    A strongly verified English annual PDF may expose a deterministic language
+    sibling such as *_eng.pdf -> *_kor.pdf. We construct only bounded same-host
+    candidates and promote one only after verifying real PDF bytes. English routes
+    are not retained as user-facing fallbacks.
+    """
+    client = http or base.Http(timeout=(5, 15))
+    attempted: List[Dict[str, Any]] = []
+    recovered: List[Dict[str, Any]] = []
+    out_docs: List[Dict[str, Any]] = []
+
+    for raw in documents.get("documents", []) or []:
+        if not isinstance(raw, dict):
+            out_docs.append(raw)
+            continue
+        doc = dict(raw)
+        if doc.get("document_type") != "SUSTAINABILITY_REPORT" or not _strong(doc):
+            out_docs.append(doc)
+            continue
+
+        routes = [doc, *[x for x in (doc.get("fallback_sources") or []) if isinstance(x, dict)]]
+        if any(_strong(route) and route_language(route) == "KO" for route in routes):
+            out_docs.append(doc)
+            continue
+
+        source_url = str(doc.get("source_url") or "")
+        candidates = _korean_sibling_candidates(source_url)
+        if not candidates:
+            out_docs.append(doc)
+            continue
+
+        chosen = ""
+        for candidate in candidates:
+            ok, final_url = _verified_pdf(client, candidate, str(doc.get("source_locator") or ""))
+            attempted.append({
+                "document_id": doc.get("document_id"),
+                "report_year": _year(doc),
+                "source_url": source_url,
+                "candidate_url": candidate,
+                "verified_pdf": bool(ok),
+            })
+            if ok:
+                chosen = final_url or candidate
+                break
+
+        if not chosen:
+            out_docs.append(doc)
+            continue
+
+        old_url = source_url
+        doc["source_url"] = chosen
+        doc["expected_extension"] = "pdf"
+        doc["verification_status"] = "SOURCE_VERIFIED"
+        doc["language_preference"] = "KO_REQUIRED_VERIFIED_ROUTE"
+        doc["fallback_sources"] = [
+            dict(route) for route in (doc.get("fallback_sources") or [])
+            if isinstance(route, dict) and _strong(route) and route_language(route) == "KO"
+        ]
+        note = "Korean route recovered from byte-verified same-host language sibling of an already verified annual PDF."
+        doc["notes"] = "; ".join(x for x in (str(doc.get("notes") or "").strip(), note) if x)
+        recovered.append({
+            "document_id": doc.get("document_id"),
+            "report_year": _year(doc),
+            "old_url": old_url,
+            "new_url": chosen,
+            "action": "PROMOTED_BYTE_VERIFIED_KOREAN_LANGUAGE_SIBLING",
+        })
+        out_docs.append(doc)
+
+    documents = dict(documents)
+    documents["documents"] = out_docs
+    audit.setdefault("stages", {})["korean_sibling_route_recovery"] = {
+        "policy": "SAME_HOST_EXPLICIT_LANGUAGE_TOKEN_AND_PDF_BYTES_REQUIRED",
+        "attempted": attempted,
+        "recovered": recovered,
+        "recovered_years": sorted({
+            int(x["report_year"]) for x in recovered if x.get("report_year") is not None
+        }),
+    }
+    if http is None and getattr(client, "audit", None):
+        audit.setdefault("http_attempts", []).extend(client.audit)
+    return documents
 
 
 def prefer_korean_sustainability(discovery: Dict[str, Any], docs: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
