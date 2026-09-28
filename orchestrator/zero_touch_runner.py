@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from orchestrator import dart_public_resolver
+from orchestrator import document_language_preference
 from orchestrator import g0_authority_site_recovery
 from orchestrator import g0_data_attr_report_recovery
 from orchestrator import g0_domestic_site_catalog_enrichment
@@ -288,6 +289,9 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
     documents = g0_generic_js_report_recovery.enrich(discovery, documents, audit)
     documents = g0_report_entity_policy.normalize(discovery, documents, audit)
     documents = _merge_verified_document_routes(discovery, documents, audit)
+    documents = document_language_preference.recover_verified_korean_siblings(
+        discovery, documents, audit
+    )
     documents = g0_report_finalizer.finalize(discovery, documents, audit)
     documents = g0_report_catalog_policy.normalize_verified_catalog_gaps(
         discovery, documents, audit
