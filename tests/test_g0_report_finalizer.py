@@ -22,6 +22,7 @@ class ReportFinalizerTests(unittest.TestCase):
                 "source_url": "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_kor.pdf",
                 "source_locator": "https://sustainability.example.com/reports",
                 "expected_extension": "pdf",
+                "verification_status": "SOURCE_VERIFIED",
                 "importance": "SUPPORTING",
                 "coverage_role": "SUPPORTING_SUMMARY_ONLY",
             }],
