@@ -19,7 +19,7 @@ class ReportFinalizerTests(unittest.TestCase):
                 "document_type": "SUSTAINABILITY_REPORT_SUMMARY",
                 "title": "2023 Sustainability Report ESG Management Highlight Environmental",
                 "report_year": 2023,
-                "source_url": "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_eng.pdf",
+                "source_url": "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_kor.pdf",
                 "source_locator": "https://sustainability.example.com/reports",
                 "expected_extension": "pdf",
                 "importance": "SUPPORTING",
@@ -90,7 +90,7 @@ class ReportFinalizerTests(unittest.TestCase):
             if d.get("document_type") == "SUSTAINABILITY_REPORT" and d.get("report_year") == 2023
         ]
         self.assertEqual(len(annual_2023), 1)
-        self.assertEqual(annual_2023[0]["source_url"], "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_eng.pdf")
+        self.assertEqual(annual_2023[0]["source_url"], "https://sustainability.example.com/files/TEST_Sustainability_Report_2023_kor.pdf")
         self.assertEqual(annual_2023[0]["expected_extension"], "pdf")
         self.assertEqual(out["gaps"], [])
         self.assertEqual(len(audit["stages"]["report_finalizer"]["superseded_digital_reports"]), 1)
@@ -207,6 +207,44 @@ class ReportFinalizerTests(unittest.TestCase):
         self.assertTrue(out["gaps"][0]["blocking"])
         self.assertEqual(out["gaps"][0]["year"], 2020)
         self.assertEqual(out["gaps"][0]["reason"], "EXPLICIT_ROUTE_YEAR_CONFLICT_NO_MATCHING_VERIFIED_ALTERNATIVE")
+
+    def test_english_only_annual_report_reopens_blocking_korean_route_gap(self):
+        discovery = {
+            "requested_company_name": "테스트",
+            "current_legal_name": "테스트 주식회사",
+        }
+        documents = {
+            "documents": [{
+                "document_id": "D2024",
+                "document_type": "SUSTAINABILITY_REPORT",
+                "title": "2024 Sustainability Report ENG",
+                "report_year": 2024,
+                "source_url": "https://official.example/files/report_2024_eng.pdf",
+                "source_locator": "https://official.example/reports",
+                "expected_extension": "pdf",
+                "verification_status": "SOURCE_VERIFIED",
+                "importance": "CORE",
+            }],
+            "gaps": [],
+            "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+        }
+        audit = {}
+        out = finalizer.finalize(discovery, documents, audit)
+        annual = [d for d in out["documents"] if d.get("document_type") == "SUSTAINABILITY_REPORT"]
+        self.assertEqual(len(annual), 1)
+        self.assertEqual(annual[0]["verification_status"], "UNVERIFIED")
+        self.assertEqual(annual[0]["language_preference"], "KO_REQUIRED_NOT_VERIFIED")
+        self.assertEqual(out["discovery_status"], "PARTIAL")
+        self.assertEqual(len(out["gaps"]), 1)
+        gap = out["gaps"][0]
+        self.assertEqual(gap["year"], 2024)
+        self.assertTrue(gap["blocking"])
+        self.assertEqual(gap["verification_status"], "UNVERIFIED")
+        self.assertEqual(gap["reason"], "KOREAN_REPORT_ROUTE_NOT_VERIFIED")
+        self.assertEqual(
+            audit["stages"]["report_finalizer"]["language_preference"]["korean_route_unverified_years"],
+            [2024],
+        )
 
     def test_highlight_filename_remains_supporting_summary(self):
         discovery = {"requested_company_name": "테스트", "current_legal_name": "테스트"}
