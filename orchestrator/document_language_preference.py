@@ -82,7 +82,9 @@ def _promote_fallback(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, An
                       "new_url": chosen.get("source_url"), "action": "PROMOTED_KOREAN_PRIMARY_DROPPED_NON_KOREAN_FALLBACKS"}
     # No Korean route is established. Preserve the candidate only as auditable
     # unverified evidence; the document collector must not download/count it.
-    item["verification_status"] = "LANGUAGE_REVIEW_REQUIRED"
+    # verification_status is the source/evidence contract and must remain inside
+    # its schema enum. Language readiness is tracked separately below.
+    item["verification_status"] = "UNVERIFIED"
     item["fallback_sources"] = []
     item["language_preference"] = "KO_REQUIRED_NOT_VERIFIED"
     return item, {"document_id": doc.get("document_id"), "report_year": _year(doc),
