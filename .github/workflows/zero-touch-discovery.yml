@@ -18,6 +18,7 @@ on:
       - 'orchestrator/dart_public_resolver.py'
       - 'orchestrator/document_route_merge.py'
       - 'orchestrator/document_route_registry.py'
+      - 'orchestrator/document_language_preference.py'
       - 'orchestrator/g0_authority_site_recovery.py'
       - 'orchestrator/g0_data_attr_report_recovery.py'
       - 'orchestrator/g0_document_recovery_runner.py'
@@ -48,6 +49,7 @@ on:
       - 'tests/test_document_evidence_schema.py'
       - 'tests/test_document_route_merge.py'
       - 'tests/test_document_route_registry.py'
+      - 'tests/test_document_language_preference.py'
       - 'tests/test_zero_touch_discovery.py'
       - 'tests/test_dart_public_resolver.py'
       - 'tests/test_g0_document_recovery_runner.py'
@@ -114,7 +116,7 @@ jobs:
           python -m unittest tests.test_g0_rename_chronology_recovery -v
           python -m unittest tests.test_g0_report_enrichment -v
           python -m unittest tests.test_g0_report_entity_alignment -v
-          python -m unittest tests.test_g0_report_finalizer -v
+          python -m unittest tests.test_document_language_preference tests.test_g0_report_finalizer -v
           python -m unittest tests.test_g0_scripted_report_enrichment -v
           python -m unittest tests.test_g0_scripted_report_navigation -v
           python -m unittest tests.test_g0_staged_official_recovery -v
