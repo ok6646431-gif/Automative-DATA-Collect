@@ -89,6 +89,12 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
             )
         )
 
+    def test_ascii_brand_generates_bounded_domain_locator_guesses(self):
+        candidates = recovery._brand_domain_candidates("LS ELECTRIC")
+        self.assertIn("https://www.ls-electric.com/", candidates)
+        self.assertIn("https://lselectric.co.kr/", candidates)
+        self.assertLessEqual(len(candidates), 12)
+
     def test_company_like_host_ranks_above_related_brand_noise(self):
         exact = "https://www.ls-electric.com/ko/company"
         related = "https://www.lstractorusa.com/about"
