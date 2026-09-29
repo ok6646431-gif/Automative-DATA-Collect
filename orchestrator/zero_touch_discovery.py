@@ -263,11 +263,17 @@ def _official_site_domain_entity_keys(http: Http, company: str) -> List[str]:
     """
     try:
         from orchestrator import g0_official_site_recovery as site_recovery
+        from orchestrator import g0_thin_shell_recovery as thin_recovery
     except Exception:
         return []
 
     for candidate_url in site_recovery._locate_candidates(http, company)[:5]:
-        pages, links = site_recovery.BASE_CRAWL(http, candidate_url, company, max_pages=40)
+        # Guessed/search-located corporate roots are often thin language selectors or
+        # JavaScript shells. Reuse the existing sitemap/script/bootstrap recovery
+        # before first-party verification instead of judging the shallow root alone.
+        pages, links = thin_recovery.crawl_official(
+            http, candidate_url, company, max_pages=40
+        )
         verified, _ = site_recovery._corporate_self_identifies(company, pages, links)
         if not verified or not pages:
             continue
