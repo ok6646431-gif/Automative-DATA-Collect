@@ -9,6 +9,7 @@ No company/domain pairs are hard-coded here.
 
 from __future__ import annotations
 
+import base64
 import html as html_lib
 import re
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
@@ -146,6 +147,20 @@ def _search_result_links(search_url: str, html: str) -> List[str]:
             href = parse_qs(urlparse(href).query).get("q", [""])[0]
         elif "duckduckgo.com/l/" in href:
             href = parse_qs(urlparse(href).query).get("uddg", [""])[0]
+        elif "bing.com/ck/a" in href:
+            token = parse_qs(urlparse(href).query).get("u", [""])[0]
+            # Bing commonly wraps the destination as u=a1<URL-safe-base64>.
+            # Decoding only produces a locator candidate; normal blocked-host and
+            # first-party self-identification gates still apply afterwards.
+            if token.startswith("a1"):
+                token = token[2:]
+            if token:
+                try:
+                    token += "=" * (-len(token) % 4)
+                    decoded = base64.urlsafe_b64decode(token.encode("ascii")).decode("utf-8", "ignore")
+                    href = decoded or href
+                except Exception:
+                    pass
         add(href)
 
     # Search engines frequently expose the destination outside href attributes.
