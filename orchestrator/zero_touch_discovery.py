@@ -187,6 +187,28 @@ def _search_engine_official_dart(http: Http, company: str) -> List[str]:
     return _dedupe(keys)
 
 
+def _english_dart_dynamic_entity_keys(http: Http, company: str) -> List[str]:
+    """Replay first-party English-DART search forms before external locator fallback."""
+    try:
+        from orchestrator import dart_public_resolver as resolver
+    except Exception:
+        return []
+    endpoints = [
+        EN_DART + "/dsbc002/main.do",
+        EN_DART + "/dsbb001/main.do",
+        EN_DART + "/dsbb007/main.do?option=corp",
+    ]
+    keys: List[str] = []
+    for endpoint in endpoints:
+        try:
+            keys.extend(resolver._dynamic_form_attempts(http, endpoint, company))
+        except Exception:
+            continue
+        if keys:
+            break
+    return _dedupe(keys)
+
+
 def _search_engine_dart_filing_entity_keys(http: Http, company: str) -> List[str]:
     """Recover DART entity keys from official filing pages when popup lookup is weak.
 
@@ -373,7 +395,9 @@ def resolve_legal_identity(http: Http, company: str) -> Tuple[Optional[Dict[str,
     # is not strong enough to verify, use exact-company search results only as
     # additional locators, re-open every candidate on official DART, and score again.
     seen_keys = {str(c.get("select_key") or "") for c in candidates}
-    locator_keys = _search_engine_official_dart(http, company)
+    locator_keys = _english_dart_dynamic_entity_keys(http, company)
+    if not locator_keys:
+        locator_keys = _search_engine_official_dart(http, company)
     if not locator_keys:
         locator_keys = _search_engine_dart_filing_entity_keys(http, company)
     fallback_keys = [key for key in locator_keys if key not in seen_keys]
