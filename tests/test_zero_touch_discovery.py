@@ -55,14 +55,30 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         self.assertLess(legal_match_score("LS ELECTRIC", parent), 88)
         self.assertGreaterEqual(legal_match_score("LS ELECTRIC", operating), 88)
 
-    def test_first_party_english_dart_dynamic_form_fallback(self):
-        with patch(
-            "orchestrator.dart_public_resolver._dynamic_form_attempts",
-            side_effect=[[], ["00105855"]],
-        ) as dynamic:
-            keys = _english_dart_dynamic_entity_keys(Mock(), "LS ELECTRIC")
-        self.assertEqual(keys, ["00105855"])
-        self.assertEqual(dynamic.call_count, 2)
+    def test_first_party_english_dart_filing_row_recovers_entity_key(self):
+        base_html = """
+        <html><body>
+          <table><tr><td>LS ELECTRIC</td>
+          <td><a href='/dsbh001/main.do?rcpNo=20260318001243'>Annual Report</a></td></tr></table>
+        </body></html>
+        """
+        report_html = """
+        <html><body>
+          <input type='hidden' name='textCrpCik' value='00105855'>
+          LS ELECTRIC Annual Report
+        </body></html>
+        """
+        base = Mock(status_code=200, text=base_html, url="https://englishdart.fss.or.kr/dsbb001/main.do")
+        report = Mock(status_code=200, text=report_html, url="https://englishdart.fss.or.kr/dsbh001/main.do?rcpNo=20260318001243")
+
+        def fake_get(url, **kwargs):
+            if "/dsbh001/main.do" in url:
+                return report
+            return base
+
+        http = Mock()
+        http.get.side_effect = fake_get
+        self.assertEqual(_english_dart_dynamic_entity_keys(http, "LS ELECTRIC"), ["00105855"])
 
     def test_filing_fallback_extracts_entity_cik_from_official_viewer(self):
         search_html = """
