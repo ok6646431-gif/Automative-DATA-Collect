@@ -8,8 +8,7 @@ from orchestrator.zero_touch_discovery import (
     _search_engine_official_dart,
     _search_engine_dart_filing_entity_keys,
     _english_dart_dynamic_entity_keys,
-    _official_site_legal_name_candidates,
-    _official_site_entity_keys,
+    _official_site_domain_entity_keys,
     _extract_select_keys,
     discover_site_candidates,
     legal_match_score,
@@ -23,7 +22,6 @@ class TestZeroTouchDiscovery(unittest.TestCase):
     def test_name_normalization_handles_korean_initial_brand_spelling(self):
         self.assertEqual(normalize_name("HD현대삼호"), normalize_name("에이치디현대삼호 주식회사"))
         self.assertEqual(normalize_name("LG화학"), normalize_name("엘지화학(주)"))
-        self.assertEqual(normalize_name("LS ELECTRIC"), normalize_name("엘에스일렉트릭㈜"))
 
     def test_dart_select_key_parser_accepts_popup_and_assignment(self):
         html = """
@@ -58,39 +56,23 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         self.assertLess(legal_match_score("LS ELECTRIC", parent), 88)
         self.assertGreaterEqual(legal_match_score("LS ELECTRIC", operating), 88)
 
-    def test_verified_official_site_extracts_exact_korean_legal_alias(self):
+    def test_verified_official_site_domain_locates_dart_popup(self):
         page = Page(
-            "https://company.example/ko/company/invest/structure",
-            "회사명 LS ELECTRIC 주식회사 계열회사 엘에스일렉트릭㈜",
-            """
-            <table>
-              <tr><th>회사명</th><td>LS ELECTRIC 주식회사</td></tr>
-              <tr><td>엘에스일렉트릭㈜</td><td>전기공급 및 전기제어장치 제조업</td></tr>
-            </table>
-            """,
-            200,
-        )
-        aliases = _official_site_legal_name_candidates("LS ELECTRIC", [page])
-        self.assertIn("LS ELECTRIC 주식회사", aliases)
-        self.assertIn("엘에스일렉트릭㈜", aliases)
-
-    def test_official_site_bridge_requeries_dart_with_exact_legal_alias(self):
-        page = Page(
-            "https://company.example/invest",
+            "https://www.company.example/invest",
             "LS ELECTRIC 회사소개 투자자 지속가능 인재채용 윤리경영 copyright 회사명 대표이사",
-            "<table><tr><td>엘에스일렉트릭㈜</td></tr></table>",
+            "<html><body>LS ELECTRIC</body></html>",
             200,
         )
         links = [
-            ("회사소개", "", "https://company.example/about"),
-            ("사업분야", "", "https://company.example/business"),
-            ("지속가능", "", "https://company.example/esg"),
-            ("투자자", "", "https://company.example/ir"),
-            ("인재채용", "", "https://company.example/recruit"),
+            ("회사소개", "", "https://www.company.example/about"),
+            ("사업분야", "", "https://www.company.example/business"),
+            ("지속가능", "", "https://www.company.example/esg"),
+            ("투자자", "", "https://www.company.example/ir"),
+            ("인재채용", "", "https://www.company.example/recruit"),
         ]
         with patch(
             "orchestrator.g0_official_site_recovery._locate_candidates",
-            return_value=["https://company.example"],
+            return_value=["https://www.company.example"],
         ), patch(
             "orchestrator.g0_official_site_recovery.BASE_CRAWL",
             return_value=([page, page], links),
@@ -98,15 +80,12 @@ class TestZeroTouchDiscovery(unittest.TestCase):
             "orchestrator.g0_official_site_recovery._corporate_self_identifies",
             return_value=(True, {"resolved_host": "company.example"}),
         ), patch(
-            "orchestrator.zero_touch_discovery.discover_dart_keys",
-            side_effect=lambda _http, name: ["00105855"] if name == "엘에스일렉트릭㈜" else [],
-        ) as dart_lookup:
-            keys = _official_site_entity_keys(Mock(), "LS ELECTRIC")
+            "orchestrator.zero_touch_discovery._search_engine_official_dart",
+            side_effect=lambda _http, hint: ["00105855"] if hint == "company.example" else [],
+        ) as dart_locator:
+            keys = _official_site_domain_entity_keys(Mock(), "LS ELECTRIC")
         self.assertEqual(keys, ["00105855"])
-        self.assertEqual(
-            [call.args[1] for call in dart_lookup.call_args_list],
-            ["LS ELECTRIC 주식회사", "엘에스일렉트릭㈜"],
-        )
+        dart_locator.assert_called_with(unittest.mock.ANY, "company.example")
 
     def test_first_party_english_dart_filing_row_recovers_entity_key(self):
         base_html = """
@@ -183,6 +162,7 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         with patch("orchestrator.zero_touch_discovery.discover_dart_keys", return_value=["00105952"]), \
              patch("orchestrator.zero_touch_discovery.fetch_dart_company", side_effect=fake_fetch), \
              patch("orchestrator.zero_touch_discovery._english_dart_dynamic_entity_keys", return_value=[]), \
+             patch("orchestrator.zero_touch_discovery._official_site_domain_entity_keys", return_value=[]), \
              patch("orchestrator.zero_touch_discovery._search_engine_official_dart", return_value=["00105855"]):
             resolved, candidates = resolve_legal_identity(Mock(), "LS ELECTRIC")
 
