@@ -276,6 +276,22 @@ def _standard_sitemap_candidates(http: base.Http, start_url: str) -> List[str]:
     return sorted(_dedupe(found), key=_candidate_priority, reverse=True)
 
 
+def _common_locale_entry_candidates(start_url: str) -> List[str]:
+    """Return a tiny same-host set of conventional locale entry points.
+
+    These are navigation guesses only. They never establish company identity and are
+    accepted only after the normal same-host crawl and corporate self-identification
+    checks. This helps language-selector roots that expose no static navigation.
+    """
+    origin = _origin(start_url)
+    if not origin:
+        return []
+    return [
+        origin + path
+        for path in ("/ko/", "/en/", "/kr/", "/kor/", "/eng/")
+    ]
+
+
 def _first_party_bootstrap_candidates(
     http: base.Http,
     start_url: str,
@@ -284,6 +300,7 @@ def _first_party_bootstrap_candidates(
     """Recover navigation candidates without leaving the verified organization boundary."""
     return sorted(_dedupe([
         *_embedded_candidates(start_url, pages),
+        *_common_locale_entry_candidates(start_url),
         *_standard_sitemap_candidates(http, start_url),
         *_script_bootstrap_candidates(http, start_url, pages),
     ]), key=_candidate_priority, reverse=True)
