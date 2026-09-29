@@ -116,7 +116,7 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
 
         with patch.object(recovery, "_search_result_links", side_effect=fake_links):
             found = recovery._locate_candidates(http, "LS ELECTRIC")
-        self.assertEqual(found[0], "https://www.ls-electric.com/ko/")
+        self.assertEqual(found[0], "https://www.ls-electric.com/")
         self.assertIn("https://www.lstractorusa.com/", found)
 
     def test_origin_variants_include_mobile_same_org_host(self):
