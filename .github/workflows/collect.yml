@@ -14,7 +14,7 @@ on:
   push:
     branches:
       - 'run/control-plane'
-      - 'posco-blind-e2e-qa'
+      - 'posco-blind-e2e-final'
     paths:
       - 'requests/company_discovery.json'
       - 'requests/event_evidence.json'
