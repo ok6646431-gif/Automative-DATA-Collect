@@ -1,4 +1,4 @@
 {
-  "company_name": "기아",
-  "rerun_reason": "2026 H2 Kia fire-safety application prep; run company-name-only zero-touch Discovery and full collection with standard fail-closed QA"
+  "company_name": "LS ELECTRIC",
+  "rerun_reason": "Second unseen-company blind acceptance after POSCO E2E PASS; company-name-only Discovery must fail closed or promote without company-specific manual patches"
 }
