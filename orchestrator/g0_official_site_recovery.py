@@ -207,6 +207,34 @@ def _candidate_host_score(company: str, url: str) -> int:
     return score
 
 
+def _brand_domain_candidates(company: str) -> List[str]:
+    """Generate a tiny deterministic locator set from an ASCII brand request.
+
+    These are locator guesses only. They never establish official-site status by
+    themselves and still must pass the existing multi-page self-identification gate
+    plus downstream DART identity verification.
+    """
+    tokens = [
+        token.casefold()
+        for token in re.findall(r"[A-Za-z0-9]+", str(company or ""))
+        if token
+    ]
+    if not tokens or len(tokens) > 5:
+        return []
+    stems = []
+    for stem in ("-".join(tokens), "".join(tokens)):
+        if 3 <= len(stem) <= 48 and stem not in stems:
+            stems.append(stem)
+    out: List[str] = []
+    for stem in stems:
+        for suffix in ("com", "co.kr", "kr"):
+            for prefix in ("https://www.", "https://"):
+                url = f"{prefix}{stem}.{suffix}/"
+                if url not in out:
+                    out.append(url)
+    return out[:12]
+
+
 def _locate_candidates(http: base.Http, company: str) -> List[str]:
     queries = (
         f'"{company}" 공식 홈페이지',
@@ -216,7 +244,7 @@ def _locate_candidates(http: base.Http, company: str) -> List[str]:
         f'"{company}" investor relations',
         f'"{company}" sustainability',
     )
-    found: List[str] = []
+    found: List[str] = list(_brand_domain_candidates(company))
     for query in queries:
         search_urls = (
             "https://www.google.com/search?q=" + base.quote(query) + "&num=10",
