@@ -11,6 +11,7 @@ on:
     branches:
       - run/control-plane
       - ls-electric-blind-e2e
+      - ls-electric-blind-final
     paths:
       - 'requests/zero_touch_request.json'
       - 'requests/document_evidence.schema.json'
