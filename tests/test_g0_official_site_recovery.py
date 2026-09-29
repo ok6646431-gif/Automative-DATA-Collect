@@ -55,6 +55,17 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
         links = recovery._search_result_links("https://www.bing.com/search?q=corp", html)
         self.assertEqual(["https://www.example-corp.com/company"], links)
 
+    def test_decodes_bing_ck_base64_destination(self):
+        import base64
+        target = "https://www.ls-electric.com/ko/company"
+        token = "a1" + base64.urlsafe_b64encode(target.encode()).decode().rstrip("=")
+        html = f'<a href="https://www.bing.com/ck/a?!&&u={token}&ntb=1">LS ELECTRIC</a>'
+        links = recovery._search_result_links(
+            "https://www.bing.com/search?q=LS+ELECTRIC",
+            html,
+        )
+        self.assertEqual([target], links)
+
     def test_bare_www_candidate_is_normalized_to_https(self):
         links = recovery._search_result_links(
             "https://www.google.com/search?q=corp",
