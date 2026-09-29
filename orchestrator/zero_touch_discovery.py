@@ -150,6 +150,12 @@ def _search_engine_official_dart(http: Http, company: str) -> List[str]:
         "https://www.bing.com/search?" + urlencode({"q": query, "count": 10}),
     ]
     keys: List[str] = []
+    # Import locally to avoid a module-import cycle: the official-site recovery
+    # module itself imports this module as its base runtime.
+    try:
+        from orchestrator import g0_official_site_recovery as search_parser
+    except Exception:
+        search_parser = None
     for url in urls:
         r = http.get(url)
         if not r or r.status_code >= 400:
@@ -158,6 +164,19 @@ def _search_engine_official_dart(http: Http, company: str) -> List[str]:
         # Search engines often percent-encode the official URL.
         decoded = requests.utils.unquote(r.text)
         keys.extend(_extract_select_keys(decoded))
+        # Modern result pages may expose the real destination only in redirects,
+        # cite text, data attributes, or serialized metadata. Reuse the hardened
+        # search-result locator parser, then accept only official English-DART popup
+        # URLs and re-verify every extracted key on DART before identity resolution.
+        if search_parser is not None:
+            for candidate in search_parser._search_result_links(url, r.text):
+                parsed = urlparse(candidate)
+                host = (parsed.hostname or "").casefold()
+                if host != "englishdart.fss.or.kr":
+                    continue
+                if "/dsbc001/selectPopup.ax" not in parsed.path:
+                    continue
+                keys.extend(_extract_select_keys(candidate))
         if keys:
             break
     return _dedupe(keys)
