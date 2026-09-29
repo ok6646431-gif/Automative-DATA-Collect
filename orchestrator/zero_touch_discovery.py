@@ -32,8 +32,9 @@ REPORT_WORDS = ("지속가능", "esg", "sustainability", "통합보고", "integr
 SITE_WORDS = ("사업장", "공장", "조선소", "본사", "주소", "위치", "오시는길", "찾아오시는길", "location", "plant", "factory", "shipyard")
 POLICY_WORDS = ("환경경영", "환경관리", "hse", "she", "environment", "안전·보건·환경", "안전보건환경")
 CORP_SUFFIXES = (
-    "주식회사", "유한회사", "합자회사", "합명회사", "(주)", "㈜", "co.,ltd.", "co., ltd.",
-    "co ltd", "corporation", "corp.", "corp", "inc.", "inc", "limited", "ltd.", "ltd",
+    "주식회사", "유한회사", "합자회사", "합명회사", "(주)", "㈜",
+    "co.,ltd.", "co., ltd.", "co.,ltd", "co., ltd", "co. ltd.", "co. ltd", "co ltd",
+    "corporation", "corp.", "corp", "inc.", "inc", "limited", "ltd.", "ltd",
 )
 INITIAL_REPLACEMENTS = {
     "에이치디": "hd", "에이치디현대": "hd현대", "엘지": "lg", "에스케이": "sk",
