@@ -187,6 +187,71 @@ def _search_engine_official_dart(http: Http, company: str) -> List[str]:
     return _dedupe(keys)
 
 
+def _entity_keys_from_english_dart_result(http: Http, response: Any, company: str) -> List[str]:
+    """Follow matching first-party filing rows and recover their DART entity key."""
+    try:
+        from orchestrator import dart_public_resolver as resolver
+    except Exception:
+        return []
+    html = str(getattr(response, "text", "") or "")
+    keys = resolver.extract_company_codes(html, company)
+    soup = BeautifulSoup(html, "html.parser")
+    report_urls: List[str] = []
+
+    for tag in soup.find_all(["tr", "li", "article", "div"]):
+        visible = " ".join(tag.stripped_strings)
+        if not visible or legal_match_score(company, {
+            "korean_name": visible,
+            "english_name": visible,
+        }) < 84:
+            continue
+        for a in tag.find_all("a", href=True):
+            href = urljoin(str(getattr(response, "url", "") or EN_DART), str(a.get("href") or ""))
+            parsed = urlparse(href)
+            if (parsed.hostname or "").casefold() != "englishdart.fss.or.kr":
+                continue
+            if parsed.path not in {"/dsbh001/main.do", "/dsbh002/viewer.do"}:
+                continue
+            if href not in report_urls:
+                report_urls.append(href)
+
+    for url in report_urls[:8]:
+        r = http.get(url)
+        if not r or r.status_code >= 400:
+            continue
+        keys.extend(resolver.extract_company_codes(r.text, company))
+        text = BeautifulSoup(r.text, "html.parser").get_text(" ", strip=True)
+        keys.extend(re.findall(r"Entity\s+Central\s+IndexKey\s*:?\s*(\d{6,12})", text, re.I))
+        # Some report shells expose the entity CIK only in hidden fields or links.
+        keys.extend(re.findall(
+            r"(?:textCrpCik|crpCik|corpCik)[^0-9]{0,40}(\d{6,12})",
+            r.text, re.I,
+        ))
+        # XBRL viewer links can contain the CIK in the rendered body even when the
+        # report shell itself does not.
+        report_soup = BeautifulSoup(r.text, "html.parser")
+        for a in report_soup.find_all("a", href=True):
+            viewer = urljoin(r.url, str(a.get("href") or ""))
+            parsed = urlparse(viewer)
+            if (parsed.hostname or "").casefold() != "englishdart.fss.or.kr":
+                continue
+            if parsed.path != "/dsbh002/viewer.do":
+                continue
+            vr = http.get(viewer)
+            if not vr or vr.status_code >= 400:
+                continue
+            vtext = BeautifulSoup(vr.text, "html.parser").get_text(" ", strip=True)
+            keys.extend(re.findall(
+                r"Entity\s+Central\s+IndexKey\s*:?\s*(\d{6,12})",
+                vtext, re.I,
+            ))
+            if keys:
+                break
+        if keys:
+            break
+    return _dedupe(keys)
+
+
 def _english_dart_dynamic_entity_keys(http: Http, company: str) -> List[str]:
     """Replay first-party English-DART search forms before external locator fallback."""
     try:
@@ -199,11 +264,50 @@ def _english_dart_dynamic_entity_keys(http: Http, company: str) -> List[str]:
         EN_DART + "/dsbb007/main.do?option=corp",
     ]
     keys: List[str] = []
+    today = datetime.now(KST).strftime("%Y%m%d")
     for endpoint in endpoints:
-        try:
-            keys.extend(resolver._dynamic_form_attempts(http, endpoint, company))
-        except Exception:
+        base = http.get(endpoint)
+        if not base or base.status_code >= 500:
             continue
+
+        # Preserve the existing generic selectKey/code parser first.
+        try:
+            keys.extend(resolver._extract_response_keys(
+                http, base, company,
+                {"endpoint": endpoint, "method": "GET_BASE_ENGLISH_DART", "variant": company},
+            ))
+        except Exception:
+            pass
+        keys.extend(_entity_keys_from_english_dart_result(http, base, company))
+        if keys:
+            break
+
+        soup = BeautifulSoup(base.text, "html.parser")
+        for form in soup.find_all("form"):
+            payload = resolver._form_payload(form, company)
+            for name in list(payload):
+                low = name.casefold()
+                if any(token in low for token in ("startdate", "startdt", "fromdate", "begindate")):
+                    payload[name] = "20000101"
+                elif any(token in low for token in ("enddate", "enddt", "todate")):
+                    payload[name] = today
+            if not payload:
+                continue
+            action = urljoin(base.url, form.get("action") or endpoint)
+            method = (form.get("method") or "GET").upper()
+            r = http.post(action, data=payload) if method == "POST" else http.get(action, params=payload)
+            if not r or r.status_code >= 500:
+                continue
+            try:
+                keys.extend(resolver._extract_response_keys(
+                    http, r, company,
+                    {"endpoint": action, "method": "ENGLISH_DART_" + method, "variant": company},
+                ))
+            except Exception:
+                pass
+            keys.extend(_entity_keys_from_english_dart_result(http, r, company))
+            if keys:
+                break
         if keys:
             break
     return _dedupe(keys)
