@@ -187,6 +187,66 @@ def _search_engine_official_dart(http: Http, company: str) -> List[str]:
     return _dedupe(keys)
 
 
+def _search_engine_dart_filing_entity_keys(http: Http, company: str) -> List[str]:
+    """Recover DART entity keys from official filing pages when popup lookup is weak.
+
+    English DART annual/XBRL pages are official FSS sources. Search engines are used
+    only as locators; every candidate page must remain on englishdart.fss.or.kr, and
+    every extracted entity key is subsequently re-opened through the official company
+    popup before it can participate in legal-identity resolution.
+    """
+    queries = [
+        f'site:englishdart.fss.or.kr/dsbh002/viewer.do "{company}" "Entity Central IndexKey"',
+        f'site:englishdart.fss.or.kr/dsbh001/main.do "{company}" "Annual Report"',
+    ]
+    try:
+        from orchestrator import g0_official_site_recovery as search_parser
+    except Exception:
+        search_parser = None
+
+    filing_urls: List[str] = []
+    for query in queries:
+        search_urls = [
+            "https://www.google.com/search?" + urlencode({"q": query, "num": 10}),
+            "https://html.duckduckgo.com/html/?" + urlencode({"q": query}),
+            "https://www.bing.com/search?" + urlencode({"q": query, "count": 10}),
+        ]
+        for search_url in search_urls:
+            r = http.get(search_url)
+            if not r or r.status_code >= 400:
+                continue
+            candidates = []
+            if search_parser is not None:
+                candidates.extend(search_parser._search_result_links(search_url, r.text))
+            decoded = requests.utils.unquote(r.text)
+            candidates.extend(re.findall(r'https?://englishdart\.fss\.or\.kr/[^\s<>"\']+', decoded))
+            for candidate in candidates:
+                parsed = urlparse(candidate)
+                host = (parsed.hostname or "").casefold()
+                if host != "englishdart.fss.or.kr":
+                    continue
+                if parsed.path not in {"/dsbh001/main.do", "/dsbh002/viewer.do"}:
+                    continue
+                clean = candidate.split("#", 1)[0]
+                if clean not in filing_urls:
+                    filing_urls.append(clean)
+            if filing_urls:
+                break
+        if filing_urls:
+            break
+
+    keys: List[str] = []
+    for url in filing_urls[:8]:
+        r = http.get(url)
+        if not r or r.status_code >= 400:
+            continue
+        text = BeautifulSoup(r.text, "html.parser").get_text(" ", strip=True)
+        keys.extend(re.findall(r"Entity\s+Central\s+IndexKey\s*:?\s*(\d{6,12})", text, re.I))
+        keys.extend(re.findall(r"textCrpCik[^0-9]{0,40}(\d{6,12})", r.text, re.I))
+        keys.extend(_extract_select_keys(r.text))
+    return _dedupe(keys)
+
+
 def discover_dart_keys(http: Http, company: str) -> List[str]:
     common = {
         "textCrpNm": company, "textCrpNM": company, "corporationType": "all",
@@ -312,10 +372,11 @@ def resolve_legal_identity(http: Http, company: str) -> Tuple[Optional[Dict[str,
     # operating company (for example LS ELECTRIC -> LS Corp.). If the direct result
     # is not strong enough to verify, use exact-company search results only as
     # additional locators, re-open every candidate on official DART, and score again.
-    fallback_keys = [
-        key for key in _search_engine_official_dart(http, company)
-        if key not in {str(c.get("select_key") or "") for c in candidates}
-    ]
+    seen_keys = {str(c.get("select_key") or "") for c in candidates}
+    locator_keys = _search_engine_official_dart(http, company)
+    if not locator_keys:
+        locator_keys = _search_engine_dart_filing_entity_keys(http, company)
+    fallback_keys = [key for key in locator_keys if key not in seen_keys]
     if fallback_keys:
         candidates.extend(
             x for x in (fetch_dart_company(http, k) for k in fallback_keys[:20]) if x
