@@ -129,6 +129,7 @@ class TestZeroTouchDiscovery(unittest.TestCase):
 
         with patch("orchestrator.zero_touch_discovery.discover_dart_keys", return_value=["00105952"]), \
              patch("orchestrator.zero_touch_discovery.fetch_dart_company", side_effect=fake_fetch), \
+             patch("orchestrator.zero_touch_discovery._english_dart_dynamic_entity_keys", return_value=[]), \
              patch("orchestrator.zero_touch_discovery._search_engine_official_dart", return_value=["00105855"]):
             resolved, candidates = resolve_legal_identity(Mock(), "LS ELECTRIC")
 
