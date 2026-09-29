@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from orchestrator.company_profile_builder import compile_discovery
 from orchestrator.zero_touch_discovery import (
@@ -10,6 +10,7 @@ from orchestrator.zero_touch_discovery import (
     legal_match_score,
     normalize_name,
     parse_dart_company,
+    resolve_legal_identity,
 )
 
 
@@ -44,6 +45,34 @@ class TestZeroTouchDiscovery(unittest.TestCase):
     def test_ambiguous_or_weak_name_score_is_not_verification(self):
         candidate = {"korean_name": "HD현대중공업 주식회사", "english_name": "HD HYUNDAI HEAVY INDUSTRIES"}
         self.assertLess(legal_match_score("HD현대삼호", candidate), 88)
+
+    def test_short_parent_brand_substring_never_verifies_operating_company(self):
+        parent = {"korean_name": "(주)LS", "english_name": "LS Corp."}
+        operating = {"korean_name": "엘에스일렉트릭 주식회사", "english_name": "LS ELECTRIC CO., LTD"}
+        self.assertLess(legal_match_score("LS ELECTRIC", parent), 88)
+        self.assertGreaterEqual(legal_match_score("LS ELECTRIC", operating), 88)
+
+    def test_weak_direct_dart_result_recovers_exact_search_candidate(self):
+        parent = {
+            "select_key": "00105952", "korean_name": "(주)LS", "english_name": "LS Corp.",
+            "website": "www.lsholdings.co.kr",
+        }
+        operating = {
+            "select_key": "00105855", "korean_name": "엘에스일렉트릭 주식회사",
+            "english_name": "LS ELECTRIC CO., LTD", "website": "www.ls-electric.com",
+        }
+        def fake_fetch(_http, key):
+            return {"00105952": parent, "00105855": operating}.get(key)
+
+        with patch("orchestrator.zero_touch_discovery.discover_dart_keys", return_value=["00105952"]), \
+             patch("orchestrator.zero_touch_discovery.fetch_dart_company", side_effect=fake_fetch), \
+             patch("orchestrator.zero_touch_discovery._search_engine_official_dart", return_value=["00105855"]):
+            resolved, candidates = resolve_legal_identity(Mock(), "LS ELECTRIC")
+
+        self.assertEqual(resolved["select_key"], "00105855")
+        scores = {row["select_key"]: row["match_score"] for row in candidates}
+        self.assertLess(scores["00105952"], 88)
+        self.assertGreaterEqual(scores["00105855"], 88)
 
     def test_official_rename_text_bounds_history(self):
         pages = [Page(
