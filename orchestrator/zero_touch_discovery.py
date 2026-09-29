@@ -38,7 +38,7 @@ CORP_SUFFIXES = (
 )
 INITIAL_REPLACEMENTS = {
     "에이치디": "hd", "에이치디현대": "hd현대", "엘지": "lg", "에스케이": "sk",
-    "케이티": "kt", "에스케이씨": "skc", "엘에스": "ls",
+    "케이티": "kt", "에스케이씨": "skc",
 }
 
 
@@ -252,74 +252,34 @@ def _entity_keys_from_english_dart_result(http: Http, response: Any, company: st
     return _dedupe(keys)
 
 
-def _official_site_legal_name_candidates(company: str, pages: Sequence[Page]) -> List[str]:
-    """Extract exact legal-name aliases from a re-verified first-party company site."""
-    target = normalize_name(company)
-    if not target:
-        return []
-    found: List[str] = []
-    suffix_pattern = re.compile(
-        r"([0-9A-Za-z가-힣&][0-9A-Za-z가-힣& .·_-]{0,70}(?:주식회사|㈜|\(주\)))",
-        re.I,
-    )
+def _official_site_domain_entity_keys(http: Http, company: str) -> List[str]:
+    """Bridge a requested brand to DART through a re-verified official website host.
 
-    def add(value: str) -> None:
-        raw = re.sub(r"\s+", " ", str(value or "")).strip(" :：|,-")
-        if not raw or len(raw) > 100:
-            return
-        # Strip common field labels before matching the legal name itself.
-        raw = re.sub(r"^(?:회사명|법인명|상호|company\s*name)\s*[:：]?\s*", "", raw, flags=re.I)
-        for match in suffix_pattern.findall(raw):
-            candidate = re.sub(r"\s+", " ", match).strip()
-            if normalize_name(candidate) == target and candidate not in found:
-                found.append(candidate)
-
-    for page in pages[:40]:
-        soup = BeautifulSoup(page.html or "", "html.parser")
-        # Prefer table/list cells and compact semantic blocks over unrestricted prose.
-        for tag in soup.find_all(["td", "th", "li", "dd", "dt", "p", "span"]):
-            text = " ".join(tag.stripped_strings)
-            if not text or len(text) > 140:
-                continue
-            add(text)
-            low = text.casefold().strip()
-            if low in {"회사명", "법인명", "상호", "company name"}:
-                sibling = tag.find_next(["td", "dd", "span"])
-                if sibling is not None:
-                    add(" ".join(sibling.stripped_strings))
-        # Some sites flatten label/value pairs into the page text.
-        for match in re.findall(
-            r"(?:회사명|법인명|상호|company\s*name)\s*[:：]?\s*([^\n|]{2,100})",
-            page.text or "", re.I,
-        ):
-            add(match)
-    return found
-
-
-def _official_site_entity_keys(http: Http, company: str) -> List[str]:
-    """Bridge an English/brand request to DART through a verified first-party legal name.
-
-    Search engines only locate candidate corporate sites. The candidate host must pass
-    the existing multi-page first-party self-identification gate; only an exact
-    normalized legal-name alias extracted from that verified site is then re-queried
-    on DART. Final legal identity still requires the normal official-DART verification.
+    Search engines only locate candidate corporate sites. A candidate must pass the
+    existing multi-page first-party self-identification gate. Its verified host is
+    then used only as a locator hint for the English-DART company popup; every
+    recovered key is re-opened on official DART and scored against the original
+    requested company before identity can be VERIFIED.
     """
     try:
         from orchestrator import g0_official_site_recovery as site_recovery
     except Exception:
         return []
 
-    keys: List[str] = []
     for candidate_url in site_recovery._locate_candidates(http, company)[:5]:
         pages, links = site_recovery.BASE_CRAWL(http, candidate_url, company, max_pages=40)
         verified, _ = site_recovery._corporate_self_identifies(company, pages, links)
-        if not verified:
+        if not verified or not pages:
             continue
-        for legal_name in _official_site_legal_name_candidates(company, pages):
-            keys.extend(discover_dart_keys(http, legal_name))
-            if keys:
-                return _dedupe(keys)
-    return _dedupe(keys)
+        host = site_recovery._host(pages[0].url)
+        if not host:
+            continue
+        keys = _search_engine_official_dart(http, host)
+        if not keys and not host.startswith("www."):
+            keys = _search_engine_official_dart(http, "www." + host)
+        if keys:
+            return _dedupe(keys)
+    return []
 
 
 def _english_dart_dynamic_entity_keys(http: Http, company: str) -> List[str]:
@@ -571,7 +531,7 @@ def resolve_legal_identity(http: Http, company: str) -> Tuple[Optional[Dict[str,
     seen_keys = {str(c.get("select_key") or "") for c in candidates}
     locator_keys = _english_dart_dynamic_entity_keys(http, company)
     if not locator_keys:
-        locator_keys = _official_site_entity_keys(http, company)
+        locator_keys = _official_site_domain_entity_keys(http, company)
     if not locator_keys:
         locator_keys = _search_engine_official_dart(http, company)
     if not locator_keys:
