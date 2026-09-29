@@ -70,6 +70,22 @@ class EnvInfoContentQATests(unittest.TestCase):
             self.assertEqual(len(written), 15)
             self.assertTrue(all(row["판정"] == "PASS" for row in written))
 
+    def test_specific_site_token_beats_shared_short_prefix(self):
+        site_tokens = [
+            ("포항본사", "포항"),
+            ("광양제철소", "광양제철소"),
+            ("포스코센터", "센터"),
+            ("포항제철소", "포항제철소"),
+        ]
+        self.assertEqual(
+            qa._display_site("포스코 포항제철소", site_tokens),
+            "포항제철소",
+        )
+        self.assertEqual(
+            qa._display_site("포스코 광양제철소", site_tokens),
+            "광양제철소",
+        )
+
     def test_missing_user_pdf_blocks_qa(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td) / "package"
