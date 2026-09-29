@@ -246,12 +246,16 @@ def legal_match_score(requested: str, candidate: Dict[str, Any]) -> int:
     en = normalize_name(candidate.get("english_name"))
     if not q or not ko:
         return 0
-    if q == ko:
+    # Exact normalized legal names are identity evidence. This includes ordinary
+    # corporate suffix removal and the bounded initial-brand normalization above.
+    if q == ko or (en and q == en):
         return 100
-    if q in ko or ko in q:
-        return 92
-    if q and q in en:
-        return 88
+    # Substring relations are only ranking hints. A short parent/brand token such as
+    # "LS" must never verify "LS ELECTRIC" merely because it is contained in the
+    # requested name. The 88-point resolver threshold therefore remains unreachable
+    # from containment alone.
+    if (ko and (q in ko or ko in q)) or (en and (q in en or en in q)):
+        return 84
     # Token overlap is candidate-ranking only and never sufficient by itself to VERIFY.
     qt = set(re.findall(r"[a-z]+|[가-힣]{2,}|\d+", q))
     kt = set(re.findall(r"[a-z]+|[가-힣]{2,}|\d+", ko + en))
@@ -261,14 +265,53 @@ def legal_match_score(requested: str, candidate: Dict[str, Any]) -> int:
 def resolve_legal_identity(http: Http, company: str) -> Tuple[Optional[Dict[str, Any]], List[Dict[str, Any]]]:
     keys = discover_dart_keys(http, company)
     candidates = [x for x in (fetch_dart_company(http, k) for k in keys[:20]) if x]
-    ranked = sorted(((legal_match_score(company, c), c) for c in candidates), key=lambda x: x[0], reverse=True)
-    if not ranked:
-        return None, []
-    top_score, top = ranked[0]
-    tied = [c for score, c in ranked if score >= max(88, top_score - 3)]
-    if top_score < 88 or len(tied) != 1:
+
+    def rank(rows):
+        return sorted(((legal_match_score(company, c), c) for c in rows), key=lambda x: x[0], reverse=True)
+
+    def resolve_ranked(ranked):
+        if not ranked:
+            return None
+        top_score, top = ranked[0]
+        tied = [c for score, c in ranked if score >= max(88, top_score - 3)]
+        if top_score < 88 or len(tied) != 1:
+            return None
+        return top
+
+    ranked = rank(candidates)
+    resolved = resolve_ranked(ranked)
+    if resolved is not None:
+        return resolved, [dict(c, match_score=s) for s, c in ranked]
+
+    # A DART finder can fuzzy-match a short parent brand before the requested
+    # operating company (for example LS ELECTRIC -> LS Corp.). If the direct result
+    # is not strong enough to verify, use exact-company search results only as
+    # additional locators, re-open every candidate on official DART, and score again.
+    fallback_keys = [
+        key for key in _search_engine_official_dart(http, company)
+        if key not in {str(c.get("select_key") or "") for c in candidates}
+    ]
+    if fallback_keys:
+        candidates.extend(
+            x for x in (fetch_dart_company(http, k) for k in fallback_keys[:20]) if x
+        )
+        # Dedupe by official DART entity key while preserving first-seen evidence.
+        deduped = []
+        seen = set()
+        for candidate in candidates:
+            key = str(candidate.get("select_key") or "")
+            if key and key in seen:
+                continue
+            if key:
+                seen.add(key)
+            deduped.append(candidate)
+        candidates = deduped
+        ranked = rank(candidates)
+        resolved = resolve_ranked(ranked)
+
+    if resolved is None:
         return None, [dict(c, match_score=s) for s, c in ranked]
-    return top, [dict(c, match_score=s) for s, c in ranked]
+    return resolved, [dict(c, match_score=s) for s, c in ranked]
 
 
 def discover_dart_name_history(http: Http, key: str) -> List[str]:
