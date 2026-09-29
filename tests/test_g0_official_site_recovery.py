@@ -78,6 +78,30 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
             )
         )
 
+    def test_company_like_host_ranks_above_related_brand_noise(self):
+        exact = "https://www.ls-electric.com/ko/company"
+        related = "https://www.lstractorusa.com/about"
+        self.assertGreater(
+            recovery._candidate_host_score("LS ELECTRIC", exact),
+            recovery._candidate_host_score("LS ELECTRIC", related),
+        )
+
+    def test_locator_collects_later_queries_and_ranks_exact_host_first(self):
+        http = unittest.mock.Mock()
+        http.get.return_value = FakeResponse("https://search.example", "<html></html>", 200)
+
+        def fake_links(search_url, _html):
+            if "official%20website" in search_url:
+                return ["https://www.ls-electric.com/ko/"]
+            if "%EA%B3%B5%EC%8B%9D%20%ED%99%88%ED%8E%98%EC%9D%B4%EC%A7%80" in search_url:
+                return ["https://www.lstractorusa.com/"]
+            return []
+
+        with patch.object(recovery, "_search_result_links", side_effect=fake_links):
+            found = recovery._locate_candidates(http, "LS ELECTRIC")
+        self.assertEqual(found[0], "https://www.ls-electric.com/ko/")
+        self.assertIn("https://www.lstractorusa.com/", found)
+
     def test_origin_variants_include_mobile_same_org_host(self):
         variants = recovery._origin_variants(
             "https://www.example-corp.com/legacy/index.do"
