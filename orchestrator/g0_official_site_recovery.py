@@ -168,11 +168,38 @@ def _search_result_links(search_url: str, html: str) -> List[str]:
     return _dedupe(out)
 
 
+def _candidate_host_score(company: str, url: str) -> int:
+    """Rank locator candidates without treating the rank itself as verification."""
+    host = _host(url)
+    if not host:
+        return -1
+    company_norm = base.normalize_name(company)
+    host_norm = re.sub(r"[^0-9a-z가-힣]+", "", host.casefold())
+    score = 0
+    if company_norm and company_norm in host_norm:
+        score += 120
+    raw_tokens = [
+        token for token in re.findall(r"[0-9a-z가-힣]+", str(company or "").casefold())
+        if len(token) >= 2
+    ]
+    for token in raw_tokens:
+        compact = re.sub(r"[^0-9a-z가-힣]+", "", token)
+        if compact and compact in host_norm:
+            score += 25
+    path_norm = re.sub(r"[^0-9a-z가-힣]+", "", urlparse(url).path.casefold())
+    if company_norm and company_norm in path_norm:
+        score += 15
+    return score
+
+
 def _locate_candidates(http: base.Http, company: str) -> List[str]:
     queries = (
         f'"{company}" 공식 홈페이지',
         f'"{company}" 회사소개',
         f'"{company}" 지속가능경영',
+        f'"{company}" official website',
+        f'"{company}" investor relations',
+        f'"{company}" sustainability',
     )
     found: List[str] = []
     for query in queries:
@@ -186,21 +213,21 @@ def _locate_candidates(http: base.Http, company: str) -> List[str]:
             if not r or r.status_code >= 400:
                 continue
             found.extend(_search_result_links(search_url, r.text))
-            if found:
-                break
-        if found:
-            break
-    host_seen: set[str] = set()
-    ranked: List[str] = []
-    for url in found:
+
+    # Search rank is only a locator hint. Prefer hosts that lexically resemble the
+    # requested company, but every candidate still has to pass independent first-
+    # party self-identification before it can be used.
+    first_seen: Dict[str, Tuple[int, str]] = {}
+    for index, url in enumerate(found):
         host = _host(url)
-        if not host or host in host_seen:
+        if not host or host in first_seen:
             continue
-        host_seen.add(host)
-        ranked.append(url)
-        if len(ranked) >= 8:
-            break
-    return ranked
+        first_seen[host] = (index, url)
+    ranked = sorted(
+        first_seen.values(),
+        key=lambda item: (-_candidate_host_score(company, item[1]), item[0]),
+    )
+    return [url for _, url in ranked[:12]]
 
 
 def _corporate_self_identifies(company: str, pages: Sequence[base.Page], links: Sequence[Tuple[str, str, str]]) -> Tuple[bool, Dict[str, Any]]:
