@@ -99,11 +99,14 @@ class TestZeroTouchDiscovery(unittest.TestCase):
             return_value=(True, {"resolved_host": "company.example"}),
         ), patch(
             "orchestrator.zero_touch_discovery.discover_dart_keys",
-            return_value=["00105855"],
+            side_effect=lambda _http, name: ["00105855"] if name == "엘에스일렉트릭㈜" else [],
         ) as dart_lookup:
             keys = _official_site_entity_keys(Mock(), "LS ELECTRIC")
         self.assertEqual(keys, ["00105855"])
-        dart_lookup.assert_called_with(unittest.mock.ANY, "엘에스일렉트릭㈜")
+        self.assertEqual(
+            [call.args[1] for call in dart_lookup.call_args_list],
+            ["LS ELECTRIC 주식회사", "엘에스일렉트릭㈜"],
+        )
 
     def test_first_party_english_dart_filing_row_recovers_entity_key(self):
         base_html = """
