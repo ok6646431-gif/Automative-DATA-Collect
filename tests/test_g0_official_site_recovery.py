@@ -132,6 +132,12 @@ class OfficialSiteRecoverySearchParsingTests(unittest.TestCase):
 
 
 class ThinShellBootstrapTests(unittest.TestCase):
+    def test_common_locale_entries_stay_on_same_origin(self):
+        candidates = thin._common_locale_entry_candidates("https://www.example-corp.com/")
+        self.assertIn("https://www.example-corp.com/ko/", candidates)
+        self.assertIn("https://www.example-corp.com/en/", candidates)
+        self.assertTrue(all(value.startswith("https://www.example-corp.com/") for value in candidates))
+
     def test_frame_and_form_targets_are_first_party_page_candidates(self):
         start = "https://www.example-corp.com/"
         page = Page(
