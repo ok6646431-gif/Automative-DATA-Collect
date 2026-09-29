@@ -74,7 +74,7 @@ class TestZeroTouchDiscovery(unittest.TestCase):
             "orchestrator.g0_official_site_recovery._locate_candidates",
             return_value=["https://www.company.example"],
         ), patch(
-            "orchestrator.g0_official_site_recovery.BASE_CRAWL",
+            "orchestrator.g0_thin_shell_recovery.crawl_official",
             return_value=([page, page], links),
         ), patch(
             "orchestrator.g0_official_site_recovery._corporate_self_identifies",
