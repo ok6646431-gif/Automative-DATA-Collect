@@ -6,6 +6,7 @@ from orchestrator.zero_touch_discovery import (
     Page,
     _extract_rename_date_and_names,
     _search_engine_official_dart,
+    _search_engine_dart_filing_entity_keys,
     _extract_select_keys,
     discover_site_candidates,
     legal_match_score,
@@ -52,6 +53,30 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         operating = {"korean_name": "엘에스일렉트릭 주식회사", "english_name": "LS ELECTRIC CO., LTD"}
         self.assertLess(legal_match_score("LS ELECTRIC", parent), 88)
         self.assertGreaterEqual(legal_match_score("LS ELECTRIC", operating), 88)
+
+    def test_filing_fallback_extracts_entity_cik_from_official_viewer(self):
+        search_html = """
+        <html><body>
+          <cite>https://englishdart.fss.or.kr/dsbh002/viewer.do?rcpNo=20230320000799</cite>
+        </body></html>
+        """
+        viewer_html = """
+        <html><body>Entity Central IndexKey : 00105855 Entity Registrant Name : LS ELECTRIC Co.,Ltd.</body></html>
+        """
+        search_response = Mock(status_code=200, text=search_html)
+        viewer_response = Mock(status_code=200, text=viewer_html)
+
+        def fake_get(url, **kwargs):
+            if "viewer.do" in url:
+                return viewer_response
+            return search_response
+
+        http = Mock()
+        http.get.side_effect = fake_get
+        self.assertEqual(
+            _search_engine_dart_filing_entity_keys(http, "LS ELECTRIC"),
+            ["00105855"],
+        )
 
     def test_search_fallback_extracts_official_dart_key_from_cite_text(self):
         html = """
