@@ -38,6 +38,29 @@ def _norm_site(value):
     return re.sub(r"[^0-9A-Za-z가-힣]", "", text).casefold()
 
 
+def _display_site(raw_name, site_tokens):
+    """Resolve a human archive site label by the most specific matching token.
+
+    Multiple requested sites can share a short geographic prefix (for example a
+    headquarters and a plant in the same city). First-match selection can therefore
+    point QA at the wrong PDF path. Prefer the longest concrete matching token/name;
+    ties remain deterministic by original candidate order.
+    """
+    raw_norm = _norm_site(raw_name)
+    matches = []
+    for index, (name, token) in enumerate(site_tokens or []):
+        token = str(token or "")
+        name_norm = _norm_site(name)
+        lengths = []
+        if token and (token in raw_norm or raw_norm in token):
+            lengths.append(len(token))
+        if name_norm and (name_norm in raw_norm or raw_norm in name_norm):
+            lengths.append(len(name_norm))
+        if lengths:
+            matches.append((max(lengths), -index, name))
+    return max(matches)[2] if matches else raw_name
+
+
 def _tokens(text):
     found = re.findall(
         r"[0-9A-Za-z가-힣]+(?:[._%/\\-][0-9A-Za-z가-힣]+)*",
@@ -133,19 +156,7 @@ def evaluate(package_root, archive_root, envinfo_scope, labels=None, site_tokens
         expected += 1
         year = str(item.get("year") or "연도미상")
         raw_name = str(item.get("compNm") or labels.get(("ENVINFO", comp), comp))
-        raw_norm = _norm_site(raw_name)
-        display = next(
-            (
-                name for name, token in site_tokens
-                if token and (
-                    token in raw_norm
-                    or raw_norm in token
-                    or _norm_site(name) in raw_norm
-                    or raw_norm in _norm_site(name)
-                )
-            ),
-            raw_name,
-        )
+        display = _display_site(raw_name, site_tokens)
         raw_matches = sorted((env / "raw_detail").glob(f"{year}_{_safe(comp)}_*.html"))
         pdf = (
             archive_root / "01_사용자자료" / "03_환경정보공개시스템" / _safe(display)
