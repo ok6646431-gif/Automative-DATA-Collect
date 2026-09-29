@@ -7,6 +7,7 @@ from orchestrator.zero_touch_discovery import (
     _extract_rename_date_and_names,
     _search_engine_official_dart,
     _search_engine_dart_filing_entity_keys,
+    _english_dart_dynamic_entity_keys,
     _extract_select_keys,
     discover_site_candidates,
     legal_match_score,
@@ -53,6 +54,15 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         operating = {"korean_name": "엘에스일렉트릭 주식회사", "english_name": "LS ELECTRIC CO., LTD"}
         self.assertLess(legal_match_score("LS ELECTRIC", parent), 88)
         self.assertGreaterEqual(legal_match_score("LS ELECTRIC", operating), 88)
+
+    def test_first_party_english_dart_dynamic_form_fallback(self):
+        with patch(
+            "orchestrator.dart_public_resolver._dynamic_form_attempts",
+            side_effect=[[], ["00105855"]],
+        ) as dynamic:
+            keys = _english_dart_dynamic_entity_keys(Mock(), "LS ELECTRIC")
+        self.assertEqual(keys, ["00105855"])
+        self.assertEqual(dynamic.call_count, 2)
 
     def test_filing_fallback_extracts_entity_cik_from_official_viewer(self):
         search_html = """
