@@ -5,6 +5,7 @@ from orchestrator.company_profile_builder import compile_discovery
 from orchestrator.zero_touch_discovery import (
     Page,
     _extract_rename_date_and_names,
+    _search_engine_official_dart,
     _extract_select_keys,
     discover_site_candidates,
     legal_match_score,
@@ -51,6 +52,17 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         operating = {"korean_name": "엘에스일렉트릭 주식회사", "english_name": "LS ELECTRIC CO., LTD"}
         self.assertLess(legal_match_score("LS ELECTRIC", parent), 88)
         self.assertGreaterEqual(legal_match_score("LS ELECTRIC", operating), 88)
+
+    def test_search_fallback_extracts_official_dart_key_from_cite_text(self):
+        html = """
+        <html><body>
+          <cite>https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00105855</cite>
+        </body></html>
+        """
+        response = Mock(status_code=200, text=html)
+        http = Mock()
+        http.get.return_value = response
+        self.assertEqual(_search_engine_official_dart(http, "LS ELECTRIC"), ["00105855"])
 
     def test_weak_direct_dart_result_recovers_exact_search_candidate(self):
         parent = {
