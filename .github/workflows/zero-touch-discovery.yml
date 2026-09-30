@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - run/control-plane
+      - hanwha-ocean-application-20260930
     paths:
       - 'requests/zero_touch_request.json'
       - 'requests/document_evidence.schema.json'
