@@ -1,20 +1,21 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-kia-env-20260928",
-  "requested_company_name": "기아",
-  "current_legal_name": "기아 주식회사",
+  "request_id": "company-a382d2ca-env-g0-20260930",
+  "requested_company_name": "한화오션",
+  "current_legal_name": "한화오션(주)",
   "current_legal_name_active_period": {
-    "start_year": 2021
+    "start_year": 2023
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "기아 국내 AutoLand",
+    "label": "한화오션(주) 국내 사업장",
     "candidate_ids": [
-      "kia-gwangmyeong",
-      "kia-hwaseong",
-      "kia-gwangju"
+      "3370-1d99e898",
+      "86-b4831853",
+      "343-dc7a6f74",
+      "rd-2-96-27bbc367"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -22,93 +23,113 @@
   },
   "company_aliases": [
     {
-      "name": "기아",
+      "name": "한화오션",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
       "active_period": {
-        "start_year": 2021
+        "start_year": 2023
       }
     },
     {
-      "name": "Kia Corporation",
+      "name": "Hanwha Ocean Co., Ltd.",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
       "active_period": {
-        "start_year": 2021
+        "start_year": 2023
       }
     }
   ],
   "historical_legal_names": [
     {
-      "name": "기아자동차",
-      "alias_type": "historical_legal_name",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
+      "name": "대우조선해양(주)",
+      "alias_type": "former_legal_name",
       "active_period": {
-        "end_year": 2020
-      }
-    },
-    {
-      "name": "기아자동차(주)",
-      "alias_type": "historical_search_alias",
+        "start_year": 2020,
+        "end_year": 2023
+      },
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
-      "active_period": {
-        "end_year": 2020
-      }
+      "source_locator": "https://kind.krx.co.kr/external/2023/08/14/001207/20230814003763/11012.htm"
     }
   ],
   "corporate_restructuring_evidence": [
     {
       "event_type": "rename",
       "effective_period": {
-        "start_year": 2021
+        "start_year": 2023,
+        "end_year": 2023
       },
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
-      "verification_state": "VERIFIED"
+      "effective_date": "2023-05-23",
+      "predecessor": "대우조선해양(주)",
+      "successor": "한화오션(주)",
+      "scope": "same legal entity name change",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://kind.krx.co.kr/external/2023/08/14/001207/20230814003763/11012.htm"
     }
   ],
   "domestic_site_candidates": [
     {
-      "candidate_id": "kia-gwangmyeong",
-      "site_name_raw": "AutoLand 광명",
-      "address_raw": "경기도 광명시 기아자동차로 113",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "candidate_id": "3370-1d99e898",
+      "site_name_raw": "거제 사업장",
+      "address_raw": "경상남도 거제시 거제대로 3370",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hanwhaocean.com/ft/cu60/",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hanwhaocean.com/ft/cu60/",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+      }
     },
     {
-      "candidate_id": "kia-hwaseong",
-      "site_name_raw": "AutoLand 화성",
-      "address_raw": "경기도 화성시 우정읍 기아로 95",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "candidate_id": "86-b4831853",
+      "site_name_raw": "서울사무소",
+      "address_raw": "서울시 중구 청계천로 86",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hanwhaocean.com/ft/cu60/",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hanwhaocean.com/ft/cu60/",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+      }
     },
     {
-      "candidate_id": "kia-gwangju",
-      "site_name_raw": "AutoLand 광주",
-      "address_raw": "광주광역시 서구 화운로 277",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "candidate_id": "343-dc7a6f74",
+      "site_name_raw": "서울사무소",
+      "address_raw": "서울시 중구 삼일대로 343",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hanwhaocean.com/ft/cu60/",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hanwhaocean.com/ft/cu60/",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+      }
+    },
+    {
+      "candidate_id": "rd-2-96-27bbc367",
+      "site_name_raw": "R&D 캠퍼스",
+      "address_raw": "경기도 시흥시 배곧2로 96",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.hanwhaocean.com/ft/cu60/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.hanwhaocean.com/ft/cu60/",
+        "extraction_contract": "FLATTENED_TEXT_FALLBACK"
+      }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://dart.fss.or.kr/navi/searchNavi.do?naviCode=A002&naviCrpCik=00106641&naviCrpNm=%EA%B8%B0%EC%95%84",
-      "source_value_raw": "기아 / DART CIK 00106641",
-      "verification_state": "VERIFIED",
-      "confidence": "HIGH"
-    },
-    {
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
-      "source_value_raw": "AutoLand 광명, 화성, 광주 및 주소",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00111704",
+      "source_value_raw": "한화오션(주) / Hanwha Ocean Co., Ltd. / establishment 2000-10-23 / website www.hanwhaocean.com/pub/main/index.do",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -169,5 +190,8 @@
         "prefer_full_history": false
       }
     }
+  },
+  "legal_entity_active_period": {
+    "start_year": 2000
   }
 }
