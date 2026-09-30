@@ -1,114 +1,134 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-kia-env-20260928",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "KIA_SUSTAINABILITY_2020",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2020 기아 지속가능경영보고서",
-      "report_year": 2020,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2020-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2021",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 기아 지속가능경영보고서",
-      "report_year": 2021,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2021-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2022",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 기아 지속가능경영보고서",
-      "report_year": 2022,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2022-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2023",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 기아 지속가능경영보고서",
-      "report_year": 2023,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2023-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2024",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 기아 지속가능경영보고서",
-      "report_year": 2024,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2024-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2025",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 기아 지속가능경영보고서",
-      "report_year": 2025,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2025-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2026",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2026 기아 지속가능경영보고서",
-      "report_year": 2026,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2026-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_ENV_GOVERNANCE_2026",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_bda33e6afa",
       "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "기아 환경 추진체계",
+      "title": "한화오션",
       "report_year": 2026,
-      "source_url": "https://worldwide.kia.com/ko/company/sustainability/environmental/governance",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/environmental/governance",
+      "source_url": "https://www.hanwhaocean.com/sustainability/ov/",
+      "source_locator": "https://www.hanwhaocean.com/sustainability/ov/",
+      "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING"
     },
     {
-      "document_id": "KIA_ESG_GOVERNANCE_2026",
-      "document_type": "SHE_POLICY",
-      "title": "기아 ESG 정책 및 안전보건·환경 정책",
+      "document_id": "AUTO_ENVIRONMENT_PAGE_a375af70f8",
+      "document_type": "ENVIRONMENTAL_MANAGEMENT",
+      "title": "한화오션",
       "report_year": 2026,
-      "source_url": "https://worldwide.kia.com/ko/company/sustainability/esg/governance",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/governance",
+      "source_url": "https://www.hanwhaocean.com/whoweare/gn/aff/",
+      "source_locator": "https://www.hanwhaocean.com/whoweare/gn/aff/",
+      "expected_extension": "html",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "SUPPORTING"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2020",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "한화오션_지속가능경영보고서_2020_kor.pdf",
+      "report_year": 2020,
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC8wKhh18Di3YwI21vV97S%2B2tETe2jfDqe1LMO7lxrHnCT51uPq3eK%2B0nzdQ6MmaGDE3aFIRUiaBrJp1bb1Xf%2FNgVUjwEfuoZclgwjqJVUeKlEUmonGH%2FnoJPlE0K5UWlMw%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2021",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "한화오션_지속가능경영보고서_2021_kor.pdf",
+      "report_year": 2021,
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FCwFoqN%2By2mX8bHn3umOG%2FcC0c8zqzxKzyNqgDP1mVyKmAYNp3l4o3xrhNSQKTGIZRSxB%2FWVrYD42XRQbHmHo%2FKZzfrfePfllbuC8bVs%2FHxz5rT24TDyQ%2F9r5zrL9qkui8w%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2022",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "한화오션_지속가능경영보고서_2022_kor.pdf",
+      "report_year": 2022,
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC1wlQPiDCOOFCAO1xOEsRUJZLU0eGtrP6rhWqULTTsKuRusohRJ9g8WBuJrWufIHgtfacjKjSaRtd3H7hrk8bdnV4foIqYoTdXq0D4sz7uTDAXf%2FMGURaAL3KBdIDZakMQ%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2023",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "한화오션_지속가능경영보고서_2023_kor.pdf",
+      "report_year": 2023,
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC3kEngJpIu7UIQdQLnKssve6GGUl%2B%2FG4krxQPylFZwWoTYJ1xmlqj0SC62yByWUSlrl6BkxlBLk6O3G%2F7T7gtKgSxF4i5DswzFHWdnAFqYFcsu4JmuBY7ZlVnl3kYfsBvg%3D%3D",
+      "source_locator": "https://esg.hanwhaocean.com/dl/rep/",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Recovered from report-semantic same-host JavaScript navigation; download contract and PDF bytes verified.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2024",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "한화오션 지속가능경영보고서 2024",
+      "report_year": 2024,
+      "source_url": "https://www.hanwhaocean.com/pdf/%ED%95%9C%ED%99%94%EC%98%A4%EC%85%98_%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C_2024_F.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2025/06/25/000122/20250620000098/61979.htm",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official Hanwha Ocean route; PDF bytes/content-type verified by Discovery. KRX 2025-06-25 disclosure confirms the Korean 2024 sustainability report and identifies Hanwha Ocean ESG homepage as submission location; English version was announced separately for July.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
+    },
+    {
+      "document_id": "AUTO_SUSTAINABILITY_2025",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "title": "한화오션 지속가능경영보고서 2025",
+      "report_year": 2025,
+      "source_url": "https://esg.hanwhaocean.com/attach?et=HBakdgHHepOKtsz6rb9FC9dXhMJlaqZaPRPiVgcMwS%2F6%2F035MdEOc74BYJaNpRaMMGMFB1lF7cdluAbm%2Fq7YpOeqrxTEaG5ktjH298dQ765pCkXsfpkNINTnjD%2F4r%2BmBmVM4Mjq9PFnWmsnUUczO9Q%3D%3D",
+      "source_locator": "https://kind.krx.co.kr/external/2026/06/30/001426/20260622000504/61979.htm",
+      "expected_extension": "pdf",
+      "verification_status": "SOURCE_VERIFIED",
+      "importance": "CORE",
+      "notes": "Official Hanwha Ocean ESG route; PDF bytes/content-type verified by Discovery. KRX 2026-06-30 disclosure confirms the Korean 2025 sustainability report and identifies Hanwha Ocean ESG homepage as submission location; English version was announced separately for July.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "language_preference": "KO_REQUIRED_VERIFIED_ROUTE"
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
+      "source_key": "CORP_DOCS",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "year": 2026,
+      "verification_status": "SOURCE_VERIFIED",
+      "status": "NOT_PUBLISHED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "As of 2026-09-30, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://esg.hanwhaocean.com/"
+    }
+  ],
   "discovery_scope": {
     "history_window": {
       "start_year": 2020,
@@ -119,8 +139,17 @@
     ],
     "current_public_document_categories": [
       "SUSTAINABILITY_REPORT",
-      "ENVIRONMENTAL_MANAGEMENT",
-      "SHE_POLICY"
-    ]
-  }
+      "ENVIRONMENTAL_MANAGEMENT"
+    ],
+    "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
+    "requested_history_window": {
+      "start_year": 2020,
+      "end_year": 2026
+    },
+    "effective_current_entity_history_window": {
+      "start_year": 2020,
+      "end_year": 2026
+    }
+  },
+  "request_id": "company-a382d2ca-env-g0-20260930"
 }
