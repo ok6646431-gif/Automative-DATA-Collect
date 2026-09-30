@@ -1,7 +1,17 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-kia-env-20260928",
-  "discovery_status": "NOT_RUN",
-  "events": [],
+  "request_id": "company-ec58a5a0-env-g0-20261001",
+  "discovery_status": "COMPLETE",
+  "events": [
+    {
+      "event_id": "KUMHO_RENAME_20210326",
+      "event_type": "CORPORATE_RENAME",
+      "event_date": "2021-03-26",
+      "title": "금호산업(주)에서 금호건설(주)로 상호 변경",
+      "source_locator": "https://kind.krx.co.kr/external/2021/11/12/000282/20211112000559/11013.htm",
+      "verification_status": "SOURCE_VERIFIED",
+      "notes": "Same legal entity; historical search alias retained for 2020-2021 collection."
+    }
+  ],
   "gaps": []
 }
