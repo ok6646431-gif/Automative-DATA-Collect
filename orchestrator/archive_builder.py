@@ -766,6 +766,36 @@ def distinct_file_count(paths):
     return len({sha256(p) for p in paths if Path(p).exists()})
 
 
+def sustainability_series_expected(package_root):
+    """Return whether a standalone annual sustainability-report series is in scope.
+
+    An explicit discovery_scope.annual_series contract is authoritative. Companies
+    that publish environmental management/performance through current official web
+    pages instead of a standalone annual sustainability series must not fail a legacy
+    five-PDF heuristic. If no document evidence contract exists, preserve the old
+    fail-closed behavior.
+    """
+    evidence=read_json(Path(package_root)/'Document_Evidence.json',None)
+    if not isinstance(evidence,dict):
+        return True
+    scope=evidence.get('discovery_scope') or {}
+    if isinstance(scope,dict) and 'annual_series' in scope:
+        series={str(x or '').upper() for x in (scope.get('annual_series') or [])}
+        return bool(series & {
+            'SUSTAINABILITY_REPORT','ESG_REPORT','ENVIRONMENTAL_REPORT',
+            'ANNUAL_ENVIRONMENT_REPORT','ANNUAL_SUSTAINABILITY_REPORT'
+        })
+    documents=evidence.get('documents') or []
+    return any(
+        isinstance(doc,dict)
+        and str(doc.get('document_type') or '').upper() in {
+            'SUSTAINABILITY_REPORT','ESG_REPORT','ENVIRONMENTAL_REPORT',
+            'ANNUAL_ENVIRONMENT_REPORT','ANNUAL_SUSTAINABILITY_REPORT'
+        }
+        for doc in documents
+    )
+
+
 def build_archive(package_root,contract_path=CONTRACT_PATH):
     package_root=Path(package_root).resolve(); profile=read_json(package_root/'Company_Profile.json',{}) or {}
     company_name=str(profile.get('company_display_name') or profile.get('company_input') or '기업')
@@ -795,7 +825,8 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     expected_env=sum(1 for r in read_csv(package_root/'output'/'ENVINFO'/'discovery.csv') if str(r.get('compId') or '') in scope['ENVINFO'])
     forbidden_user_suffixes={'.html','.htm','.json','.jsonl'}
     user_machine_formats_absent=not any(p.is_file() and p.suffix.lower() in forbidden_user_suffixes for p in (archive_root/USER_ROOT).rglob('*'))
-    checks={'user_excel_exports':len(excels)>=4,'human_delivery_fidelity':fidelity.get('pass') is True,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present,'user_machine_formats_absent':user_machine_formats_absent}
+    sust_expected=sustainability_series_expected(package_root)
+    checks={'user_excel_exports':len(excels)>=4,'human_delivery_fidelity':fidelity.get('pass') is True,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5 if sust_expected else True,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present,'user_machine_formats_absent':user_machine_formats_absent}
     completeness='COMPLETE' if all(checks.values()) else 'INCOMPLETE'; idx=archive_root/'00_자료목록'
     manifest={'schema_version':'2.0','company_id':company_id,'company_display_name':company_name,'created_at':datetime.now(timezone.utc).isoformat(),'archive_root':archive_root.name,'archive_completeness':completeness,'acceptance_checks':checks,'target_site_tokens':[x[0] for x in tokens],'target_source_ids':{k:sorted(v) for k,v in scope.items()},'user_files':len(user_files),'system_files':sum(1 for p in (archive_root/SYSTEM_ROOT).rglob('*') if p.is_file()),'xlsx_exports':len(excels),'envinfo_promoted_references':len(promoted),'envinfo_pdf_failures':env_failures,'envinfo_cross_entity_attachment_exclusions':len(env_cross_entity),'envinfo_cross_entity_attachment_exclusion_file':cross_entity_index,'principle':'01_사용자자료만으로 조사·비교가 가능해야 하며, 재현용 raw 자료는 90_시스템원본에 격리한다.'}
     (idx/'Archive_Manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
