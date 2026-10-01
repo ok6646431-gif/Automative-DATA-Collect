@@ -6,6 +6,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"orchestrator"))
 import archive_builder
 from archive_builder import build_archive
 from envinfo_reference_lane import keep_envinfo_out_of_official_annual_lane
+from human_archive_raw_policy import suppress_system_raw_copy
 
 
 def write_csv(path, rows):
@@ -73,7 +74,8 @@ class ArchiveBuilderTests(unittest.TestCase):
             # Exercise the production provenance contract in isolation, independent
             # of other tests importing the archive_stage module in a different order.
             segregated = keep_envinfo_out_of_official_annual_lane(archive_builder.promote_envinfo_references)
-            with patch.object(archive_builder, 'promote_envinfo_references', segregated):
+            with patch.object(archive_builder, 'promote_envinfo_references', segregated), \
+                 patch.object(archive_builder, 'copy_system_raw', suppress_system_raw_copy):
                 summary=build_archive(root)
             archive=root/"Human_Archive"/"테스트화학_환경자료"
             self.assertTrue((archive/"01_사용자자료"/"03_환경정보공개시스템"/"테스트공장"/"첨부자료"/"2024_조직도.png").exists())
