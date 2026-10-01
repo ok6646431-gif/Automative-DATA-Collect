@@ -32,5 +32,9 @@ jobs:
         run: python -m unittest tests.test_package_validation tests.test_final_validation_semantics -v
       - name: Collection completeness regressions
         run: python -m unittest tests.test_collection_completeness -v
+      - name: Requested-scope identity regressions
+        run: python -m unittest tests.test_requested_scope_company_entity_filter tests.test_human_archive_exports -v
+      - name: User-format regressions
+        run: python -m unittest tests.test_user_archive_format -v
       - name: Archive builder regressions
         run: python -m unittest tests.test_archive_builder -v
