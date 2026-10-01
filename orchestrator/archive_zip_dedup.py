@@ -227,6 +227,19 @@ def _resolved_sustainability_gap_years(package_root):
 def _apply_sustainability_coverage(package_root,archive_root,summary):
     package_root=Path(package_root); archive_root=Path(archive_root)
     profile=read_json(package_root/'Company_Profile.json',{}) or {}
+    evidence=read_json(package_root/'Document_Evidence.json',{}) or {}
+    scope=evidence.get('discovery_scope') or {}
+    annual_series_contract=None
+    if isinstance(scope,dict) and 'annual_series' in scope:
+        annual_series_contract={str(x or '').upper() for x in (scope.get('annual_series') or [])}
+    sustainability_types={
+        'SUSTAINABILITY_REPORT','ESG_REPORT','ENVIRONMENTAL_REPORT',
+        'ANNUAL_ENVIRONMENT_REPORT','ANNUAL_SUSTAINABILITY_REPORT'
+    }
+    sustainability_applicable=(
+        None if annual_series_contract is None
+        else bool(annual_series_contract & sustainability_types)
+    )
     docs=read_csv(package_root/'output'/'CORP_DOCS'/'document_index.csv')
     folder=archive_root/'01_사용자자료'/'04_지속가능경영보고서'
     # Only a verified, downloaded official annual report can satisfy annual coverage.
@@ -250,7 +263,30 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
         matches=any(digest==source_hash for _,source_hash in official[year])
         rendered=any(ext in {'.html','.htm'} for ext,_ in official[year]) and re.search(r'_지속가능경영보고서_'+str(year)+r'\.pdf$',p.name)
         if matches or rendered: paths.append(p)
-    coverage=evaluate_sustainability_coverage(profile,docs,paths)
+    if sustainability_applicable is False:
+        coverage={
+            'schema_version':'1.2',
+            'state':'NOT_APPLICABLE_NO_DECLARED_SERIES',
+            'applicable':False,
+            'minimum_history_years':int(profile.get('minimum_history_years',5) or 5),
+            'required_report_count':0,
+            'expected_report_years':[],
+            'target_report_years':[],
+            'delivered_report_years':[],
+            'missing_target_years':[],
+            'declared_report_years':[],
+            'failed_download_years':[],
+            'verified_index_ranges':[],
+            'coverage_sufficient':True,
+            'principle':(
+                'No standalone annual sustainability-report series is declared for this company. '
+                'Current official environmental-management/performance disclosures are evaluated '
+                'through their own document contracts instead.'
+            ),
+        }
+    else:
+        coverage=evaluate_sustainability_coverage(profile,docs,paths)
+        coverage['applicable']=True
 
     resolved=set(_resolved_sustainability_gap_years(package_root))
     target=set(coverage.get('target_report_years') or [])
@@ -271,8 +307,9 @@ def _apply_sustainability_coverage(package_root,archive_root,summary):
     )
 
     checks=dict(summary.get('acceptance_checks') or {})
-    checks['sustainability_minimum_5']=bool(coverage['coverage_sufficient'])
-    checks['sustainability_coverage_sufficient']=bool(coverage['coverage_sufficient'])
+    coverage_ok=bool(coverage['coverage_sufficient'])
+    checks['sustainability_minimum_5']=coverage_ok
+    checks['sustainability_coverage_sufficient']=coverage_ok
     summary['acceptance_checks']=checks
     blocking=dict(summary.get('blocking_acceptance_checks') or {})
     if blocking:
