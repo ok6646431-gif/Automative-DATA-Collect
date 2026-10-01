@@ -94,6 +94,42 @@ class ArchiveZipDedupTests(unittest.TestCase):
             manifest=json.loads((package/'Master_Manifest.json').read_text(encoding='utf-8'))
             self.assertEqual(manifest['human_archive']['user_files'],2)
 
+    def test_no_declared_annual_series_is_not_applicable_and_nonblocking(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td); package=root/'assembled'; archive=root/'기업_환경자료'
+            docs=package/'output'/'CORP_DOCS'; reports=archive/'01_사용자자료'/'04_지속가능경영보고서'
+            docs.mkdir(parents=True); reports.mkdir(parents=True)
+            (package/'Company_Profile.json').write_text(json.dumps({
+                'minimum_history_years':5,
+                'requested_history_window':{'start_year':2020,'end_year':2026},
+            }),encoding='utf-8')
+            (package/'Document_Evidence.json').write_text(json.dumps({
+                'discovery_scope':{'annual_series':[]},
+                'documents':[{
+                    'document_type':'ENVIRONMENTAL_MANAGEMENT',
+                    'verification_status':'SOURCE_VERIFIED',
+                }],
+            }),encoding='utf-8')
+            with (docs/'document_index.csv').open('w',encoding='utf-8-sig',newline='') as f:
+                w=csv.DictWriter(f,fieldnames=['document_type','title','report_year','verification_status','collection_status','stored_path'])
+                w.writeheader()
+            summary={'acceptance_checks':{
+                'user_excel_exports':True,'envinfo_pdf_complete':True,'sustainability_minimum_5':False,
+                'public_policy_present':True,'guideline_reference_present':False,'review_report_present':True,
+                'collection_completeness_complete':True,
+            },'blocking_acceptance_checks':{
+                'user_excel_exports':True,'envinfo_pdf_complete':True,'sustainability_minimum_5':False,
+                'public_policy_present':True,'review_report_present':True,'collection_completeness_complete':True,
+            }}
+            result=_apply_sustainability_coverage(package,archive,summary)
+            coverage=result['sustainability_coverage']
+            self.assertEqual(coverage['state'],'NOT_APPLICABLE_NO_DECLARED_SERIES')
+            self.assertFalse(coverage['applicable'])
+            self.assertTrue(coverage['coverage_sufficient'])
+            self.assertTrue(result['acceptance_checks']['sustainability_minimum_5'])
+            self.assertTrue(result['acceptance_checks']['sustainability_coverage_sufficient'])
+            self.assertEqual(result['archive_completeness'],'COMPLETE')
+
     def test_verified_not_published_year_resolves_coverage_without_fake_file(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td); package=root/'assembled'; archive=root/'기업_환경자료'
