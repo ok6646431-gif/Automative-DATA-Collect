@@ -324,6 +324,7 @@ jobs:
           python -m unittest
           tests.test_human_review_package
           tests.test_archive_series_applicability
+          tests.test_package_validation
           -v
       - name: Install Korean/CJK fonts for PDF rendering
         run: |
