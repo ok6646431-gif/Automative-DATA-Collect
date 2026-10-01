@@ -243,6 +243,48 @@ def _load_source_rows(root: Path, source: str):
     return []
 
 
+def _row_source_id(row: dict, source: str) -> str:
+    if source == "CLEANSYS_AIR":
+        return str(row.get("source_fact_code") or row.get("fact_code") or "")
+    if source == "SOOSIRO_WATER":
+        return str(row.get("FACT_CODE") or row.get("source_fact_code") or "")
+    if source == "PRTR":
+        return str(row.get("entrps_id") or "")
+    if source == "CHEM_STATS":
+        return str(row.get("bplcId") or "")
+    return ""
+
+
+def _identity_map(assembled: Path, source: str) -> dict[str, dict]:
+    result = {}
+    for row in read_csv(assembled / "Source_Identity.csv"):
+        if str(row.get("source_key") or "") != source:
+            continue
+        sid = str(row.get("source_site_id") or "")
+        if sid:
+            result[sid] = row
+    return result
+
+
+def _classified_source_rows(assembled: Path, source: str, rows: list[dict]):
+    identities = _identity_map(assembled, source)
+    confirmed, review = [], []
+    for raw in rows:
+        item = dict(raw)
+        sid = _row_source_id(item, source)
+        identity = identities.get(sid, {})
+        state = str(identity.get("match_status") or "").upper()
+        item["식별상태"] = state or "UNRESOLVED"
+        if state == "CONFIRMED":
+            item["사용구분"] = "확정자료"
+            confirmed.append(item)
+        else:
+            item["사용구분"] = "검토필요"
+            item["검토사유"] = str(identity.get("match_basis") or identity.get("notes") or "source identity not confirmed")
+            review.append(item)
+    return confirmed, review
+
+
 def make_public_workbook(assembled: Path, out: Path):
     wb = Workbook()
     wb.remove(wb.active)
@@ -250,15 +292,25 @@ def make_public_workbook(assembled: Path, out: Path):
         wb, "자료원_상태", source_status_rows(assembled),
         ["자료원", "상태", "발견행수", "상세확보", "오류", "비고"],
     )
+    short = {
+        "ENVINFO": "ENVINFO",
+        "PRTR": "PRTR",
+        "CHEM_STATS": "화학통계",
+        "CLEANSYS_AIR": "CleanSYS",
+        "SOOSIRO_WATER": "SOOSIRO",
+    }
     for source in SOURCE_LABELS:
         rows = _load_source_rows(assembled, source)
         if not rows:
             status = read_json(assembled / "output" / source / "status.json", {}) or {}
-            rows = [{
+            write_rows_sheet(wb, f"{short[source]}_상태", [{
                 "상태": status.get("status", "NO_DATA"),
-                "설명": "확정된 공개자료 행이 없습니다. 수집 상태는 자료원_상태 시트를 확인하십시오.",
-            }]
-        write_rows_sheet(wb, source[:31], rows)
+                "설명": "확정된 공개자료 행이 없습니다. 자료원_상태 시트를 확인하십시오.",
+            }])
+            continue
+        confirmed, review = _classified_source_rows(assembled, source, rows)
+        write_rows_sheet(wb, f"{short[source]}_확정", confirmed)
+        write_rows_sheet(wb, f"{short[source]}_검토필요", review)
     out.parent.mkdir(parents=True, exist_ok=True)
     wb.save(out)
 
