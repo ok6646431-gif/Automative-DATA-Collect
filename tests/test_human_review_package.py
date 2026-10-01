@@ -79,7 +79,10 @@ class HumanReviewPackageTests(unittest.TestCase):
                 "CLEANSYS_AIR": "NO_FACILITY_MATCH_CONFIRMED",
                 "SOOSIRO_WATER": "NO_FACILITY_MATCH_CONFIRMED",
             }.items():
-                write_json(assembled / "output" / source / "status.json", {"status": status, "rows": 0})
+                payload = {"status": status, "rows": 0}
+                if source == "CLEANSYS_AIR":
+                    payload["errors"] = []
+                write_json(assembled / "output" / source / "status.json", payload)
             write_csv(assembled / "output" / "CHEM_STATS" / "discovery.csv", [{
                 "search_year": "2024",
                 "bplcId": "X1",
