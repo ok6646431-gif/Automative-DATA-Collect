@@ -131,6 +131,21 @@ class HumanReviewPackageTests(unittest.TestCase):
             review_book = load_workbook(out / "테스트건설_검토용" / "00_먼저보기" / "확인필요_REVIEW_REQUIRED.xlsx")
             self.assertGreaterEqual(review_book["확인필요"].max_row, 2)
 
+            public_book = load_workbook(out / "테스트건설_검토용" / "02_공공환경자료" / "공공환경자료_정리.xlsx")
+            confirmed_values = [
+                cell.value
+                for row in public_book["화학통계_확정"].iter_rows()
+                for cell in row
+            ]
+            review_values = [
+                cell.value
+                for row in public_book["화학통계_검토필요"].iter_rows()
+                for cell in row
+            ]
+            self.assertNotIn("X1", confirmed_values)
+            self.assertIn("X1", review_values)
+            self.assertIn("REVIEW_REQUIRED", review_values)
+
 
 if __name__ == "__main__":
     unittest.main()
