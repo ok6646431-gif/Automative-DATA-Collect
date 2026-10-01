@@ -358,6 +358,8 @@ jobs:
           path: collected/icis
           merge-multiple: false
       - name: Assemble, validate and manifest
+        id: assemble
+        continue-on-error: true
         run: >-
           python orchestrator/package_run.py
           --stable collected/stable
@@ -371,7 +373,25 @@ jobs:
           if [ -f requests/runtime/Company_Discovery_Summary.json ]; then
             cp requests/runtime/Company_Discovery_Summary.json assembled/Company_Discovery_Summary.json
           fi
+      - name: Build human-readable review package
+        if: ${{ always() && hashFiles('assembled/**') != '' }}
+        run: >-
+          python tools/build_human_review_package.py
+          --assembled assembled
+          --out-dir review-delivery
+          --prefix 환경자료_검토용
+      - name: Upload human-readable review package
+        id: review_upload
+        if: ${{ always() && hashFiles('review-delivery/*.zip') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-env-review-package
+          path: review-delivery/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
       - name: Build human-facing archive
+        if: ${{ steps.assemble.outcome == 'success' }}
         run: >-
           python orchestrator/archive_stage.py
           --package assembled
@@ -464,6 +484,11 @@ jobs:
           path: assembled/
           if-no-files-found: warn
           retention-days: 14
+      - name: Preserve strict assembly failure after review delivery
+        if: ${{ always() && steps.assemble.outcome == 'failure' }}
+        run: |
+          echo "Strict assembly validation failed; human-readable review package was preserved." >&2
+          exit 81
       - name: Publish control-plane run receipt
         if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/run/control-plane' }}
         continue-on-error: true
