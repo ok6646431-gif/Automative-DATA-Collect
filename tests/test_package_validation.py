@@ -70,6 +70,23 @@ class TestPackageValidation(unittest.TestCase):
             self.assertEqual(package_health(results, review), "FAIL")
             self.assertIn("PRTR/detail_table_rows.jsonl", [p.replace("\\", "/") for p in review[0]["zero_byte"]])
 
+    def test_envinfo_zero_attachment_index_is_declared_empty(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for source in SOURCES:
+                if source == "ENVINFO":
+                    write_status(root, source, attachments_discovered=0)
+                    (root / source / "attachment_index.jsonl").write_text("", encoding="utf-8")
+                else:
+                    write_status(root, source)
+
+            ok, results, review = validate(root)
+
+            self.assertTrue(ok)
+            self.assertEqual(results["ENVINFO"]["checks"], [])
+            self.assertEqual(review, [])
+            self.assertEqual(package_health(results, review), "PASS")
+
     def test_declared_zero_row_stream_is_not_structural_failure(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
