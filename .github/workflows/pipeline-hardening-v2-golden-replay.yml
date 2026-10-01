@@ -1,0 +1,340 @@
+name: Pipeline hardening v2 golden replay
+
+on:
+  push:
+    branches: [pipeline-hardening-v2]
+    paths:
+      - '.github/workflows/pipeline-hardening-v2-golden-replay.yml'\n      - 'orchestrator/requested_scope.py'\n      - 'orchestrator/human_archive_exports.py'\n      - 'orchestrator/archive_builder.py'\n      - 'orchestrator/user_archive_format.py'\n      - 'tools/build_human_review_package.py'\n      - 'tools/build_application_material_package.py'
+      - 'orchestrator/human_archive_exports.py'
+      - 'tests/test_human_archive_exports.py'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: kumho
+            company: 금호석유화학
+            base_run: '35099857670'
+            overlay_run: ''
+            corp_mode: refresh_kumho_kor
+          - key: hanwha
+            company: 한화에어로스페이스
+            base_run: '35480886754'
+            overlay_run: '35482930612'
+            corp_mode: keep_base
+          - key: hyosung
+            company: 효성티앤씨
+            base_run: '35339897727'
+            overlay_run: ''
+            corp_mode: refresh_hyosung_kor
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: orchestrator
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pipeline-hardening-v2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install current package and archive runtime
+        run: |
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter openpyxl pypdf cryptography
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum >/dev/null
+          sudo fc-cache -f
+
+      - name: Download retained baseline raw package
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ matrix.base_run }}
+          name: enterprise-env-final
+          path: base
+          github-token: ${{ github.token }}
+
+      - name: Download corrected raw overlay when declared
+        if: ${{ matrix.overlay_run != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ matrix.overlay_run }}
+          name: enterprise-env-final
+          path: overlay
+          github-token: ${{ github.token }}
+
+      - name: Stage preserved raw sources and company-bound evidence
+        env:
+          OVERLAY_RUN: ${{ matrix.overlay_run }}
+        run: |
+          set -euo pipefail
+          test -s base/Company_Profile.json
+          test -s base/Document_Evidence.json
+          mkdir -p collected/stable collected/icis/icis-attempt-1 evidence
+
+          RAW=base
+          if [ -n "$OVERLAY_RUN" ]; then RAW=overlay; fi
+
+          for source in ENVINFO CLEANSYS_AIR SOOSIRO_WATER; do
+            test -s "$RAW/output/$source/status.json"
+            cp -a "$RAW/output/$source" "collected/stable/$source"
+          done
+
+          # Preserve the validated baseline corporate-document lane for every
+          # company. Refresh modes replace only the annual PDFs that actually need
+          # Korean-language remediation instead of re-downloading the whole series.
+          test -s base/output/CORP_DOCS/status.json
+          cp -a base/output/CORP_DOCS collected/stable/CORP_DOCS
+
+          for source in PRTR CHEM_STATS; do
+            test -s "$RAW/output/$source/status.json"
+            cp -a "$RAW/output/$source" "collected/icis/icis-attempt-1/$source"
+          done
+
+          cp base/Company_Profile.json evidence/Company_Profile.json
+          cp base/Document_Evidence.json evidence/Document_Evidence.json
+          if [ -s base/Event_Evidence.json ]; then
+            cp base/Event_Evidence.json evidence/Event_Evidence.json
+          else
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          profile=json.loads(Path('evidence/Company_Profile.json').read_text(encoding='utf-8'))
+          request_id=profile.get('request_id') or ''
+          Path('evidence/Event_Evidence.json').write_text(
+              json.dumps({'schema_version':'1.0','request_id':request_id,'discovery_status':'NOT_RUN','events':[],'gaps':[]},ensure_ascii=False,indent=2)+'\n',
+              encoding='utf-8'
+          )
+          PY
+          fi
+
+      - name: Refresh only Korean annual-report originals that need remediation
+        if: ${{ matrix.corp_mode != 'keep_base' }}
+        env:
+          CORP_MODE: ${{ matrix.corp_mode }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+
+          p=Path('evidence/Document_Evidence.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          mode=os.environ['CORP_MODE']
+
+          if mode=='refresh_kumho_kor':
+              kor={
+                  2022:'https://kind.krx.co.kr/external/2023/07/28/000536/20230728000690/2022%20%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C_%EA%B5%AD%EB%AC%B8.pdf',
+                  2023:'https://www.kkpc.com/download/?seq=7019',
+                  2024:'https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822',
+              }
+          elif mode=='refresh_hyosung_kor':
+              kor={2020:'https://www.hyosungtnc.com/assets/files/SR_2020_kr.pdf'}
+          else:
+              raise SystemExit(f'unknown CORP_MODE={mode}')
+
+          selected=[]
+          for doc in d.get('documents',[]):
+              if doc.get('document_type')!='SUSTAINABILITY_REPORT':
+                  continue
+              try: year=int(doc.get('report_year'))
+              except (TypeError,ValueError): continue
+              if year not in kor:
+                  continue
+              old_url=str(doc.get('source_url') or '')
+              old={
+                  'source_url':old_url,
+                  'source_locator':doc.get('source_locator'),
+                  'expected_extension':doc.get('expected_extension') or 'pdf',
+                  'verification_status':doc.get('verification_status') or 'SOURCE_VERIFIED',
+                  'source_role':'PREVIOUS_VERIFIED_PRIMARY',
+              }
+              doc['source_url']=kor[year]
+              doc['expected_extension']='pdf'
+              doc['verification_status']='VERIFIED'
+              doc['language_preference']='KO_REQUIRED'
+              fallbacks=[dict(x) for x in (doc.get('fallback_sources') or [])]
+              if old_url and old_url!=kor[year] and all(str(x.get('source_url') or '')!=old_url for x in fallbacks):
+                  fallbacks.append(old)
+              doc['fallback_sources']=[x for x in fallbacks if str(x.get('source_url') or '')!=kor[year]]
+              doc['notes']=(str(doc.get('notes') or '')+' | Golden replay requires the verified official Korean annual-report original.').strip(' |')
+              selected.append(doc)
+
+          if {int(x.get('report_year')) for x in selected} != set(kor):
+              raise SystemExit(f'missing annual-report evidence years for Korean refresh: expected={sorted(kor)} got={[x.get("report_year") for x in selected]}')
+
+          # Keep the full evidence file for downstream archive semantics.
+          p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          # Collector receives only the files that actually require replacement.
+          refresh=dict(d)
+          refresh['documents']=selected
+          refresh['gaps']=[]
+          Path('evidence/Document_Evidence.refresh.json').write_text(
+              json.dumps(refresh,ensure_ascii=False,indent=2)+'\n',encoding='utf-8'
+          )
+          print('KOREAN_REPORT_TARGETED_REFRESH',mode,sorted(kor))
+          PY
+
+          rm -rf output/CORP_DOCS
+          python collectors/corporate_docs_collect.py evidence/Document_Evidence.refresh.json evidence/Company_Profile.json
+          test -s output/CORP_DOCS/status.json
+
+          python - <<'PY'
+          import csv, json, shutil
+          from pathlib import Path
+
+          base=Path('collected/stable/CORP_DOCS')
+          fresh=Path('output/CORP_DOCS')
+
+          def read_csv(path):
+              if not path.exists() or path.stat().st_size==0: return []
+              with path.open(encoding='utf-8-sig',newline='') as f:
+                  return list(csv.DictReader(f))
+
+          def write_csv(path,rows):
+              fields=[]
+              for row in rows:
+                  for key in row:
+                      if key not in fields: fields.append(key)
+              if not fields: fields=['value']
+              with path.open('w',encoding='utf-8-sig',newline='') as f:
+                  w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore')
+                  w.writeheader(); w.writerows(rows)
+
+          fresh_status=json.loads((fresh/'status.json').read_text(encoding='utf-8'))
+          if fresh_status.get('status')!='DATA_FOUND' or int(fresh_status.get('failed') or 0)!=0:
+              raise SystemExit(f'targeted corporate document refresh failed: {fresh_status}')
+
+          base_index=read_csv(base/'document_index.csv')
+          fresh_index=read_csv(fresh/'document_index.csv')
+          refresh_ids={r.get('document_id') for r in fresh_index if r.get('document_id')}
+          if not refresh_ids or any(r.get('collection_status')!='DOWNLOADED' for r in fresh_index):
+              raise SystemExit(f'targeted refresh did not deliver all replacement documents: {fresh_index}')
+
+          # New raw files overwrite same-name baseline payloads where applicable.
+          if (fresh/'raw_documents').exists():
+              shutil.copytree(fresh/'raw_documents',base/'raw_documents',dirs_exist_ok=True)
+
+          merged_index=[r for r in base_index if r.get('document_id') not in refresh_ids] + fresh_index
+          write_csv(base/'document_index.csv',merged_index)
+
+          base_attempts=read_csv(base/'download_attempts.csv')
+          fresh_attempts=read_csv(fresh/'download_attempts.csv')
+          merged_attempts=[r for r in base_attempts if r.get('document_id') not in refresh_ids] + fresh_attempts
+          write_csv(base/'download_attempts.csv',merged_attempts)
+
+          status=json.loads((base/'status.json').read_text(encoding='utf-8'))
+          downloaded=[r for r in merged_index if r.get('collection_status')=='DOWNLOADED']
+          failed=[r for r in merged_index if r.get('collection_status')=='FAILED']
+          skipped=[r for r in merged_index if r.get('collection_status')=='SKIPPED']
+          status.update({
+              'status':'DATA_FOUND' if downloaded and not failed else status.get('status'),
+              'documents_declared':len(merged_index),
+              'downloaded':len(downloaded),
+              'failed':len(failed),
+              'skipped':len(skipped),
+              'bytes':sum(int(r.get('bytes') or 0) for r in downloaded),
+              'source_attempt_rows':len(merged_attempts),
+          })
+          (base/'status.json').write_text(json.dumps(status,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          if failed or skipped or len(downloaded)!=len(merged_index):
+              raise SystemExit(f'merged corporate-document lane is incomplete: status={status}')
+
+          print('TARGETED_CORPDOC_MERGE_PASS',json.dumps({
+              'refresh_ids':sorted(refresh_ids),
+              'documents':len(merged_index),
+              'downloaded':len(downloaded),
+              'bytes':status['bytes'],
+          },ensure_ascii=False))
+          PY
+
+      - name: Reassemble current package from preserved raw sources
+        run: |
+          set -euo pipefail
+          rm -rf assembled
+          python orchestrator/package_run.py             --stable collected/stable             --icis collected/icis             --profile evidence/Company_Profile.json             --events evidence/Event_Evidence.json             --out assembled
+
+      - name: Build current Human Archive from reassembled package
+        run: >-
+          python orchestrator/archive_stage.py
+          --package assembled
+          --stable collected/stable
+          --documents evidence/Document_Evidence.json
+
+      - name: Require current collection, archive, content and annual-report QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          collection=json.loads(Path('assembled/Collection_Completeness.json').read_text(encoding='utf-8'))
+          archive=json.loads(Path('assembled/Archive_Summary.json').read_text(encoding='utf-8'))
+          manifest=json.loads(Path('assembled/Master_Manifest.json').read_text(encoding='utf-8'))
+          qa=archive.get('envinfo_content_qa') or {}
+          annual=archive.get('sustainability_korean_delivery_qa') or {}
+          cov=archive.get('sustainability_coverage') or {}
+
+          assert collection.get('status')=='COMPLETE',collection
+          assert archive.get('archive_completeness')=='COMPLETE',archive.get('blocking_acceptance_checks')
+          assert archive.get('blocking_acceptance_checks',{}).get('envinfo_content_fidelity') is True,qa
+          assert qa.get('status')=='PASS' and qa.get('fail_items')==0 and qa.get('expected_items')==qa.get('checked_items'),qa
+          assert annual.get('status')=='PASS' and annual.get('pass') is True,annual
+          assert manifest.get('human_archive',{}).get('status')=='PASS',manifest.get('human_archive')
+          assert cov.get('coverage_sufficient') is True,cov
+          assert not (set(cov.get('delivered_report_years') or []) & set(cov.get('resolved_without_file_years') or [])),cov
+
+          Path('PreApp.json').write_text(json.dumps({
+              'company':'${{ matrix.company }}',
+              'collection':collection.get('status'),
+              'archive':archive.get('archive_completeness'),
+              'envinfo_qa':qa,
+              'annual_report_qa':annual,
+              'annual_coverage':cov,
+          },ensure_ascii=False,indent=2),encoding='utf-8')
+          print('CURRENT_RAW_TO_ARCHIVE_PASS', '${{ matrix.company }}')
+          PY
+
+      - name: Build and validate current Application Materials
+        run: |
+          set -euo pipefail
+          python tools/build_application_material_from_archive.py             --input assembled/Human_Archive.zip             --output-dir delivery             --source-run "${{ github.run_id }}"             --package-label "${{ matrix.company }}"             --summary-out Application_Materials_Result.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path('Application_Materials_Result.json').read_text(encoding='utf-8'))
+          assert result.get('status')=='PASS',result
+          print('GOLDEN_STRICT_PASS='+json.dumps({
+              'company':result['company'],
+              'archive':'COMPLETE',
+              'application_materials':result['status']
+          },ensure_ascii=False))
+          PY
+
+      - name: Upload compact replay audit
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-current-raw-replay-${{ matrix.key }}
+          path: |
+            PreApp.json
+            Application_Materials_Result.json
+            assembled/Archive_Summary.json
+            assembled/Collection_Completeness.json
+            assembled/Master_Manifest.json
+            collected/stable/CORP_DOCS/status.json
+            collected/stable/CORP_DOCS/document_index.csv
+          if-no-files-found: warn
+          retention-days: 14
+# rerun after out-of-scope fidelity accounting fix: 2026-09-27
+# use official KRX Korean 2022 attachment after repeated KKPC transfer truncation: 2026-09-27
