@@ -115,6 +115,14 @@ class CompanyScopeEntityFilterTests(unittest.TestCase):
                         "source_address_raw": "인천광역시 연수구 컨벤시아대로 165",
                         "match_status": "REVIEW_REQUIRED",
                     },
+                    {
+                        "source_key": "CHEM_STATS",
+                        "source_site_id": "REVIEW_SAME",
+                        "canonical_site_id": "",
+                        "source_site_name_raw": "테스트산업",
+                        "source_address_raw": "부산광역시 사상구 낙동대로 1",
+                        "match_status": "REVIEW_REQUIRED",
+                    },
                 ],
                 [
                     "source_key",
@@ -132,6 +140,9 @@ class CompanyScopeEntityFilterTests(unittest.TestCase):
             self.assertEqual(scope["target_canonical_site_ids"], {"SITE_P", "SITE_G"})
             self.assertEqual(scope["target_source_ids"]["PRTR"], {"CUR_P", "CUR_G"})
             self.assertEqual(scope["target_source_ids"]["CHEM_STATS"], set())
+            # A source-native row whose company token is compatible but whose identity
+            # is still REVIEW_REQUIRED must not enter the confirmed COMPANY scope.
+            self.assertNotIn("REVIEW_SAME", scope["target_source_ids"]["CHEM_STATS"])
             excluded = {
                 (x["source_key"], x["source_site_id"]): x["reason"]
                 for x in scope["excluded_source_ids"]
