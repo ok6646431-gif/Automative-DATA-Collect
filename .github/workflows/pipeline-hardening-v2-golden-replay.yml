@@ -4,9 +4,16 @@ on:
   push:
     branches: [pipeline-hardening-v2]
     paths:
-      - '.github/workflows/pipeline-hardening-v2-golden-replay.yml'\n      - 'orchestrator/requested_scope.py'\n      - 'orchestrator/human_archive_exports.py'\n      - 'orchestrator/archive_builder.py'\n      - 'orchestrator/user_archive_format.py'\n      - 'tools/build_human_review_package.py'\n      - 'tools/build_application_material_package.py'
+      - '.github/workflows/pipeline-hardening-v2-golden-replay.yml'
+      - 'orchestrator/requested_scope.py'
       - 'orchestrator/human_archive_exports.py'
+      - 'orchestrator/archive_builder.py'
+      - 'orchestrator/user_archive_format.py'
+      - 'tools/build_human_review_package.py'
+      - 'tools/build_application_material_package.py'
       - 'tests/test_human_archive_exports.py'
+      - 'tests/test_requested_scope_company_entity_filter.py'
+
 
 permissions:
   contents: read
