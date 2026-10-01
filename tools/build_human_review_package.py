@@ -82,6 +82,14 @@ def style_sheet(ws, freeze="A2"):
     ws.auto_filter.ref = ws.dimensions
 
 
+def excel_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list, tuple, set)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=isinstance(value, dict))
+    return value
+
+
 def write_rows_sheet(wb: Workbook, title: str, rows: list[dict], preferred=None):
     ws = wb.create_sheet(title[:31])
     if not rows:
@@ -99,7 +107,7 @@ def write_rows_sheet(wb: Workbook, title: str, rows: list[dict], preferred=None)
                 fields.append(key)
     ws.append(fields)
     for row in rows:
-        ws.append([row.get(k, "") for k in fields])
+        ws.append([excel_value(row.get(k, "")) for k in fields])
     style_sheet(ws)
     return ws
 
