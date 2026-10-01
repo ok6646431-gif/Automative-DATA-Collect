@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - 'run/control-plane'
+      - 'regression/kumho-hardening-v2'
     paths:
       - 'requests/company_discovery.json'
       - 'requests/event_evidence.json'
