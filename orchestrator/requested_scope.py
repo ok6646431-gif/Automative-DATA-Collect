@@ -443,6 +443,13 @@ def resolve_requested_scope(package_root, profile=None):
                     "reason": entity_reason,
                 })
                 continue
+            # COMPANY means the requested legal entity, not every registry row that
+            # merely shares a compatible company-name token. Only source-native
+            # identities already confirmed by the integration layer may enter the
+            # user-facing confirmed scope. REVIEW_REQUIRED rows remain preserved in
+            # company-wide raw evidence and are exported only through review sheets.
+            if str(row.get("match_status") or "").upper() != "CONFIRMED":
+                continue
             source_ids[source].add(sid)
             labels[(source, sid)] = row.get("source_site_name_raw", "")
 
