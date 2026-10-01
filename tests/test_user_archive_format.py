@@ -24,6 +24,10 @@ class UserArchiveFormatTests(unittest.TestCase):
                 '<html><body><div class="wrapper ESG"><h3>환경경영 전략</h3><p>본문</p><script>x()</script></div></body></html>',
                 encoding="utf-8",
             )
+            (policy / "2026_performance.asp").write_text(
+                '<html><body><main><h2>환경성과</h2><p>온실가스 및 에너지</p></main></body></html>',
+                encoding="utf-8",
+            )
             for name in ["brief.html", "summary.json", "cards.json", "cards.md"]:
                 (review / name).write_text("machine", encoding="utf-8")
             (review / "brief.pdf").write_bytes(b"%PDF-1.4\n%%EOF")
@@ -46,14 +50,18 @@ class UserArchiveFormatTests(unittest.TestCase):
             ):
                 result = user_archive_format.normalize_user_archive(root)
 
-            self.assertEqual(result["corporate_html_rendered_to_pdf"], 1)
+            self.assertEqual(result["corporate_html_rendered_to_pdf"], 2)
             self.assertEqual(result["review_machine_variants_removed"], 4)
             # Product-boundary HTML normalization preserves the materialized user
             # filename stem and changes only the representation to PDF. The HTML
             # document title remains content, not a second source of filename truth.
             self.assertTrue((policy / "2026_policy.pdf").exists())
+            self.assertTrue((policy / "2026_performance.pdf").exists())
             self.assertFalse(any(policy.glob("*.html")))
-            self.assertFalse(any(p.suffix.lower() in {".html", ".htm", ".json", ".jsonl"} for p in (root / "01_사용자자료").rglob("*")))
+            self.assertFalse(any(
+                p.suffix.lower() in user_archive_format.PROHIBITED_USER_SUFFIXES
+                for p in (root / "01_사용자자료").rglob("*")
+            ))
             self.assertTrue((index / "사용자자료_목록.csv").exists())
             self.assertTrue((index / "전체자료목록.xlsx").exists())
 
