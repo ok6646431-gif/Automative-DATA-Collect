@@ -29,7 +29,7 @@ ROOT_ARTIFACTS=[
 ]
 
 DECLARED_ROW_STREAM_COUNTS={
-    "ENVINFO":{"excluded_rows.jsonl":"excluded_rows","scope_rejected_rows.jsonl":"scope_rejected_rows"},
+    "ENVINFO":{"excluded_rows.jsonl":"excluded_rows","scope_rejected_rows.jsonl":"scope_rejected_rows","attachment_index.jsonl":"attachments_discovered"},
     "PRTR":{"detail_table_rows.jsonl":"detail_table_rows","excluded_rows.jsonl":"excluded_rows","scope_rejected_rows.jsonl":"scope_rejected_rows"},
     "CHEM_STATS":{"detail_table_rows.jsonl":"detail_table_rows","excluded_rows.jsonl":"excluded_rows","scope_rejected_rows.jsonl":"scope_rejected_rows"},
     "CLEANSYS_AIR":{"annual_rows.jsonl":"annual_rows"},
