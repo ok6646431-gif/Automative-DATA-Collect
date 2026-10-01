@@ -15,8 +15,9 @@ import archive_builder
 from archive_acceptance import assert_pass, validate_archive_tree
 
 
-MACHINE_REVIEW_SUFFIXES = {".html", ".htm", ".json", ".jsonl", ".md"}
-PROHIBITED_USER_SUFFIXES = {".html", ".htm", ".json", ".jsonl"}
+WEB_PAGE_SUFFIXES = {".html", ".htm", ".asp", ".aspx", ".jsp", ".php", ".do", ".action", ".cgi"}
+MACHINE_REVIEW_SUFFIXES = WEB_PAGE_SUFFIXES | {".json", ".jsonl", ".md"}
+PROHIBITED_USER_SUFFIXES = WEB_PAGE_SUFFIXES | {".json", ".jsonl"}
 
 
 def _safe_title(value: str) -> str:
@@ -72,7 +73,7 @@ def _render_user_html(user_root: Path) -> int:
     """
     sources = sorted(
         p for p in user_root.rglob("*")
-        if p.is_file() and p.suffix.lower() in {".html", ".htm"}
+        if p.is_file() and p.suffix.lower() in WEB_PAGE_SUFFIXES
     )
     converted = 0
     for src in sources:
