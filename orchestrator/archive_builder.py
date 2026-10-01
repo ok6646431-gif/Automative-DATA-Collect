@@ -707,7 +707,9 @@ def build_corporate_user(package_root,archive_root,company_name):
                 x=dict(doc); x['user_archive_status']='SKIPPED_ENGLISH_KOREAN_ALREADY_AVAILABLE'; rows.append(x); continue
         suffix=src.suffix or Path(str(doc.get('original_filename') or '')).suffix
         source_for_user=src; rendered_tmp=None
-        if str(suffix).lower() in {'.html','.htm'}:
+        web_suffixes={'.html','.htm','.asp','.aspx','.jsp','.php','.do','.action','.cgi'}
+        content_type=str(doc.get('content_type') or '').lower()
+        if str(suffix).lower() in web_suffixes or 'html' in content_type:
             rendered_tmp=root/f'.user_render_{sha256(src)[:16]}.pdf'
             source_url=str(doc.get('source_url') or '').strip()
             if source_url.startswith(('https://','http://')):
@@ -823,7 +825,7 @@ def build_archive(package_root,contract_path=CONTRACT_PATH):
     exposed_docs=docs_created+promoted
     sustainability=[p for p in exposed_docs if '04_지속가능경영보고서' in str(p)]; policy=[p for p in exposed_docs if '06_회사환경정책' in str(p)]; guides=[p for p in docs_created if '07_가이드라인_참고자료' in str(p)]
     expected_env=sum(1 for r in read_csv(package_root/'output'/'ENVINFO'/'discovery.csv') if str(r.get('compId') or '') in scope['ENVINFO'])
-    forbidden_user_suffixes={'.html','.htm','.json','.jsonl'}
+    forbidden_user_suffixes={'.html','.htm','.asp','.aspx','.jsp','.php','.do','.action','.cgi','.json','.jsonl'}
     user_machine_formats_absent=not any(p.is_file() and p.suffix.lower() in forbidden_user_suffixes for p in (archive_root/USER_ROOT).rglob('*'))
     sust_expected=sustainability_series_expected(package_root)
     checks={'user_excel_exports':len(excels)>=4,'human_delivery_fidelity':fidelity.get('pass') is True,'envinfo_pdf_complete':len([p for p in env_created if str(p).lower().endswith('.pdf')])>=expected_env if expected_env else True,'sustainability_minimum_5':distinct_file_count(sustainability)>=5 if sust_expected else True,'public_policy_present':len(policy)>=1,'guideline_reference_present':len(guides)>=1,'review_report_present':review_pdf_present,'user_machine_formats_absent':user_machine_formats_absent}
