@@ -1,40 +1,36 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-kia-env-20260928",
-  "requested_company_name": "기아",
-  "current_legal_name": "기아 주식회사",
+  "request_id": "company-ec58a5a0-env-g0-20261001",
+  "requested_company_name": "금호건설",
+  "current_legal_name": "금호건설(주)",
   "current_legal_name_active_period": {
     "start_year": 2021
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
-    "mode": "SITE_SET",
-    "label": "기아 국내 AutoLand",
-    "candidate_ids": [
-      "kia-gwangmyeong",
-      "kia-hwaseong",
-      "kia-gwangju"
-    ],
+    "mode": "COMPANY",
+    "label": "금호건설(주) 국내 건설사업",
+    "candidate_ids": [],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
-    "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
-    "analysis_policy": "FILTER_TO_REQUESTED_SCOPE"
+    "archive_policy": "PRESERVE_COMPANY_WIDE",
+    "analysis_policy": "PRESERVE_COMPANY_WIDE"
   },
   "company_aliases": [
     {
-      "name": "기아",
+      "name": "금호건설",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106313",
       "active_period": {
         "start_year": 2021
       }
     },
     {
-      "name": "Kia Corporation",
+      "name": "KUMHO Engineering & Construction Co., Ltd.",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106313",
       "active_period": {
         "start_year": 2021
       }
@@ -42,73 +38,52 @@
   ],
   "historical_legal_names": [
     {
-      "name": "기아자동차",
-      "alias_type": "historical_legal_name",
+      "name": "금호산업(주)",
+      "alias_type": "former_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
+      "source_locator": "https://kind.krx.co.kr/external/2021/11/12/000282/20211112000559/11013.htm",
       "active_period": {
-        "end_year": 2020
+        "start_year": 2020,
+        "end_year": 2021
       }
     },
     {
-      "name": "기아자동차(주)",
+      "name": "금호산업",
       "alias_type": "historical_search_alias",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
+      "source_locator": "https://kind.krx.co.kr/external/2021/11/12/000282/20211112000559/11013.htm",
       "active_period": {
-        "end_year": 2020
+        "start_year": 2020,
+        "end_year": 2021
       }
     }
   ],
   "corporate_restructuring_evidence": [
     {
       "event_type": "rename",
+      "effective_date": "2021-03-26",
       "effective_period": {
-        "start_year": 2021
+        "start_year": 2021,
+        "end_year": 2021
       },
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
-      "verification_state": "VERIFIED"
+      "predecessor": "금호산업(주)",
+      "successor": "금호건설(주)",
+      "scope": "same legal entity name change",
+      "verification_state": "VERIFIED",
+      "source_locator": "https://kind.krx.co.kr/external/2021/11/12/000282/20211112000559/11013.htm"
     }
   ],
-  "domestic_site_candidates": [
-    {
-      "candidate_id": "kia-gwangmyeong",
-      "site_name_raw": "AutoLand 광명",
-      "address_raw": "경기도 광명시 기아자동차로 113",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kia-hwaseong",
-      "site_name_raw": "AutoLand 화성",
-      "address_raw": "경기도 화성시 우정읍 기아로 95",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    },
-    {
-      "candidate_id": "kia-gwangju",
-      "site_name_raw": "AutoLand 광주",
-      "address_raw": "광주광역시 서구 화운로 277",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
-      "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
-    }
-  ],
+  "domestic_site_candidates": [],
   "identity_evidence": [
     {
-      "source_locator": "https://dart.fss.or.kr/navi/searchNavi.do?naviCode=A002&naviCrpCik=00106641&naviCrpNm=%EA%B8%B0%EC%95%84",
-      "source_value_raw": "기아 / DART CIK 00106641",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106313",
+      "source_value_raw": "금호건설(주) / KUMHO Engineering & Construction Co., Ltd. / DART selectKey 00106313 / www.kumhoenc.com",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     },
     {
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
-      "source_value_raw": "AutoLand 광명, 화성, 광주 및 주소",
+      "source_locator": "https://kind.krx.co.kr/external/2021/11/12/000282/20211112000559/11013.htm",
+      "source_value_raw": "2021-03-26 금호산업(주)에서 금호건설(주)로 상호변경",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -169,5 +144,8 @@
         "prefer_full_history": false
       }
     }
+  },
+  "legal_entity_active_period": {
+    "start_year": 1972
   }
 }
