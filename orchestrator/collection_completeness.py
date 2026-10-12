@@ -454,7 +454,18 @@ def document_rows(package, profile, evidence):
     legal_start = current_entity_period(profile).get("start_year")
     for dtype in sorted(ANNUAL_DOCUMENT_TYPES):
         declared = {as_year(d.get("report_year")): d for d in strong_docs if str(d.get("document_type") or "").upper() == dtype and as_year(d.get("report_year")) is not None}
-        if not declared: continue
+        if not declared:
+            if discovery_status == "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY":
+                for g in gaps:
+                    if (isinstance(g, dict) and not g.get("blocking")
+                            and str(g.get("document_type") or "").upper() == dtype
+                            and str(g.get("status") or "") == "NOT_FOUND_IN_BOUNDED_SCOPE"):
+                        rows.append(row("CORP_DOCS", dtype, as_year(g.get("year")),
+                                        "DOCUMENT_NOT_FOUND_IN_BOUNDED_SCOPE",
+                                        query_state="BOUNDED_FIRST_PARTY", data=False,
+                                        evidence=str(g.get("source_locator") or ""),
+                                        note="공식 홈페이지의 정해진 탐색 범위에서 미발견. 미발간을 뜻하지 않음"))
+            continue
         series_start = start if start is not None else min(declared)
         series_end = max([x for x in [end, max(declared)] if x is not None])
         if legal_start is not None: series_start = max(series_start, legal_start)
