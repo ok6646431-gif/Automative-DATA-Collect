@@ -549,6 +549,12 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
         return status
 
     gaps = evidence.get("gaps", []) or []
+    discovery_scope = evidence.get("discovery_scope") or {}
+    # Retain the exact search boundary; not finding a report is not proof of nonpublication.
+    (out / "discovery_scope.json").write_text(
+        json.dumps(discovery_scope, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
     session = requests.Session(); session.headers.update({"User-Agent": UA}); PREFLIGHT_CACHE.clear()
 
     for doc in evidence.get("documents", []) or []:
@@ -629,13 +635,29 @@ def collect(evidence_path, profile_path, out_dir="output/CORP_DOCS"):
     if downloaded:
         final = "DATA_FOUND" if failed == 0 else "PARTIAL_DOWNLOAD"
     elif declared == 0:
-        final = "NO_DOCUMENTS_DECLARED"
+        bounded = str(evidence.get("discovery_status") or "") == "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY"
+        checked = discovery_scope.get("official_pages_checked")
+        pages = discovery_scope.get("official_page_urls") or []
+        gaps_ok = all(
+            isinstance(gap, dict) and not gap.get("blocking")
+            and str(gap.get("status") or "") == "NOT_FOUND_IN_BOUNDED_SCOPE"
+            for gap in gaps
+        )
+        final = (
+            "NO_DOCUMENTS_FOUND_IN_SCOPE"
+            if bounded and isinstance(checked, int) and checked > 0
+            and isinstance(pages, list) and len(pages) == checked and gaps_ok
+            else "NO_DOCUMENTS_DECLARED"
+        )
     else:
         final = "NO_DOCUMENT_DOWNLOADED"
     status.update({
         "status": final, "discovery_status": str(evidence.get("discovery_status") or "UNKNOWN"),
         "documents_declared": declared, "downloaded": downloaded, "fallback_downloaded": fallback_downloaded,
-        "failed": failed, "skipped": skipped, "gaps": len(gaps), "bytes": total_bytes,
+        "failed": failed, "skipped": skipped, "gaps": len(gaps),
+        "blocking_gaps": sum(1 for gap in gaps if isinstance(gap, dict) and gap.get("blocking")),
+        "official_pages_checked": discovery_scope.get("official_pages_checked", 0),
+        "bytes": total_bytes,
         "source_attempt_rows": len(attempts)
     })
     write_index(out / "document_index.csv", rows); write_attempts(out / "download_attempts.csv", attempts)
