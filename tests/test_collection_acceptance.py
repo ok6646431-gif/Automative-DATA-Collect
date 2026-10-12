@@ -365,5 +365,90 @@ class CollectionAcceptanceTests(unittest.TestCase):
                           [x["issue_type"] for x in outcome["blocking_issues"]])
 
 
+    def test_bounded_corporate_nonfind_is_explicitly_limited(self):
+        import csv
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {}})
+            out = root / "output/CORP_DOCS"
+            out.mkdir(parents=True)
+            write_json(out / "status.json", {
+                "source_key": "CORP_DOCS", "status": "NO_DOCUMENTS_FOUND_IN_SCOPE",
+                "discovery_status": "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY",
+                "documents_declared": 0, "downloaded": 0, "failed": 0, "skipped": 0,
+                "official_pages_checked": 2,
+            })
+            write_json(out / "discovery_scope.json", {
+                "official_pages_checked": 2,
+                "official_page_urls": ["https://official.example/", "https://official.example/environment"],
+                "publication_certainty": "UNKNOWN_FOR_UNFOUND_YEARS",
+            })
+            write_json(out / "discovery_gaps.json", [{
+                "document_type": "SUSTAINABILITY_REPORT",
+                "year": 2024, "status": "NOT_FOUND_IN_BOUNDED_SCOPE",
+                "verification_status": "UNVERIFIED", "blocking": False,
+            }])
+            (out / "document_index.csv").write_text(
+                "document_id,stored_path,collection_status,bytes,sha256\\n", encoding="utf-8"
+            )
+            limited = evaluate(root / "output", root / "request.json")
+            self.assertEqual(limited["status"], "PASS_WITH_LIMITATION")
+            self.assertEqual(limited["blocking_issue_count"], 0)
+            self.assertIn("REPORT_PUBLICATION_NOT_CONFIRMED",
+                          [w["issue_type"] for w in limited["warnings"]])
+            (out / "discovery_scope.json").unlink()
+            missing = evaluate(root / "output", root / "request.json")
+            self.assertEqual(missing["status"], "REVIEW_REQUIRED")
+            self.assertIn("BOUNDED_DISCOVERY_EVIDENCE_MISSING",
+                          [b["issue_type"] for b in missing["blocking_issues"]])
+
+    def test_bounded_nonfind_never_overrides_known_missing_document(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = root / "output/CORP_DOCS"
+            out.mkdir(parents=True)
+            write_json(root / "request.json", {"sources": {}})
+            write_json(out / "status.json", {
+                "source_key": "CORP_DOCS", "status": "NO_DOCUMENTS_FOUND_IN_SCOPE",
+                "discovery_status": "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY",
+                "documents_declared": 0, "downloaded": 0, "failed": 0, "skipped": 0,
+                "official_pages_checked": 2,
+            })
+            write_json(out / "discovery_scope.json", {
+                "official_pages_checked": 2,
+                "official_page_urls": ["https://official.example", "https://official.example/report"],
+            })
+            write_json(out / "discovery_gaps.json", [{
+                "document_type": "SUSTAINABILITY_REPORT",
+                "year": 2024, "status": "PUBLISHED_DOCUMENT_TARGET_UNRESOLVED",
+                "blocking": True,
+            }])
+            (out / "document_index.csv").write_text(
+                "document_id,stored_path,collection_status,bytes,sha256\\n", encoding="utf-8"
+            )
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+            self.assertIn("BOUNDED_DISCOVERY_GAPS_UNRESOLVED",
+                          [b["issue_type"] for b in result["blocking_issues"]])
+
+    def test_unsubstantiated_no_documents_declared_stays_review(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            out = root / "output/CORP_DOCS"
+            out.mkdir(parents=True)
+            write_json(root / "request.json", {"sources": {}})
+            write_json(out / "status.json", {
+                "source_key": "CORP_DOCS", "status": "NO_DOCUMENTS_DECLARED",
+                "discovery_status": "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY",
+                "documents_declared": 0, "downloaded": 0, "failed": 0, "skipped": 0,
+            })
+            (out / "document_index.csv").write_text(
+                "document_id,stored_path,collection_status,bytes,sha256\\n", encoding="utf-8"
+            )
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+
+
+
 if __name__ == "__main__":
     unittest.main()
