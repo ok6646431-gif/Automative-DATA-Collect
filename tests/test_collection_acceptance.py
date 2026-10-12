@@ -450,5 +450,76 @@ class CollectionAcceptanceTests(unittest.TestCase):
 
 
 
+    def test_envinfo_scoped_empty_official_responses_pass_with_limitations(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            req = {"sources": {"ENVINFO": {
+                "start_year": 2024, "end_year": 2024,
+                "search_terms": ["TEST"],
+                "identity_gate": {
+                    "enabled": True,
+                    "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                    "current_entity_names": ["Test Company"],
+                    "verified_sites": [{"site_name": "Test Plant", "address": "Test Road"}],
+                }
+            }}}
+            write_json(root / "request.json", req)
+            out = root / "output/ENVINFO"
+            write_json(out / "status.json", {
+                "source_key": "ENVINFO",
+                "status": "NO_PUBLIC_RECORD_FOUND_IN_SCOPE",
+                "year_start": 2024, "year_end": 2024, "rows": 0,
+                "search_candidate_rows": 0, "errors": 0,
+                "query_receipts": [{
+                    "year_start": 2024, "year_end": 2024,
+                    "term": "TEST", "first_page_file": "2024_2024_TEST_p1.json",
+                    "total_rows": 0
+                }]
+            })
+            p = out / "raw_search/2024_2024_TEST_p1.json"
+            write_json(p, {"totalRows": [0], "compId": [], "compNm": []})
+            good = evaluate(root / "output", root / "request.json")
+            self.assertEqual(good["status"], "PASS_WITH_LIMITATION")
+            self.assertIn("ENVINFO_PUBLICATION_AND_APPLICABILITY_UNCONFIRMED",
+                          [x["issue_type"] for x in good["warnings"]])
+            write_json(p, {"totalRows": [1], "compId": ["fake"], "compNm": ["company"]})
+            forged = evaluate(root / "output", root / "request.json")
+            self.assertEqual(forged["status"], "REVIEW_REQUIRED")
+            self.assertIn("BOUNDED_ENVINFO_RAW_QUERY_INVALID",
+                          [x["issue_type"] for x in forged["blocking_issues"]])
+            p.unlink()
+            missing = evaluate(root / "output", root / "request.json")
+            self.assertEqual(missing["status"], "REVIEW_REQUIRED")
+
+    def test_envinfo_nonfind_without_verified_site_remains_review(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            req = {"sources": {"ENVINFO": {
+                "start_year": 2024, "end_year": 2024,
+                "search_terms": ["TEST"],
+                "identity_gate": {
+                    "enabled": True, "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                    "current_entity_names": ["Test Company"], "verified_sites": [],
+                }
+            }}}
+            write_json(root / "request.json", req)
+            out = root / "output/ENVINFO"
+            write_json(out / "status.json", {
+                "source_key": "ENVINFO", "status": "NO_PUBLIC_RECORD_FOUND_IN_SCOPE",
+                "rows": 0, "search_candidate_rows": 0,
+                "query_receipts": [{
+                    "year_start": 2024, "year_end": 2024, "term": "TEST",
+                    "first_page_file": "2024_2024_TEST_p1.json", "total_rows": 0,
+                }],
+            })
+            write_json(out / "raw_search/2024_2024_TEST_p1.json",
+                       {"totalRows": [0], "compId": [], "compNm": []})
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+            self.assertIn("BOUNDED_ENVINFO_IDENTITY_UNVERIFIED",
+                          [x["issue_type"] for x in result["blocking_issues"]])
+
+
+
 if __name__ == "__main__":
     unittest.main()
