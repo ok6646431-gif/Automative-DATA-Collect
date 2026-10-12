@@ -5,6 +5,8 @@ on:
     branches: [run/control-plane]
     paths:
       - 'orchestrator/g0_public_source_fallback.py'
+      - 'orchestrator/request_builder.py'
+      - 'tests/test_request_builder.py'
       - 'tests/test_g0_public_source_fallback.py'
       - '.github/workflows/g0-public-source-fallback-tests.yml'
   workflow_dispatch:
@@ -26,4 +28,4 @@ jobs:
       - name: Test fail-closed legal gate, projected source scope and nonpromotion of weak sites
         run: |
           python -m py_compile orchestrator/g0_public_source_fallback.py
-          python -m unittest tests.test_g0_public_source_fallback tests.test_g0_promotion_policy tests.test_g0_site_verification_policy -v
+          python -m unittest tests.test_g0_public_source_fallback tests.test_g0_promotion_policy tests.test_g0_site_verification_policy tests.test_request_builder -v
