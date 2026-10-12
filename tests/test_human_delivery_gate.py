@@ -57,6 +57,43 @@ class HumanDeliveryGateTests(unittest.TestCase):
                                              Path(root) / "Archive_Summary.json",
                                              Path(root) / "Master_Manifest.json")
 
+    def test_real_parseable_pdf_and_four_excel_workbooks_pass_unmocked(self):
+        import io
+        import xlsxwriter
+        from pypdf import PdfWriter
+        from orchestrator.archive_acceptance import REQUIRED_USER_XLSX
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self.fixture(td)
+            pdf_mem = io.BytesIO()
+            pdf = PdfWriter()
+            pdf.add_blank_page(width=612, height=792)
+            pdf.write(pdf_mem)
+            content = io.BytesIO()
+            wb = xlsxwriter.Workbook(content, {"in_memory": True})
+            ws = wb.add_worksheet("수집현황")
+            ws.write(0, 0, "자료원")
+            ws.write(1, 0, "실제 엑셀")
+            wb.close()
+            path = root / "Human_Archive.zip"
+            with zipfile.ZipFile(path, "w") as zf:
+                for relative in REQUIRED_USER_XLSX.values():
+                    zf.writestr("Test/" + relative, content.getvalue())
+                zf.writestr(
+                    "Test/01_사용자자료/03_환경정보공개시스템/"
+                    "이수페타시스/환경정보공개_이수페타시스_2024_전체내용정적재현본.pdf",
+                    pdf_mem.getvalue(),
+                )
+            summary = json.loads((root / "Archive_Summary.json").read_text(encoding="utf-8"))
+            summary["zip_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            (root / "Archive_Summary.json").write_text(json.dumps(summary), encoding="utf-8")
+            result = mod.check_archive(
+                path, root / "Archive_Summary.json", root / "Master_Manifest.json")
+            self.assertEqual("HUMAN_ARCHIVE_READY", result["status"], result.get("problems"))
+            self.assertEqual(4, result["human_files"]["XLSX"])
+            self.assertEqual(1, result["human_files"]["ENVINFO_BODY_PDF"])
+
     def test_complete_document_archive_is_ready_and_needs_upload_to_publish(self):
         with tempfile.TemporaryDirectory() as td:
             self.fixture(td)
