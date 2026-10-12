@@ -39,8 +39,10 @@ class G0SiteVerificationPolicyTests(unittest.TestCase):
     def test_multiple_flat_site_candidates_are_never_source_verified(self):
         page = Page(
             "https://official.example/company/domestic",
-            ("국내사업장 고객과 공장 대구광역시 달성군 논공읍 논공로 53 "
-             "서울사무소 서울특별시 중구 세종대로 100"),
+            ("글로벌네트워크 생산공장 "
+             "울산고무공장 울산광역시 남구 상개로 64 "
+             "여수고무제1공장 전라남도 여수시 여수산단3로 118 "
+             "예산건자재공장 충청남도 예산군 고덕면 예덕로 1033-9"),
             "", 200)
         discovered = catalog.discover("이수페타시스", [page])
         self.assertIsNotNone(discovered)
