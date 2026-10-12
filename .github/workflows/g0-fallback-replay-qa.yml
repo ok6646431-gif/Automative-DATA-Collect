@@ -1,0 +1,55 @@
+name: G0 verified legal fallback replay QA
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/g0_public_source_fallback.py'
+      - '.github/workflows/g0-fallback-replay-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay_real_reviewed_g0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install request compiler dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Retrieve last real G0 source evidence for verification only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh run download 38276813472
+          --name zero-touch-discovery-38276813472
+          --dir g0-evidence
+      - name: Compile generic fallback from the real G0 evidence
+        run: >-
+          python -m orchestrator.g0_public_source_fallback
+          --discovery-dir g0-evidence
+          --out-dir replay
+      - name: Verify all five independent searches, no phantom facilities
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          req=json.loads(Path('replay/request.json').read_text(encoding='utf-8'))
+          evidence=json.loads(Path('replay/identity_evidence.json').read_text(encoding='utf-8'))
+          assert evidence['legal_name']=='(주)이수페타시스'
+          assert evidence['verified_site_count']==0
+          assert evidence['unverified_site_candidates_excluded']>=2
+          assert set(req['sources'])=={'ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER'}
+          for source, cfg in req['sources'].items():
+              assert not cfg['identity_gate']['verified_sites']
+              assert '(주)이수페타시스' in cfg['identity_gate']['current_entity_names']
+          print('PASS generic real-G0 company-only fallback evidence')
+          PY
