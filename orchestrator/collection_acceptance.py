@@ -12,6 +12,8 @@ facility ID has been independently discovered and queried successfully.
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
 import json
 from pathlib import Path
 
@@ -78,6 +80,67 @@ def issue(source: str, issue_type: str, detail: str, *, severity: str = "BLOCKIN
         "severity": severity,
         "detail": detail,
     }
+
+
+def _validate_corporate_document_files(output_root: Path, status: dict) -> list[dict]:
+    """Reconcile declared downloads against actual indexed files and digests.
+
+    Counts in status.json are not sufficient: a file can be absent, truncated,
+    duplicated in the index, or replaced after the downloader wrote its status.
+    """
+    source = "CORP_DOCS"
+    root = output_root / source
+    index_path = root / "document_index.csv"
+    if not index_path.is_file():
+        return [issue(source, "DOCUMENT_INDEX_MISSING", str(index_path))]
+    with index_path.open(encoding="utf-8-sig", newline="") as stream:
+        records = list(csv.DictReader(stream))
+    declared = int(status.get("documents_declared") or 0)
+    downloaded = int(status.get("downloaded") or 0)
+    skipped = int(status.get("skipped") or 0)
+    found = [r for r in records if r.get("collection_status") == "DOWNLOADED"]
+    issues = []
+    if len(records) != declared or len(found) != downloaded:
+        issues.append(issue(source, "DOCUMENT_INDEX_COUNT_MISMATCH",
+                            f"index_rows={len(records)}/{declared}; downloads={len(found)}/{downloaded}"))
+    ids = [str(r.get("document_id") or "") for r in records]
+    if not all(ids) or len(set(ids)) != len(ids):
+        issues.append(issue(source, "DOCUMENT_INDEX_DUPLICATE_OR_MISSING_ID",
+                            "document_index contains missing or repeated document_id"))
+    if skipped:
+        issues.append(issue(source, "DOCUMENTS_SKIPPED_REQUIRE_REVIEW",
+                            f"skipped={skipped}; declared documents were not fully downloaded"))
+    for record in found:
+        doc_id = str(record.get("document_id") or "UNKNOWN")
+        raw = str(record.get("stored_path") or "").strip()
+        if not raw:
+            issues.append(issue(source, "DOCUMENT_FILE_MISSING", f"{doc_id}: no stored_path"))
+            continue
+        target = Path(raw)
+        if not target.is_absolute():
+            target = output_root.parent / target
+        target = target.resolve()
+        # Source payloads may not point outside the requested collection directory.
+        try:
+            target.relative_to(root.resolve())
+        except ValueError:
+            issues.append(issue(source, "DOCUMENT_PATH_OUTSIDE_SOURCE_ROOT",
+                                f"{doc_id}: {raw}"))
+            continue
+        if not target.is_file() or target.stat().st_size <= 0:
+            issues.append(issue(source, "DOCUMENT_FILE_MISSING",
+                                f"{doc_id}: missing/empty file {raw}"))
+            continue
+        byte_size = str(record.get("bytes") or "").strip()
+        if not byte_size.isdigit() or target.stat().st_size != int(byte_size):
+            issues.append(issue(source, "DOCUMENT_SIZE_MISMATCH",
+                                f"{doc_id}: indexed={byte_size}; actual={target.stat().st_size}"))
+        expected_digest = str(record.get("sha256") or "").lower().strip()
+        actual_digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        if len(expected_digest) != 64 or actual_digest != expected_digest:
+            issues.append(issue(source, "DOCUMENT_DIGEST_MISMATCH",
+                                f"{doc_id}: indexed={expected_digest}; actual={actual_digest}"))
+    return issues
 
 
 def _validate_cleansys_no_data(status: dict) -> list[dict]:
@@ -209,6 +272,7 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
             issues.extend(_validate_soosiro_no_data(status))
             issues.extend(_validate_registry_miss(source, status))
         elif source == "CORP_DOCS":
+            issues.extend(_validate_corporate_document_files(output, status))
             discovery_status = str(status.get("discovery_status") or "").upper()
             if discovery_status not in {
                 "COMPLETE",
