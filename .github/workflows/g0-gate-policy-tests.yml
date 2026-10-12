@@ -1,0 +1,33 @@
+name: G0 final gate and site identity regression
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/g0-gate-policy-tests.yml'
+      - 'orchestrator/g0_document_recovery_runner.py'
+      - 'orchestrator/g0_site_verification_policy.py'
+      - 'orchestrator/g0_promotion_policy.py'
+      - 'orchestrator/zero_touch_runner.py'
+      - 'tests/test_g0_document_recovery_runner.py'
+      - 'tests/test_g0_site_verification_policy.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit_gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Compile contract modules
+        run: python -m py_compile orchestrator/g0_document_recovery_runner.py orchestrator/g0_site_verification_policy.py orchestrator/zero_touch_runner.py orchestrator/g0_promotion_policy.py
+      - name: Verify final G0 gate and site identity contracts
+        run: python -m unittest tests.test_g0_document_recovery_runner tests.test_g0_promotion_policy tests.test_g0_site_verification_policy tests.test_g0_domestic_site_catalog -v
