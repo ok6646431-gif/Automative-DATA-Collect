@@ -11,6 +11,7 @@ on:
       - 'orchestrator/zero_touch_runner.py'
       - 'tests/test_g0_document_recovery_runner.py'
       - 'tests/test_g0_site_verification_policy.py'
+      - 'tests/test_g0_promotion_policy.py'
   workflow_dispatch:
 
 permissions:
