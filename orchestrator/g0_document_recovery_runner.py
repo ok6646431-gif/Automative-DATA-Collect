@@ -236,6 +236,20 @@ def run(out_dir: str | Path, budget_seconds: int = DEFAULT_RECOVERY_BUDGET_SECON
     # positive-document recovery pass; do not confuse it with nonpublication.
     from orchestrator import g0_bounded_document_policy
     documents = g0_bounded_document_policy.normalize(discovery, documents, audit)
+
+    # Finalize the G0 promotion gate *after* every recovery/normalization stage.
+    # refresh_document_unresolved() can legitimately reintroduce report-coverage
+    # warnings and overwrite gate_status. A document gap must never override a
+    # verified legal identity decision; conversely, real identity/site blockers
+    # must remain fail-closed. Keep company_discovery.json consistent with the
+    # final audit gate rather than saving only updated document evidence.
+    from orchestrator import g0_promotion_policy
+    discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
+    stage["final_gate_status"] = audit["gate_status"]
+    stage["deferred_document_reviews"] = (
+        (audit.get("stages") or {}).get("promotion_policy") or {}
+    ).get("deferred_review_count", 0)
+    _write_json(company_path, discovery)
     _write_json(documents_path, documents)
     _write_json(audit_path, audit)
     return stage
