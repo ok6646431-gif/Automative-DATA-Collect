@@ -17,6 +17,10 @@ from orchestrator.archive_acceptance import validate_archive_zip
 
 USER_PREFIX = "01_사용자자료/"
 ALLOWED_USER_SUFFIXES = frozenset({".pdf", ".xlsx"})
+# Some official attachments are already readable as images, and source notices
+# are plain text. They may accompany the PDF/XLSX main materials, but cannot
+# count towards an accepted PDF/XLSX deliverable.
+AUXILIARY_READABLE_SUFFIXES = frozenset({".txt", ".png", ".jpg", ".jpeg", ".gif"})
 
 
 def read_json(path: Path) -> dict:
@@ -73,7 +77,7 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
     if accepted["status"] != "PASS":
         problems.extend("USER_ZIP_INVALID:" + str(item.get("check"))
                         for item in accepted.get("failures", []))
-    counts = {"PDF": 0, "XLSX": 0, "OTHER": 0, "ENVINFO_BODY_PDF": 0}
+    counts = {"PDF": 0, "XLSX": 0, "OTHER": 0, "AUXILIARY": 0, "ENVINFO_BODY_PDF": 0}
     try:
         with zipfile.ZipFile(path) as zf:
             root = accepted.get("archive_root")
@@ -95,6 +99,8 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
                         counts["ENVINFO_BODY_PDF"] += 1
                 elif suffix == ".xlsx":
                     counts["XLSX"] += 1
+                elif suffix in AUXILIARY_READABLE_SUFFIXES:
+                    counts["AUXILIARY"] += 1
                 else:
                     counts["OTHER"] += 1
     except (OSError, zipfile.BadZipFile, RuntimeError) as e:
@@ -143,7 +149,7 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
     if not (counts["PDF"] or counts["XLSX"]):
         problems.append("NO_PDF_OR_EXCEL_USER_FILES")
     if counts["OTHER"]:
-        problems.append("NON_PDF_XLSX_IN_USER_LAYER")
+        problems.append("MACHINE_OR_UNSUPPORTED_USER_FILE_IN_USER_LAYER")
     completeness_file = manifest_file.parent / "Collection_Completeness.json"
     completeness = read_json(completeness_file) if completeness_file.exists() else {}
     limited = (
@@ -187,7 +193,7 @@ def confirm_publication(report: dict, artifact_id: str, run_url: str) -> dict:
                    else "USER_ARCHIVE_AVAILABLE_WITH_LIMITATIONS"),
         "artifact_id": str(artifact_id),
         "run_url": run_url,
-        "file_type": "ZIP_CONTAINING_PDF_AND_XLSX",
+        "file_type": "ZIP_WITH_PDF_XLSX_AND_OPTIONAL_READABLE_ATTACHMENTS",
         "human_files": report.get("human_files"),
         "limitations": (report.get("collection_validation") != "PASS"
                         or report.get("collection_completeness") != "COMPLETE"),
