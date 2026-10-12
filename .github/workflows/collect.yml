@@ -84,6 +84,15 @@ jobs:
             output/CORP_DOCS/document_index.csv
           if-no-files-found: warn
           retention-days: 21
+      - name: Preserve raw source evidence independent of Human Archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collection-only-raw-${{ github.run_id }}
+          path: output/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
       - name: Enforce collection-only PASS
         if: always()
         run: |
