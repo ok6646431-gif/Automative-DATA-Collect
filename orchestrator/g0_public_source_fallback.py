@@ -122,6 +122,7 @@ def build_source_only(discovery: dict, audit: dict) -> tuple[dict, dict, dict]:
     source_discovery["unresolved_items"] = []
 
     profile, summary = compile_discovery(source_discovery)
+    profile["requested_scope"] = source_discovery["requested_scope"]
     request = build(profile)
     if tuple(request.get("sources", {}).keys()) != PUBLIC_SOURCES:
         raise SourceFallbackIneligible("five-source request contract incomplete")
