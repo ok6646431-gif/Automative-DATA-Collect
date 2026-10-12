@@ -54,7 +54,7 @@ class PublicSiteCrosscheckTests(unittest.TestCase):
             result = mod.evaluate(root, "(주)이수페타시스")
             self.assertEqual("CORRELATED_WITH_LIMITATIONS", result["status"])
             self.assertEqual(
-                ["ADH677N", "AAC001N"], result["chem_native_ids"])
+                ["AAC001N", "ADH677N"], result["chem_native_ids"])
             self.assertEqual(1, len(result["envinfo_native_ids"]))
             self.assertFalse(result["facility_id_crosswalk_verified"])
             self.assertEqual(
