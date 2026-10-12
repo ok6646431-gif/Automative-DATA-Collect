@@ -16,6 +16,7 @@ from pathlib import Path
 
 from orchestrator.collection_acceptance import (
     ACCEPTED_SOURCE_STATUSES, ACCEPTED_TMS_STATUSES, ACCEPTED_CORPORATE_STATUSES,
+    ACCEPTED_ENVINFO_STATUSES,
     TMS_SOURCES, evaluate,
 )
 from orchestrator.source_regression_runner import (
@@ -54,6 +55,7 @@ def baseline_check(label: str, output_root: Path, baseline_path: Path) -> dict:
         status_value = str(status.get("status") or "MISSING_STATUS")
         allowed = (ACCEPTED_TMS_STATUSES if source in TMS_SOURCES
                    else ACCEPTED_CORPORATE_STATUSES if source == "CORP_DOCS"
+                   else ACCEPTED_ENVINFO_STATUSES if source == "ENVINFO"
                    else ACCEPTED_SOURCE_STATUSES)
         if status_value not in allowed or status.get("errors") or not status:
             results.append({"source": source, "result": "SKIPPED_UNACCEPTED",
