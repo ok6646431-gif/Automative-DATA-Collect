@@ -63,6 +63,16 @@ def apply(
         else:
             blocking.append(item)
 
+    # G0 may apply this policy once before and once after fresh document
+    # recovery. Preserve previously deferred *historical* uncertainty in the
+    # audit while allowing a newly recovered report gap to disappear.
+    previous = ((audit.get("stages") or {}).get("promotion_policy") or {}).get("deferred_review_items") or []
+    for item in previous:
+        if (isinstance(item, dict)
+                and _historical_name_issue_is_pre_window(item, discovery, audit)
+                and item not in deferred):
+            deferred.append(item)
+
     discovery["unresolved_items"] = blocking
     audit.setdefault("stages", {})["promotion_policy"] = {
         "blocking_unresolved_items": blocking,
