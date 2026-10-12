@@ -36,6 +36,8 @@ TMS_SOURCES = {"CLEANSYS_AIR", "SOOSIRO_WATER"}
 # A successful process exit with NO_MATCH/RUNNING/unknown status is not accepted.
 ACCEPTED_SOURCE_STATUSES = {"DATA_FOUND", "NO_DATA_CONFIRMED"}
 ACCEPTED_TMS_STATUSES = ACCEPTED_SOURCE_STATUSES | {"NO_FACILITY_MATCH_CONFIRMED"}
+ACCEPTED_CORPORATE_STATUSES = ACCEPTED_SOURCE_STATUSES | {"NO_DOCUMENTS_FOUND_IN_SCOPE"}
+BOUNDED_CORPORATE_DISCOVERY = "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY"
 REQUIRED_COLLECTION_SOURCES = (
     "ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER", "CORP_DOCS",
 )
@@ -147,6 +149,36 @@ def _validate_corporate_document_files(output_root: Path, status: dict) -> list[
     return issues
 
 
+
+def _validate_bounded_document_discovery(output_root: Path, status: dict) -> list[dict]:
+    """A bounded first-party crawl is an auditable nonfind, not nonpublication."""
+    root = output_root / "CORP_DOCS"
+    scope = read_json(root / "discovery_scope.json", {})
+    gaps = read_json(root / "discovery_gaps.json", [])
+    pages = scope.get("official_page_urls") if isinstance(scope, dict) else None
+    count = scope.get("official_pages_checked") if isinstance(scope, dict) else None
+    if not isinstance(pages, list) or not pages or not isinstance(count, int) or count != len(pages):
+        return [issue("CORP_DOCS", "BOUNDED_DISCOVERY_EVIDENCE_MISSING",
+                      "verified first-party pages and exact checked count are required")]
+    if any(
+        not isinstance(page, str) or not page.startswith(("https://", "http://"))
+        for page in pages
+    ):
+        return [issue("CORP_DOCS", "BOUNDED_DISCOVERY_UNVERIFIED_PAGE",
+                      "official page URLs must be explicit HTTP(S) source evidence")]
+    if int(status.get("official_pages_checked") or 0) != count:
+        return [issue("CORP_DOCS", "BOUNDED_DISCOVERY_COUNT_MISMATCH",
+                      "status official_pages_checked differs from stored discovery scope")]
+    if not isinstance(gaps, list) or any(
+        not isinstance(gap, dict) or gap.get("blocking")
+        or str(gap.get("status") or "") not in {"NOT_FOUND_IN_BOUNDED_SCOPE", "NOT_PUBLISHED"}
+        for gap in gaps
+    ):
+        return [issue("CORP_DOCS", "BOUNDED_DISCOVERY_GAPS_UNRESOLVED",
+                      "blocking/unclassified report years cannot become a bounded complete")]
+    return []
+
+
 def _validate_cleansys_no_data(status: dict) -> list[dict]:
     if str(status.get("status") or "") != "NO_DATA_CONFIRMED":
         return []
@@ -229,7 +261,9 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
         source_status = str(status.get("status") or "MISSING_STATUS")
         source_results[source] = status
 
-        allowed = ACCEPTED_TMS_STATUSES if source in TMS_SOURCES else ACCEPTED_SOURCE_STATUSES
+        allowed = (ACCEPTED_TMS_STATUSES if source in TMS_SOURCES
+                   else ACCEPTED_CORPORATE_STATUSES if source == "CORP_DOCS"
+                   else ACCEPTED_SOURCE_STATUSES)
         if source_status == "DISCOVERY_UNRESOLVED":
             issues.append(issue(
                 source,
@@ -278,10 +312,23 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
         elif source == "CORP_DOCS":
             issues.extend(_validate_corporate_document_files(output, status))
             discovery_status = str(status.get("discovery_status") or "").upper()
+            if discovery_status == BOUNDED_CORPORATE_DISCOVERY:
+                issues.extend(_validate_bounded_document_discovery(output, status))
+                warnings.append(issue(source, "REPORT_PUBLICATION_NOT_CONFIRMED",
+                                      "first-party crawl completed only for documented bounded scope; undiscovered reports may exist",
+                                      severity="LIMITATION"))
+            if source_status == "NO_DOCUMENTS_FOUND_IN_SCOPE" and (
+                discovery_status != BOUNDED_CORPORATE_DISCOVERY
+                or int(status.get("documents_declared") or 0) != 0
+                or int(status.get("downloaded") or 0) != 0
+            ):
+                issues.append(issue(source, "INVALID_BOUNDED_NO_DOCUMENTS_CLAIM",
+                                    "document nonfind requires zero declared/downloaded and bounded official discovery"))
             if discovery_status not in {
                 "COMPLETE",
                 "VERIFIED_COMPLETE",
                 "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+                BOUNDED_CORPORATE_DISCOVERY,
             }:
                 issues.append(issue(
                     source,
@@ -317,7 +364,9 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
 
     result = {
         "schema_version": "collection-acceptance-1.0",
-        "status": "PASS" if not issues else "REVIEW_REQUIRED",
+        "status": ("REVIEW_REQUIRED" if issues
+                   else "PASS_WITH_LIMITATION" if any(w["severity"] == "LIMITATION" for w in warnings)
+                   else "PASS"),
         "configured_sources": configured,
         "source_results": {
             source: {
@@ -339,7 +388,8 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
             "Facility-indexed TMS no-data requires a source-native facility ID and a successful ID-bound query.",
             "A discovery miss is resolved only when the source-native public facility registry was completely scanned and the selected-period query evidence is retained.",
             "Any failed selected-period query blocks collection acceptance even if other periods returned data.",
-            "Declared official corporate documents must be fully downloaded or explicitly skipped under a complete discovery scope.",
+            "Declared official corporate documents must be fully downloaded and independently file-verified.",
+            "A bounded first-party document search can pass only with explicit limitations, never as a confirmed report nonpublication.",
         ],
     }
     return result
@@ -360,7 +410,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result["status"] == "PASS" else 2
+    return 0 if result["status"] in {"PASS", "PASS_WITH_LIMITATION"} else 2
 
 
 if __name__ == "__main__":
