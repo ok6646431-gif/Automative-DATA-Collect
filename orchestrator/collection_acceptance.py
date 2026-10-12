@@ -136,7 +136,11 @@ def _validate_corporate_document_files(output_root: Path, status: dict) -> list[
             issues.append(issue(source, "DOCUMENT_SIZE_MISMATCH",
                                 f"{doc_id}: indexed={byte_size}; actual={target.stat().st_size}"))
         expected_digest = str(record.get("sha256") or "").lower().strip()
-        actual_digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        digest = hashlib.sha256()
+        with target.open("rb") as contents:
+            for block in iter(lambda: contents.read(1024 * 1024), b""):
+                digest.update(block)
+        actual_digest = digest.hexdigest()
         if len(expected_digest) != 64 or actual_digest != expected_digest:
             issues.append(issue(source, "DOCUMENT_DIGEST_MISMATCH",
                                 f"{doc_id}: indexed={expected_digest}; actual={actual_digest}"))
