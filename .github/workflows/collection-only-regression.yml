@@ -32,7 +32,7 @@ jobs:
             snapshot: 488ddccbb634cb7af181d2a81507883eb3291458
           - label: HANWHA_AEROSPACE
             company: 한화에어로스페이스
-            snapshot: ccca0d9cc94a3849e8116a72015242c1eca89a8d
+            snapshot: 7e50ca7967f2e48fcb9d7b99d0888ad18c5586b7
           - label: HYOSUNG_TNC
             company: 효성티앤씨
             snapshot: 7e248b0717fe07bd7849c892bb8bb51a8f4fbe01
@@ -57,6 +57,14 @@ jobs:
           for f in company_discovery.json document_evidence.json event_evidence.json; do
             git show "FETCH_HEAD:requests/$f" > "requests/$f"
           done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          company=json.loads(Path("requests/company_discovery.json").read_text(encoding="utf-8"))
+          documents=json.loads(Path("requests/document_evidence.json").read_text(encoding="utf-8"))
+          if company.get("request_id") != documents.get("request_id"):
+              raise SystemExit("R3 snapshot mixes company Discovery and corporate documents from different requests")
+          PY
       - name: Run full six-source collection and must-keep ID regression gate
         id: r3
         continue-on-error: true
