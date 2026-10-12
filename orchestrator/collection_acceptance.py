@@ -303,6 +303,45 @@ def _validate_registry_miss(source: str, status: dict) -> list[dict]:
     return []
 
 
+
+def _source_assessment(source: str, status: dict, issues: list[dict], warnings: list[dict]) -> dict:
+    """Keep document existence, acquisition success and scope certainty separate."""
+    state = str(status.get("status") or "MISSING_STATUS")
+    publication = {
+        "DATA_FOUND": "PUBLIC_DATA_FOUND",
+        "NO_DATA_CONFIRMED": "NO_PUBLIC_DATA_ID_BOUND_CONFIRMED",
+        "NO_FACILITY_MATCH_CONFIRMED": "NO_PUBLIC_FACILITY_MATCH_CONFIRMED",
+        "NO_DOCUMENTS_FOUND_IN_SCOPE": "UNKNOWN_NOT_FOUND_IN_BOUNDED_OFFICIAL_SCOPE",
+        "NO_PUBLIC_RECORD_FOUND_IN_SCOPE": "UNKNOWN_NOT_FOUND_IN_VERIFIED_SOURCE_SEARCH",
+    }.get(state, "UNKNOWN")
+    source_issues = [x["issue_type"] for x in issues if x["source"] == source]
+    limited = any(x["severity"] == "LIMITATION" and x["source"] == source for x in warnings)
+    verdict = ("REVIEW_REQUIRED" if source_issues else
+               "PASS_WITH_LIMITATION" if limited else "PASS")
+    scoped = (
+        "BOUNDED_FIRST_PARTY_SEARCH" if source == "CORP_DOCS" and limited else
+        "VERIFIED_IDENTITY_SCOPED_SEARCH" if source == "ENVINFO" and limited else
+        "SOURCE_NATIVE_REGISTRY_OR_ID_QUERY" if source in TMS_SOURCES else
+        "SELECTED_OFFICIAL_COLLECTION_SCOPE"
+    )
+    evidence = []
+    if source == "CORP_DOCS":
+        evidence = ["output/CORP_DOCS/discovery_scope.json",
+                    "output/CORP_DOCS/discovery_gaps.json",
+                    "output/CORP_DOCS/document_index.csv"]
+    elif source == "ENVINFO":
+        evidence = ["output/ENVINFO/status.json", "output/ENVINFO/raw_search/"]
+    return {
+        "source_status": state,
+        "disclosure_state": publication,
+        "acquisition_state": "COMPLETE" if not source_issues else "REQUIRES_REVIEW",
+        "discovery_scope_state": scoped if not source_issues else "UNVERIFIED_OR_INCOMPLETE",
+        "verdict": verdict,
+        "blocking_issue_types": source_issues,
+        "evidence_paths": evidence,
+    }
+
+
 def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_sources: bool = False) -> dict:
     output = Path(output_root)
     request = read_json(request_path, {}) or {}
@@ -441,6 +480,10 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
                    else "PASS_WITH_LIMITATION" if any(w["severity"] == "LIMITATION" for w in warnings)
                    else "PASS"),
         "configured_sources": configured,
+        "source_assessments": {
+            source: _source_assessment(source, source_results.get(source) or {}, issues, warnings)
+            for source in configured
+        },
         "source_results": {
             source: {
                 "status": str((source_results.get(source) or {}).get("status") or "MISSING_STATUS"),
