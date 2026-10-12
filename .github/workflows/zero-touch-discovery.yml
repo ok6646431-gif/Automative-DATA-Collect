@@ -414,7 +414,7 @@ jobs:
                                        if source in {'PRTR','CHEM_STATS'} else 'NOT_APPLICABLE')
           root.mkdir(parents=True, exist_ok=True)
           (root / 'Collection_Acceptance.json').write_text(
-              json.dumps(verdict, ensure_ascii=False, indent=2) + '\\n', encoding='utf-8')
+              json.dumps(verdict, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           print(json.dumps({'source': source, 'verdict': verdict['status'],
                             'blocking_issue_count': len(verdict.get('blocking_issues') or []),
                             'g0_promoted': False}, ensure_ascii=False))
