@@ -287,11 +287,13 @@ jobs:
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
 
-      - name: Dispatch existing master collection after promotion
+      - name: Record common collection-only trigger
         if: success() && steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate == 'PASS'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run collect.yml --ref "${GITHUB_REF_NAME}"
+        run: |
+          echo "Verified Discovery promotion updates requests/run_token.txt."
+          echo "That push triggers the common collect.yml collection_only job."
+          echo "No redundant workflow_dispatch is emitted."
+
 
       - name: Stop on unresolved Discovery
         if: steps.request.outputs.run_live == 'true' && steps.gate.outputs.gate != 'PASS'
