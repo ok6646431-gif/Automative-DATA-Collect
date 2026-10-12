@@ -100,7 +100,11 @@ def main() -> int:
                               "--summary-out", "requests/runtime/Company_Discovery_Summary.json")
     if codes["bootstrap"] != 0 or not Path(request).exists():
         write(args.execution_out, {"status": "REVIEW_REQUIRED", "process_exit_codes": codes,
-                                   "error": "BOOTSTRAP_FAILED"})
+                                   "error": "BOOTSTRAP_FAILED",
+                                   "execution_scope": "COLLECTION_ONLY_INTERNAL_QA",
+                                   "user_delivery_status": "NOT_READY",
+                                   "human_zip_created": False,
+                                   "user_delivery_artifact_id": None})
         write(args.summary_out, {"status": "REVIEW_REQUIRED", "blocking_issue_count": 1,
                                  "blocking_issues": [{"source": "BOOTSTRAP", "issue_type": "BOOTSTRAP_FAILED"}]})
         write(args.baseline_out, {"status": "NOT_RUN", "label": args.baseline_label})
@@ -169,7 +173,13 @@ def main() -> int:
         and baseline["status"] in {"PASS", "NOT_REQUESTED"}
         else "REVIEW_REQUIRED"
     )
+    # This PASS is only internal collection validation. JSON/CSV artifacts are
+    # diagnostics, and cannot be described as a completed user deliverable.
     execution = {"status": execution_status,
+                 "execution_scope": "COLLECTION_ONLY_INTERNAL_QA",
+                 "user_delivery_status": "NOT_READY",
+                 "human_zip_created": False,
+                 "user_delivery_artifact_id": None,
                  "process_exit_codes": codes,
                  "acceptance_status": acceptance["status"],
                  "baseline_status": baseline["status"]}
@@ -177,7 +187,8 @@ def main() -> int:
     write(args.baseline_out, baseline)
     write(args.execution_out, execution)
     print(json.dumps({"collection": acceptance["status"], "issues": acceptance.get("blocking_issue_count"),
-                      "baseline": baseline["status"], "overall": execution["status"]}, ensure_ascii=False),
+                      "baseline": baseline["status"], "overall": execution["status"],
+                      "user_delivery": "NOT_READY_COLLECTION_ONLY_QA"}, ensure_ascii=False),
           flush=True)
     return 0 if execution["status"] in {"PASS", "PASS_WITH_LIMITATION"} else 2
 
