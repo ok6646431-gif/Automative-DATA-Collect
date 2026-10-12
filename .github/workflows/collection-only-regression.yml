@@ -1,0 +1,161 @@
+name: R3 strict collection-only representative regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/collection-only-regression.yml'
+      - 'orchestrator/collection_only_runner.py'
+      - 'orchestrator/collection_acceptance.py'
+      - 'tests/test_collection_acceptance.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strict-collection-regression-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  representative_collection:
+    name: R3 ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - label: KUMHO
+            company: 금호석유화학
+            snapshot: 488ddccbb634cb7af181d2a81507883eb3291458
+          - label: HANWHA_AEROSPACE
+            company: 한화에어로스페이스
+            snapshot: ccca0d9cc94a3849e8116a72015242c1eca89a8d
+          - label: HYOSUNG_TNC
+            company: 효성티앤씨
+            snapshot: 7e248b0717fe07bd7849c892bb8bb51a8f4fbe01
+    env:
+      PYTHONPATH: .
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install collector dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Verify strict acceptance regression unit tests
+        run: python -m unittest tests.test_collection_acceptance tests.test_tms_discovery tests.test_soosiro_identity_gate tests.test_entity_scope_gate -v
+      - name: Restore previously verified company Discovery evidence
+        env:
+          SNAPSHOT: ${{ matrix.snapshot }}
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "$SNAPSHOT"
+          for f in company_discovery.json document_evidence.json event_evidence.json; do
+            git show "FETCH_HEAD:requests/$f" > "requests/$f"
+          done
+      - name: Run full six-source collection and must-keep ID regression gate
+        id: r3
+        continue-on-error: true
+        run: >-
+          python orchestrator/collection_only_runner.py
+          --baseline-label '${{ matrix.label }}'
+          --summary-out Collection_Acceptance.json
+          --baseline-out Collection_Baseline.json
+          --execution-out Collection_Execution.json
+      - name: Publish collection-only inspection evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-collection-${{ matrix.label }}
+          path: |
+            Collection_Acceptance.json
+            Collection_Baseline.json
+            Collection_Execution.json
+            requests/runtime/Company_Discovery_Summary.json
+            output/*/status.json
+            output/*/errors.log
+            output/*/discovery.csv
+            output/CHEM_STATS/source_id_backfill_audit.jsonl
+            output/CLEANSYS_AIR/candidates.json
+            output/CLEANSYS_AIR/scope_rejected_candidates.json
+            output/CLEANSYS_AIR/index_raw.html
+            output/SOOSIRO_WATER/fact_candidates.json
+            output/SOOSIRO_WATER/scope_rejected_rows.jsonl
+            output/SOOSIRO_WATER/fact_list_raw.json
+            output/CORP_DOCS/document_index.csv
+          if-no-files-found: warn
+          retention-days: 21
+      - name: Enforce no false complete and no missing baseline IDs
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('Collection_Execution.json')
+          if not p.exists():
+              raise SystemExit('R3 collection execution evidence missing')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          print(json.dumps({'company':'${{ matrix.label }}','execution':d},ensure_ascii=False))
+          if d.get('status')!='PASS':
+              raise SystemExit('R3 strict collection requires REVIEW_REQUIRED / regression investigation')
+          PY
+
+  aggregate:
+    needs: representative_collection
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: r3-collection-*
+          path: r3-results
+          merge-multiple: false
+      - name: Fail closed on three-company acceptance and ID coverage
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected=('KUMHO','HANWHA_AEROSPACE','HYOSUNG_TNC')
+          results=[]
+          for label in expected:
+              root=Path('r3-results')/('r3-collection-'+label)
+              p=root/'Collection_Execution.json'
+              if not p.exists():
+                  results.append({'company':label,'status':'REVIEW_REQUIRED','error':'MISSING_EXECUTION_EVIDENCE'})
+                  continue
+              execution=json.loads(p.read_text(encoding='utf-8'))
+              acceptance=json.loads((root/'Collection_Acceptance.json').read_text(encoding='utf-8'))
+              baseline=json.loads((root/'Collection_Baseline.json').read_text(encoding='utf-8'))
+              results.append({
+                  'company':label,'status':execution.get('status'),
+                  'collection':acceptance.get('status'),
+                  'blocking_issue_count':acceptance.get('blocking_issue_count'),
+                  'blocking_issues':acceptance.get('blocking_issues',[]),
+                  'baseline':baseline.get('status'),
+                  'missing_must_keep_ids':{
+                      x['source']:x.get('baseline_missing_ids',[])
+                      for x in baseline.get('results',[])
+                      if x.get('baseline_missing_ids')
+                  },
+              })
+          status='PASS' if len(results)==3 and all(x.get('status')=='PASS' for x in results) else 'REVIEW_REQUIRED'
+          payload={'status':status,'companies':results}
+          Path('R3_Representative_Summary.json').write_text(
+              json.dumps(payload,ensure_ascii=False,indent=2)+'\\n',encoding='utf-8')
+          print(json.dumps(payload,ensure_ascii=False,indent=2))
+          if status!='PASS':
+              raise SystemExit('One or more companies failed strict collection acceptance')
+          PY
+      - name: Upload representative regression summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-collection-summary
+          path: R3_Representative_Summary.json
+          if-no-files-found: warn
+          retention-days: 21
