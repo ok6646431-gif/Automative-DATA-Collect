@@ -52,6 +52,30 @@ class TestRequestBuilder(unittest.TestCase):
         self.assertNotIn("기간미상",r["sources"]["ENVINFO"]["search_terms"])
         self.assertFalse(any(x["term"] == "기간미상" for x in r["sources"]["PRTR"]["search_terms"]))
 
+    def test_dart_prefixed_korean_legal_name_does_not_generate_double_markers(self):
+        from orchestrator.request_builder import query_terms_for_alias
+        expected = {
+            "이수페타시스", "이수페타시스(주)", "이수페타시스㈜",
+            "주식회사 이수페타시스", "이수페타시스 주식회사",
+        }
+        for original in ("(주)이수페타시스", "㈜이수페타시스",
+                         "주식회사 이수페타시스", "이수페타시스(주)",
+                         "이수페타시스 주식회사"):
+            with self.subTest(original=original):
+                actual = set(query_terms_for_alias({
+                    "term": original, "alias_type": "current_legal_name",
+                }))
+                self.assertTrue(expected.issubset(actual))
+                self.assertFalse(any("(주)이수페타시스(주)" in x for x in actual))
+                self.assertFalse(any("주식회사 (주)" in x for x in actual))
+                self.assertFalse(any("㈜이수페타시스(주)" in x for x in actual))
+
+    def test_non_legal_or_english_alias_is_not_synthetically_expanded(self):
+        from orchestrator.request_builder import query_terms_for_alias
+        for raw, kind in (("(주)이수페타시스", "requested_name"),
+                          ("ISUPETASYS CO.,LTD", "english_legal_name")):
+            self.assertEqual([raw], query_terms_for_alias({"term": raw, "alias_type": kind}))
+
     def test_only_verified_confirmed_site_addresses_are_passed_to_tms(self):
         p={"request_id":"x","company_display_name":"새회사","aliases":[{"term":"새회사","scope":"current","year_start":2020,"year_end":"auto"}],
            "site_candidates":[
