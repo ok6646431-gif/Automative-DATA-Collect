@@ -151,6 +151,7 @@ class CollectionAcceptanceTests(unittest.TestCase):
                 "annual_rows": 0,
                 "fact_codes": 1,
                 "fact_code_list": ["FACT1"],
+                "annual_years": [2024],
                 "address_seeded_fact_codes": ["FACT1"],
                 "fact_list_query_success": True,
                 "annual_fact_requests_success": 1,
