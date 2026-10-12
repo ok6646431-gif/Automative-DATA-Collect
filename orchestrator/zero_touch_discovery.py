@@ -417,6 +417,7 @@ def _year_from(value: str) -> Optional[int]:
 
 def discover_documents(http: Http, official_root: str, pages: Sequence[Page], links: Sequence[Tuple[str, str, str]], start_year: int, current_year: int) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     candidates: List[Dict[str, Any]] = []
+    unverified_report_links: List[Dict[str, Any]] = []
     official_hosts = {_host(official_root)}
     report_index_pages: List[str] = []
     for page in pages:
@@ -434,6 +435,13 @@ def discover_documents(http: Http, official_root: str, pages: Sequence[Page], li
             continue
         is_pdf, final_url, ctype = verify_pdf(http, target, source)
         if not is_pdf:
+            if downloadable and any(token in value for token in (
+                "지속가능", "sustainability", "esg report", "통합보고", "integrated report"
+            )):
+                unverified_report_links.append({
+                    "year": year, "url": target, "source_locator": source,
+                    "reason": "FIRST_PARTY_REPORT_LINK_PDF_NOT_VERIFIED",
+                })
             continue
         score = 0
         if any(w in value for w in ("지속가능", "sustainability", "esg")):
@@ -524,7 +532,8 @@ def discover_documents(http: Http, official_root: str, pages: Sequence[Page], li
             "current_public_document_categories": ["SUSTAINABILITY_REPORT", "ENVIRONMENTAL_MANAGEMENT"],
             "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
         },
-    }, {"report_index_pages": report_index_pages, "report_candidates": candidates}
+    }, {"report_index_pages": report_index_pages, "report_candidates": candidates,
+        "unverified_report_links": unverified_report_links}
 
 
 PROVINCES = "서울|부산|대구|인천|광주|대전|울산|세종|경기|경기도|강원|강원도|충북|충청북도|충남|충청남도|전북|전라북도|전남|전라남도|경북|경상북도|경남|경상남도|제주|제주도"
