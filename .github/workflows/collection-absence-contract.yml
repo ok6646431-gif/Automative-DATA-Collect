@@ -1,0 +1,50 @@
+name: Collection absence contract unit tests
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/collection-absence-contract.yml'
+      - 'orchestrator/collection_acceptance.py'
+      - 'orchestrator/collection_completeness.py'
+      - 'orchestrator/g0_bounded_document_policy.py'
+      - 'orchestrator/g0_document_recovery_runner.py'
+      - 'orchestrator/zero_touch_discovery.py'
+      - 'orchestrator/collection_only_runner.py'
+      - 'collectors/corporate_docs_collect.py'
+      - 'tests/test_collection_acceptance.py'
+      - 'tests/test_g0_bounded_document_policy.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install minimal dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Compile modified collectors and policies
+        run: |
+          python -m py_compile \
+            orchestrator/collection_acceptance.py \
+            orchestrator/collection_completeness.py \
+            orchestrator/g0_bounded_document_policy.py \
+            orchestrator/g0_document_recovery_runner.py \
+            orchestrator/collection_only_runner.py \
+            collectors/corporate_docs_collect.py
+      - name: Test missing-data acceptance without network
+        run: >-
+          python -m unittest
+          tests.test_collection_acceptance
+          tests.test_g0_bounded_document_policy
+          tests.test_zero_touch_discovery
+          -v
