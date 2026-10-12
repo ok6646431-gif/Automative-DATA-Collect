@@ -62,10 +62,14 @@ def query_terms_for_alias(alias):
     if alias_type not in LEGAL_QUERY_ALIAS_TYPES or not re.search(r"[가-힣]", term):
         return out
 
-    base=term
-    base=re.sub(r"^\s*주식회사\s+", "", base)
-    base=re.sub(r"\s+주식회사\s*$", "", base)
-    base=re.sub(r"\s*(?:\(주\)|㈜)\s*$", "", base).strip()
+    # Strip already-present Korean corporate legal-form markers from *either*
+    # end before generating query variants. DART commonly supplies "(주)회사";
+    # treating its "(주)" prefix as the stem incorrectly produces synthetic
+    # names such as "(주)회사(주)" and "주식회사 (주)회사".
+    base = re.sub(r"^\s*(?:(?:주식회사|\(\s*주\s*\)|㈜)\s*)+", "", term)
+    base = re.sub(r"(?:\s*(?:주식회사|\(\s*주\s*\)|㈜))+", "", base).strip() if re.fullmatch(
+        r"(?:.*?)(?:\s*(?:주식회사|\(\s*주\s*\)|㈜))+\s*", base
+    ) else base.strip()
     if not base:
         return out
     for variant in (base, f"{base}(주)", f"{base}㈜", f"주식회사 {base}", f"{base} 주식회사"):
