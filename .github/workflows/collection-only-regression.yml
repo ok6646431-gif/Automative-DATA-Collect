@@ -8,7 +8,11 @@ on:
       - '.github/workflows/collection-only-regression.yml'
       - 'orchestrator/collection_only_runner.py'
       - 'orchestrator/collection_acceptance.py'
+      - 'orchestrator/request_builder.py'
+      - 'orchestrator/public_site_crosscheck.py'
       - 'tests/test_collection_acceptance.py'
+      - 'tests/test_request_builder.py'
+      - 'tests/test_public_site_crosscheck.py'
 
 permissions:
   contents: read
@@ -47,7 +51,7 @@ jobs:
       - name: Install collector dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
       - name: Verify strict acceptance regression unit tests
-        run: python -m unittest tests.test_collection_acceptance tests.test_tms_discovery tests.test_soosiro_identity_gate tests.test_entity_scope_gate -v
+        run: python -m unittest tests.test_collection_acceptance tests.test_tms_discovery tests.test_soosiro_identity_gate tests.test_entity_scope_gate tests.test_request_builder tests.test_public_site_crosscheck -v
       - name: Restore previously verified company Discovery evidence
         env:
           SNAPSHOT: ${{ matrix.snapshot }}
