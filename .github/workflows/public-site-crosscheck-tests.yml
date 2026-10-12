@@ -1,0 +1,80 @@
+name: Public source site identity crosscheck verification
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/public_site_crosscheck.py'
+      - 'tests/test_public_site_crosscheck.py'
+      - '.github/workflows/public-site-crosscheck-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  unit_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check beautifulsoup4
+      - name: Verify no unsafe identity merger and TMS applicability inference
+        run: |
+          python -m py_compile orchestrator/public_site_crosscheck.py
+          python -m unittest tests.test_public_site_crosscheck -v
+
+  real_petasys_evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check beautifulsoup4
+      - name: Retrieve genuine 2026-10-13 G0 fallback collection artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for source in ENVINFO CHEM_STATS CLEANSYS_AIR SOOSIRO_WATER; do
+            gh run download 38277905157 \
+              --name "g0-public-fallback-38277905157-$source" \
+              --dir "replay-artifacts/$source"
+            test -s "replay-artifacts/$source/output/$source/status.json"
+            mkdir -p "replayed/output/$source"
+            cp -a "replay-artifacts/$source/output/$source/." "replayed/output/$source/"
+          done
+      - name: Evaluate source-ID continuity against original ENVINFO HTML and chemical survey records
+        run: |
+          python -m orchestrator.public_site_crosscheck \
+            --output-root replayed/output \
+            --legal-name '(주)이수페타시스' \
+            --out real-crosscheck/Public_Source_Site_Crosscheck.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('real-crosscheck/Public_Source_Site_Crosscheck.json').read_text(encoding='utf-8'))
+          assert r['status']=='CORRELATED_WITH_LIMITATIONS'
+          assert len(r['envinfo_native_ids'])==1
+          assert len(r['chem_native_ids'])==2
+          assert not r['facility_id_crosswalk_verified']
+          assert {'MULTIPLE_SOURCE_NATIVE_CHEM_IDS_NO_AUTO_MERGE',
+                  'TMS_NO_MATCH_DOES_NOT_PROVE_NON_APPLICABILITY'}.issubset(
+                      set(r['review_issues']))
+          assert all(v['disclosure_applicability']=='UNCONFIRMED'
+                     for v in r['tms'].values())
+          PY
+      - name: Publish source crosscheck evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isupetasys-genuine-source-site-crosscheck
+          path: real-crosscheck/
+          if-no-files-found: warn
+          retention-days: 21
