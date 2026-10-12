@@ -311,16 +311,46 @@ jobs:
   # are unreachable. Recover each public source independently for the DART-
   # verified legal entity. Leave the original G0 run failed, and never promote
   # weak site names or modify the current control-plane company request.
+  public_fallback_preflight:
+    name: Verify legal-only fallback from G0 audit
+    needs: discover
+    # On a failed G0 job GitHub may not expose job-level step outputs.
+    # Do not use needs.discover.outputs.gate: read the artifact itself.
+    if: ${{ always() && needs.discover.result == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      actions: read
+      contents: read
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download this run's G0 evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: zero-touch-discovery-${{ github.run_id }}
+          path: g0-evidence
+      - name: Verify independently sourced legal identity and safe review types
+        run: >-
+          python -m orchestrator.g0_public_source_fallback
+          --discovery-dir g0-evidence
+          --out-dir public-fallback
+      - name: Preserve source-only identity and search request
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-public-fallback-request-${{ github.run_id }}
+          path: public-fallback/
+          if-no-files-found: error
+          retention-days: 21
+
   public_source_fallback:
     name: G0 public fallback ${{ matrix.source }}
-    needs: discover
-    if: >-
-      ${{ always() &&
-          needs.discover.outputs.gate == 'REVIEW_REQUIRED' &&
-          (github.event_name == 'workflow_dispatch' ||
-           contains(github.event.head_commit.modified, 'requests/zero_touch_request.json') ||
-           contains(github.event.head_commit.added, 'requests/zero_touch_request.json') ||
-           contains(github.event.head_commit.modified, '.github/workflows/zero-touch-discovery.yml')) }}
+    needs: [discover, public_fallback_preflight]
+    if: ${{ always() && needs.public_fallback_preflight.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 110
     strategy:
@@ -338,16 +368,26 @@ jobs:
           python-version: '3.12'
       - name: Install source collector dependencies
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
-      - name: Read G0 audit artifact from this run (no current-request mutation)
+      - name: Read preflight-verified legal source request
         uses: actions/download-artifact@v4
         with:
-          name: zero-touch-discovery-${{ github.run_id }}
-          path: g0-evidence
-      - name: Build verified-legal source request; reject legal or site ambiguity
-        run: >-
-          python -m orchestrator.g0_public_source_fallback
-          --discovery-dir g0-evidence
-          --out-dir public-fallback
+          name: verified-public-fallback-request-${{ github.run_id }}
+          path: public-fallback
+      - name: Confirm independent request and identity proof survived artifact transfer
+        run: |
+          test -s public-fallback/request.json
+          test -s public-fallback/profile.json
+          test -s public-fallback/identity_evidence.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          evidence = json.loads(Path('public-fallback/identity_evidence.json').read_text(encoding='utf-8'))
+          assert evidence['status'] == 'COMPANY_VERIFIED_PUBLIC_DISCOVERY_ONLY'
+          assert evidence['source_g0_gate'] == 'REVIEW_REQUIRED'
+          assert evidence['request_id'] == json.loads(
+              Path('public-fallback/request.json').read_text(encoding='utf-8')
+          )['request_id']
+          PY
       - name: Collect the selected public source independently
         id: collect
         continue-on-error: true
