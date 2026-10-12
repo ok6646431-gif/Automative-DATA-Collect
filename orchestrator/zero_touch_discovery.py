@@ -652,7 +652,7 @@ def discover(company: str, start_year: int = 2020, max_pages: int = 90) -> Tuple
     links: List[Tuple[str, str, str]] = []
     if official_start:
         pages, links = crawl_official(http, official_start, company, max_pages=max_pages)
-    audit["stages"]["official_site"] = {"dart_website": legal.get("website"), "pages_crawled": len(pages), "links_seen": len(links), "sample_pages": [p.url for p in pages[:30]]}
+    audit["stages"]["official_site"] = {"dart_website": legal.get("website"), "pages_crawled": len(pages), "links_seen": len(links), "page_urls": [p.url for p in pages], "sample_pages": [p.url for p in pages[:30]]}
 
     dart_history = discover_dart_name_history(http, legal["select_key"])
     rename = _extract_rename_date_and_names(pages, legal["korean_name"], dart_history)
