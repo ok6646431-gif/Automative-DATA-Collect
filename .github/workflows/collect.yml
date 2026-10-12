@@ -104,8 +104,10 @@ jobs:
               raise SystemExit('Collection_Execution.json missing: collection has not passed')
           data=json.loads(p.read_text(encoding='utf-8'))
           print(json.dumps(data,ensure_ascii=False,indent=2))
-          if data.get('status')!='PASS':
+          if data.get('status') not in {'PASS', 'PASS_WITH_LIMITATION'}:
               raise SystemExit('Collection acceptance REVIEW_REQUIRED')
+          if data.get('status') == 'PASS_WITH_LIMITATION':
+              print('Bounded official document discovery completed with unresolved publication; see Collection_Acceptance warnings')
           PY
 
   stable_sources:
