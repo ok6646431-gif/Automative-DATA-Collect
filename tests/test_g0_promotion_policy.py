@@ -55,6 +55,22 @@ class G0PromotionPolicyTests(unittest.TestCase):
         self.assertEqual(a['gate_status'], 'PASS')
         self.assertEqual(a['stages']['promotion_policy']['deferred_review_count'], 1)
 
+    def test_pre_window_review_is_retained_across_post_recovery_final_gate(self):
+        historical = {'code': 'HISTORICAL_LEGAL_NAME_PREDECESSOR_UNRESOLVED'}
+        discovery = {
+            'collection_policy': {'requested_history_window': {'start_year': 2020}},
+            'unresolved_items': [historical, {'code': 'CORPORATE_DOCUMENT_COVERAGE_INCOMPLETE'}],
+        }
+        audit = {'stages': {'official_site': {'recovery': {'rename_signals': [{'year': 2012}]}}}}
+        policy.apply(discovery, {'gaps': [{'blocking': True}]}, audit)
+        self.assertEqual('PASS', audit['gate_status'])
+        # Recovery removed the annual document gap; prior historical review
+        # must remain visible without reintroducing stale report blockers.
+        policy.apply(discovery, {'gaps': []}, audit)
+        self.assertEqual('PASS', audit['gate_status'])
+        self.assertEqual([historical], audit['stages']['promotion_policy']['deferred_review_items'])
+        self.assertEqual(0, audit['stages']['promotion_policy']['document_blocking_gap_count'])
+
     def test_current_or_unknown_historical_name_ambiguity_remains_blocking(self):
         for signals in ([{'year': 2021}], [{'year': None}]):
             discovery = {
