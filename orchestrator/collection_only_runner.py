@@ -14,7 +14,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from orchestrator.collection_acceptance import ACCEPTED_SOURCE_STATUSES, ACCEPTED_TMS_STATUSES, TMS_SOURCES, evaluate
+from orchestrator.collection_acceptance import (
+    ACCEPTED_SOURCE_STATUSES, ACCEPTED_TMS_STATUSES, ACCEPTED_CORPORATE_STATUSES,
+    TMS_SOURCES, evaluate,
+)
 from orchestrator.source_regression_runner import (
     BASELINE_PATH, SOURCE_ORDER, apply_source_baseline, read_json,
 )
@@ -49,7 +52,9 @@ def baseline_check(label: str, output_root: Path, baseline_path: Path) -> dict:
     for source in SOURCE_ORDER:
         status = read_json(output_root / source / "status.json")
         status_value = str(status.get("status") or "MISSING_STATUS")
-        allowed = ACCEPTED_TMS_STATUSES if source in TMS_SOURCES else ACCEPTED_SOURCE_STATUSES
+        allowed = (ACCEPTED_TMS_STATUSES if source in TMS_SOURCES
+                   else ACCEPTED_CORPORATE_STATUSES if source == "CORP_DOCS"
+                   else ACCEPTED_SOURCE_STATUSES)
         if status_value not in allowed or status.get("errors") or not status:
             results.append({"source": source, "result": "SKIPPED_UNACCEPTED",
                             "source_status": status_value,
@@ -156,8 +161,13 @@ def main() -> int:
         acceptance["blocking_issue_count"] = len(acceptance["blocking_issues"])
 
     baseline = baseline_check(args.baseline_label, root, Path(args.baseline_file))
-    execution = {"status": "PASS" if acceptance["status"] == "PASS" and
-                 baseline["status"] in {"PASS", "NOT_REQUESTED"} else "REVIEW_REQUIRED",
+    execution_status = (
+        acceptance["status"]
+        if acceptance["status"] in {"PASS", "PASS_WITH_LIMITATION"}
+        and baseline["status"] in {"PASS", "NOT_REQUESTED"}
+        else "REVIEW_REQUIRED"
+    )
+    execution = {"status": execution_status,
                  "process_exit_codes": codes,
                  "acceptance_status": acceptance["status"],
                  "baseline_status": baseline["status"]}
@@ -167,7 +177,7 @@ def main() -> int:
     print(json.dumps({"collection": acceptance["status"], "issues": acceptance.get("blocking_issue_count"),
                       "baseline": baseline["status"], "overall": execution["status"]}, ensure_ascii=False),
           flush=True)
-    return 0 if execution["status"] == "PASS" else 2
+    return 0 if execution["status"] in {"PASS", "PASS_WITH_LIMITATION"} else 2
 
 
 if __name__ == "__main__":
