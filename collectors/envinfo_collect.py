@@ -176,12 +176,14 @@ def main(req_path):
     s=requests.Session(); s.headers.update({"User-Agent":UA})
     status={"source_key":"ENVINFO","status":"RUNNING","year_start":y1,"year_end":y2,"terms":terms,"requests":0,"errors":0}
     dedup={}; excluded_rows=[]; attachment_rows=[]; attachment_ok=attachment_fail=0; attachment_bytes=0; attachment_budget_exhausted=False
+    query_receipts=[]
     try:
         p=s.get(SEARCH_PAGE,timeout=(5,12)); p.raise_for_status(); (out/"search_page_raw.html").write_text(p.text,encoding="utf-8")
         term_map=cfg.get("search_terms_by_year",{})
         jobs=[(y,y,term) for y in range(y1,y2+1) for term in term_map.get(str(y),terms)] if term_map else [(y1,y2,term) for term in terms]
         for query_start,query_end,term in jobs:
             page=1; total=None
+            first_page_file=f"{query_start}_{query_end}_{safe(term)}_p1.json"
             while True:
                 status["requests"]+=1
                 r=s.post(SEARCH,data=search_payload(query_start,query_end,term,page,page_size),headers={"Referer":SEARCH_PAGE,"X-Requested-With":"XMLHttpRequest"},timeout=(5,20)); r.raise_for_status()
@@ -201,6 +203,11 @@ def main(req_path):
                         dedup[key]["search_terms_hit"]+="|"+term
                 if page*page_size>=total or not rows: break
                 page+=1
+            query_receipts.append({
+                "year_start":query_start, "year_end":query_end,
+                "term":term, "first_page_file":first_page_file,
+                "total_rows":total,
+            })
         search_candidate_rows=list(dedup.values())
         rows,scope_rejected_rows=split_candidates(
             search_candidate_rows,
@@ -252,7 +259,18 @@ def main(req_path):
                     (out/"errors.log").open("a",encoding="utf-8").write(f"DETAIL\t{year}\t{comp}\t{e}\n")
                 time.sleep(float(cfg.get("request_delay_ms",80))/1000)
         write_attachment_index(out,attachment_rows)
-        status.update({"status":"DATA_FOUND" if rows else "NO_MATCH","search_candidate_rows":len(search_candidate_rows),"rows":len(rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"unique_comp_ids":len({r.get('compId') for r in rows}),"detail_ok":detail_ok,"detail_fail":detail_fail,"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
+        gate=cfg.get("identity_gate") or {}
+        verified_scope=bool(
+            isinstance(gate,dict) and gate.get("enabled") is True
+            and gate.get("mode")=="VERIFIED_CURRENT_ENTITY_OR_SITE"
+            and gate.get("current_entity_names") and gate.get("verified_sites")
+        )
+        scoped_nonfind=bool(not rows and not search_candidate_rows and verified_scope and query_receipts
+                            and all(item["total_rows"] == 0 for item in query_receipts))
+        result_state=("DATA_FOUND" if rows else "NO_PUBLIC_RECORD_FOUND_IN_SCOPE" if scoped_nonfind else "NO_MATCH")
+        status.update({"status":result_state,"query_receipts":query_receipts,
+                       "scope_conclusion":("PUBLICATION_AND_APPLICABILITY_UNKNOWN" if scoped_nonfind else ""),
+                       "search_candidate_rows":len(search_candidate_rows),"rows":len(rows),"scope_rejected_rows":len(scope_rejected_rows),"excluded_rows":len(excluded_rows),"unique_comp_ids":len({r.get('compId') for r in rows}),"detail_ok":detail_ok,"detail_fail":detail_fail,"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
     except Exception as e:
         write_attachment_index(out,attachment_rows)
         status.update({"status":"REQUEST_OR_PARSE_FAILED","fatal_error":f"{type(e).__name__}: {e}","excluded_rows":len(excluded_rows),"attachments_discovered":len(attachment_rows),"attachment_ok":attachment_ok,"attachment_fail":attachment_fail,"attachment_bytes":attachment_bytes})
