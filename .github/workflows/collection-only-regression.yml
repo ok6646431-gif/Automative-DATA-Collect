@@ -158,7 +158,12 @@ jobs:
           status='PASS' if len(results)==3 and all(x.get('status')=='PASS' for x in results) else 'REVIEW_REQUIRED'
           payload={'status':status,'companies':results}
           Path('R3_Representative_Summary.json').write_text(
-              json.dumps(payload,ensure_ascii=False,indent=2)+'\\n',encoding='utf-8')
+              json.dumps(payload,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          # The published machine-readable summary must parse in a fresh reader,
+          # not only appear correct when printed to the GitHub Actions log.
+          roundtrip=json.loads(Path('R3_Representative_Summary.json').read_text(encoding='utf-8'))
+          if roundtrip!=payload:
+              raise SystemExit('R3 summary JSON round-trip mismatch')
           print(json.dumps(payload,ensure_ascii=False,indent=2))
           if status!='PASS':
               raise SystemExit('One or more companies failed strict collection acceptance')
