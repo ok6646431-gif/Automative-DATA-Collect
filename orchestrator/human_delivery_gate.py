@@ -73,7 +73,7 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
     if accepted["status"] != "PASS":
         problems.extend("USER_ZIP_INVALID:" + str(item.get("check"))
                         for item in accepted.get("failures", []))
-    counts = {"PDF": 0, "XLSX": 0, "OTHER": 0}
+    counts = {"PDF": 0, "XLSX": 0, "OTHER": 0, "ENVINFO_BODY_PDF": 0}
     try:
         with zipfile.ZipFile(path) as zf:
             root = accepted.get("archive_root")
@@ -89,6 +89,10 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
                 suffix = Path(rel).suffix.lower()
                 if suffix == ".pdf":
                     counts["PDF"] += 1
+                    if (rel.startswith(USER_PREFIX + "03_환경정보공개시스템/")
+                            and "/첨부자료/" not in rel
+                            and Path(rel).name.startswith("환경정보공개_")):
+                        counts["ENVINFO_BODY_PDF"] += 1
                 elif suffix == ".xlsx":
                     counts["XLSX"] += 1
                 else:
@@ -134,6 +138,8 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
         problems.append("HUMAN_FORMAT_READER_UNAVAILABLE:" + type(exc).__name__)
     if counts["XLSX"] < 4:
         problems.append("FOUR_PUBLIC_USER_XLSX_EXPORTS_REQUIRED")
+    if expected is not None and counts["ENVINFO_BODY_PDF"] < expected:
+        problems.append("ENVINFO_BODY_PDF_DELIVERY_INCOMPLETE")
     if not (counts["PDF"] or counts["XLSX"]):
         problems.append("NO_PDF_OR_EXCEL_USER_FILES")
     if counts["OTHER"]:
