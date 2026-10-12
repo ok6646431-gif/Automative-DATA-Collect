@@ -1,0 +1,135 @@
+name: ISU PETASYS isolated five-source public collection
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/isu-petasys-public-sources.yml'
+      - '.github/scripts/isu_petasys_source_only.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  collect_source:
+    name: Collect ${{ matrix.source }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        source: [ENVINFO, PRTR, CHEM_STATS, CLEANSYS_AIR, SOOSIRO_WATER]
+    env:
+      PYTHONPATH: .
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source collection dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Load existing verified legal-entity Discovery without promoting it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38246277808 \
+            --name zero-touch-discovery-38246277808 \
+            --dir independent_g0_input
+          test -s independent_g0_input/company_discovery.json
+          test -s independent_g0_input/Discovery_Audit.json
+      - name: Build source-only request with corrected DART site anchor
+        run: python .github/scripts/isu_petasys_source_only.py independent_g0_input source_only
+      - name: Collect only the selected public source
+        id: collect
+        continue-on-error: true
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: |
+          case "$SOURCE" in
+            ENVINFO)
+              python collectors/envinfo_collect.py source_only/request.json
+              ;;
+            PRTR)
+              python collectors/prtr_collect.py source_only/request.json
+              ;;
+            CHEM_STATS)
+              python collectors/chem_stats_collect.py source_only/request.json
+              ;;
+            CLEANSYS_AIR)
+              python collectors/cleansys_collect.py source_only/request.json
+              ;;
+            SOOSIRO_WATER)
+              python collectors/soosiro_collect.py source_only/request.json
+              ;;
+            *) echo 'Unexpected source' >&2; exit 98 ;;
+          esac
+      - name: Independently audit selected source, including failed periods
+        if: always()
+        env:
+          SOURCE: ${{ matrix.source }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from orchestrator.collection_acceptance import evaluate
+          root=Path("source_only")
+          request_path=root/"request.json"
+          if request_path.exists():
+              req=json.loads(request_path.read_text(encoding="utf-8"))
+              source=os.environ["SOURCE"]
+              req["sources"]={source:req["sources"][source]}
+              scoped=root/"scoped_request.json"
+              scoped.write_text(json.dumps(req,ensure_ascii=False,indent=2),encoding="utf-8")
+              try:
+                  report=evaluate("output",scoped)
+              except Exception as exc:
+                  report={"status":"REVIEW_REQUIRED","error":f"{type(exc).__name__}: {exc}"}
+          else:
+              report={"status":"REVIEW_REQUIRED","error":"SOURCE_REQUEST_NOT_GENERATED"}
+          report["source"]=os.environ["SOURCE"]
+          report["collection_process_outcome"]=os.environ.get("COLLECT_OUTCOME","not_evaluated")
+          (root/"Collection_Acceptance.json").write_text(
+              json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8"
+          )
+          st=Path("output")/os.environ["SOURCE"]/"status.json"
+          src=json.loads(st.read_text(encoding="utf-8")) if st.exists() else {}
+          lines=["# 이수페타시스 공공자료 조사", "", f"자료원: {os.environ['SOURCE']}",
+                 f"판정: {report['status']}",f"수집기 상태: {src.get('status','MISSING')}",
+                 "","주의: 조사 완료와 법정 공개의무 대상 판정은 서로 다릅니다.",
+                 "수집 미완료나 미조회 결과를 공개대상 아님으로 해석하지 마세요.","",
+                 "## 수집된 자료 파일", ""]
+          for p in sorted(Path("output").glob(os.environ["SOURCE"]+"/**/*")):
+              if p.is_file(): lines.append(f"- {p} ({p.stat().st_size} bytes)")
+          (root/"README_결과.txt").write_text("\n".join(lines)+"\n",encoding="utf-8")
+          print(json.dumps({"source":os.environ["SOURCE"],"verdict":report["status"],
+                            "source_status":src.get("status"),"rows":src.get("rows"),
+                            "issues":report.get("blocking_issue_count")},ensure_ascii=False))
+          PY
+      - name: Preserve actual evidence even if incomplete
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isu-petasys-public-${{ matrix.source }}
+          path: |
+            source_only/
+            output/${{ matrix.source }}/
+          retention-days: 21
+          if-no-files-found: warn
+          compression-level: 0
+      - name: Enforce source acceptance
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("source_only/Collection_Acceptance.json")
+          if not p.is_file():
+              raise SystemExit("missing independent source acceptance")
+          status=json.loads(p.read_text(encoding="utf-8")).get("status")
+          if status not in {"PASS","PASS_WITH_LIMITATION"}:
+              raise SystemExit("selected source not accepted: "+str(status))
+          PY
