@@ -35,6 +35,7 @@ from orchestrator import g0_live_adapters
 from orchestrator import g0_official_site_recovery
 from orchestrator import g0_plain_href_report_recovery
 from orchestrator import g0_promotion_policy
+from orchestrator import g0_site_verification_policy
 from orchestrator import g0_public_disclosure_enrichment
 from orchestrator import g0_rename_chronology_recovery
 from orchestrator import g0_report_catalog_policy
@@ -330,6 +331,9 @@ def _enriched_discover(company: str, start_year: int = 2020, max_pages: int = 90
 
     g0_kind_disclosure_recovery.enforce_historical_continuity_gate(discovery, audit)
     discovery = g0_entity_continuity_policy.normalize(discovery, audit)
+    # Cross-module provenance gate: first-party prose proximity is never enough
+    # to establish a facility, even when an earlier parser labelled it verified.
+    discovery = g0_site_verification_policy.normalize(discovery, audit)
     discovery, documents, audit = g0_promotion_policy.apply(discovery, documents, audit)
 
     return discovery, documents, audit
