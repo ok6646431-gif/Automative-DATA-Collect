@@ -14,6 +14,7 @@ on:
       - 'collectors/corporate_docs_collect.py'
       - 'tests/test_collection_acceptance.py'
       - 'tests/test_g0_bounded_document_policy.py'
+      - 'tests/test_zero_touch_discovery.py'
   workflow_dispatch:
 
 permissions:
