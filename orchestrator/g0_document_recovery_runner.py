@@ -232,6 +232,10 @@ def run(out_dir: str | Path, budget_seconds: int = DEFAULT_RECOVERY_BUDGET_SECON
         "routes_after": _document_routes(documents),
         "recovered_years": sorted(set(before_years) - set(after_years)),
     })
+    # The bounded nonfind verdict is possible only after the independent
+    # positive-document recovery pass; do not confuse it with nonpublication.
+    from orchestrator import g0_bounded_document_policy
+    documents = g0_bounded_document_policy.normalize(discovery, documents, audit)
     _write_json(documents_path, documents)
     _write_json(audit_path, audit)
     return stage
