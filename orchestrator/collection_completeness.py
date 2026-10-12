@@ -436,7 +436,7 @@ def document_rows(package, profile, evidence):
                             note="검증된 공식문서 다운로드가 완료되지 않음"))
 
     discovery_status = str((evidence or {}).get("discovery_status") or "").upper()
-    if discovery_status and discovery_status not in {"COMPLETE", "VERIFIED_COMPLETE", "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE"}:
+    if discovery_status and discovery_status not in {"COMPLETE", "VERIFIED_COMPLETE", "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE", "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY"}:
         rows.append(row("CORP_DOCS", "DISCOVERY", "OFFICIAL_DOCUMENT_SCOPE", "DOCUMENT_DISCOVERY_PARTIAL",
                         query_state=discovery_status, data=bool(strong_docs), evidence=f"discovery_status={discovery_status}",
                         note="공식문서 탐색 자체가 완결 상태로 확인되지 않아 미발견 문서를 없다고 간주하지 않음"))
@@ -457,6 +457,16 @@ def document_rows(package, profile, evidence):
                 rows.append(row("CORP_DOCS", dtype, year, "NO_DATA_CONFIRMED", query_state="VERIFIED_GAP", data=False,
                                 evidence="explicit verified NOT_PUBLISHED/NO_PUBLIC_DOCUMENT gap",
                                 note="공식적으로 미발행/미공개가 확인된 연도"))
+            elif discovery_status == "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY" and any(
+                str(g.get("status") or "") == "NOT_FOUND_IN_BOUNDED_SCOPE"
+                and str(g.get("document_type") or "") == dtype
+                and as_year(g.get("year")) == year and not g.get("blocking")
+                for g in gaps if isinstance(g, dict)
+            ):
+                rows.append(row("CORP_DOCS", dtype, year, "DOCUMENT_NOT_FOUND_IN_BOUNDED_SCOPE",
+                                query_state="BOUNDED_FIRST_PARTY", data=False,
+                                evidence="bounded first-party search complete; publication unknown",
+                                note="정해진 공식 홈페이지 탐색 범위에서는 미발견. 실제 미발간은 확인되지 않음"))
             else:
                 rows.append(row("CORP_DOCS", dtype, year, "DOCUMENT_DISCOVERY_MISSING", query_state="MISSING", data=False,
                                 evidence=f"requested_history={series_start}..{series_end}; declared={sorted(declared)}",
