@@ -68,7 +68,10 @@ class HumanDeliveryGateTests(unittest.TestCase):
             self.fixture(td)
             pdf_mem = io.BytesIO()
             pdf = PdfWriter()
-            pdf.add_blank_page(width=612, height=792)
+            # Production archive acceptance requires >=1000 PDF bytes.
+            # Multiple real pages keep this a readable PDF without fake padding.
+            for _ in range(8):
+                pdf.add_blank_page(width=612, height=792)
             pdf.write(pdf_mem)
             content = io.BytesIO()
             wb = xlsxwriter.Workbook(content, {"in_memory": True})
