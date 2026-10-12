@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import zipfile
 from pathlib import Path
@@ -94,6 +95,43 @@ def check_archive(zip_path: str | Path, summary_path: str | Path,
                     counts["OTHER"] += 1
     except (OSError, zipfile.BadZipFile, RuntimeError) as e:
         problems.append("USER_ZIP_UNREADABLE:" + str(e))
+    # Structural signatures alone cannot prove that user documents can open.
+    # Reparse the actual ZIP member bytes with PDF and XLSX readers. Archive
+    # jobs already install both dependencies, so missing readers fail closed.
+    try:
+        from pypdf import PdfReader
+        from openpyxl import load_workbook
+        with zipfile.ZipFile(path) as zf:
+            roots = {item.filename.split("/", 1)[0] for item in zf.infolist()
+                     if not item.is_dir() and "/" in item.filename}
+            archive_root = next(iter(roots)) if len(roots) == 1 else ""
+            for item in zf.infolist():
+                if item.is_dir() or not archive_root:
+                    continue
+                prefix = archive_root + "/" + USER_PREFIX
+                if not item.filename.startswith(prefix):
+                    continue
+                suffix = Path(item.filename).suffix.lower()
+                if suffix not in ALLOWED_USER_SUFFIXES:
+                    continue
+                try:
+                    data = io.BytesIO(zf.read(item))
+                    if suffix == ".pdf":
+                        pdf = PdfReader(data, strict=False)
+                        if pdf.is_encrypted or len(pdf.pages) < 1:
+                            raise ValueError("PDF has no accessible pages")
+                    else:
+                        wb = load_workbook(data, read_only=True, data_only=False)
+                        try:
+                            if not wb.sheetnames:
+                                raise ValueError("XLSX has no worksheets")
+                        finally:
+                            wb.close()
+                except Exception as exc:
+                    problems.append("USER_FILE_CANNOT_OPEN:" + item.filename +
+                                    ":" + type(exc).__name__)
+    except (ImportError, OSError, zipfile.BadZipFile) as exc:
+        problems.append("HUMAN_FORMAT_READER_UNAVAILABLE:" + type(exc).__name__)
     if counts["XLSX"] < 4:
         problems.append("FOUR_PUBLIC_USER_XLSX_EXPORTS_REQUIRED")
     if not (counts["PDF"] or counts["XLSX"]):
