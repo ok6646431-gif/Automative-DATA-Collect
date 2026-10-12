@@ -50,8 +50,14 @@ def normalize(discovery: dict, documents: dict, audit: dict) -> dict:
 
     # A site displaying a year-specific report but failing to expose the
     # actual asset is a known missing document, not a harmless nonfind.
+    # A verified report-index page can identify report editions which the
+    # bounded link parser could not resolve. Keep those misses for review.
+    if document_stage.get("report_index_pages"):
+        summary["status"] = "REPORT_INDEX_REQUIRES_EXPLICIT_YEAR_COVERAGE"
+        return documents
     positive_years = set()
-    for row in document_stage.get("report_candidates") or []:
+    for row in [*(document_stage.get("report_candidates") or []),
+                *(document_stage.get("unverified_report_links") or [])]:
         try:
             positive_years.add(int(row.get("year")))
         except (TypeError, ValueError):
@@ -75,6 +81,12 @@ def normalize(discovery: dict, documents: dict, audit: dict) -> dict:
         else:
             summary["status"] = "POSITIVE_DOCUMENT_EVIDENCE_OR_UNRESOLVED_SCOPE"
             return documents
+
+    # A complete, verified annual series must stay unqualified PASS; do
+    # not manufacture a limitation when no uncertain gap remains.
+    if not unresolved:
+        summary["status"] = "NO_UNRESOLVED_REPORT_NONFINDS"
+        return documents
 
     # Classify only after every known positive report target was recovered.
     for gap in unresolved:
