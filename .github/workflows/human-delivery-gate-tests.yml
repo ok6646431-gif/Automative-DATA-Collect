@@ -1,0 +1,30 @@
+name: User PDF/XLSX delivery contract tests
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/human_delivery_gate.py'
+      - 'tests/test_human_delivery_gate.py'
+      - '.github/workflows/human-delivery-gate-tests.yml'
+      - '.github/workflows/collect.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  human_delivery_contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install actual document validators
+        run: python -m pip install --disable-pip-version-check pypdf openpyxl
+      - name: Verify JSON-only uploads cannot ever be called completed delivery
+        run: |
+          python -m py_compile orchestrator/human_delivery_gate.py
+          python -m unittest tests.test_human_delivery_gate -v
