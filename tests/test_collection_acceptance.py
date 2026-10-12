@@ -26,6 +26,12 @@ class CollectionAcceptanceTests(unittest.TestCase):
                         "start_year": 2024,
                         "end_year": 2024,
                         "search_terms": ["테스트회사"],
+                    "identity_gate": {
+                        "enabled": True,
+                        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                        "current_entity_names": ["테스트회사"],
+                        "verified_sites": [{"site_name": "테스트회사 제1공장", "address": "테스트로 1"}],
+                    },
                     }
                 }
             }
@@ -57,6 +63,12 @@ class CollectionAcceptanceTests(unittest.TestCase):
                         "start_year": 2024,
                         "end_year": 2024,
                         "search_terms": ["테스트회사"],
+                    "identity_gate": {
+                        "enabled": True,
+                        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                        "current_entity_names": ["테스트회사"],
+                        "verified_sites": [{"site_name": "테스트회사 제1공장", "address": "테스트로 1"}],
+                    },
                     }
                 }
             })
@@ -84,6 +96,12 @@ class CollectionAcceptanceTests(unittest.TestCase):
                         "annual_years": [2024],
                         "daily_years": [],
                         "search_terms": ["테스트회사"],
+                    "identity_gate": {
+                        "enabled": True,
+                        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                        "current_entity_names": ["테스트회사"],
+                        "verified_sites": [{"site_name": "테스트회사 제1공장", "address": "테스트로 1"}],
+                    },
                     }
                 }
             })
@@ -118,6 +136,12 @@ class CollectionAcceptanceTests(unittest.TestCase):
                         "annual_years": [2024],
                         "daily_years": [],
                         "search_terms": ["테스트회사"],
+                    "identity_gate": {
+                        "enabled": True,
+                        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                        "current_entity_names": ["테스트회사"],
+                        "verified_sites": [{"site_name": "테스트회사 제1공장", "address": "테스트로 1"}],
+                    },
                     }
                 }
             })
@@ -129,6 +153,7 @@ class CollectionAcceptanceTests(unittest.TestCase):
                 "fact_code_list": ["FACT1"],
                 "address_seeded_fact_codes": ["FACT1"],
                 "fact_list_query_success": True,
+                "annual_fact_requests_success": 1,
                 "errors": 0,
             })
             write_json(root / "output/SOOSIRO_WATER/fact_candidates.json", [{
@@ -154,6 +179,12 @@ class CollectionAcceptanceTests(unittest.TestCase):
                         "start_year": 2024,
                         "end_year": 2024,
                         "search_terms": ["테스트회사"],
+                    "identity_gate": {
+                        "enabled": True,
+                        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                        "current_entity_names": ["테스트회사"],
+                        "verified_sites": [{"site_name": "테스트회사 제1공장", "address": "테스트로 1"}],
+                    },
                     }
                 }
             })
@@ -185,6 +216,12 @@ class CollectionAcceptanceTests(unittest.TestCase):
                         "annual_years": [2024],
                         "daily_years": [],
                         "search_terms": ["테스트회사"],
+                    "identity_gate": {
+                        "enabled": True,
+                        "mode": "VERIFIED_CURRENT_ENTITY_OR_SITE",
+                        "current_entity_names": ["테스트회사"],
+                        "verified_sites": [{"site_name": "테스트회사 제1공장", "address": "테스트로 1"}],
+                    },
                     }
                 }
             })
@@ -214,6 +251,57 @@ class CollectionAcceptanceTests(unittest.TestCase):
                 row["completeness_state"] == "NO_FACILITY_MATCH_CONFIRMED"
                 for row in result["period_audit"]
             ))
+
+
+    def test_unconfirmed_name_only_empty_result_is_blocking(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {"PRTR": {"start_year": 2024, "end_year": 2024, "search_terms": ["테스트회사"]}}})
+            write_json(root / "output/PRTR/status.json", {
+                "source_key": "PRTR", "status": "NO_MATCH", "rows": 0, "errors": 0,
+            })
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+            self.assertIn("UNACCEPTED_SOURCE_STATUS", [x["issue_type"] for x in result["blocking_issues"]])
+
+    def test_data_found_with_errors_is_blocking(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {"PRTR": {"start_year": 2024, "end_year": 2024, "search_terms": ["테스트회사"]}}})
+            write_json(root / "output/PRTR/status.json", {
+                "source_key": "PRTR", "status": "DATA_FOUND", "rows": 1, "detail_ok": 1, "errors": 1,
+            })
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+            self.assertIn("COLLECTOR_ERRORS_REPORTED", [x["issue_type"] for x in result["blocking_issues"]])
+
+    def test_registry_miss_without_verified_identity_is_blocking(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {
+                "CLEANSYS_AIR": {"start_year": 2024, "end_year": 2024, "search_terms": ["테스트회사"]}
+            }})
+            write_json(root / "output/CLEANSYS_AIR/status.json", {
+                "source_key": "CLEANSYS_AIR",
+                "status": "NO_FACILITY_MATCH_CONFIRMED",
+                "registry_scan_complete": True,
+                "index_selectable_option_count": 923,
+                "candidate_count": 0,
+                "candidate_query_attempts": 0,
+                "errors": [],
+            })
+            result = evaluate(root / "output", root / "request.json")
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+            self.assertIn("UNVERIFIED_REGISTRY_MISS_IDENTITY", [x["issue_type"] for x in result["blocking_issues"]])
+
+    def test_full_collection_requires_corporate_documents_status(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {}})
+            result = evaluate(root / "output", root / "request.json", require_all_sources=True)
+            self.assertEqual(result["status"], "REVIEW_REQUIRED")
+            self.assertIn("CORP_DOCS", [x["source"] for x in result["blocking_issues"]])
+
 
 
 if __name__ == "__main__":
