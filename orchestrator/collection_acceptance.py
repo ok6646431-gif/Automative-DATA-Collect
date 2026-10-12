@@ -15,6 +15,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 from pathlib import Path
 
 try:
@@ -37,6 +38,7 @@ TMS_SOURCES = {"CLEANSYS_AIR", "SOOSIRO_WATER"}
 ACCEPTED_SOURCE_STATUSES = {"DATA_FOUND", "NO_DATA_CONFIRMED"}
 ACCEPTED_TMS_STATUSES = ACCEPTED_SOURCE_STATUSES | {"NO_FACILITY_MATCH_CONFIRMED"}
 ACCEPTED_CORPORATE_STATUSES = ACCEPTED_SOURCE_STATUSES | {"NO_DOCUMENTS_FOUND_IN_SCOPE"}
+ACCEPTED_ENVINFO_STATUSES = ACCEPTED_SOURCE_STATUSES | {"NO_PUBLIC_RECORD_FOUND_IN_SCOPE"}
 BOUNDED_CORPORATE_DISCOVERY = "COMPLETE_FOR_BOUNDED_OFFICIAL_DISCOVERY"
 REQUIRED_COLLECTION_SOURCES = (
     "ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER", "CORP_DOCS",
@@ -148,6 +150,71 @@ def _validate_corporate_document_files(output_root: Path, status: dict) -> list[
                                 f"{doc_id}: indexed={expected_digest}; actual={actual_digest}"))
     return issues
 
+
+
+
+def _validate_envinfo_bounded_nonfind(output_root: Path, request: dict, status: dict) -> list[dict]:
+    """Check source-native zero-row responses before accepting a limited nonfind.
+
+    Without a source-native ID this is *not* NO_DATA_CONFIRMED or an exemption
+    from statutory disclosure. All requested company/year searches must have
+    first-party raw receipts, and no candidate rows may have been returned.
+    """
+    source = "ENVINFO"
+    cfg = (request.get("sources") or {}).get(source) or {}
+    if not _verified_tms_identity(request, source):
+        return [issue(source, "BOUNDED_ENVINFO_IDENTITY_UNVERIFIED",
+                      "verified current legal entity and facility anchors are required")]
+    if int(status.get("rows") or 0) or int(status.get("search_candidate_rows") or 0):
+        return [issue(source, "BOUNDED_ENVINFO_HAS_CANDIDATES",
+                      "nonfind contradicted by source-native candidate rows")]
+    try:
+        y1, y2 = int(cfg["start_year"]), int(cfg["end_year"])
+    except (KeyError, ValueError, TypeError):
+        return [issue(source, "BOUNDED_ENVINFO_REQUEST_SCOPE_MISSING",
+                      "explicit selected-period query window required")]
+    term_map = cfg.get("search_terms_by_year") or {}
+    terms = cfg.get("search_terms") or [cfg.get("search_term", "")]
+    expected = (
+        [(year, year, term) for year in range(y1, y2 + 1)
+         for term in term_map.get(str(year), terms)]
+        if term_map else [(y1, y2, term) for term in terms]
+    )
+    if not expected or any(not str(t).strip() for _, _, t in expected):
+        return [issue(source, "BOUNDED_ENVINFO_TERMS_MISSING",
+                      "explicit source query terms are required")]
+    receipts = status.get("query_receipts") or []
+    if not isinstance(receipts, list) or len(receipts) != len(expected):
+        return [issue(source, "BOUNDED_ENVINFO_RECEIPTS_MISSING",
+                      f"required={len(expected)}; collected={len(receipts) if isinstance(receipts, list) else 'invalid'}")]
+    root = output_root / source / "raw_search"
+    issues = []
+    for expected_item, receipt in zip(expected, receipts):
+        if not isinstance(receipt, dict):
+            issues.append(issue(source, "BOUNDED_ENVINFO_BAD_RECEIPT", str(expected_item)))
+            continue
+        y_start, y_end, term = expected_item
+        expected_name = (
+            f"{y_start}_{y_end}_{re.sub(r'[^0-9A-Za-z가-힣._-]+', '_', str(term)).strip('_')}_p1.json"
+        )
+        if (receipt.get("year_start"), receipt.get("year_end"), receipt.get("term"),
+                receipt.get("first_page_file")) != (y_start, y_end, term, expected_name):
+            issues.append(issue(source, "BOUNDED_ENVINFO_QUERY_MISMATCH", str(expected_item)))
+            continue
+        raw_path = root / expected_name
+        try:
+            payload = json.loads(raw_path.read_text(encoding="utf-8"))
+            raw_count = payload.get("totalRows")
+            if isinstance(raw_count, list):
+                raw_count = raw_count[0] if raw_count else None
+            if int(raw_count) != 0 or int(receipt.get("total_rows")) != 0:
+                raise ValueError("query returned records or missing count")
+            if any(payload.get(k) for k in ("compId", "compNm")):
+                raise ValueError("source-native data present despite zero-row claim")
+        except (OSError, ValueError, TypeError, AttributeError, json.JSONDecodeError) as exc:
+            issues.append(issue(source, "BOUNDED_ENVINFO_RAW_QUERY_INVALID",
+                                f"{expected_name}: {type(exc).__name__}: {exc}"))
+    return issues
 
 
 def _validate_bounded_document_discovery(output_root: Path, status: dict) -> list[dict]:
@@ -263,6 +330,7 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
 
         allowed = (ACCEPTED_TMS_STATUSES if source in TMS_SOURCES
                    else ACCEPTED_CORPORATE_STATUSES if source == "CORP_DOCS"
+                   else ACCEPTED_ENVINFO_STATUSES if source == "ENVINFO"
                    else ACCEPTED_SOURCE_STATUSES)
         if source_status == "DISCOVERY_UNRESOLVED":
             issues.append(issue(
@@ -296,6 +364,11 @@ def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_s
                     issues.append(issue(source, "CONTRADICTORY_REGISTRY_MISS",
                                         "registry no-match reported despite discovered FACT_CODE candidates"))
 
+        if source == "ENVINFO" and source_status == "NO_PUBLIC_RECORD_FOUND_IN_SCOPE":
+            issues.extend(_validate_envinfo_bounded_nonfind(output, request, status))
+            warnings.append(issue(source, "ENVINFO_PUBLICATION_AND_APPLICABILITY_UNCONFIRMED",
+                                  "verified name/site scope yielded zero public rows, but disclosure applicability and source-ID absence are not established",
+                                  severity="LIMITATION"))
         if source == "CLEANSYS_AIR":
             issues.extend(_validate_cleansys_no_data(status))
             issues.extend(_validate_registry_miss(source, status))
