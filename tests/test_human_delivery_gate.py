@@ -108,7 +108,7 @@ class HumanDeliveryGateTests(unittest.TestCase):
                              mod.confirm_publication(ready, "", "https://github.com/org/repo/actions/runs/1")["status"])
             confirmed = mod.confirm_publication(ready, "123456", "https://github.com/org/repo/actions/runs/1")
             self.assertEqual("USER_ARCHIVE_AVAILABLE", confirmed["status"])
-            self.assertEqual("ZIP_CONTAINING_PDF_AND_XLSX", confirmed["file_type"])
+            self.assertEqual("ZIP_WITH_PDF_XLSX_AND_OPTIONAL_READABLE_ATTACHMENTS", confirmed["file_type"])
 
     def test_json_only_never_qualifies_as_completed_delivery(self):
         with tempfile.TemporaryDirectory() as td:
@@ -135,7 +135,25 @@ class HumanDeliveryGateTests(unittest.TestCase):
             self.fixture(td, with_json=True)
             result = self.check(td)
             self.assertEqual("DELIVERY_NOT_READY", result["status"])
-            self.assertIn("NON_PDF_XLSX_IN_USER_LAYER", result["problems"])
+            self.assertIn("MACHINE_OR_UNSUPPORTED_USER_FILE_IN_USER_LAYER", result["problems"])
+
+    def test_readable_source_images_and_text_not_mistaken_for_json(self):
+        with tempfile.TemporaryDirectory() as td:
+            self.fixture(td)
+            root = Path(td)
+            with zipfile.ZipFile(root / "Human_Archive.zip", "a") as zf:
+                zf.writestr("Test/01_사용자자료/03_환경정보공개시스템/"
+                            "이수페타시스/첨부자료/현장사진.jpg", b"IMAGE_TEST_ONLY")
+                zf.writestr("Test/01_사용자자료/03_환경정보공개시스템/"
+                            "이수페타시스/환경정보출처.txt", b"SOURCE_NOTICE")
+            summary = json.loads((root / "Archive_Summary.json").read_text(encoding="utf-8"))
+            summary["zip_sha256"] = hashlib.sha256(
+                (root / "Human_Archive.zip").read_bytes()).hexdigest()
+            (root / "Archive_Summary.json").write_text(json.dumps(summary), encoding="utf-8")
+            report = self.check(td)
+            self.assertEqual("HUMAN_ARCHIVE_READY", report["status"], report["problems"])
+            self.assertEqual(2, report["human_files"]["AUXILIARY"])
+            self.assertEqual(4, report["human_files"]["XLSX"])
 
     def test_missing_zip_or_audit_must_fail_closed(self):
         with tempfile.TemporaryDirectory() as td:
