@@ -1,0 +1,37 @@
+name: ISU PETASYS human-readable source archive
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/petasys-review-bundle.yml'
+      - '.github/scripts/petasys_review_bundle.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collect_official_documents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install official web capture dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+      - name: Download first-party PDFs, HTML source and ESH data table
+        run: python .github/scripts/petasys_review_bundle.py
+      - name: List captured source files
+        run: find review_bundle/ISU_PETASYS -type f -printf '%p (%s bytes)\n' | sort
+      - name: Upload browsable research bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isu-petasys-official-site-human-review
+          path: review_bundle/ISU_PETASYS/
+          if-no-files-found: error
+          retention-days: 21
+          compression-level: 0
