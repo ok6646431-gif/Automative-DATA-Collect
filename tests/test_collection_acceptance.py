@@ -305,5 +305,65 @@ class CollectionAcceptanceTests(unittest.TestCase):
 
 
 
+    def test_corporate_document_digest_and_file_presence_are_required(self):
+        import csv
+        import hashlib
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {}})
+            file_path = root / "output/CORP_DOCS/report.pdf"
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.write_bytes(b"%PDF-1.4 test report fixture")
+            digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
+            write_json(root / "output/CORP_DOCS/status.json", {
+                "source_key": "CORP_DOCS",
+                "status": "DATA_FOUND",
+                "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
+                "documents_declared": 1,
+                "downloaded": 1,
+                "failed": 0,
+                "skipped": 0,
+            })
+            with (root / "output/CORP_DOCS/document_index.csv").open(
+                "w", encoding="utf-8-sig", newline=""
+            ) as file:
+                writer = csv.DictWriter(file, fieldnames=[
+                    "document_id", "stored_path", "collection_status", "bytes", "sha256"
+                ])
+                writer.writeheader()
+                writer.writerow({
+                    "document_id": "REPORT2024",
+                    "stored_path": "output/CORP_DOCS/report.pdf",
+                    "collection_status": "DOWNLOADED",
+                    "bytes": file_path.stat().st_size,
+                    "sha256": digest,
+                })
+            good = evaluate(root / "output", root / "request.json")
+            self.assertEqual(good["status"], "PASS")
+            file_path.write_bytes(b"%PDF-1.4 changed report fixture")
+            corrupted = evaluate(root / "output", root / "request.json")
+            self.assertEqual(corrupted["status"], "REVIEW_REQUIRED")
+            self.assertIn("DOCUMENT_DIGEST_MISMATCH",
+                          [x["issue_type"] for x in corrupted["blocking_issues"]])
+            file_path.unlink()
+            missing = evaluate(root / "output", root / "request.json")
+            self.assertIn("DOCUMENT_FILE_MISSING",
+                          [x["issue_type"] for x in missing["blocking_issues"]])
+
+    def test_corporate_document_claim_without_index_is_blocking(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            write_json(root / "request.json", {"sources": {}})
+            write_json(root / "output/CORP_DOCS/status.json", {
+                "source_key": "CORP_DOCS", "status": "DATA_FOUND",
+                "discovery_status": "COMPLETE",
+                "documents_declared": 1, "downloaded": 1, "failed": 0, "skipped": 0,
+            })
+            outcome = evaluate(root / "output", root / "request.json")
+            self.assertEqual(outcome["status"], "REVIEW_REQUIRED")
+            self.assertIn("DOCUMENT_INDEX_MISSING",
+                          [x["issue_type"] for x in outcome["blocking_issues"]])
+
+
 if __name__ == "__main__":
     unittest.main()
