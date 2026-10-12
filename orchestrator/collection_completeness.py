@@ -224,6 +224,14 @@ def audit_envinfo(output, cfg):
         terms = terms_for_year(cfg, year)
         files = [root/"raw_search"/f"{year}_{year}_{safe(term)}_p1.json" for term in terms]
         complete = bool(terms) and all(p.exists() and p.stat().st_size > 0 for p in files)
+        # The collector also supports a single official range query over all
+        # selected years when no year-specific term map is supplied.
+        if not complete and not cfg.get("search_terms_by_year"):
+            combined = [
+                root/"raw_search"/f"{cfg.get('start_year')}_{cfg.get('end_year')}_{safe(term)}_p1.json"
+                for term in terms
+            ]
+            complete = bool(combined) and all(p.exists() and p.stat().st_size > 0 for p in combined)
         failed = status.get("status") in TERMINAL_FAILURES and not complete
         rows.append(query_row(source, year, complete, failed, year in data_years,
                               f"terms={len(terms)}; page1={sum(p.exists() for p in files)}; status={status.get('status')}"))
