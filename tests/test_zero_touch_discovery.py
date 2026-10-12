@@ -10,6 +10,7 @@ from orchestrator.zero_touch_discovery import (
     legal_match_score,
     normalize_name,
     parse_dart_company,
+    discover_documents,
 )
 
 
@@ -113,6 +114,45 @@ class TestZeroTouchDiscovery(unittest.TestCase):
         self.assertEqual(summary["review_required_count"], 0)
         old = next(x for x in profile["aliases"] if x["term"] == "현대삼호중공업")
         self.assertEqual((old["year_start"], old["year_end"]), (2020, 2024))
+
+
+    def test_standalone_pdf_and_html_environment_page_are_separate_documents(self):
+        from unittest.mock import patch
+        root = "https://official.example"
+        pages = [
+            Page(root + "/environment", "환경경영 환경방침과 온실가스 감축 관리", "", 200),
+        ]
+        links = [
+            (root + "/environment", "2024 지속가능경영보고서", root + "/uploads/report-2024.pdf"),
+        ]
+        with patch("orchestrator.zero_touch_discovery.verify_pdf",
+                   return_value=(True, root + "/uploads/report-2024.pdf", "application/pdf")):
+            documents, audit = discover_documents(
+                Mock(), root, pages, links, start_year=2024, current_year=2024
+            )
+        by_type = {}
+        for doc in documents["documents"]:
+            by_type.setdefault(doc["document_type"], []).append(doc)
+        self.assertEqual(len(by_type["SUSTAINABILITY_REPORT"]), 1)
+        self.assertEqual(by_type["SUSTAINABILITY_REPORT"][0]["report_year"], 2024)
+        self.assertEqual(by_type["SUSTAINABILITY_REPORT"][0]["expected_extension"], "pdf")
+        self.assertEqual(len(by_type["ENVIRONMENTAL_MANAGEMENT"]), 1)
+        self.assertEqual(by_type["ENVIRONMENTAL_MANAGEMENT"][0]["expected_extension"], "html")
+        self.assertEqual(documents["discovery_status"],
+                         "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE")
+
+    def test_homepage_environment_statement_is_not_relabelled_as_report(self):
+        root = "https://official.example"
+        pages = [Page(root + "/environment", "환경경영 환경방침", "", 200)]
+        documents, audit = discover_documents(
+            Mock(), root, pages, [], start_year=2024, current_year=2024
+        )
+        self.assertFalse([d for d in documents["documents"]
+                          if d["document_type"] == "SUSTAINABILITY_REPORT"])
+        self.assertEqual(len([d for d in documents["documents"]
+                              if d["document_type"] == "ENVIRONMENTAL_MANAGEMENT"]), 1)
+        self.assertEqual(documents["gaps"][0]["status"], "DISCOVERY_GAP")
+
 
 
 if __name__ == "__main__":
