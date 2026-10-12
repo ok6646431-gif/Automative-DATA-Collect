@@ -31,6 +31,37 @@ BLOCKING_SOURCE_STATUSES = {
     "NOT_RUN",
 }
 TMS_SOURCES = {"CLEANSYS_AIR", "SOOSIRO_WATER"}
+# A successful process exit with NO_MATCH/RUNNING/unknown status is not accepted.
+ACCEPTED_SOURCE_STATUSES = {"DATA_FOUND", "NO_DATA_CONFIRMED"}
+ACCEPTED_TMS_STATUSES = ACCEPTED_SOURCE_STATUSES | {"NO_FACILITY_MATCH_CONFIRMED"}
+REQUIRED_COLLECTION_SOURCES = (
+    "ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER", "CORP_DOCS",
+)
+
+
+def _has_errors(status: dict) -> bool:
+    value = status.get("errors", 0)
+    if isinstance(value, (list, dict, set, tuple)):
+        return bool(value)
+    try:
+        return int(value or 0) > 0
+    except (TypeError, ValueError):
+        return bool(value)
+
+
+def _verified_tms_identity(request: dict, source: str) -> bool:
+    gate = ((request.get("sources") or {}).get(source) or {}).get("identity_gate")
+    if not isinstance(gate, dict) or gate.get("enabled") is not True:
+        return False
+    if gate.get("mode") != "VERIFIED_CURRENT_ENTITY_OR_SITE":
+        return False
+    names = [x for x in gate.get("current_entity_names", []) if str(x).strip()]
+    sites = [
+        x for x in gate.get("verified_sites", [])
+        if isinstance(x, dict) and (str(x.get("site_name") or "").strip() or str(x.get("address") or "").strip())
+    ]
+    return bool(names and sites)
+
 
 
 def read_json(path: str | Path, default=None):
@@ -106,12 +137,14 @@ def _validate_registry_miss(source: str, status: dict) -> list[dict]:
     return []
 
 
-def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
+def evaluate(output_root: str | Path, request_path: str | Path, *, require_all_sources: bool = False) -> dict:
     output = Path(output_root)
     request = read_json(request_path, {}) or {}
     configured = list((request.get("sources") or {}).keys())
     if (output / "CORP_DOCS" / "status.json").exists() and "CORP_DOCS" not in configured:
         configured.append("CORP_DOCS")
+    if require_all_sources:
+        configured = list(dict.fromkeys([*configured, *REQUIRED_COLLECTION_SOURCES]))
     rows = public_rows(output, request)
 
     issues: list[dict] = []
@@ -129,14 +162,38 @@ def evaluate(output_root: str | Path, request_path: str | Path) -> dict:
         source_status = str(status.get("status") or "MISSING_STATUS")
         source_results[source] = status
 
-        if source_status in BLOCKING_SOURCE_STATUSES:
-            issues.append(issue(source, source_status, "collector reported a blocking collection state"))
-        elif source_status == "DISCOVERY_UNRESOLVED":
+        allowed = ACCEPTED_TMS_STATUSES if source in TMS_SOURCES else ACCEPTED_SOURCE_STATUSES
+        if source_status == "DISCOVERY_UNRESOLVED":
             issues.append(issue(
                 source,
                 "SOURCE_ID_DISCOVERY_UNRESOLVED",
                 "source was reachable but no source-native facility identity was established; do not convert this to no-data",
             ))
+        elif source_status not in allowed:
+            issues.append(issue(source, "UNACCEPTED_SOURCE_STATUS",
+                                f"status={source_status}; execution success is not collection success"))
+
+        if _has_errors(status):
+            issues.append(issue(source, "COLLECTOR_ERRORS_REPORTED", f"errors={str(status.get('errors'))[:500]}"))
+        for failure_field in ("detail_fail", "attachment_fail", "source_id_backfill_failed"):
+            if int(status.get(failure_field) or 0) > 0:
+                issues.append(issue(source, "INCOMPLETE_SOURCE_ARTIFACT",
+                                    f"{failure_field}={status[failure_field]}"))
+        if str(status.get("source_key") or "") != source:
+            issues.append(issue(source, "SOURCE_KEY_MISMATCH",
+                                f"expected={source}; reported={status.get('source_key')}"))
+        if source in TMS_SOURCES and source_status == "NO_FACILITY_MATCH_CONFIRMED":
+            if not _verified_tms_identity(request, source):
+                issues.append(issue(source, "UNVERIFIED_REGISTRY_MISS_IDENTITY",
+                                    "verified current-entity names and sites are required for a registry no-match"))
+            if source == "CLEANSYS_AIR":
+                if int(status.get("candidate_count") or 0) != 0 or int(status.get("candidate_query_attempts") or 0) != 0:
+                    issues.append(issue(source, "CONTRADICTORY_REGISTRY_MISS",
+                                        "registry no-match reported despite candidate IDs or attempted ID-bound queries"))
+            else:
+                if int(status.get("fact_codes") or 0) != 0 or status.get("fact_code_list"):
+                    issues.append(issue(source, "CONTRADICTORY_REGISTRY_MISS",
+                                        "registry no-match reported despite discovered FACT_CODE candidates"))
 
         if source == "CLEANSYS_AIR":
             issues.extend(_validate_cleansys_no_data(status))
@@ -225,9 +282,11 @@ def main() -> int:
     parser.add_argument("--output-root", default="output")
     parser.add_argument("--request", default="requests/current.generated.json")
     parser.add_argument("--summary-out", default="Collection_Acceptance.json")
+    parser.add_argument("--require-all-sources", action="store_true",
+                        help="Require all six collection lanes, including corporate documents.")
     args = parser.parse_args()
 
-    result = evaluate(args.output_root, args.request)
+    result = evaluate(args.output_root, args.request, require_all_sources=args.require_all_sources)
     Path(args.summary_out).write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
