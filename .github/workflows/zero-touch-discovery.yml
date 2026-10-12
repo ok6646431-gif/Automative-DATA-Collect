@@ -37,6 +37,8 @@ on:
       - 'orchestrator/g0_promotion_policy.py'
       - 'orchestrator/g0_site_verification_policy.py'
       - 'orchestrator/g0_public_source_fallback.py'
+      - 'orchestrator/public_site_crosscheck.py'
+      - 'tests/test_public_site_crosscheck.py'
       - 'orchestrator/g0_public_disclosure_enrichment.py'
       - 'orchestrator/g0_rename_chronology_recovery.py'
       - 'orchestrator/g0_report_catalog_policy.py'
@@ -483,3 +485,80 @@ jobs:
           if d.get('status') not in {'PASS', 'PASS_WITH_LIMITATION'}:
               raise SystemExit('G0 source-only verdict REVIEW_REQUIRED: ' + str(d.get('source')))
           PY
+
+  public_site_crosscheck:
+    name: Compare public source-native site IDs
+    needs: [public_fallback_preflight, public_source_fallback]
+    if: ${{ always() && needs.public_fallback_preflight.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install evidence parsing dependency
+        run: python -m pip install --disable-pip-version-check beautifulsoup4
+      - name: Collect independent source evidence from this run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: g0-public-fallback-${{ github.run_id }}-*
+          path: source-evidence
+          merge-multiple: true
+      - name: Recover the same preflight-verified legal identity
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-public-fallback-request-${{ github.run_id }}
+          path: verified-request
+      - name: Produce non-merging source-native ID correlation report
+        run: |
+          python - <<'PY'
+          import json, subprocess, sys
+          from pathlib import Path
+          evidence=json.loads(Path('verified-request/identity_evidence.json').read_text(encoding='utf-8'))
+          legal=str(evidence['legal_name'])
+          cmd=[
+              sys.executable, '-m', 'orchestrator.public_site_crosscheck',
+              '--output-root', 'source-evidence/output',
+              '--legal-name', legal,
+              '--out', 'site-crosscheck/Public_Source_Site_Crosscheck.json',
+          ]
+          result=subprocess.run(cmd,check=False)
+          p=Path('site-crosscheck/Public_Source_Site_Crosscheck.json')
+          if not p.exists():
+              raise SystemExit('Missing cross-source audit evidence')
+          audit=json.loads(p.read_text(encoding='utf-8'))
+          if audit.get('facility_id_crosswalk_verified') is not False:
+              raise SystemExit('Unsafe cross-source native ID auto-merge')
+          if any(v.get('disclosure_applicability')!='UNCONFIRMED'
+                 for v in audit.get('tms',{}).values()):
+              raise SystemExit('Unsafe TMS applicability inference')
+          lines=[
+              '공공자료원 사업장 식별 교차검증',
+              '법인: '+legal,
+              '판정: '+audit['status'],
+              '주의: 같은 주소라도 자료원별 사업장 식별자가 같다는 뜻은 아닙니다.',
+              '주의: TMS 목록 미매칭은 배출량 0이나 설치의무 비대상을 뜻하지 않습니다.',
+              'ENVINFO 고유 ID 수: '+str(len(audit.get('envinfo_native_ids',[]))),
+              '화학물질 통계 고유 ID 수: '+str(len(audit.get('chem_native_ids',[]))),
+              '검토 항목: '+', '.join(audit.get('review_issues',[])),
+          ]
+          out=Path('site-crosscheck/Public_Source_Site_Crosscheck_Readme.txt')
+          out.write_text('\\n'.join(lines)+'\\n',encoding='utf-8')
+          print(json.dumps({'source_site_audit':audit['status'],
+                            'blocked_inference_safety_pass':True,
+                            'analyzer_exit_code':result.returncode},ensure_ascii=False))
+          PY
+      - name: Preserve cross-source evidence even with unresolved facility identity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g0-public-site-crosscheck-${{ github.run_id }}
+          path: site-crosscheck/
+          retention-days: 21
+          if-no-files-found: warn
