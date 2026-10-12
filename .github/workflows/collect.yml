@@ -22,10 +22,10 @@ on:
   workflow_dispatch:
     inputs:
       collection_only:
-        description: 'Run source collection and strict acceptance only (no archive or application materials)'
+        description: 'Internal QA only, no user PDF/Excel archive. Never report user delivery as complete.'
         type: boolean
         required: false
-        default: true
+        default: false
 
 permissions:
   contents: read
@@ -459,17 +459,41 @@ jobs:
           --package assembled
           --stable collected/stable
           --documents requests/document_evidence.json
-      - name: Upload human-facing archive
+      - name: Validate downloadable PDF/XLSX user archive
+        id: human_delivery_preflight
+        run: >-
+          python -m orchestrator.human_delivery_gate
+          --zip assembled/Human_Archive.zip
+          --summary assembled/Archive_Summary.json
+          --manifest assembled/Master_Manifest.json
+          --out assembled/Human_Delivery_Gate.json
+      - name: Upload validated PDF/XLSX ZIP
         id: human_archive_upload
-        if: ${{ always() && hashFiles('assembled/Human_Archive.zip') != '' }}
+        if: ${{ steps.human_delivery_preflight.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: enterprise-env-human-archive
           path: assembled/Human_Archive.zip
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
+          compression-level: 0
+      - name: Confirm upload before user delivery can be called ready
+        id: human_delivery_confirm
+        if: ${{ steps.human_delivery_preflight.outcome == 'success' }}
+        env:
+          HUMAN_ARTIFACT_ID: ${{ steps.human_archive_upload.outputs.artifact-id }}
+          HUMAN_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          python -m orchestrator.human_delivery_gate
+          --zip assembled/Human_Archive.zip
+          --summary assembled/Archive_Summary.json
+          --manifest assembled/Master_Manifest.json
+          --out assembled/Human_Delivery_Gate.json
+          --confirm-upload
+          --artifact-id "$HUMAN_ARTIFACT_ID"
+          --run-url "$HUMAN_RUN_URL"
       - name: Build and validate application materials
-        if: ${{ hashFiles('assembled/Human_Archive.zip') != '' }}
+        if: ${{ steps.human_delivery_confirm.outcome == 'success' }}
         run: >-
           python tools/build_application_material_from_archive.py
           --input assembled/Human_Archive.zip
@@ -477,7 +501,7 @@ jobs:
           --source-run ${{ github.run_id }}
           --summary-out application-delivery/application_package_result.json
       - name: Require Application Materials PASS
-        if: ${{ hashFiles('assembled/Human_Archive.zip') != '' }}
+        if: ${{ steps.human_delivery_confirm.outcome == 'success' }}
         run: |
           python - <<'PY'
           import json
