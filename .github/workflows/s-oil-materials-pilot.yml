@@ -1,0 +1,139 @@
+name: S-OIL source materials pilot
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - '.github/workflows/s-oil-materials-pilot.yml'
+      - '.github/scripts/s_oil_materials_pilot.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    env:
+      PYTHONPATH: .
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install official report verification dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 pypdf
+      - name: Capture real original PDF files for 2020 to 2025
+        run: python .github/scripts/s_oil_materials_pilot.py reports
+      - name: Preserve human-readable PDF report ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-공식_ESG_보고서_PDF_2020-2025
+          path: |
+            soiloil_2026/S-OIL_2020-2025_공식보고서_원본PDF.zip
+            soiloil_2026/internal/reports_manifest.json
+          if-no-files-found: warn
+          retention-days: 21
+          compression-level: 0
+
+  public_sources:
+    runs-on: ubuntu-latest
+    name: S-OIL ${{ matrix.source }}
+    timeout-minutes: 105
+    env:
+      PYTHONPATH: .
+      PYTHONUNBUFFERED: '1'
+      SOURCE: ${{ matrix.source }}
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        source: [ENVINFO, PRTR, CHEM_STATS, CLEANSYS_AIR, SOOSIRO_WATER]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install source dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter
+      - name: Generate S-OIL verified legal and official Onsan request
+        run: python .github/scripts/s_oil_materials_pilot.py setup
+      - name: Retrieve real public source
+        id: retrieve
+        continue-on-error: true
+        run: |
+          case "$SOURCE" in
+            ENVINFO) python collectors/envinfo_collect.py soiloil_2026/internal/request.json ;;
+            PRTR) python collectors/prtr_collect.py soiloil_2026/internal/request.json ;;
+            CHEM_STATS) python collectors/chem_stats_collect.py soiloil_2026/internal/request.json ;;
+            CLEANSYS_AIR) python collectors/cleansys_collect.py soiloil_2026/internal/request.json ;;
+            SOOSIRO_WATER) python collectors/soosiro_collect.py soiloil_2026/internal/request.json ;;
+            *) exit 99;;
+          esac
+      - name: Recover all official ENVINFO disclosure attachments
+        if: matrix.source == 'ENVINFO' && steps.retrieve.outcome == 'success'
+        id: attachments
+        continue-on-error: true
+        run: python collectors/envinfo_attachment_recovery.py --out output/ENVINFO --repo-root .
+      - name: Evaluate evidence by actual source and requested years
+        if: always()
+        env:
+          RETRIEVE_OUTCOME: ${{ steps.retrieve.outcome }}
+          ATTACHMENT_OUTCOME: ${{ steps.attachments.outcome }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from orchestrator.collection_acceptance import evaluate
+          source=os.environ["SOURCE"]
+          q=Path("soiloil_2026/internal/request.json")
+          evidence=Path("soiloil_2026/internal")
+          if q.is_file():
+              req=json.loads(q.read_text(encoding="utf-8"))
+              req["sources"]={source:req["sources"][source]}
+              scoped=evidence/"scoped_request.json"
+              scoped.write_text(json.dumps(req,ensure_ascii=False,indent=2),encoding="utf-8")
+              try:
+                  verdict=evaluate("output",scoped,require_all_sources=False)
+              except Exception as exc:
+                  verdict={"status":"REVIEW_REQUIRED","blocking_issues":[{
+                      "source":source,"issue_type":"EVALUATION_FAILED","detail":str(exc)}]}
+          else:
+              verdict={"status":"REVIEW_REQUIRED","blocking_issues":[{
+                  "source":source,"issue_type":"REQUEST_NOT_CREATED"}]}
+          if os.environ["RETRIEVE_OUTCOME"]!="success" or (
+                  source=="ENVINFO" and os.environ["ATTACHMENT_OUTCOME"]!="success"):
+              verdict.setdefault("blocking_issues",[]).append({
+                  "source":source,"issue_type":"COLLECTOR_FAILED",
+                  "retrieve":os.environ["RETRIEVE_OUTCOME"],
+                  "attachment":os.environ["ATTACHMENT_OUTCOME"]})
+          if verdict.get("blocking_issues"):
+              verdict["status"]="REVIEW_REQUIRED"
+          evidence.joinpath("Collection_Acceptance.json").write_text(
+              json.dumps(verdict,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          status_file=Path("output")/source/"status.json"
+          status=json.loads(status_file.read_text(encoding="utf-8")) if status_file.exists() else {}
+          print(json.dumps({"source":source,
+                            "verdict":verdict.get("status"),
+                            "collected_status":status.get("status"),
+                            "rows":status.get("rows"),
+                            "details":status.get("detail_ok"),
+                            "attachments":status.get("attachment_ok"),
+                            "blocking_issues":verdict.get("blocking_issues",[])},ensure_ascii=False))
+          PY
+      - name: Preserve original public-source data even if partial
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-public-${{ matrix.source }}
+          path: |
+            output/${{ matrix.source }}/
+            soiloil_2026/internal/Collection_Acceptance.json
+            soiloil_2026/internal/scoped_request.json
+          if-no-files-found: warn
+          retention-days: 21
+          compression-level: 0
