@@ -37,6 +37,7 @@ on:
       - 'orchestrator/g0_promotion_policy.py'
       - 'orchestrator/g0_site_verification_policy.py'
       - 'orchestrator/g0_public_source_fallback.py'
+      - 'orchestrator/public_source_human_delivery.py'
       - 'orchestrator/public_site_crosscheck.py'
       - 'tests/test_public_site_crosscheck.py'
       - 'orchestrator/g0_public_disclosure_enrichment.py'
@@ -562,3 +563,106 @@ jobs:
           path: site-crosscheck/
           retention-days: 21
           if-no-files-found: warn
+
+  public_source_human_pdf_excel:
+    name: Deliver five public registries as readable PDF and Excel ZIP
+    needs: [public_fallback_preflight, public_source_fallback]
+    if: ${{ always() && needs.public_fallback_preflight.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      actions: read
+      contents: read
+    env:
+      PYTHONPATH: .:orchestrator
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Korean PDF printing and user-document validators
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium-browser || sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium
+          sudo fc-cache -f
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl Pillow
+      - name: Fetch five source archives independently without JSON filename collisions
+        uses: actions/download-artifact@v4
+        with:
+          pattern: g0-public-fallback-${{ github.run_id }}-*
+          path: source-artifacts
+          merge-multiple: false
+      - name: Fetch verified legal entity (not guessed from source names)
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-public-fallback-request-${{ github.run_id }}
+          path: verified-request
+      - name: Assemble exactly the five original public source directories
+        run: |
+          set -euo pipefail
+          mkdir -p combined/output
+          for source in ENVINFO PRTR CHEM_STATS CLEANSYS_AIR SOOSIRO_WATER; do
+            input="source-artifacts/g0-public-fallback-${{ github.run_id }}-$source/output/$source"
+            test -s "$input/status.json"
+            cp -a "$input" "combined/output/$source"
+          done
+      - name: Render ENVINFO disclosure PDFs, preserve attachments, build 5-source Excel
+        run: |
+          python - <<'PY'
+          import json,subprocess,sys
+          from pathlib import Path
+          evidence=json.loads(Path('verified-request/identity_evidence.json').read_text(encoding='utf-8'))
+          legal=str(evidence['legal_name'])
+          if evidence['status']!='COMPANY_VERIFIED_PUBLIC_DISCOVERY_ONLY' or not legal:
+              raise SystemExit('Unverified legal entity cannot receive public user archive')
+          # This is intentionally a public-registry-only ZIP; company ESG reports
+          # were not collected in the fallback and remain an explicit limitation.
+          cmd=[
+              sys.executable,'-m','orchestrator.public_source_human_delivery',
+              '--output-root','combined/output',
+              '--out','human-delivery',
+              '--company',legal,
+          ]
+          raise SystemExit(subprocess.run(cmd,check=False).returncode)
+          PY
+      - name: Verify user ZIP, completeness caveat and PDF/Excel-only formats
+        run: |
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          q=json.loads(Path('human-delivery/Internal_Delivery_QA.json').read_text(encoding='utf-8'))
+          if q['status'] not in {'USER_PDF_EXCEL_ZIP_READY','USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS'}:
+              raise SystemExit('No validated user PDF/Excel bundle')
+          if 'CORPORATE_REPORTS_NOT_INCLUDED_IN_PUBLIC_SOURCE_ONLY_PACKAGE' not in q.get('limitations',[]):
+              raise SystemExit('Missing disclosure of nonincluded corporate reports')
+          z=Path(q['outputs']['zip'])
+          with zipfile.ZipFile(z) as a:
+              files=[x for x in a.namelist() if not x.endswith('/')]
+              if a.testzip() or not files or not all(f.endswith(('.pdf','.xlsx')) for f in files):
+                  raise SystemExit('User bundle contains machine files or corrupted material')
+          print('PDF/Excel validated; disclosure caveats preserved; JSON kept internal')
+          PY
+      - name: Publish validated user-facing PDF and Excel ZIP
+        id: user_upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-registry-human-PDF-Excel-${{ github.run_id }}
+          path: human-delivery/Public_Environmental_PDF_Excel.zip
+          if-no-files-found: error
+          retention-days: 21
+          compression-level: 0
+      - name: Require uploaded user ZIP ID
+        env:
+          USER_ARTIFACT_ID: ${{ steps.user_upload.outputs.artifact-id }}
+        run: |
+          test -n "$USER_ARTIFACT_ID"
+          echo "User PDF/Excel ZIP artifact ID $USER_ARTIFACT_ID"
+      - name: Retain internal evidence outside user ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-registry-internal-delivery-QA-${{ github.run_id }}
+          path: human-delivery/Internal_Delivery_QA.json
+          if-no-files-found: warn
+          retention-days: 21
