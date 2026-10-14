@@ -122,7 +122,7 @@ class PublicHumanDeliveryTests(unittest.TestCase):
                 result = mod.create(source, Path(td) / "user", "Test", reports,
                                     required_report_years=("2023", "2024"))
             self.assertEqual("DELIVERY_REVIEW_REQUIRED", result["status"])
-            self.assertIn("OFFICIAL_ANNUAL_REPORT_YEARS_MISSING:2023", result["problems"])
+            self.assertIn("OFFICIAL_ANNUAL_REPORT_YEARS_MISSING:2023,2024", result["problems"])
 
     def test_bad_unknown_status_cannot_become_a_completed_delivery(self):
         with tempfile.TemporaryDirectory() as td:
