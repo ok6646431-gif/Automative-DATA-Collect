@@ -17,6 +17,8 @@ jobs:
   unit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      PYTHONPATH: .:orchestrator
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
-      PYTHONPATH: .
+      PYTHONPATH: .:orchestrator
       PYTHONUNBUFFERED: '1'
     steps:
       - uses: actions/checkout@v4
