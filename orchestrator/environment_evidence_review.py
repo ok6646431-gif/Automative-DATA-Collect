@@ -274,6 +274,9 @@ def compare_prtr_envinfo(root, metrics):
             "비교판정": "", "집계범위": "미확인 (자료원마다 배출물질·조사범위 차이 가능)",
             "원문근거_PRTR": "PRTR/discovery.csv + PRTR/detail_table_rows.jsonl",
             "원문근거_ENVINFO": "", "처리원칙": "수치차이가 있더라도 오류 단정 금지",
+            "PRTR원문사업장표기범위": str(r.get("company_name_raw") or ""),
+            "ENVINFO원문사업장표기범위": "",
+            "사업장공개범위차이_참고": "",
         }
         if len(by_site) != 1:
             row["비교판정"] = "SITE_PAIRING_AMBIGUOUS_OR_MISSING"
@@ -282,6 +285,16 @@ def compare_prtr_envinfo(root, metrics):
         else:
             matched = by_site[0]
             row["ENVINFO사업장ID"] = matched["ENVINFO사업장ID"]
+            row["ENVINFO원문사업장표기범위"] = matched["사업장원문명"]
+            # A difference in the source-name qualifier is evidence of differing
+            # descriptions, NOT proof that the two totals exclude the same sites.
+            env_terminal = "터미널 포함" in matched["사업장원문명"]
+            prtr_terminal = "터미널 포함" in str(r.get("company_name_raw") or "")
+            if env_terminal and not prtr_terminal:
+                row["사업장공개범위차이_참고"] = (
+                    "ENVINFO 사업장명에 '터미널 포함' 명시; PRTR 사업장명에는 "
+                    "같은 범위 설명 없음. 실제 조사범위 불일치 여부 미확인"
+                )
             row["ENVINFO원문배출량"] = matched["원문수치"]
             row["ENVINFO원문단위"] = matched["원문단위"]
             row["원문근거_ENVINFO"] = matched["원문HTML"]
