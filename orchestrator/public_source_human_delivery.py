@@ -37,8 +37,13 @@ SOURCE_URLS = {
     "SOOSIRO_WATER": "https://www.soosiro.or.kr/",
 }
 USER_EXTENSIONS = {".pdf", ".xlsx"}
-STATUS_UNCERTAIN = {"NOT_RUN", "FAILED", "COLLECTION_FAILED", "INVALID_SCOPE",
-                    "REVIEW_REQUIRED", "MISSING_STATUS"}
+ACCEPTED_SOURCE_STATUSES = {
+    "ENVINFO": {"DATA_FOUND", "NO_DATA_CONFIRMED", "NO_PUBLIC_RECORD_FOUND_IN_SCOPE"},
+    "PRTR": {"DATA_FOUND", "NO_DATA_CONFIRMED"},
+    "CHEM_STATS": {"DATA_FOUND", "NO_DATA_CONFIRMED"},
+    "CLEANSYS_AIR": {"DATA_FOUND", "NO_DATA_CONFIRMED", "NO_FACILITY_MATCH_CONFIRMED"},
+    "SOOSIRO_WATER": {"DATA_FOUND", "NO_DATA_CONFIRMED", "NO_FACILITY_MATCH_CONFIRMED"},
+}
 ATTACHMENT_SUPPORTED = {".pdf", ".xlsx", ".xls", ".png", ".jpg", ".jpeg"}
 
 
@@ -180,8 +185,11 @@ def _render_envinfo(root, target, qa):
 
 def _attachments(root, target, qa):
     env = root / "ENVINFO"
-    rows = [r for r in read_csv(env / "attachment_index.csv")
-            if r.get("collection_status") == "DOWNLOADED"]
+    indexed_rows = read_csv(env / "attachment_index.csv")
+    rows = [r for r in indexed_rows if r.get("collection_status") == "DOWNLOADED"]
+    missing = [r for r in indexed_rows if r.get("collection_status") != "DOWNLOADED"]
+    if missing:
+        qa["problems"].append(f"ENVINFO_ATTACHMENT_DOWNLOAD_NOT_COMPLETE:{len(missing)}")
     handled = set()
     exported = 0
     for row in rows:
@@ -217,7 +225,7 @@ def _attachments(root, target, qa):
         qa["problems"].append("ENVINFO_ATTACHMENT_DELIVERY_NOT_COMPLETE")
 
 
-def _reports(archive, target, qa):
+def _reports(archive, target, qa, required_report_years=()):
     if not archive:
         qa["report_status"] = "NOT_PROVIDED"
         return
@@ -226,6 +234,7 @@ def _reports(archive, target, qa):
         qa["problems"].append("REPORT_PDF_ARCHIVE_MISSING")
         return
     count = 0
+    years_delivered = set()
     try:
         with zipfile.ZipFile(archive) as zipped:
             if zipped.testzip():
@@ -245,14 +254,19 @@ def _reports(archive, target, qa):
                     path.unlink(missing_ok=True)
                 else:
                     count += 1
+                    years_delivered.update(re.findall(r"(?<!\\d)20\\d{2}(?!\\d)", Path(entry.filename).name))
         qa["official_report_pdfs_delivered"] = count
+        qa["official_report_years_delivered"] = sorted(years_delivered)
+        missing_years = sorted(set(map(str, required_report_years)) - years_delivered)
+        if missing_years:
+            qa["problems"].append("OFFICIAL_ANNUAL_REPORT_YEARS_MISSING:" + ",".join(missing_years))
         if count == 0:
             qa["problems"].append("NO_OFFICIAL_REPORT_PDFS")
     except (OSError, zipfile.BadZipFile, ValueError) as exc:
         qa["problems"].append("REPORT_ZIP_UNREADABLE:" + str(exc))
 
 
-def create(root, destination, company, reports_archive=None):
+def create(root, destination, company, reports_archive=None, required_report_years=()):
     root = Path(root).resolve()
     dest = Path(destination).resolve()
     dest.mkdir(parents=True, exist_ok=True)
@@ -261,7 +275,7 @@ def create(root, destination, company, reports_archive=None):
         shutil.rmtree(staging)
     staging.mkdir()
     qa = {"company": company, "status": "DELIVERY_NOT_READY",
-          "problems": [], "source_checks": {}, "required_sources": list(SOURCES),
+          "problems": [], "limitations": [], "source_checks": {}, "required_sources": list(SOURCES),
           "outputs": {}}
     overview = []
     for source in SOURCES:
@@ -270,7 +284,17 @@ def create(root, destination, company, reports_archive=None):
         state = str(status.get("status") or "MISSING_STATUS")
         source_rows = _rows(root, source)
         counts = {name: len(rows) for name, rows in source_rows}
-        acceptable = state not in STATUS_UNCERTAIN and src.is_dir()
+        errors = status.get("errors", [])
+        has_errors = (bool(errors) if isinstance(errors, (list, dict, str))
+                      else int(errors or 0) > 0)
+        acceptable = state in ACCEPTED_SOURCE_STATUSES[source] and src.is_dir() and not has_errors
+        if state in {"NO_FACILITY_MATCH_CONFIRMED", "NO_PUBLIC_RECORD_FOUND_IN_SCOPE", "NO_DATA_CONFIRMED"}:
+            qa["limitations"].append(source + ":NO_SOURCE_NATIVE_ROWS_OR_FACILITY_MATCH")
+        if state == "DATA_FOUND" and not sum(counts.values()):
+            qa["problems"].append("DATA_FOUND_WITHOUT_USER_SOURCE_ROWS:" + source)
+        for flag in ("detail_fail", "attachment_fail"):
+            if int(status.get(flag, 0) or 0) > 0:
+                qa["problems"].append(f"COLLECTOR_PARTIAL_DETAIL_FAILURE:{source}:{flag}")
         qa["source_checks"][source] = {
             "collector_status": state, "counts": counts,
             "evidence_present": src.is_dir(),
@@ -300,7 +324,7 @@ def create(root, destination, company, reports_archive=None):
                        ])])
     _render_envinfo(root, staging, qa)
     _attachments(root, staging, qa)
-    _reports(reports_archive, staging, qa)
+    _reports(reports_archive, staging, qa, required_report_years)
     files = sorted(p for p in staging.rglob("*") if p.is_file())
     counts = Counter(p.suffix.lower() for p in files)
     if not files or counts[".xlsx"] < 6:
@@ -322,7 +346,9 @@ def create(root, destination, company, reports_archive=None):
     qa["outputs"] = {"zip": str(zip_path), "zip_sha256": _sha(zip_path),
                      "zip_bytes": zip_path.stat().st_size,
                      "pdf_files": counts[".pdf"], "excel_files": counts[".xlsx"]}
-    qa["status"] = "USER_PDF_EXCEL_ZIP_READY" if not qa["problems"] else "DELIVERY_REVIEW_REQUIRED"
+    qa["status"] = ("DELIVERY_REVIEW_REQUIRED" if qa["problems"] else
+                    "USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS" if qa["limitations"] else
+                    "USER_PDF_EXCEL_ZIP_READY")
     report = dest / "Internal_Delivery_QA.json"
     report.write_text(json.dumps(qa, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({"delivery_status": qa["status"],
@@ -338,9 +364,14 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--company", required=True)
     p.add_argument("--reports-zip", default="")
+    p.add_argument("--required-report-years", default="",
+                   help="Comma-separated official annual report years that must be present")
     args = p.parse_args()
-    result = create(args.output_root, args.out, args.company, args.reports_zip or None)
-    return 0 if result["status"] == "USER_PDF_EXCEL_ZIP_READY" else 2
+    years = tuple(y.strip() for y in args.required_report_years.split(",") if y.strip())
+    result = create(args.output_root, args.out, args.company, args.reports_zip or None, years)
+    return 0 if result["status"] in {
+        "USER_PDF_EXCEL_ZIP_READY", "USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS"
+    } else 2
 
 
 if __name__ == "__main__":
