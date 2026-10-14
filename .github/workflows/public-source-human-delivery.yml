@@ -85,6 +85,7 @@ jobs:
           assert q['envinfo_source_attachments_downloaded']==12
           assert q['envinfo_attachments_delivered']==12
           assert q['official_report_pdfs_delivered']==6
+          from openpyxl import load_workbook
           with zipfile.ZipFile('delivery/Public_Environmental_PDF_Excel.zip') as z:
               paths=[name for name in z.namelist() if not name.endswith('/')]
               assert all(name.lower().endswith(('.pdf','.xlsx')) for name in paths)
@@ -92,25 +93,24 @@ jobs:
               assert sum(x.startswith('ENVINFO_공식첨부자료/') for x in paths)==12
               assert sum(x.startswith('공식_지속가능경영보고서_PDF/') for x in paths)==6
               assert sum(x.endswith('.xlsx') for x in paths)==7
-          from openpyxl import load_workbook
-          with z.open('01_환경규제_사업장식별_수치검토.xlsx') as source:
-              wb=load_workbook(source,read_only=True)
-              try:
-                  assert {'검토요약','사업장_식별근거','행정처분_원문',
-                          'PRTR_화학배출량비교','대기TMS_단위범위검토'}.issubset(set(wb.sheetnames))
-                  sheet=wb['행정처분_원문']
-                  assert sheet.max_row==7, ('2023 5 + 2024 1 original violation records',sheet.max_row)
-                  prtr=wb['PRTR_화학배출량비교']
-                  assert prtr.max_row==6
-              finally:
-                  wb.close()
+              with z.open('01_환경규제_사업장식별_수치검토.xlsx') as source:
+                  wb=load_workbook(source,read_only=True)
+                  try:
+                      assert {'검토요약','사업장_식별근거','행정처분_원문',
+                              'PRTR_화학배출량비교','대기TMS_단위범위검토'}.issubset(set(wb.sheetnames))
+                      sheet=wb['행정처분_원문']
+                      assert sheet.max_row==7, ('2023 5 + 2024 1 original violation records',sheet.max_row)
+                      prtr=wb['PRTR_화학배출량비교']
+                      assert prtr.max_row==6
+                  finally:
+                      wb.close()
+              assert z.testzip() is None
           reviewed=q['interpretation']
           assert reviewed['legal_disclosure_records']==6
           assert reviewed['prtr_years_compared']==5
           assert 'PRTR_SITE_IDENTITY_UNRESOLVED' in reviewed['flags']
           assert 'PRTR_ENVINFO_MATERIAL_DIFFERENCE_REVIEW' in reviewed['flags']
           assert 'CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED' in reviewed['flags']
-              assert z.testzip() is None
           print('PASS: original PDF 6+10+12, seven Excel files, six sanctions, PRTR/TMS safe comparison, no JSON')
           PY
       - name: Publish actual validated user PDF and Excel ZIP
