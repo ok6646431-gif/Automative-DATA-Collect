@@ -55,9 +55,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          mkdir -p input/output
           for source in ENVINFO PRTR CHEM_STATS CLEANSYS_AIR SOOSIRO_WATER; do
-            gh run download 38417731063 --name "S-OIL-public-$source" --dir input
-            test -s "input/output/$source/status.json"
+            gh run download 38417731063 --name "S-OIL-public-$source" --dir "source-artifacts/$source"
+            test -s "source-artifacts/$source/output/$source/status.json"
+            cp -a "source-artifacts/$source/output/$source" "input/output/$source"
           done
           gh run download 38417731063 --name 'S-OIL-공식_ESG_보고서_PDF_2020-2025' --dir official-reports
           test -s official-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
