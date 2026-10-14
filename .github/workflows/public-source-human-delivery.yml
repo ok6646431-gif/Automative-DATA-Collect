@@ -1,0 +1,106 @@
+name: Public-source PDF Excel delivery regression
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/public_source_human_delivery.py'
+      - 'tests/test_public_source_human_delivery.py'
+      - '.github/workflows/public-source-human-delivery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install document validation dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl Pillow
+      - name: Source-agnostic delivery tests
+        run: |
+          python -m py_compile orchestrator/public_source_human_delivery.py
+          python -m unittest tests.test_public_source_human_delivery -v
+
+  genuine_s_oil_replay:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      PYTHONPATH: .
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PDF reconstruction and Korean fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium-browser || sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium
+          sudo fc-cache -f
+      - name: Install document validators
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl Pillow
+      - name: Download genuine S-OIL five public-source artifacts (not synthetic)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for source in ENVINFO PRTR CHEM_STATS CLEANSYS_AIR SOOSIRO_WATER; do
+            gh run download 38417731063 --name "S-OIL-public-$source" --dir input
+            test -s "input/output/$source/status.json"
+          done
+          gh run download 38417731063 --name 'S-OIL-공식_ESG_보고서_PDF_2020-2025' --dir official-reports
+          test -s official-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
+      - name: Build human-only ZIP; enforce report, ENVINFO disclosure and attachment completeness
+        run: >-
+          python -m orchestrator.public_source_human_delivery
+          --output-root input/output
+          --out delivery
+          --company 'S-OIL(주)'
+          --reports-zip official-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
+      - name: Prove full source-year coverage and only PDF/XLSX in actual ZIP
+        run: |
+          python - <<'PY'
+          import json, zipfile
+          from pathlib import Path
+          q=json.loads(Path('delivery/Internal_Delivery_QA.json').read_text(encoding='utf-8'))
+          assert q['status']=='USER_PDF_EXCEL_ZIP_READY', q['problems']
+          assert q['envinfo_disclosure_expected']==10
+          assert q['envinfo_disclosure_pdf_created']==10
+          assert q['envinfo_source_attachments_downloaded']==12
+          assert q['envinfo_attachments_delivered']==12
+          assert q['official_report_pdfs_delivered']==6
+          with zipfile.ZipFile('delivery/Public_Environmental_PDF_Excel.zip') as z:
+              paths=[name for name in z.namelist() if not name.endswith('/')]
+              assert all(name.lower().endswith(('.pdf','.xlsx')) for name in paths)
+              assert sum(x.startswith('ENVINFO_공개정보본문/') for x in paths)==10
+              assert sum(x.startswith('ENVINFO_공식첨부자료/') for x in paths)==12
+              assert sum(x.startswith('공식_지속가능경영보고서_PDF/') for x in paths)==6
+              assert sum(x.endswith('.xlsx') for x in paths)==6
+              assert z.testzip() is None
+          print('PASS: official reports 6, ENVINFO 10+12, full 5-source Excel ZIP, no JSON')
+          PY
+      - name: Publish actual validated user PDF and Excel ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-generalized-user-PDF-Excel-ZIP
+          path: delivery/Public_Environmental_PDF_Excel.zip
+          if-no-files-found: error
+          retention-days: 21
+          compression-level: 0
+      - name: Retain internal QA separately from user ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-internal-public-delivery-QA
+          path: delivery/Internal_Delivery_QA.json
+          if-no-files-found: warn
+          retention-days: 21
