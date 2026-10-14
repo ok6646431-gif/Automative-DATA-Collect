@@ -170,22 +170,27 @@ def build(profile):
     # leaving PRTR discovery incorrectly UNRESOLVED despite a verified Onsan
     # address. These are candidate hints, not a source-native ID crosswalk.
     verified_address_anchors = {}
+    explicit_mapped_addresses = set()
+    # A canonical source label, if previously supplied, takes precedence over
+    # the generated site-name label for the *same* verified address. Otherwise
+    # an innocent alias duplicate would create two candidate IDs and spuriously
+    # mark a uniquely located facility as ambiguous.
+    for label, addresses in (profile.get("site_address_anchors") or {}).items():
+        if not isinstance(addresses, (list, tuple)) or not str(label).strip():
+            continue
+        vetted = sorted(set(str(a).strip() for a in addresses
+                            if str(a).strip() in site_addresses))
+        if vetted:
+            verified_address_anchors[str(label)] = vetted
+            explicit_mapped_addresses.update(vetted)
     for i, site in enumerate(identity_gate["verified_sites"], 1):
         address = str(site.get("address") or "").strip()
         name = str(site.get("site_name") or "").strip()
-        if address:
+        if address and address not in explicit_mapped_addresses:
             label = name or f"VERIFIED_SITE_{i}"
             verified_address_anchors.setdefault(label, [])
             if address not in verified_address_anchors[label]:
                 verified_address_anchors[label].append(address)
-    # Retain explicit canonical labels only when their addresses occur in the
-    # G0-verified set. Never promote unverified profile site hints.
-    for label, addresses in (profile.get("site_address_anchors") or {}).items():
-        if not isinstance(addresses, (list, tuple)) or not str(label).strip():
-            continue
-        vetted = [str(a).strip() for a in addresses if str(a).strip() in site_addresses]
-        if vetted:
-            verified_address_anchors[str(label)] = sorted(set(vetted))
     req={"request_id":profile["request_id"],"company_display_name":company,"profile_version":profile.get("profile_version","1.0"),"related_entity_exclusions":exclusions,"sources":{}}
 
     p=plan["ENVINFO"]; s=int(p["start_year"]); e=int(p["end_year"])
