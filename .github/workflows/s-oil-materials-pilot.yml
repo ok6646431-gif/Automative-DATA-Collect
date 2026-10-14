@@ -195,7 +195,12 @@ jobs:
               names=[x for x in archive.namelist() if not x.endswith('/')]
               assert names and archive.testzip() is None
               assert all(x.lower().endswith(('.pdf','.xlsx')) for x in names)
-              assert sum(x.lower().endswith('.xlsx') for x in names)>=6
+              assert sum(x.lower().endswith('.xlsx') for x in names)>=7
+              assert '01_환경규제_사업장식별_수치검토.xlsx' in names
+          checks=q.get('interpretation') or {}
+          assert checks.get('status') in {'INTERPRETATION_REVIEW_REQUIRED',
+                                          'STRUCTURED_EXTRACTION_COMPLETE'}
+          assert checks.get('identity_records',0)>=1
           PY
       - name: Upload completed user PDF/Excel package
         id: human_upload
