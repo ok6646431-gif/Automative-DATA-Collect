@@ -115,6 +115,20 @@ class PublicEnvironmentalEvidenceTests(unittest.TestCase):
             self.assertEqual(64, len(rows[2]["원문SHA256"]))
             self.assertEqual([], result["qa_issues"])
 
+    def test_missing_violation_table_is_not_false_announcement_of_zero_offenses(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = _fixture(temp)
+            p = root / "ENVINFO" / "raw_detail" / "2024_000161472_S-OIL.html"
+            html = p.read_text(encoding="utf-8")
+            first = html.index('<table><caption>환경관련 법규 위반 현황</caption>')
+            p.write_text(html[:first] + '</html>', encoding="utf-8")
+            result = e.review(root)
+            row = next(x for x in result["legal_coverage_rows"] if x["공개연도"]=="2024")
+            self.assertEqual("아니오", row["개별표존재"])
+            self.assertIn("0건을 입증하지 않음", row["해석주의"])
+            self.assertFalse(any("LEGAL_DISCLOSURE_TABLE_MISSING" in x
+                                 for x in result["qa_issues"]))
+
     def test_prtr_units_require_native_header_and_identification_stays_unresolved(self):
         with tempfile.TemporaryDirectory() as temp:
             result = e.review(_fixture(temp))
