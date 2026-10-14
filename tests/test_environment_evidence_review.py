@@ -202,6 +202,24 @@ class PublicEnvironmentalEvidenceTests(unittest.TestCase):
             self.assertEqual("NOT_VERIFIED_IN_CAPTURE",row["CleanSYS_단위검증"])
             self.assertEqual("",row["CleanSYS_NOx환산톤"])
 
+    def test_prtr_address_candidate_remains_unconfirmed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = _fixture(temp)
+            p = root / "PRTR/discovery.csv"
+            records = e._csv(p)
+            for row in records:
+                row["match_status"] = "ADDRESS_CANDIDATE"
+                row["proposed_site_ids"] = "온산공장"
+            _write_csv(p, records)
+            result = e.review(root)
+            self.assertIn("PRTR_SITE_IDENTITY_CANDIDATE_NOT_CANONICAL", result["flags"])
+            self.assertNotIn("PRTR_SITE_IDENTITY_UNRESOLVED", result["flags"])
+            self.assertTrue(all("식별 미확정" in r["처리원칙"]
+                                for r in result["prtr_comparison_rows"]))
+            prtr = [r for r in result["identity_rows"] if r["자료원"]=="PRTR"]
+            self.assertTrue(prtr)
+            self.assertIn("미확정",prtr[0]["주의"])
+
     def test_no_prtr_ton_conversion_without_source_native_header(self):
         with tempfile.TemporaryDirectory() as temp:
             root = _fixture(temp)
