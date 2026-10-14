@@ -94,7 +94,7 @@ def parse_envinfo(root):
     discovered = _csv(env / "discovery.csv")
     names = {(str(r.get("year")), str(r.get("compId"))):
              str(r.get("compNm") or "") for r in discovered}
-    violations, metrics, qa_issues = [], [], []
+    violations, metrics, qa_issues, legal_coverage = [], [], [], []
     body_paths = sorted((env / "raw_detail").glob("*.html"))
     for path in body_paths:
         file_match = re.match(r"(20\d\d)_(\d+)_", path.name)
@@ -114,6 +114,7 @@ def parse_envinfo(root):
             "공식출처": PUBLIC_URLS["ENVINFO"], "원문SHA256": source_hash,
         }
         legal_tables = 0
+        before_file_violation_count = len(violations)
         for table in soup.find_all("table"):
             cap = table.find("caption")
             title = re.sub(r"\s+", " ", cap.get_text(" ", strip=True)).strip() if cap else ""
@@ -154,9 +155,17 @@ def parse_envinfo(root):
                         "원문셀_전체": content,
                         "수치": _decimal(matched.group(1)),
                     })
-        if legal_tables == 0:
-            qa_issues.append("LEGAL_DISCLOSURE_TABLE_MISSING:" + path.name)
-    return violations, metrics, qa_issues
+        page_count = len(violations) - before_file_violation_count
+        legal_coverage.append({
+            **provenance,
+            "개별위반기록추출수": page_count,
+            "개별표존재": "예" if legal_tables else "아니오",
+            "공개기록상태": ("개별 위반 기록 추출" if page_count else
+                           "표 내 개별 기록 없음" if legal_tables else
+                           "개별표 미확인"),
+            "해석주의": "기록 미발견은 실제 위반·행정처분 0건을 입증하지 않음",
+        })
+    return violations, metrics, qa_issues, legal_coverage
 
 
 def inspect_identity(root):
@@ -331,7 +340,7 @@ def compare_air_envinfo(root, metrics):
 
 
 def review(root):
-    violations, metrics, qa = parse_envinfo(root)
+    violations, metrics, qa, legal_coverage = parse_envinfo(root)
     identities = inspect_identity(root)
     prtr = compare_prtr_envinfo(root, metrics)
     air = compare_air_envinfo(root, metrics)
@@ -344,6 +353,10 @@ def review(root):
            if r["비교판정"].startswith("NO_AUTOMATIC_NUMERIC")]
     ))
     overview = [
+        {"항목": "행정처분 원문 공개영역",
+         "결과": f"공개정보 본문 {len(legal_coverage)}건 중 위반 기록 표출 {sum(bool(x['개별위반기록추출수']) for x in legal_coverage)}건",
+         "판정": "표 미확인과 위반 0건을 동일시하지 않음",
+         "확인방법": "공개정보 페이지별 표 존재 및 개별기록 추출 수 기록"},
         {"항목": "ENVINFO 행정처분 원문 추출",
          "결과": f"{len(violations)}개 공개기록", "판정": "원문 전사, 법적 확정판단 아님",
          "확인방법": "공개연도·원문사업장ID·원문HTML·처분일자 모두 제공"},
@@ -369,6 +382,7 @@ def review(root):
         "status": "INTERPRETATION_REVIEW_REQUIRED" if (flags or qa) else "STRUCTURED_EXTRACTION_COMPLETE",
         "flags": flags, "qa_issues": qa, "overview": overview,
         "identity_rows": identities, "violation_rows": violations,
+        "legal_coverage_rows": legal_coverage,
         "prtr_comparison_rows": prtr, "air_comparison_rows": air,
         "envinfo_metric_rows": source_metrics,
     }
