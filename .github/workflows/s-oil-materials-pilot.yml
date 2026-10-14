@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/s-oil-materials-pilot.yml'
       - '.github/scripts/s_oil_materials_pilot.py'
+      - 'orchestrator/public_source_human_delivery.py'
   workflow_dispatch:
 
 permissions:
@@ -137,3 +138,84 @@ jobs:
           if-no-files-found: warn
           retention-days: 21
           compression-level: 0
+
+  human_pdf_excel_delivery:
+    name: Publish S-OIL PDF and Excel ZIP (not JSON)
+    needs: [reports, public_sources]
+    if: ${{ always() && needs.reports.result == 'success' && needs.public_sources.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: .:orchestrator
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Korean PDF printer and fonts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium-browser || sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium
+          sudo fc-cache -f
+      - name: Install workbook, PDF and image validators
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl Pillow
+      - name: Reassemble all five public original sources
+        uses: actions/download-artifact@v4
+        with:
+          pattern: S-OIL-public-*
+          path: from-sources
+          merge-multiple: true
+      - name: Download official report PDF ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: S-OIL-공식_ESG_보고서_PDF_2020-2025
+          path: from-reports
+      - name: Build and validate only PDF/Excel user ZIP
+        run: >-
+          python -m orchestrator.public_source_human_delivery
+          --output-root from-sources/output
+          --out human-delivery
+          --company 'S-OIL(주)'
+          --reports-zip from-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
+      - name: Require original ENVINFO body plus attachments and PDF reports
+        run: |
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          p=Path('human-delivery/Internal_Delivery_QA.json')
+          q=json.loads(p.read_text(encoding='utf-8'))
+          assert q['status']=='USER_PDF_EXCEL_ZIP_READY',q['problems']
+          assert q['envinfo_disclosure_pdf_created']==q['envinfo_disclosure_expected']
+          assert q['envinfo_attachments_delivered']==q['envinfo_source_attachments_downloaded']
+          assert q['official_report_pdfs_delivered']>=1
+          z=Path(q['outputs']['zip'])
+          with zipfile.ZipFile(z) as archive:
+              names=[x for x in archive.namelist() if not x.endswith('/')]
+              assert names and archive.testzip() is None
+              assert all(x.lower().endswith(('.pdf','.xlsx')) for x in names)
+              assert sum(x.lower().endswith('.xlsx') for x in names)>=6
+          PY
+      - name: Upload completed user PDF/Excel package
+        id: human_upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-완료_환경자료_인간용_PDF_엑셀_ZIP
+          path: human-delivery/Public_Environmental_PDF_Excel.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 21
+      - name: Require GitHub artifact upload confirmation
+        env:
+          ARTIFACT_ID: ${{ steps.human_upload.outputs.artifact-id }}
+        run: |
+          test -n "$ARTIFACT_ID"
+          echo "Human-readable ZIP published under GitHub artifact ID: $ARTIFACT_ID"
+      - name: Preserve validation machine data separately (not user-facing ZIP)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-internal-PDF-Excel-delivery-QA
+          path: human-delivery/Internal_Delivery_QA.json
+          if-no-files-found: warn
+          retention-days: 21
