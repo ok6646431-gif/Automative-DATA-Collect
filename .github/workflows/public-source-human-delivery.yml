@@ -6,6 +6,7 @@ on:
     paths:
       - 'orchestrator/public_source_human_delivery.py'
       - 'orchestrator/environment_evidence_review.py'
+      - 'orchestrator/source_snapshot_recovery.py'
       - 'tests/test_environment_evidence_review.py'
       - 'tests/test_public_source_human_delivery.py'
       - '.github/workflows/public-source-human-delivery.yml'
@@ -31,7 +32,7 @@ jobs:
       - name: Source-agnostic delivery tests
         run: |
           python -m py_compile orchestrator/public_source_human_delivery.py orchestrator/environment_evidence_review.py
-          python -m unittest tests.test_public_source_human_delivery tests.test_environment_evidence_review -v
+          python -m unittest tests.test_public_source_human_delivery tests.test_environment_evidence_review tests.test_source_snapshot_recovery -v
 
   genuine_s_oil_replay:
     needs: unit
