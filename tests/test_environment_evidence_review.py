@@ -155,6 +155,49 @@ class PublicEnvironmentalEvidenceTests(unittest.TestCase):
             self.assertNotIn("차이_톤", row)
             self.assertIn("CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED", result["flags"])
 
+    def test_clean_sys_kg_per_year_from_exact_raw_api_field_title(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = _fixture(temp)
+            raw = root / "CLEANSYS_AIR/raw_annual/130140_S_OIL_온산공장.json"
+            raw.parent.mkdir(parents=True, exist_ok=True)
+            raw.write_text(json.dumps({
+                "fieldNm": ["examin_year", "fact_code", "nox_dscamt"],
+                "fieldTitle": ["년도", "시설코드", "대기오염물질 연간 배출량(kg/년) - 질소산화물"],
+                "ResultList": [{
+                    "examin_year": "2024", "fact_code": "130140",
+                    "nox_dscamt": 2345048,
+                }],
+            },ensure_ascii=False),encoding="utf-8")
+            result = e.review(root)
+            row = result["air_comparison_rows"][0]
+            self.assertEqual("kg/년", row["CleanSYS원문단위"])
+            self.assertEqual("SOURCE_API_FIELD_TITLE_AND_ROW_VERIFIED", row["CleanSYS_단위검증"])
+            self.assertAlmostEqual(2345.048, row["CleanSYS_NOx환산톤"])
+            self.assertIn("질소산화물", row["CleanSYS_원문필드제목"])
+            self.assertEqual(64, len(row["CleanSYS_원문SHA256"]))
+            self.assertEqual("NOT_VERIFIED_AS_EQUIVALENT", row["집계범위"])
+            self.assertEqual("UNIT_VERIFIED_SCOPE_UNCONFIRMED_NO_DIRECT_DIFFERENCE", row["비교판정"])
+            self.assertNotIn("차이_톤", row)
+            self.assertIn("CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT_VERIFIED", result["flags"])
+            self.assertNotIn("CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED", result["flags"])
+
+    def test_clean_sys_rejects_another_facility_or_year_as_unit_proof(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = _fixture(temp)
+            raw = root / "CLEANSYS_AIR/raw_annual/130140_S_OIL_온산공장.json"
+            raw.parent.mkdir(parents=True, exist_ok=True)
+            raw.write_text(json.dumps({
+                "fieldNm": ["examin_year","fact_code","nox_dscamt"],
+                "fieldTitle": ["년도","시설코드","대기오염물질 연간 배출량(kg/년) - 질소산화물"],
+                "ResultList": [{
+                    "examin_year": "2023", "fact_code": "130140",
+                    "nox_dscamt": 2345048,
+                }],
+            },ensure_ascii=False),encoding="utf-8")
+            row = e.review(root)["air_comparison_rows"][0]
+            self.assertEqual("NOT_VERIFIED_IN_CAPTURE",row["CleanSYS_단위검증"])
+            self.assertEqual("",row["CleanSYS_NOx환산톤"])
+
     def test_no_prtr_ton_conversion_without_source_native_header(self):
         with tempfile.TemporaryDirectory() as temp:
             root = _fixture(temp)
