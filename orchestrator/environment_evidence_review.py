@@ -407,6 +407,12 @@ def compare_air_envinfo(root, metrics):
                        if proof else "NO_AUTOMATIC_NUMERIC_DIFF_UNVERIFIED_UNIT_AND_SCOPE"),
             "공개시설명_직접매칭건수": status.get("registry_identity_matches"),
             "통신TLS인증": status.get("tls_verification"),
+            "원문전달검증": (
+                "CERTIFICATE_VERIFICATION_EXCEPTION_DOCUMENTED"
+                if status.get("tls_verification") is False else
+                "TLS_STATE_NOT_RECORDED" if status.get("tls_verification") is None else
+                "HTTPS_CERTIFICATE_VERIFIED_IN_COLLECTION"
+            ),
             "원문근거": "CLEANSYS_AIR/annual_rows.jsonl; " +
                       (found["원문HTML"] if found else "ENVINFO site missing"),
             "주의": "조회 성공 및 명칭 유사성은 집계범위 동일성·규제 적용성의 증거가 아님",
@@ -430,6 +436,8 @@ def review(root):
            if r["CleanSYS_단위검증"] == "NOT_VERIFIED_IN_CAPTURE"]
         + ["CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT_VERIFIED" for r in air
            if r["CleanSYS_단위검증"] == "SOURCE_API_FIELD_TITLE_AND_ROW_VERIFIED"]
+        + ["CLEANSYS_TLS_CERTIFICATE_NOT_VERIFIED" for r in air
+           if r["통신TLS인증"] is False]
     ))
     overview = [
         {"항목": "행정처분 원문 공개영역",
