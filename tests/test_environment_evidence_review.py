@@ -137,6 +137,10 @@ class PublicEnvironmentalEvidenceTests(unittest.TestCase):
             self.assertEqual(50.722, rows["2023"]["PRTR_환산톤"])
             self.assertAlmostEqual(4.778, rows["2023"]["차이_톤"])
             self.assertEqual("MATERIAL_DIFFERENCE_REVIEW", rows["2023"]["비교판정"])
+            self.assertIn("터미널 포함", rows["2023"]["ENVINFO원문사업장표기범위"])
+            self.assertNotIn("터미널 포함", rows["2023"]["PRTR원문사업장표기범위"])
+            self.assertIn("실제 조사범위 불일치 여부 미확인",
+                          rows["2023"]["사업장공개범위차이_참고"])
             self.assertEqual(0, rows["2024"]["차이_톤"])
             self.assertEqual("UNRESOLVED", rows["2023"]["PRTR식별상태"])
             self.assertIn("PRTR_SITE_IDENTITY_UNRESOLVED", result["flags"])
