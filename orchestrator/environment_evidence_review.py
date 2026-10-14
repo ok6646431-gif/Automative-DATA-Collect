@@ -324,7 +324,7 @@ def _cleansys_native_nox_unit(root, record):
                 continue
             index = names.index("nox_dscamt")
             label = str(titles[index])
-            if not ("질소산화물" in label and re.search(r"kg\\s*/\\s*년", label, re.I)):
+            if not ("질소산화물" in label and re.search(r"kg\s*/\s*년", label, re.I)):
                 continue
             matched = any(
                 str(item.get("fact_code") or "") == code
@@ -406,7 +406,7 @@ def review(root):
            if r["비교판정"] == "MATERIAL_DIFFERENCE_REVIEW"]
         + ["CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED" for r in air
            if r["CleanSYS_단위검증"] == "NOT_VERIFIED_IN_CAPTURE"]
-        + ["CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT" + "_VERIFIED" for r in air
+        + ["CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT_VERIFIED" for r in air
            if r["CleanSYS_단위검증"] == "SOURCE_API_FIELD_TITLE_AND_ROW_VERIFIED"]
     ))
     overview = [
