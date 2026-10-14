@@ -102,11 +102,16 @@ jobs:
                       assert sheet.max_row==7, ('2023 5 + 2024 1 original violation records',sheet.max_row)
                       prtr=wb['PRTR_화학배출량비교']
                       assert prtr.max_row==6
+                      coverage=wb['행정처분_공개범위']
+                      assert coverage.max_row==11
                   finally:
                       wb.close()
               assert z.testzip() is None
           reviewed=q['interpretation']
           assert reviewed['legal_disclosure_records']==6
+          assert reviewed['legal_disclosure_source_pages']==10
+          assert reviewed['legal_pages_without_individual_records']==8
+          assert not reviewed['qa_issues']
           assert reviewed['prtr_years_compared']==5
           assert 'PRTR_SITE_IDENTITY_UNRESOLVED' in reviewed['flags']
           assert 'PRTR_ENVINFO_MATERIAL_DIFFERENCE_REVIEW' in reviewed['flags']
