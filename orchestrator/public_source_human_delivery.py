@@ -291,6 +291,23 @@ def create(root, destination, company, reports_archive=None, required_report_yea
         has_errors = (bool(errors) if isinstance(errors, (list, dict, str))
                       else int(errors or 0) > 0)
         acceptable = state in ACCEPTED_SOURCE_STATUSES[source] and src.is_dir() and not has_errors
+        snapshot = _read_json(src / "source_snapshot_recovery.json", {}) or {}
+        if snapshot:
+            from orchestrator.source_snapshot_recovery import checksum
+            if (snapshot.get("recovery_status") != "VERIFIED_ORIGINAL_SNAPSHOT_REUSED"
+                    or snapshot.get("source") != source
+                    or not snapshot.get("source_run_id")
+                    or not snapshot.get("source_captured_at")):
+                qa["problems"].append("UNVERIFIED_SNAPSHOT_RECOVERY:" + source)
+            else:
+                digests = snapshot.get("original_files_sha256") or {}
+                for relative, expected_digest in digests.items():
+                    original = src / relative
+                    if not original.is_file() or checksum(original) != expected_digest:
+                        qa["problems"].append("SNAPSHOT_ORIGINAL_CHANGED:" + source + ":" + relative)
+                qa["limitations"].append(
+                    source + ":VERIFIED_PRIOR_SNAPSHOT_USED_NOT_CURRENT_COLLECTION"
+                )
         if state in {"NO_FACILITY_MATCH_CONFIRMED", "NO_PUBLIC_RECORD_FOUND_IN_SCOPE", "NO_DATA_CONFIRMED"}:
             qa["limitations"].append(source + ":NO_SOURCE_NATIVE_ROWS_OR_FACILITY_MATCH")
         if state == "DATA_FOUND" and not sum(counts.values()):
@@ -302,6 +319,9 @@ def create(root, destination, company, reports_archive=None, required_report_yea
             "collector_status": state, "counts": counts,
             "evidence_present": src.is_dir(),
             "source_url": SOURCE_URLS[source],
+            "retrieval_status": ("검증된 과거 원본 재사용" if snapshot else "이번 실행 수집본"),
+            "original_capture_date": snapshot.get("source_captured_at", "") if snapshot else "",
+            "original_run_id": snapshot.get("source_run_id", "") if snapshot else "",
         }
         if not acceptable:
             qa["problems"].append("SOURCE_INCOMPLETE:" + source + ":" + state)
@@ -310,6 +330,9 @@ def create(root, destination, company, reports_archive=None, required_report_yea
             "원자료_합계행수": sum(counts.values()),
             "상세내역": "; ".join(f"{k} {v}행" for k, v in counts.items()),
             "공식_출처_URL": SOURCE_URLS[source],
+            "자료취득경로": ("과거 검증본 재사용 (현재 서버 재조회 실패)" if snapshot else "이번 실행에서 원본 수집"),
+            "과거원본수집일시": snapshot.get("source_captured_at", "") if snapshot else "",
+            "과거원본GitHub실행ID": snapshot.get("source_run_id", "") if snapshot else "",
             "주의": ("자료원별 식별자는 서로 다른 체계임. 같은 주소만으로 동일 시설이라고 확정하지 않음."
                    if source != "ENVINFO" else "본문 PDF는 원본 HTML을 재구성한 인쇄본. 공식 원본 PDF와 구별.")
         })
@@ -357,6 +380,8 @@ def create(root, destination, company, reports_archive=None, required_report_yea
                 "PRTR 식별 미확정: UNRESOLVED 또는 주소 후보(ADDRESS_CANDIDATE) "
                 "상태는 공식 사업장 고유 ID 연계를 입증하지 않음"
             )
+        if row["자료원"] == "PRTR" and qa["source_checks"]["PRTR"]["retrieval_status"] == "검증된 과거 원본 재사용":
+            row["주의"] += "; 이번 PRTR 재조회 실패, 기존 검증 자료와 수집시점 표시"
         if row["자료원"] == "CLEANSYS_AIR" and interpretation["air_comparison_rows"]:
             row["주의"] = "수치 필드 단위 및 ENVINFO와 집계범위 동일성 미검증. 배출량 차이 임의 계산 금지"
     dict_rows_to_xlsx(staging / "00_수집범위_및_자료목록.xlsx",
