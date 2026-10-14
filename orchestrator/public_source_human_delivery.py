@@ -328,6 +328,9 @@ def create(root, destination, company, reports_archive=None, required_report_yea
         "qa_issues": interpretation["qa_issues"],
         "identity_records": len(interpretation["identity_rows"]),
         "legal_disclosure_records": len(interpretation["violation_rows"]),
+        "legal_disclosure_source_pages": len(interpretation["legal_coverage_rows"]),
+        "legal_pages_without_individual_records": sum(
+            not x["개별위반기록추출수"] for x in interpretation["legal_coverage_rows"]),
         "prtr_years_compared": len(interpretation["prtr_comparison_rows"]),
         "air_years_reviewed": len(interpretation["air_comparison_rows"]),
     }
@@ -338,6 +341,7 @@ def create(root, destination, company, reports_archive=None, required_report_yea
         [("검토요약", interpretation["overview"]),
          ("사업장_식별근거", interpretation["identity_rows"]),
          ("행정처분_원문", interpretation["violation_rows"]),
+         ("행정처분_공개범위", interpretation["legal_coverage_rows"]),
          ("PRTR_화학배출량비교", interpretation["prtr_comparison_rows"]),
          ("대기TMS_단위범위검토", interpretation["air_comparison_rows"]),
          ("ENVINFO_수치원문", interpretation["envinfo_metric_rows"])],
