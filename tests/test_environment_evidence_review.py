@@ -180,6 +180,8 @@ class PublicEnvironmentalEvidenceTests(unittest.TestCase):
             self.assertIn("질소산화물", row["CleanSYS_원문필드제목"])
             self.assertEqual(64, len(row["CleanSYS_원문SHA256"]))
             self.assertEqual("NOT_VERIFIED_AS_EQUIVALENT", row["집계범위"])
+            self.assertEqual("CERTIFICATE_VERIFICATION_EXCEPTION_DOCUMENTED",row["원문전달검증"])
+            self.assertIn("CLEANSYS_TLS_CERTIFICATE_NOT_VERIFIED", result["flags"])
             self.assertEqual("UNIT_VERIFIED_SCOPE_UNCONFIRMED_NO_DIRECT_DIFFERENCE", row["비교판정"])
             self.assertNotIn("차이_톤", row)
             self.assertIn("CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT_VERIFIED", result["flags"])
