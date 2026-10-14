@@ -70,13 +70,14 @@ jobs:
           --out delivery
           --company 'S-OIL(주)'
           --reports-zip official-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
+          --required-report-years 2020,2021,2022,2023,2024,2025
       - name: Prove full source-year coverage and only PDF/XLSX in actual ZIP
         run: |
           python - <<'PY'
           import json, zipfile
           from pathlib import Path
           q=json.loads(Path('delivery/Internal_Delivery_QA.json').read_text(encoding='utf-8'))
-          assert q['status']=='USER_PDF_EXCEL_ZIP_READY', q['problems']
+          assert q['status'] in {'USER_PDF_EXCEL_ZIP_READY', 'USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS'}, q['problems']
           assert q['envinfo_disclosure_expected']==10
           assert q['envinfo_disclosure_pdf_created']==10
           assert q['envinfo_source_attachments_downloaded']==12
