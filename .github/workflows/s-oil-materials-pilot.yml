@@ -171,6 +171,32 @@ jobs:
         with:
           name: S-OIL-공식_ESG_보고서_PDF_2020-2025
           path: from-reports
+      - name: Reuse accepted PRTR originals ONLY if new official host fetch failed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python .github/scripts/s_oil_materials_pilot.py setup
+          snapshot_state="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          q=json.loads(Path('from-sources/output/PRTR/status.json').read_text(encoding='utf-8'))
+          print(q['status'])
+          PY
+          )"
+          if [ "$snapshot_state" = "REMOTE_HOST_UNREACHABLE" ]; then
+            echo "Fresh PRTR host unreachable. Checking immutable prior accepted evidence."
+            gh run download 38417731063 --name S-OIL-public-PRTR --dir original-PRTR-snapshot
+            python -c "import json,pathlib; p=pathlib.Path('soiloil_2026/internal/request.json'); q=json.loads(p.read_text(encoding='utf-8')); q['sources']={'PRTR':q['sources']['PRTR']}; pathlib.Path('soiloil_2026/internal/current_prtr_scoped_request.json').write_text(json.dumps(q,ensure_ascii=False,indent=2),encoding='utf-8')"
+            python -m orchestrator.source_snapshot_recovery \
+              --current-source from-sources/output/PRTR \
+              --snapshot-source original-PRTR-snapshot/output/PRTR \
+              --current-request soiloil_2026/internal/current_prtr_scoped_request.json \
+              --snapshot-request original-PRTR-snapshot/soiloil_2026/internal/scoped_request.json \
+              --snapshot-acceptance original-PRTR-snapshot/soiloil_2026/internal/Collection_Acceptance.json \
+              --run-id 38417731063 \
+              --collected-at 2026-10-13T15:02:13Z
+          fi
       - name: Build and validate only PDF/Excel user ZIP
         run: >-
           python -m orchestrator.public_source_human_delivery
