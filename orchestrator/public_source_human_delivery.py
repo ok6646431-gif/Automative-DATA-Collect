@@ -347,12 +347,16 @@ def create(root, destination, company, reports_archive=None, required_report_yea
          ("ENVINFO_수치원문", interpretation["envinfo_metric_rows"])],
     )
     prtr_unresolved = any(
-        r["자료원"] == "PRTR" and "UNRESOLVED" in r["식별상태"]
+        r["자료원"] == "PRTR" and
+        any(status != "MATCHED" for status in r["식별상태"].split(" / "))
         for r in interpretation["identity_rows"]
     )
     for row in overview:
         if row["자료원"] == "PRTR" and prtr_unresolved:
-            row["주의"] = "사업장 식별 UNRESOLVED. 자료원에서 수집됐지만 법인·시설 귀속 확정 아님"
+            row["주의"] = (
+                "PRTR 식별 미확정: UNRESOLVED 또는 주소 후보(ADDRESS_CANDIDATE) "
+                "상태는 공식 사업장 고유 ID 연계를 입증하지 않음"
+            )
         if row["자료원"] == "CLEANSYS_AIR" and interpretation["air_comparison_rows"]:
             row["주의"] = "수치 필드 단위 및 ENVINFO와 집계범위 동일성 미검증. 배출량 차이 임의 계산 금지"
     dict_rows_to_xlsx(staging / "00_수집범위_및_자료목록.xlsx",
