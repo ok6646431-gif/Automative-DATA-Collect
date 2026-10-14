@@ -70,7 +70,8 @@ class PublicHumanDeliveryTests(unittest.TestCase):
                 source, reports = self.fixture(td, company)
                 with patch.object(mod, "render_envinfo_static_pdf", side_effect=self.mock_renderer):
                     result = mod.create(source, Path(td) / "user", company, reports)
-                self.assertEqual("USER_PDF_EXCEL_ZIP_READY", result["status"], result["problems"])
+                self.assertEqual("USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS", result["status"], result["problems"])
+                self.assertEqual(2, len(result["limitations"]))
                 self.assertEqual(1, result["envinfo_disclosure_pdf_created"])
                 self.assertEqual(1, result["envinfo_attachments_delivered"])
                 self.assertEqual(1, result["official_report_pdfs_delivered"])
@@ -113,6 +114,23 @@ class PublicHumanDeliveryTests(unittest.TestCase):
                 result = mod.create(source, Path(td) / "user", "Test", "missing.zip")
             self.assertEqual("DELIVERY_REVIEW_REQUIRED", result["status"])
             self.assertIn("REPORT_PDF_ARCHIVE_MISSING", result["problems"])
+
+    def test_report_years_missing_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, reports = self.fixture(td, "Test")
+            with patch.object(mod, "render_envinfo_static_pdf", side_effect=self.mock_renderer):
+                result = mod.create(source, Path(td) / "user", "Test", reports,
+                                    required_report_years=("2023", "2024"))
+            self.assertEqual("DELIVERY_REVIEW_REQUIRED", result["status"])
+            self.assertIn("OFFICIAL_ANNUAL_REPORT_YEARS_MISSING:2023", result["problems"])
+
+    def test_bad_unknown_status_cannot_become_a_completed_delivery(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, reports = self.fixture(td, "Test")
+            (source / "CHEM_STATS/status.json").write_text('{"status":"COLLECTION_FAILED_RETRY_EXHAUSTED"}', encoding="utf-8")
+            with patch.object(mod, "render_envinfo_static_pdf", side_effect=self.mock_renderer):
+                result = mod.create(source, Path(td) / "user", "Test", reports)
+            self.assertTrue(any(x.startswith("SOURCE_INCOMPLETE:CHEM_STATS") for x in result["problems"]))
 
     def test_json_internal_qa_never_enters_user_zip(self):
         with tempfile.TemporaryDirectory() as td:
