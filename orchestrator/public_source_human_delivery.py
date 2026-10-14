@@ -190,9 +190,12 @@ def _attachments(root, target, qa):
     missing = [r for r in indexed_rows if r.get("collection_status") != "DOWNLOADED"]
     if missing:
         qa["problems"].append(f"ENVINFO_ATTACHMENT_DOWNLOAD_NOT_COMPLETE:{len(missing)}")
-    handled = set()
+    # One source-native record must result in one user-visible attachment,
+    # even when the collector stores identical bytes only once across years.
+    # S-OIL's 2024 policy attachment refers to the 2023 canonical PDF file.
     exported = 0
-    for row in rows:
+    unique_origins = set()
+    for row_idx, row in enumerate(rows, 1):
         source = root.parent / str(row.get("stored_path") or "")
         # Source-native collector indices normally contain `output/ENVINFO/...`.
         if not source.exists():
@@ -200,10 +203,7 @@ def _attachments(root, target, qa):
         original = str(row.get("original_filename") or source.name)
         year = str(row.get("year") or "연도미상")
         site = str(row.get("compId") or "사업장미상")
-        dedup_key = (str(source), str(row.get("sha256") or ""))
-        if dedup_key in handled:
-            continue
-        handled.add(dedup_key)
+        unique_origins.add((str(source), str(row.get("sha256") or "")))
         if not source.is_file():
             qa["problems"].append("ENVINFO_ATTACHMENT_MISSING:" + str(source))
             continue
@@ -216,12 +216,13 @@ def _attachments(root, target, qa):
             qa["problems"].append("ENVINFO_LEGACY_XLS_REQUIRES_CONVERSION:" + str(source))
             continue
         target_file = (target / "ENVINFO_공식첨부자료" / _safe(year) / _safe(site) /
-                       f"{exported+1:03d}_{_safe(Path(original).stem)}")
+                       f"{row_idx:03d}_{_safe(Path(original).stem)}")
         if _copy_attachment(source, target_file, qa):
             exported += 1
-    qa["envinfo_source_attachments_downloaded"] = len(handled)
+    qa["envinfo_source_attachments_downloaded"] = len(rows)
+    qa["envinfo_attachment_unique_origins"] = len(unique_origins)
     qa["envinfo_attachments_delivered"] = exported
-    if exported != len(handled):
+    if exported != len(rows):
         qa["problems"].append("ENVINFO_ATTACHMENT_DELIVERY_NOT_COMPLETE")
 
 
@@ -255,7 +256,7 @@ def _reports(archive, target, qa, required_report_years=()):
                     path.unlink(missing_ok=True)
                 else:
                     count += 1
-                    years_delivered.update(re.findall(r"(?<!\\d)20\\d{2}(?!\\d)", Path(entry.filename).name))
+                    years_delivered.update(re.findall(r"(?<!\d)20\d{2}(?!\d)", Path(entry.filename).name))
         qa["official_report_pdfs_delivered"] = count
         qa["official_report_years_delivered"] = sorted(years_delivered)
         missing_years = sorted(set(map(str, required_report_years)) - years_delivered)
