@@ -115,6 +115,28 @@ class PublicHumanDeliveryTests(unittest.TestCase):
             self.assertEqual("DELIVERY_REVIEW_REQUIRED", result["status"])
             self.assertIn("REPORT_PDF_ARCHIVE_MISSING", result["problems"])
 
+    def test_reused_source_pdf_still_delivers_each_year_attachment_reference(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, reports = self.fixture(td, "Test")
+            index = source / "ENVINFO/attachment_index.csv"
+            with index.open("a", newline="", encoding="utf-8-sig") as file:
+                csv.writer(file).writerow([
+                    "2023", "001", "policy.pdf",
+                    "output/ENVINFO/raw_attachments/2024/001/policy.pdf",
+                    "DOWNLOADED",
+                    mod._sha(source / "ENVINFO/raw_attachments/2024/001/policy.pdf"),
+                ])
+            with patch.object(mod, "render_envinfo_static_pdf", side_effect=self.mock_renderer):
+                result = mod.create(source, Path(td) / "user", "Test", reports)
+            self.assertEqual(2, result["envinfo_source_attachments_downloaded"])
+            self.assertEqual(1, result["envinfo_attachment_unique_origins"])
+            self.assertEqual(2, result["envinfo_attachments_delivered"])
+            with zipfile.ZipFile(result["outputs"]["zip"]) as archive:
+                attachments = [x for x in archive.namelist() if x.startswith("ENVINFO_공식첨부자료/")]
+                self.assertEqual(2, len(attachments))
+                self.assertTrue(any("/2023/" in "/" + x for x in attachments))
+                self.assertTrue(any("/2024/" in "/" + x for x in attachments))
+
     def test_report_years_missing_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             source, reports = self.fixture(td, "Test")
