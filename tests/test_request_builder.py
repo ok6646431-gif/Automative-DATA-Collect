@@ -106,8 +106,14 @@ class TestRequestBuilder(unittest.TestCase):
                               "daily_years":[2024]}}}
         r=build(p)
         anchors=r["sources"]["PRTR"]["site_address_anchors"]
-        self.assertEqual(["울산광역시 울주군 온산읍 온산로 68"],anchors["온산공장"])
         self.assertEqual(["울산광역시 울주군 온산읍 온산로 68"],anchors["공식공장ID"])
+        self.assertNotIn("온산공장",anchors)
+        # If there is no canonical explicit ID, the verified current-site name
+        # becomes the single noncanonical address-candidate label.
+        without_explicit = dict(p)
+        without_explicit.pop("site_address_anchors")
+        generated = build(without_explicit)["sources"]["PRTR"]["site_address_anchors"]
+        self.assertEqual(["울산광역시 울주군 온산읍 온산로 68"], generated["온산공장"])
         self.assertNotIn("잘못된후보",anchors)
         self.assertNotIn("계열사",anchors)
         # Official address is useful for source-site candidate matching;
