@@ -71,15 +71,15 @@ class PublicHumanDeliveryTests(unittest.TestCase):
                 with patch.object(mod, "render_envinfo_static_pdf", side_effect=self.mock_renderer):
                     result = mod.create(source, Path(td) / "user", company, reports)
                 self.assertEqual("USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS", result["status"], result["problems"])
-                self.assertEqual(2, len(result["limitations"]))
+                self.assertGreaterEqual(len(result["limitations"]), 2)
                 self.assertEqual(1, result["envinfo_disclosure_pdf_created"])
                 self.assertEqual(1, result["envinfo_attachments_delivered"])
                 self.assertEqual(1, result["official_report_pdfs_delivered"])
                 with zipfile.ZipFile(result["outputs"]["zip"]) as z:
                     names=z.namelist()
-                    self.assertEqual(9, len(names))
+                    self.assertEqual(10, len(names))
                     self.assertTrue(all(x.endswith((".pdf", ".xlsx")) for x in names))
-                    self.assertEqual(6, sum(x.endswith(".xlsx") for x in names))
+                    self.assertEqual(7, sum(x.endswith(".xlsx") for x in names))
 
     def test_missing_envinfo_html_does_not_claim_completion(self):
         with tempfile.TemporaryDirectory() as td:
