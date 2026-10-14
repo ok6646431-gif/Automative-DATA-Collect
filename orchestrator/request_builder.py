@@ -165,6 +165,27 @@ def build(profile):
     exclusions=list(profile.get("related_entity_exclusions",[]) or [])
     site_addresses=verified_site_addresses(profile)
     identity_gate=detail_identity_gate(profile)
+    # G0's verified_sites is the only source of current-site address evidence.
+    # Older compiler profiles do not populate profile.site_address_anchors,
+    # leaving PRTR discovery incorrectly UNRESOLVED despite a verified Onsan
+    # address. These are candidate hints, not a source-native ID crosswalk.
+    verified_address_anchors = {}
+    for i, site in enumerate(identity_gate["verified_sites"], 1):
+        address = str(site.get("address") or "").strip()
+        name = str(site.get("site_name") or "").strip()
+        if address:
+            label = name or f"VERIFIED_SITE_{i}"
+            verified_address_anchors.setdefault(label, [])
+            if address not in verified_address_anchors[label]:
+                verified_address_anchors[label].append(address)
+    # Retain explicit canonical labels only when their addresses occur in the
+    # G0-verified set. Never promote unverified profile site hints.
+    for label, addresses in (profile.get("site_address_anchors") or {}).items():
+        if not isinstance(addresses, (list, tuple)) or not str(label).strip():
+            continue
+        vetted = [str(a).strip() for a in addresses if str(a).strip() in site_addresses]
+        if vetted:
+            verified_address_anchors[str(label)] = sorted(set(vetted))
     req={"request_id":profile["request_id"],"company_display_name":company,"profile_version":profile.get("profile_version","1.0"),"related_entity_exclusions":exclusions,"sources":{}}
 
     p=plan["ENVINFO"]; s=int(p["start_year"]); e=int(p["end_year"])
@@ -180,7 +201,7 @@ def build(profile):
             if key in seen_specs: continue
             seen_specs.add(key)
             specs.append({"term":term,"year_start":ys,"year_end":ye})
-    req["sources"]["PRTR"]={"start_year":s,"end_year":e,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True,"search_terms":specs,"exclude_terms":exclusions,"identity_gate":identity_gate,"site_address_anchors":profile.get("site_address_anchors",{})}
+    req["sources"]["PRTR"]={"start_year":s,"end_year":e,"max_pages":int(p.get("max_pages",50)),"request_delay_ms":int(p.get("request_delay_ms",80)),"collect_details":True,"search_terms":specs,"exclude_terms":exclusions,"identity_gate":identity_gate,"site_address_anchors":verified_address_anchors}
 
     p=plan["CHEM_STATS"]; years=[int(x) for x in p["years"]]; s=min(years); e=max(years)
     terms=_query_terms(aliases_for(profile,s,e))
