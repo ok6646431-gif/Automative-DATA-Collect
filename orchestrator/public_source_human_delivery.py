@@ -228,6 +228,7 @@ def _attachments(root, target, qa):
 def _reports(archive, target, qa, required_report_years=()):
     if not archive:
         qa["report_status"] = "NOT_PROVIDED"
+        qa["limitations"].append("CORPORATE_REPORTS_NOT_INCLUDED_IN_PUBLIC_SOURCE_ONLY_PACKAGE")
         return
     archive = Path(archive)
     if not archive.is_file():
