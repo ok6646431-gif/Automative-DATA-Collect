@@ -27,6 +27,7 @@ from pypdf import PdfReader
 from orchestrator.archive_builder import (
     dict_rows_to_xlsx, read_csv, read_jsonl, render_envinfo_static_pdf,
 )
+from orchestrator.environment_evidence_review import review as review_environment_evidence
 
 SOURCES = ("ENVINFO", "PRTR", "CHEM_STATS", "CLEANSYS_AIR", "SOOSIRO_WATER")
 SOURCE_URLS = {
@@ -317,8 +318,43 @@ def create(root, destination, company, reports_archive=None, required_report_yea
                               [("수집상태", [overview[-1]])] + source_rows)
         except Exception as exc:
             qa["problems"].append("EXCEL_EXPORT_FAILED:" + source + ":" + str(exc))
+    # Human interpretation layer is separate from raw exports: it does not
+    # rewrite source measurements, promote unresolved PRTR identity or assert
+    # comparability from an unverified TMS unit.
+    interpretation = review_environment_evidence(root)
+    qa["interpretation"] = {
+        "status": interpretation["status"],
+        "flags": interpretation["flags"],
+        "qa_issues": interpretation["qa_issues"],
+        "identity_records": len(interpretation["identity_rows"]),
+        "legal_disclosure_records": len(interpretation["violation_rows"]),
+        "prtr_years_compared": len(interpretation["prtr_comparison_rows"]),
+        "air_years_reviewed": len(interpretation["air_comparison_rows"]),
+    }
+    for flag in interpretation["flags"] + interpretation["qa_issues"]:
+        qa["limitations"].append("EVIDENCE_REVIEW:" + flag)
+    dict_rows_to_xlsx(
+        staging / "01_환경규제_사업장식별_수치검토.xlsx",
+        [("검토요약", interpretation["overview"]),
+         ("사업장_식별근거", interpretation["identity_rows"]),
+         ("행정처분_원문", interpretation["violation_rows"]),
+         ("PRTR_화학배출량비교", interpretation["prtr_comparison_rows"]),
+         ("대기TMS_단위범위검토", interpretation["air_comparison_rows"]),
+         ("ENVINFO_수치원문", interpretation["envinfo_metric_rows"])],
+    )
+    prtr_unresolved = any(
+        r["자료원"] == "PRTR" and "UNRESOLVED" in r["식별상태"]
+        for r in interpretation["identity_rows"]
+    )
+    for row in overview:
+        if row["자료원"] == "PRTR" and prtr_unresolved:
+            row["주의"] = "사업장 식별 UNRESOLVED. 자료원에서 수집됐지만 법인·시설 귀속 확정 아님"
+        if row["자료원"] == "CLEANSYS_AIR" and interpretation["air_comparison_rows"]:
+            row["주의"] = "수치 필드 단위 및 ENVINFO와 집계범위 동일성 미검증. 배출량 차이 임의 계산 금지"
     dict_rows_to_xlsx(staging / "00_수집범위_및_자료목록.xlsx",
                       [("자료원별_수집현황", overview),
+                       ("중요_검토사항", interpretation["overview"]),
+                       ("원본_사업장식별", interpretation["identity_rows"]),
                        ("자료원_구분_주의", [
                          {"확인사항": "공식 공개 여부", "설명": "공개 목록 미매칭은 TMS 비대상 또는 배출량 0의 증거가 아닙니다."},
                          {"확인사항": "자료원 원본", "설명": "공식 사이트 자료를 보존·표로 정리했으며 수치 단위를 임의로 환산하지 않았습니다."},
@@ -329,8 +365,8 @@ def create(root, destination, company, reports_archive=None, required_report_yea
     _reports(reports_archive, staging, qa, required_report_years)
     files = sorted(p for p in staging.rglob("*") if p.is_file())
     counts = Counter(p.suffix.lower() for p in files)
-    if not files or counts[".xlsx"] < 6:
-        qa["problems"].append("REQUIRED_SIX_EXCEL_WORKBOOKS_MISSING")
+    if not files or counts[".xlsx"] < 7:
+        qa["problems"].append("REQUIRED_SEVEN_EXCEL_WORKBOOKS_MISSING")
     if any(p.suffix.lower() not in USER_EXTENSIONS for p in files):
         qa["problems"].append("NON_PDF_EXCEL_USER_DELIVERY_FILE")
     for p in files:
