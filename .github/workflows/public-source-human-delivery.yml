@@ -115,7 +115,23 @@ jobs:
           assert reviewed['prtr_years_compared']==5
           assert 'PRTR_SITE_IDENTITY_UNRESOLVED' in reviewed['flags']
           assert 'PRTR_ENVINFO_MATERIAL_DIFFERENCE_REVIEW' in reviewed['flags']
-          assert 'CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED' in reviewed['flags']
+          assert 'CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT_VERIFIED' in reviewed['flags']
+          assert 'CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED' not in reviewed['flags']
+          with zipfile.ZipFile('delivery/Public_Environmental_PDF_Excel.zip') as z:
+              with z.open('01_환경규제_사업장식별_수치검토.xlsx') as source:
+                  wb=load_workbook(source,read_only=True,data_only=True)
+                  try:
+                      sheet=wb['대기TMS_단위범위검토']
+                      values=list(sheet.values)
+                      headers=list(values[0])
+                      actual=[dict(zip(headers,row)) for row in values[1:]]
+                      row=next(r for r in actual if str(r['연도'])=='2024')
+                      assert row['CleanSYS원문단위']=='kg/년'
+                      assert row['CleanSYS_단위검증']=='SOURCE_API_FIELD_TITLE_AND_ROW_VERIFIED'
+                      assert abs(float(row['CleanSYS_NOx환산톤'])-2345.048)<0.000001
+                      assert row['집계범위']=='NOT_VERIFIED_AS_EQUIVALENT'
+                  finally:
+                      wb.close()
           print('PASS: original PDF 6+10+12, seven Excel files, six sanctions, PRTR/TMS safe comparison, no JSON')
           PY
       - name: Publish actual validated user PDF and Excel ZIP
