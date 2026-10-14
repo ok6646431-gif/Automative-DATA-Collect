@@ -5,6 +5,8 @@ on:
     branches: [run/control-plane]
     paths:
       - 'orchestrator/public_source_human_delivery.py'
+      - 'orchestrator/environment_evidence_review.py'
+      - 'tests/test_environment_evidence_review.py'
       - 'tests/test_public_source_human_delivery.py'
       - '.github/workflows/public-source-human-delivery.yml'
   workflow_dispatch:
@@ -28,8 +30,8 @@ jobs:
         run: python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl Pillow
       - name: Source-agnostic delivery tests
         run: |
-          python -m py_compile orchestrator/public_source_human_delivery.py
-          python -m unittest tests.test_public_source_human_delivery -v
+          python -m py_compile orchestrator/public_source_human_delivery.py orchestrator/environment_evidence_review.py
+          python -m unittest tests.test_public_source_human_delivery tests.test_environment_evidence_review -v
 
   genuine_s_oil_replay:
     needs: unit
@@ -89,9 +91,27 @@ jobs:
               assert sum(x.startswith('ENVINFO_공개정보본문/') for x in paths)==10
               assert sum(x.startswith('ENVINFO_공식첨부자료/') for x in paths)==12
               assert sum(x.startswith('공식_지속가능경영보고서_PDF/') for x in paths)==6
-              assert sum(x.endswith('.xlsx') for x in paths)==6
+              assert sum(x.endswith('.xlsx') for x in paths)==7
+          from openpyxl import load_workbook
+          with z.open('01_환경규제_사업장식별_수치검토.xlsx') as source:
+              wb=load_workbook(source,read_only=True)
+              try:
+                  assert {'검토요약','사업장_식별근거','행정처분_원문',
+                          'PRTR_화학배출량비교','대기TMS_단위범위검토'}.issubset(set(wb.sheetnames))
+                  sheet=wb['행정처분_원문']
+                  assert sheet.max_row==7, ('2023 5 + 2024 1 original violation records',sheet.max_row)
+                  prtr=wb['PRTR_화학배출량비교']
+                  assert prtr.max_row==6
+              finally:
+                  wb.close()
+          reviewed=q['interpretation']
+          assert reviewed['legal_disclosure_records']==6
+          assert reviewed['prtr_years_compared']==5
+          assert 'PRTR_SITE_IDENTITY_UNRESOLVED' in reviewed['flags']
+          assert 'PRTR_ENVINFO_MATERIAL_DIFFERENCE_REVIEW' in reviewed['flags']
+          assert 'CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED' in reviewed['flags']
               assert z.testzip() is None
-          print('PASS: official reports 6, ENVINFO 10+12, full 5-source Excel ZIP, no JSON')
+          print('PASS: original PDF 6+10+12, seven Excel files, six sanctions, PRTR/TMS safe comparison, no JSON')
           PY
       - name: Publish actual validated user PDF and Excel ZIP
         uses: actions/upload-artifact@v4
