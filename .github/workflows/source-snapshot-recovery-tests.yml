@@ -1,0 +1,85 @@
+name: PRTR verified snapshot recovery QA
+
+on:
+  push:
+    branches: [run/control-plane]
+    paths:
+      - 'orchestrator/source_snapshot_recovery.py'
+      - 'tests/test_source_snapshot_recovery.py'
+      - '.github/workflows/source-snapshot-recovery-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source snapshot safety boundaries
+        run: |
+          python -m py_compile orchestrator/source_snapshot_recovery.py
+          python -m unittest tests.test_source_snapshot_recovery -v
+
+  replay_actual_prtr_outage:
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download failed fresh S-OIL PRTR attempt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38557217772 --name S-OIL-public-PRTR --dir current
+          test -s current/output/PRTR/status.json
+          test -s current/soiloil_2026/internal/scoped_request.json
+      - name: Download previously accepted S-OIL PRTR originals
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 38417731063 --name S-OIL-public-PRTR --dir archive
+          test -s archive/output/PRTR/status.json
+          test -s archive/soiloil_2026/internal/scoped_request.json
+          test -s archive/soiloil_2026/internal/Collection_Acceptance.json
+      - name: Guarded original snapshot recovery (not fresh collection)
+        run: |
+          python -m orchestrator.source_snapshot_recovery \
+            --current-source current/output/PRTR \
+            --snapshot-source archive/output/PRTR \
+            --current-request current/soiloil_2026/internal/scoped_request.json \
+            --snapshot-request archive/soiloil_2026/internal/scoped_request.json \
+            --snapshot-acceptance archive/soiloil_2026/internal/Collection_Acceptance.json \
+            --run-id 38417731063 \
+            --collected-at 2026-10-13T15:02:13Z
+          python - <<'PY'
+          from orchestrator.source_snapshot_recovery import load
+          q=load("current/output/PRTR/source_snapshot_recovery.json")
+          assert q["recovery_status"]=="VERIFIED_ORIGINAL_SNAPSHOT_REUSED"
+          assert q["source_years"]==[2020,2021,2022,2023,2024]
+          assert q["source_row_count"]==5
+          assert q["source_run_id"]=="38417731063"
+          assert len(q["original_files_sha256"])>=10
+          q2=load("current/output/PRTR.failed_fetch/status.json")
+          assert q2["status"]=="REMOTE_HOST_UNREACHABLE"
+          print("PASS: exact original source reused after isolated PRTR outage; original failure preserved")
+          PY
+      - name: Preserve internal recovery evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: S-OIL-prtr-snapshot-recovery-internal-proof
+          path: |
+            current/output/PRTR/source_snapshot_recovery.json
+            current/output/PRTR.failed_fetch/status.json
+          if-no-files-found: warn
+          retention-days: 14
