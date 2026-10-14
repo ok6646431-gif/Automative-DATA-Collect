@@ -302,8 +302,55 @@ def compare_prtr_envinfo(root, metrics):
     return results
 
 
+def _cleansys_native_nox_unit(root, record):
+    """Require exact raw API field title AND same source fact/year/value.
+
+    `annual_rows.jsonl` omits the source response's `fieldTitle` array.
+    Do not look up units from a web guess or from a neighboring facility.
+    A raw ResultList entry is required to authenticate the field-title mapping.
+    """
+    src = Path(root) / "CLEANSYS_AIR" / "raw_annual"
+    code = str(record.get("fact_code") or record.get("source_fact_code") or "")
+    year = str(record.get("examin_year") or "")
+    observed = _decimal(record.get("nox_dscamt"))
+    if not code or not year or observed is None:
+        return None
+    proofs = []
+    for path in sorted(src.glob(f"{re.escape(code)}_*.json")):
+        try:
+            raw = _json(path, {}) or {}
+            names, titles = raw.get("fieldNm"), raw.get("fieldTitle")
+            if not isinstance(names, list) or not isinstance(titles, list) or len(names) != len(titles):
+                continue
+            index = names.index("nox_dscamt")
+            label = str(titles[index])
+            if not ("질소산화물" in label and re.search(r"kg\\s*/\\s*년", label, re.I)):
+                continue
+            matched = any(
+                str(item.get("fact_code") or "") == code
+                and str(item.get("examin_year") or "") == year
+                and _decimal(item.get("nox_dscamt")) == observed
+                for item in raw.get("ResultList", []) if isinstance(item, dict)
+            )
+            if matched:
+                proofs.append((path, label))
+        except (ValueError, OSError, json.JSONDecodeError):
+            continue
+    if not proofs:
+        return None
+    if len({label for _, label in proofs}) > 1:
+        return None
+    path, title = proofs[0]
+    return {
+        "unit": "kg/년",
+        "field_title": title,
+        "proof_file": path.relative_to(Path(root)).as_posix(),
+        "proof_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+    }
+
+
 def compare_air_envinfo(root, metrics):
-    """No kg→ton conversion absent independent captured source unit evidence."""
+    """Confirm CleanSYS native unit; keep cross-source scope unverified."""
     root = Path(root)
     clean = _jsonl(root / "CLEANSYS_AIR" / "annual_rows.jsonl")
     status = _json(root / "CLEANSYS_AIR" / "status.json", {}) or {}
@@ -319,17 +366,25 @@ def compare_air_envinfo(root, metrics):
             if _site_token(r.get("fact_manage_nm")) & _site_token(m["사업장원문명"])
         ]
         found = by_site[0] if len(by_site) == 1 else None
+        proof = _cleansys_native_nox_unit(root, r)
+        nox = _decimal(r.get("nox_dscamt"))
         rows.append({
             "연도": year, "CleanSYS시설ID": str(r.get("fact_code") or ""),
             "CleanSYS원문시설명": str(r.get("fact_manage_nm") or ""),
             "CleanSYS_NOx원문수치": r.get("nox_dscamt"),
-            "CleanSYS원문단위": "단위 증빙 없음 (원본 필드명만 확보)",
+            "CleanSYS원문단위": proof["unit"] if proof else "미확인",
+            "CleanSYS_원문필드제목": proof["field_title"] if proof else "",
+            "CleanSYS_원문API파일": proof["proof_file"] if proof else "",
+            "CleanSYS_원문SHA256": proof["proof_sha256"] if proof else "",
+            "CleanSYS_NOx환산톤": float(nox / 1000) if proof and nox is not None else "",
             "ENVINFO사업장ID": found["ENVINFO사업장ID"] if found else "",
             "ENVINFO_NOx원문수치": found["원문수치"] if found else "",
             "ENVINFO단위": found["원문단위"] if found else "",
-            "CleanSYS_단위검증": "NOT_VERIFIED_IN_CAPTURE",
+            "CleanSYS_단위검증": ("SOURCE_API_FIELD_TITLE_AND_ROW_VERIFIED"
+                                    if proof else "NOT_VERIFIED_IN_CAPTURE"),
             "집계범위": "NOT_VERIFIED_AS_EQUIVALENT",
-            "비교판정": "NO_AUTOMATIC_NUMERIC_DIFF_UNVERIFIED_UNIT_AND_SCOPE",
+            "비교판정": ("UNIT_VERIFIED_SCOPE_UNCONFIRMED_NO_DIRECT_DIFFERENCE"
+                       if proof else "NO_AUTOMATIC_NUMERIC_DIFF_UNVERIFIED_UNIT_AND_SCOPE"),
             "공개시설명_직접매칭건수": status.get("registry_identity_matches"),
             "통신TLS인증": status.get("tls_verification"),
             "원문근거": "CLEANSYS_AIR/annual_rows.jsonl; " +
@@ -350,7 +405,9 @@ def review(root):
         + ["PRTR_ENVINFO_MATERIAL_DIFFERENCE_REVIEW" for r in prtr
            if r["비교판정"] == "MATERIAL_DIFFERENCE_REVIEW"]
         + ["CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED" for r in air
-           if r["비교판정"].startswith("NO_AUTOMATIC_NUMERIC")]
+           if r["CleanSYS_단위검증"] == "NOT_VERIFIED_IN_CAPTURE"]
+        + ["CLEANSYS_SOURCE_UNIT_VERIFIED_SCOPE_NOT" + "_VERIFIED" for r in air
+           if r["CleanSYS_단위검증"] == "SOURCE_API_FIELD_TITLE_AND_ROW_VERIFIED"]
     ))
     overview = [
         {"항목": "행정처분 원문 공개영역",
@@ -367,8 +424,9 @@ def review(root):
          "결과": f"{len(prtr)}개 연도별 조회", "판정": "집계범위 차이/정정 가능성 검토",
          "확인방법": "PRTR 원문 kg/년 헤더가 존재할 때만 톤 환산"},
         {"항목": "CleanSYS ↔ ENVINFO NOx",
-         "결과": f"{len(air)}개 연도별 조회", "판정": "단위 및 집계범위 검증 전 수치차이 계산 금지",
-         "확인방법": "원본 필드명·원문량 보존, 단위 미증빙 표시"},
+         "결과": f"{len(air)}개 연도별 조회",
+         "판정": "CleanSYS 원본 API fieldTitle에서 단위 검증 시 환산 가능; 집계범위 동일성 미확인으로 수치차이 계산 보류",
+         "확인방법": "fieldTitle + ResultList 시설코드·연도·원문값 일치 검증, SHA256 보존"},
         {"항목": "검토 대상",
          "결과": "; ".join(flags) or "없음", "판정": "미해결이면 최종 직무분석 확정본 아님",
          "확인방법": "공식 원문 대조 및 사업장 귀속 재확인 필요"},
