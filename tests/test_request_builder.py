@@ -88,6 +88,32 @@ class TestRequestBuilder(unittest.TestCase):
         self.assertEqual(r["sources"]["CLEANSYS_AIR"]["site_addresses"],expected)
         self.assertEqual(r["sources"]["SOOSIRO_WATER"]["site_addresses"],expected)
 
+    def test_prtr_anchors_use_only_g0_verified_sites(self):
+        p={"request_id":"so", "company_display_name":"S-OIL(주)",
+           "aliases":[{"term":"S-OIL(주)", "scope":"current", "year_start":2020,"year_end":"auto"}],
+           "site_candidates":[
+             {"site_name_raw":"온산공장","address_raw":"울산광역시 울주군 온산읍 온산로 68",
+              "verification_state":"VERIFIED","identity_status":"CONFIRMED"},
+             {"site_name_raw":"계열사","address_raw":"울산광역시 울주군 온산읍 산업로 999",
+              "verification_state":"UNVERIFIED","identity_status":"CANDIDATE"}],
+           "site_address_anchors":{"공식공장ID":["울산광역시 울주군 온산읍 온산로 68"],
+                                   "잘못된후보":["울산광역시 울주군 온산읍 산업로 999"]},
+           "source_plan":{"ENVINFO":{"start_year":2020,"end_year":2024},
+             "PRTR":{"start_year":2020,"end_year":2024},
+             "CHEM_STATS":{"years":[2020,2022,2024]},
+             "CLEANSYS_AIR":{"start_year":2020,"end_year":2025},
+             "SOOSIRO_WATER":{"annual_years":[2020,2021,2022,2023,2024,2025],
+                              "daily_years":[2024]}}}
+        r=build(p)
+        anchors=r["sources"]["PRTR"]["site_address_anchors"]
+        self.assertEqual(["울산광역시 울주군 온산읍 온산로 68"],anchors["온산공장"])
+        self.assertEqual(["울산광역시 울주군 온산읍 온산로 68"],anchors["공식공장ID"])
+        self.assertNotIn("잘못된후보",anchors)
+        self.assertNotIn("계열사",anchors)
+        # Official address is useful for source-site candidate matching;
+        # the generated gate still refuses address-only proof.
+        self.assertFalse(r["sources"]["PRTR"]["identity_gate"]["address_only_is_sufficient"])
+
     def test_verified_korean_legal_names_expand_source_native_legal_forms_with_same_bounds(self):
         p={"request_id":"hd","company_display_name":"에이치디현대삼호 주식회사","aliases":[
              {"term":"에이치디현대삼호 주식회사","scope":"current","alias_type":"current_legal_name","year_start":2024,"year_end":"auto"},
