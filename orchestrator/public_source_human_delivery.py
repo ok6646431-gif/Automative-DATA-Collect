@@ -301,10 +301,17 @@ def create(root, destination, company, reports_archive=None, required_report_yea
                 qa["problems"].append("UNVERIFIED_SNAPSHOT_RECOVERY:" + source)
             else:
                 digests = snapshot.get("original_files_sha256") or {}
-                for relative, expected_digest in digests.items():
-                    original = src / relative
-                    if not original.is_file() or checksum(original) != expected_digest:
-                        qa["problems"].append("SNAPSHOT_ORIGINAL_CHANGED:" + source + ":" + relative)
+                if source != "PRTR" or not isinstance(digests, dict) or len(digests) < 3:
+                    qa["problems"].append("INCOMPLETE_OR_UNSUPPORTED_SNAPSHOT_RECEIPT:" + source)
+                else:
+                    for relative, expected_digest in digests.items():
+                        source_rel = Path(relative)
+                        if source_rel.is_absolute() or ".." in source_rel.parts or not str(relative):
+                            qa["problems"].append("UNSAFE_SNAPSHOT_PROOF_PATH:" + str(relative))
+                            continue
+                        original = src / source_rel
+                        if not original.is_file() or checksum(original) != expected_digest:
+                            qa["problems"].append("SNAPSHOT_ORIGINAL_CHANGED:" + source + ":" + relative)
                 qa["limitations"].append(
                     source + ":VERIFIED_PRIOR_SNAPSHOT_USED_NOT_CURRENT_COLLECTION"
                 )
