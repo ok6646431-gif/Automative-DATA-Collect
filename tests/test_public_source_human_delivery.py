@@ -137,6 +137,62 @@ class PublicHumanDeliveryTests(unittest.TestCase):
                 self.assertTrue(any("/2023/" in "/" + x for x in attachments))
                 self.assertTrue(any("/2024/" in "/" + x for x in attachments))
 
+    def test_cached_prtr_provenance_visible_in_first_user_excel(self):
+        from openpyxl import load_workbook
+        with tempfile.TemporaryDirectory() as td:
+            source, reports = self.fixture(td, "Test")
+            old = source / "PRTR"
+            digests = {
+                p.relative_to(old).as_posix(): mod._sha(p)
+                for p in old.rglob("*") if p.is_file()
+            }
+            receipt = {
+                "recovery_status":"VERIFIED_ORIGINAL_SNAPSHOT_REUSED",
+                "source":"PRTR", "source_run_id":"38417731063",
+                "source_captured_at":"2026-10-13T15:02:13+00:00",
+                "original_files_sha256":digests,
+            }
+            (old / "source_snapshot_recovery.json").write_text(
+                json.dumps(receipt),encoding="utf-8")
+            with patch.object(mod,"render_envinfo_static_pdf",side_effect=self.mock_renderer):
+                q = mod.create(source,Path(td)/"user","Test",reports)
+            self.assertEqual("USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS",q["status"])
+            self.assertIn("PRTR:VERIFIED_PRIOR_SNAPSHOT_USED_NOT_CURRENT_COLLECTION",q["limitations"])
+            self.assertEqual("38417731063",q["source_checks"]["PRTR"]["original_run_id"])
+            with zipfile.ZipFile(q["outputs"]["zip"]) as z:
+                with z.open("00_수집범위_및_자료목록.xlsx") as f:
+                    wb=load_workbook(f,read_only=True,data_only=True)
+                    try:
+                        rows=list(wb["자료원별_수집현황"].values)
+                        names=list(rows[0])
+                        prtr=next(dict(zip(names,row)) for row in rows[1:]
+                                  if row[0]=="PRTR")
+                        self.assertIn("과거 검증본 재사용",prtr["자료취득경로"])
+                        self.assertEqual("38417731063",prtr["과거원본GitHub실행ID"])
+                    finally:
+                        wb.close()
+
+    def test_modified_cached_original_fails_delivery_check(self):
+        with tempfile.TemporaryDirectory() as td:
+            source,reports=self.fixture(td,"Test")
+            old=source/"PRTR"
+            originals={
+                p.relative_to(old).as_posix():mod._sha(p)
+                for p in old.rglob("*") if p.is_file()
+            }
+            (old/"source_snapshot_recovery.json").write_text(json.dumps({
+                "recovery_status":"VERIFIED_ORIGINAL_SNAPSHOT_REUSED",
+                "source":"PRTR","source_run_id":"38417731063",
+                "source_captured_at":"2026-10-13T15:02:13+00:00",
+                "original_files_sha256":originals,
+            }),encoding="utf-8")
+            (old/"discovery.csv").write_text("tampered",encoding="utf-8")
+            with patch.object(mod,"render_envinfo_static_pdf",side_effect=self.mock_renderer):
+                result=mod.create(source,Path(td)/"user","Test",reports)
+            self.assertEqual("DELIVERY_REVIEW_REQUIRED",result["status"])
+            self.assertTrue(any(x.startswith("SNAPSHOT_ORIGINAL_CHANGED:PRTR")
+                                for x in result["problems"]))
+
     def test_report_years_missing_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             source, reports = self.fixture(td, "Test")
