@@ -191,8 +191,15 @@ def inspect_identity(root):
             "해당연도": ", ".join(sorted({r.get("search_year","") for r in grouped})),
             "식별상태": " / ".join(statuses),
             "원본근거": "PRTR/discovery.csv:match_status",
-            "주의": ("UNRESOLVED는 해당 법인·시설 귀속 확정이 아님"
-                   if "UNRESOLVED" in statuses else "자료원 간 고유 ID 동일성 확인 필요"),
+            "주의": (
+                "사업장 주소 후보만 일치함. 공식 PRTR ID와 검증된 사이트 ID의 동일성은 미확정"
+                if "ADDRESS_CANDIDATE" in statuses else
+                "UNRESOLVED는 해당 법인·시설 귀속 확정이 아님"
+                if "UNRESOLVED" in statuses else
+                "PRTR 사업장 식별 별도 재확인 필요"
+                if any(x != "MATCHED" for x in statuses) else
+                "타 자료원 고유 ID와의 동일성 확인 필요"
+            ),
         })
     chem = _csv(root / "CHEM_STATS" / "discovery.csv")
     for sid, grouped in _group(chem, "bplcId").items():
@@ -310,7 +317,7 @@ def compare_prtr_envinfo(root, metrics):
             row["비교판정"] = ("MATERIAL_DIFFERENCE_REVIEW" if threshold else
                           "NUMERIC_COMPARISON_ONLY_SCOPE_UNCONFIRMED")
         if row["PRTR식별상태"] != "MATCHED":
-            row["처리원칙"] += "; PRTR 식별 미확정"
+            row["처리원칙"] += "; PRTR 식별 미확정 (ADDRESS_CANDIDATE도 확정 아님)"
         results.append(row)
     return results
 
@@ -415,6 +422,8 @@ def review(root):
     flags = sorted(set(
         ["PRTR_SITE_IDENTITY_UNRESOLVED" for r in identities
          if r["자료원"] == "PRTR" and "UNRESOLVED" in r["식별상태"]]
+        + ["PRTR_SITE_IDENTITY_CANDIDATE_NOT_CANONICAL" for r in identities
+           if r["자료원"] == "PRTR" and "ADDRESS_CANDIDATE" in r["식별상태"]]
         + ["PRTR_ENVINFO_MATERIAL_DIFFERENCE_REVIEW" for r in prtr
            if r["비교판정"] == "MATERIAL_DIFFERENCE_REVIEW"]
         + ["CLEANSYS_SOURCE_UNIT_AND_SCOPE_NOT_VERIFIED" for r in air
