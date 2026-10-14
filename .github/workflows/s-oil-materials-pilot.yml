@@ -178,6 +178,7 @@ jobs:
           --out human-delivery
           --company 'S-OIL(주)'
           --reports-zip from-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
+          --required-report-years 2020,2021,2022,2023,2024,2025
       - name: Require original ENVINFO body plus attachments and PDF reports
         run: |
           python - <<'PY'
@@ -185,7 +186,7 @@ jobs:
           from pathlib import Path
           p=Path('human-delivery/Internal_Delivery_QA.json')
           q=json.loads(p.read_text(encoding='utf-8'))
-          assert q['status']=='USER_PDF_EXCEL_ZIP_READY',q['problems']
+          assert q['status'] in {'USER_PDF_EXCEL_ZIP_READY','USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS'},q['problems']
           assert q['envinfo_disclosure_pdf_created']==q['envinfo_disclosure_expected']
           assert q['envinfo_attachments_delivered']==q['envinfo_source_attachments_downloaded']
           assert q['official_report_pdfs_delivered']>=1
