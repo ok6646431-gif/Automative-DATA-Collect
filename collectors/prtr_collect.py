@@ -9,9 +9,11 @@ from urllib3.util.retry import Retry
 try:
     from .name_filter import matching_exclusion
     from .entity_scope_gate import evaluate_candidate
+    from .icis_preflight import classify_preflight_error
 except ImportError:
     from name_filter import matching_exclusion
     from entity_scope_gate import evaluate_candidate
+    from icis_preflight import classify_preflight_error
 
 BASE = "https://icis.mcee.go.kr"
 SEARCH = BASE + "/prtr/prtrInfo/entrpsSearch.do"
@@ -72,7 +74,8 @@ def main(req_path):
     try:
         r0=s.post(SEARCH,data=form(end,first_term,1),headers={"Referer":SEARCH},timeout=(8,20)); r0.raise_for_status()
     except Exception as e:
-        status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}","preflight_retry_policy":"session connect/read retry total=2 with exponential backoff"}); write_status(out,status); return 22
+        source_status, http_status = classify_preflight_error(e)
+        status.update({"status":source_status,"preflight_http_status":http_status,"preflight_error":f"{type(e).__name__}: {e}","preflight_retry_policy":"session connect/read retry total=2 with exponential backoff"}); write_status(out,status); return 22
     dedup={}; successful=0; excluded_rows=[]; scope_rejected_rows=[]
     try:
         for spec in cfg["search_terms"]:
