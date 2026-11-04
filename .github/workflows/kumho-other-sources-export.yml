@@ -1,0 +1,71 @@
+name: Kumho remaining collected environmental sources extraction
+on:
+  push:
+    branches: [run/kumho-envinfo-export-20261104]
+    paths: ['.github/workflows/kumho-other-sources-export.yml']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: collection-only-raw-41819795193
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 41819795193
+          github-token: ${{ github.token }}
+          path: downloaded
+      - name: Export non-ENVINFO collector records and official reports
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          root=next((p for p in (Path('downloaded'),Path('downloaded/output')) if (p/'CHEM_STATS/status.json').is_file()),None)
+          if root is None:raise SystemExit('Verified source snapshot absent')
+          out=Path('bundles');out.mkdir(exist_ok=True)
+          for source in ['CLEANSYS_AIR','SOOSIRO_WATER','CHEM_STATS','PRTR','CORP_DOCS']:
+              path=root/source;assert (path/'status.json').is_file()
+              status=json.loads((path/'status.json').read_text())
+              print('SOURCE_STATUS',source,status.get('status'),flush=True)
+              files=[]
+              for p in path.rglob('*'):
+                  if not p.is_file():continue
+                  if source=='CORP_DOCS':
+                      keep=p.suffix.lower() in ('.pdf','.json','.csv','.jsonl')
+                  else:
+                      keep=p.suffix.lower() in ('.csv','.json','.jsonl','.xlsx','.html')
+                  if keep:files.append(p)
+              chunks=[];chunk=[];size=0
+              for p in sorted(files,key=lambda p:(p.suffix!='.pdf',str(p))):
+                  if chunk and size+p.stat().st_size>65_000_000:
+                      chunks.append(chunk);chunk=[];size=0
+                  chunk.append(p);size+=p.stat().st_size
+              if chunk:chunks.append(chunk)
+              for i,part in enumerate(chunks,1):
+                  name=f'{source}_{i:02}.zip'
+                  with zipfile.ZipFile(out/name,'w',zipfile.ZIP_DEFLATED,compresslevel=5,allowZip64=True) as z:
+                      for p in part:z.write(p,f'{source}/{p.relative_to(path).as_posix()}')
+                  print('BUNDLE',name,len(part),(out/name).stat().st_size,flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kumho-env-other-sources
+          path: |
+            bundles/CLEANSYS_AIR_*.zip
+            bundles/SOOSIRO_WATER_*.zip
+            bundles/CHEM_STATS_*.zip
+            bundles/PRTR_*.zip
+          if-no-files-found: error
+          retention-days: 15
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kumho-sustainability-reports
+          path: bundles/CORP_DOCS_*.zip
+          if-no-files-found: error
+          retention-days: 15
+          compression-level: 0
