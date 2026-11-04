@@ -1,20 +1,27 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-kia-env-20260928",
-  "requested_company_name": "기아",
-  "current_legal_name": "기아 주식회사",
+  "request_id": "company-cf83fccf-env-g0-20260915",
+  "requested_company_name": "금호석유화학",
+  "current_legal_name": "금호석유화학(주)",
   "current_legal_name_active_period": {
-    "start_year": 2021
+    "start_year": 1976
   },
   "company_verification_state": "VERIFIED",
   "confidence": "HIGH",
   "requested_scope": {
     "mode": "SITE_SET",
-    "label": "기아 국내 AutoLand",
+    "label": "금호석유화학(주) 국내 사업장",
     "candidate_ids": [
-      "kia-gwangmyeong",
-      "kia-hwaseong",
-      "kia-gwangju"
+      "64-2f07e032",
+      "260257-bf0bf857",
+      "latex-64-a19899bd",
+      "1-3-118-4296e225",
+      "2-331-80f8c70a",
+      "2-227-cb4c3d71",
+      "1-2-4651-dc093fa5",
+      "2-2-22384-81b1e632",
+      "10339-7676a45f",
+      "cnt-6-115-0348f593"
     ],
     "raw_collection_policy": "PRESERVE_COMPANY_WIDE",
     "archive_policy": "FILTER_TO_REQUESTED_SCOPE",
@@ -22,93 +29,172 @@
   },
   "company_aliases": [
     {
-      "name": "기아",
+      "name": "금호석유화학",
       "alias_type": "requested_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
       "active_period": {
-        "start_year": 2021
+        "start_year": 1976
       }
     },
     {
-      "name": "Kia Corporation",
+      "name": "KUMHO PETRO CHEMICAL CO.,LTD",
       "alias_type": "english_legal_name",
       "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
       "active_period": {
-        "start_year": 2021
+        "start_year": 1976
       }
     }
   ],
-  "historical_legal_names": [
-    {
-      "name": "기아자동차",
-      "alias_type": "historical_legal_name",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
-      "active_period": {
-        "end_year": 2020
-      }
-    },
-    {
-      "name": "기아자동차(주)",
-      "alias_type": "historical_search_alias",
-      "verification_state": "VERIFIED",
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
-      "active_period": {
-        "end_year": 2020
-      }
-    }
-  ],
-  "corporate_restructuring_evidence": [
-    {
-      "event_type": "rename",
-      "effective_period": {
-        "start_year": 2021
-      },
-      "source_locator": "https://worldwide.kia.com/ko/brand/our-brand/heritage/history/chapter-7",
-      "verification_state": "VERIFIED"
-    }
-  ],
+  "historical_legal_names": [],
+  "corporate_restructuring_evidence": [],
   "domestic_site_candidates": [
     {
-      "candidate_id": "kia-gwangmyeong",
-      "site_name_raw": "AutoLand 광명",
-      "address_raw": "경기도 광명시 기아자동차로 113",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "candidate_id": "64-2f07e032",
+      "site_name_raw": "울산고무공장",
+      "address_raw": "울산광역시 남구 상개로 64",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
     },
     {
-      "candidate_id": "kia-hwaseong",
-      "site_name_raw": "AutoLand 화성",
-      "address_raw": "경기도 화성시 우정읍 기아로 95",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "candidate_id": "260257-bf0bf857",
+      "site_name_raw": "울산수지공장",
+      "address_raw": "울산광역시 남구 처용로 260-257",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
     },
     {
-      "candidate_id": "kia-gwangju",
-      "site_name_raw": "AutoLand 광주",
-      "address_raw": "광주광역시 서구 화운로 277",
-      "business_unit_raw": "AutoLand",
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
+      "candidate_id": "latex-64-a19899bd",
+      "site_name_raw": "울산 LATEX공장",
+      "address_raw": "울산광역시 남구 상개로64",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
       "identity_status": "CONFIRMED",
-      "verification_state": "VERIFIED"
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "1-3-118-4296e225",
+      "site_name_raw": "여수고무제1공장",
+      "address_raw": "전남 여수시 여수산단3로 118",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "2-331-80f8c70a",
+      "site_name_raw": "여수고무제2공장",
+      "address_raw": "전남 여수시 산단중앙로 331",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "2-227-cb4c3d71",
+      "site_name_raw": "여수정밀화학공장",
+      "address_raw": "전남 여수시 여수산단2로 227",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "1-2-4651-dc093fa5",
+      "site_name_raw": "여수제1에너지",
+      "address_raw": "전남 여수시 여수산단2로 46-51",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "2-2-22384-81b1e632",
+      "site_name_raw": "여수제2에너지",
+      "address_raw": "전남 여수시 여수산단2로 223-84",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "10339-7676a45f",
+      "site_name_raw": "예산건자재공장",
+      "address_raw": "충청남도 예산군 고덕면 예덕로 1033-9",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
+    },
+    {
+      "candidate_id": "cnt-6-115-0348f593",
+      "site_name_raw": "율촌CNT공장",
+      "address_raw": "전남 여수시 율촌면 율촌산단6로 115",
+      "business_unit_raw": "official domestic-site catalog",
+      "source_locator": "https://www.kkpc.com/kor/company/global/global/",
+      "identity_status": "CONFIRMED",
+      "verification_state": "VERIFIED",
+      "discovery_evidence": {
+        "evidence_type": "EXPLICIT_DOMESTIC_SITE_CATALOG",
+        "catalog_page": "https://www.kkpc.com/kor/company/global/global/",
+        "extraction_contract": "STRUCTURED_PRODUCTION_TABLE_NAME_ADDRESS_PAIR"
+      }
     }
   ],
   "identity_evidence": [
     {
-      "source_locator": "https://dart.fss.or.kr/navi/searchNavi.do?naviCode=A002&naviCrpCik=00106641&naviCrpNm=%EA%B8%B0%EC%95%84",
-      "source_value_raw": "기아 / DART CIK 00106641",
-      "verification_state": "VERIFIED",
-      "confidence": "HIGH"
-    },
-    {
-      "source_locator": "https://www.kia.com/kr/discover-kia/workplace",
-      "source_value_raw": "AutoLand 광명, 화성, 광주 및 주소",
+      "source_locator": "https://englishdart.fss.or.kr/dsbc001/selectPopup.ax?selectKey=00106368",
+      "source_value_raw": "금호석유화학(주) / KUMHO PETRO CHEMICAL CO.,LTD / establishment 1976-12-10 / website www.kkpc.com",
       "verification_state": "VERIFIED",
       "confidence": "HIGH"
     }
@@ -169,5 +255,8 @@
         "prefer_full_history": false
       }
     }
+  },
+  "legal_entity_active_period": {
+    "start_year": 1976
   }
 }

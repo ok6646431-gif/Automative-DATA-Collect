@@ -1,114 +1,138 @@
 {
   "schema_version": "1.0",
-  "request_id": "company-kia-env-20260928",
   "discovery_status": "COMPLETE_FOR_DECLARED_PUBLIC_DOCUMENT_SCOPE",
   "documents": [
     {
-      "document_id": "KIA_SUSTAINABILITY_2020",
+      "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2020_3",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2020 기아 지속가능경영보고서",
+      "title": "2020 sustainability report 국문",
       "report_year": 2020,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2020-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_url": "https://www.kkpc.com/download/?seq=4017",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
+      "notes": "Nearest single-year official report DOM context + literal JavaScript call + statically reconstructed same-org GET form submission + streamed PDF magic verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "KIA_SUSTAINABILITY_2021",
+      "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2021_2",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2021 기아 지속가능경영보고서",
+      "title": "2021 sustainability report 국문",
       "report_year": 2021,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2021-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_url": "https://www.kkpc.com/download/?seq=5173",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
+      "notes": "Nearest single-year official report DOM context + literal JavaScript call + statically reconstructed same-org GET form submission + streamed PDF magic verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "KIA_SUSTAINABILITY_2022",
+      "document_id": "AUTO_SUSTAINABILITY_JS_FORM_2022_1",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2022 기아 지속가능경영보고서",
+      "title": "2022 sustainability report 국문",
       "report_year": 2022,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2022-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_url": "https://www.kkpc.com/download/?seq=6252",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
+      "notes": "Nearest single-year official report DOM context + literal JavaScript call + statically reconstructed same-org GET form submission + streamed PDF magic verification.",
+      "entity_alignment": "UNKNOWN",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "KIA_SUSTAINABILITY_2023",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2023_3",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2023 기아 지속가능경영보고서",
+      "title": "Kumho Petrochemical Sustainability Report 2023",
       "report_year": 2023,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2023-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202023.pdf",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "KIA_SUSTAINABILITY_2024",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2024_2",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2024 기아 지속가능경영보고서",
+      "title": "Kumho Petrochemical Sustainability Report 2024",
       "report_year": 2024,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2024-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202024.pdf?v=20250822",
+      "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
       "expected_extension": "pdf",
       "verification_status": "SOURCE_VERIFIED",
       "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202024.pdf?v=20250822",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+        }
+      ],
+      "route_merge_status": "PRESERVED_PREVIOUS_ALTERNATES"
     },
     {
-      "document_id": "KIA_SUSTAINABILITY_2025",
+      "document_id": "AUTO_SUSTAINABILITY_PLAIN_HREF_2025_1",
       "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2025 기아 지속가능경영보고서",
+      "title": "금호석유화학 지속가능경영보고서 2025",
       "report_year": 2025,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2025-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
+      "source_url": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf",
+      "source_locator": "https://kind.krx.co.kr/external/2026/07/24/000826/20260722001742/99998.htm",
       "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
+      "verification_status": "VERIFIED",
       "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_SUSTAINABILITY_2026",
-      "document_type": "SUSTAINABILITY_REPORT",
-      "title": "2026 기아 지속가능경영보고서",
-      "report_year": 2026,
-      "source_url": "https://worldwide.kia.com/kr/files/company/sr/sustainability-report/sustainability-report-2026-kr.pdf",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/sustainability-report",
-      "expected_extension": "pdf",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "CORE",
-      "notes": "Official Kia sustainability-report series; annual report page lists this year. Direct annual PDF naming follows the official Kia report series."
-    },
-    {
-      "document_id": "KIA_ENV_GOVERNANCE_2026",
-      "document_type": "ENVIRONMENTAL_MANAGEMENT",
-      "title": "기아 환경 추진체계",
-      "report_year": 2026,
-      "source_url": "https://worldwide.kia.com/ko/company/sustainability/environmental/governance",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/environmental/governance",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
-    },
-    {
-      "document_id": "KIA_ESG_GOVERNANCE_2026",
-      "document_type": "SHE_POLICY",
-      "title": "기아 ESG 정책 및 안전보건·환경 정책",
-      "report_year": 2026,
-      "source_url": "https://worldwide.kia.com/ko/company/sustainability/esg/governance",
-      "source_locator": "https://worldwide.kia.com/ko/company/sustainability/esg/governance",
-      "verification_status": "SOURCE_VERIFIED",
-      "importance": "SUPPORTING"
+      "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification.",
+      "entity_alignment": "ALIGNED",
+      "fallback_sources": [
+        {
+          "source_url": "https://www.kkpc.com/upload/download/Kumho%20Petrochemical%20Sustainability%20Report%202025.pdf?v=20260729",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "FRESH_DISCOVERY_PRIMARY",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "notes": "Nearest single-year official report DOM context + ordinary same-org href + supporting-derivative exclusion + streamed PDF magic verification."
+        },
+        {
+          "source_url": "https://www.kkpc.com/upload/download/%EA%B8%88%ED%98%B8%EC%84%9D%EC%9C%A0%ED%99%94%ED%95%99%20%EC%A7%80%EC%86%8D%EA%B0%80%EB%8A%A5%EA%B2%BD%EC%98%81%EB%B3%B4%EA%B3%A0%EC%84%9C%202025.pdf?v=20260724",
+          "verification_status": "SOURCE_VERIFIED",
+          "source_role": "PREVIOUS_VERIFIED_FALLBACK",
+          "source_locator": "https://www.kkpc.com/kor/winwin/esg/sustainabilityList/",
+          "expected_extension": "pdf",
+          "notes": "Strict annual-report semantics plus official-company or directly linked same-organization ESG/report host; PDF verified by response bytes/content-type."
+        }
+      ],
+      "route_merge_status": "PRESERVED_STRONGER_PREVIOUS_PRIMARY"
     }
   ],
-  "gaps": [],
+  "gaps": [
+    {
+      "gap_id": "AUTO_SUSTAINABILITY_2026_NOT_LISTED",
+      "source_key": "CORP_DOCS",
+      "document_type": "SUSTAINABILITY_REPORT",
+      "year": 2026,
+      "verification_status": "SOURCE_VERIFIED",
+      "status": "NOT_PUBLISHED",
+      "severity": "LOW",
+      "blocking": false,
+      "reason": "As of 2026-09-15, verified official report sources list reports through 2025, not 2026.",
+      "source_locator": "https://www.kkpc.com/kor/"
+    }
+  ],
   "discovery_scope": {
     "history_window": {
       "start_year": 2020,
@@ -119,8 +143,17 @@
     ],
     "current_public_document_categories": [
       "SUSTAINABILITY_REPORT",
-      "ENVIRONMENTAL_MANAGEMENT",
-      "SHE_POLICY"
-    ]
-  }
+      "ENVIRONMENTAL_MANAGEMENT"
+    ],
+    "scope_note": "Automatically discovered only from the DART-anchored official-company web boundary; off-domain files are accepted only when linked by an official page.",
+    "requested_history_window": {
+      "start_year": 2020,
+      "end_year": 2026
+    },
+    "effective_current_entity_history_window": {
+      "start_year": 2020,
+      "end_year": 2026
+    }
+  },
+  "request_id": "company-cf83fccf-env-g0-20260915"
 }
