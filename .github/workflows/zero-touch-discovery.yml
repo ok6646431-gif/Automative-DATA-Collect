@@ -623,6 +623,8 @@ jobs:
               '--output-root','combined/output',
               '--out','human-delivery',
               '--company',legal,
+              '--input-origin','LIVE',
+              '--input-run-id',str('${{ github.run_id }}'),
           ]
           raise SystemExit(subprocess.run(cmd,check=False).returncode)
           PY
