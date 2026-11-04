@@ -96,6 +96,26 @@ class PRTRSnapshotRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(m.SnapshotRejected,"PARTIAL_CURRENT"):
             self.check()
 
+    def test_legacy_http_404_is_not_a_transport_outage(self):
+        p = self.current / "status.json"
+        p.write_text(json.dumps({
+            "status": "REMOTE_HOST_UNREACHABLE",
+            "rows": 0,
+            "preflight_error": "HTTPError: 404 Client Error: Not Found for url: https://icis.mcee.go.kr/prtr/prtrInfo/entrpsSearch.do",
+        }), encoding="utf-8")
+        with self.assertRaisesRegex(m.SnapshotRejected, "HTTP_REPLY_IS_NOT_TRANSPORT_OUTAGE"):
+            self.check()
+
+    def test_explicit_http_code_blocks_snapshot_replay(self):
+        p = self.current / "status.json"
+        p.write_text(json.dumps({
+            "status": "REMOTE_HOST_UNREACHABLE",
+            "rows": 0,
+            "preflight_http_status": 503,
+        }), encoding="utf-8")
+        with self.assertRaisesRegex(m.SnapshotRejected, "HTTP_REPLY_IS_NOT_TRANSPORT_OUTAGE"):
+            self.check()
+
     def test_reject_wrong_company_or_verified_site_or_years(self):
         for opt in [
             {"company":"다른법인"},
