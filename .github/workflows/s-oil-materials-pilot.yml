@@ -205,6 +205,8 @@ jobs:
           --company 'S-OIL(주)'
           --reports-zip from-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
           --required-report-years 2020,2021,2022,2023,2024,2025
+          --input-origin LIVE
+          --input-run-id ${{ github.run_id }}
       - name: Require original ENVINFO body plus attachments and PDF reports
         run: |
           python - <<'PY'
