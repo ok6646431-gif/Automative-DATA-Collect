@@ -10,6 +10,7 @@ import argparse
 import csv
 import hashlib
 import json
+import re
 import shutil
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -68,6 +69,11 @@ def validate(current_source, archived_source, current_request, archive_request,
     current_status = load(current_source / "status.json")
     if current_status.get("status") not in {"REMOTE_HOST_UNREACHABLE"}:
         raise SnapshotRejected("NOT_AN_EXPLICIT_RETRIEVAL_HOST_OUTAGE")
+    # Old collectors mislabeled HTTP replies, including 404, as host outages.
+    legacy_error = str(current_status.get("preflight_error") or "")
+    if (current_status.get("preflight_http_status") is not None
+            or re.search(r"\bHTTPError:\s*[1-5]\d{2}\b", legacy_error)):
+        raise SnapshotRejected("HTTP_REPLY_IS_NOT_TRANSPORT_OUTAGE")
     if int(current_status.get("rows", 0) or 0) != 0:
         raise SnapshotRejected("PARTIAL_CURRENT_DATA_CANNOT_BE_OVERWRITTEN")
     if _identity(load(current_request)) != _identity(load(archive_request)):
