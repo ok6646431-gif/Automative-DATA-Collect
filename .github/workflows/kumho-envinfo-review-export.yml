@@ -1,0 +1,95 @@
+name: Kumho ENVINFO source extraction for review
+on:
+  push:
+    branches:
+      - run/kumho-envinfo-export-20261104
+    paths:
+      - .github/workflows/kumho-envinfo-review-export.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Download existing verified raw collector output
+        uses: actions/download-artifact@v4
+        with:
+          name: collection-only-raw-41819795193
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 41819795193
+          github-token: ${{ github.token }}
+          path: downloaded
+      - name: Extract ENVINFO metadata and official attachments by year
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json,zipfile,hashlib
+          from pathlib import Path
+          src=Path('downloaded')
+          root=next((p/'ENVINFO' for p in [src,src/'output'] if (p/'ENVINFO/status.json').is_file()),None)
+          if root is None:raise SystemExit('Source ENVINFO missing; no false-success output.')
+          status=json.loads((root/'status.json').read_text(encoding='utf-8'))
+          if status.get('status')!='DATA_FOUND' or status.get('rows')!=48 or status.get('attachment_fail')!=29:
+              raise SystemExit('ENVINFO verified snapshot expected counts do not match')
+          out=Path('bundles');out.mkdir(exist_ok=True)
+          files=[p for p in root.rglob('*') if p.is_file()]
+          attachment=[p for p in files if 'raw_attachments' in p.parts]
+          metadata=[p for p in files if p not in attachment]
+          index={'source_run':41819795193,'status':status,'all_file_count':len(files),'meta_files':len(metadata),'attachment_files':len(attachment),'year_counts':{},'bundles':[]}
+          def make(name, paths):
+              dest=out/name
+              with zipfile.ZipFile(dest,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=5,allowZip64=True) as z:
+                  for p in paths:z.write(p,'ENVINFO/'+p.relative_to(root).as_posix())
+              with zipfile.ZipFile(dest) as z:
+                  if z.testzip() is not None:raise SystemExit('Bad zip '+name)
+              index['bundles'].append({'name':name,'files':len(paths),'bytes':dest.stat().st_size,'sha256':hashlib.sha256(dest.read_bytes()).hexdigest()})
+          make('ENVINFO_source_metadata_2020-2024.zip',metadata)
+          for year in ['2020','2021','2022','2023','2024']:
+              rows=[p for p in attachment if year in p.relative_to(root).parts]
+              index['year_counts'][year]=len(rows)
+              if rows:
+                  # Generate size-bounded ZIP chunks to keep each download small.
+                  chunks=[];cur=[];total=0
+                  for p in sorted(rows):
+                      size=p.stat().st_size
+                      if cur and total+size>70_000_000:
+                          chunks.append(cur);cur=[];total=0
+                      cur.append(p);total+=size
+                  if cur:chunks.append(cur)
+                  for n,chunk in enumerate(chunks,1):
+                      make(f'ENVINFO_attachments_{year}_{n:02}.zip',chunk)
+          (out/'index.json').write_text(json.dumps(index,ensure_ascii=False,indent=2),encoding='utf-8')
+          print('ENVINFO_EXTRACTED',json.dumps({'metadata':len(metadata),'attachments':len(attachment),'year_counts':index['year_counts'],'bundles':[(x['name'],x['bytes']) for x in index['bundles']]},ensure_ascii=False))
+          PY
+      - name: Upload metadata bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-envinfo-source-metadata
+          path: |
+            bundles/ENVINFO_source_metadata_2020-2024.zip
+            bundles/index.json
+          if-no-files-found: error
+          retention-days: 15
+          compression-level: 0
+      - name: Upload year 2024 official attachments
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-envinfo-2024-attachments
+          path: bundles/ENVINFO_attachments_2024_*.zip
+          if-no-files-found: error
+          retention-days: 15
+          compression-level: 0
+      - name: Upload year 2020-2023 official attachments
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-envinfo-2020-2023-attachments
+          path: |
+            bundles/ENVINFO_attachments_2020_*.zip
+            bundles/ENVINFO_attachments_2021_*.zip
+            bundles/ENVINFO_attachments_2022_*.zip
+            bundles/ENVINFO_attachments_2023_*.zip
+          if-no-files-found: error
+          retention-days: 15
+          compression-level: 0
