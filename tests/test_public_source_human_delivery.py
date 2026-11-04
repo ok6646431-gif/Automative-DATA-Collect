@@ -81,6 +81,28 @@ class PublicHumanDeliveryTests(unittest.TestCase):
                     self.assertTrue(all(x.endswith((".pdf", ".xlsx")) for x in names))
                     self.assertEqual(7, sum(x.endswith(".xlsx") for x in names))
 
+    def test_replayed_source_run_is_not_fresh(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, reports = self.fixture(td, "Test")
+            with patch.object(mod, "render_envinfo_static_pdf", side_effect=self.mock_renderer):
+                result = mod.create(source, Path(td) / "user", "Test", reports,
+                                    input_origin="REPLAY", input_run_id="38417731063")
+            self.assertEqual("REPLAY", result["input_origin"])
+            for name, info in result["source_checks"].items():
+                self.assertEqual("REPLAY", info["input_origin"])
+                self.assertEqual("38417731063", info["input_run_id"])
+                self.assertEqual("NOT_RECORDED", info["source_capture_date"])
+                self.assertIn("재포장", info["retrieval_status"])
+
+    def test_invalid_source_run_provenance_is_rejected(self):
+        with tempfile.TemporaryDirectory() as td:
+            source, reports = self.fixture(td, "Test")
+            with self.assertRaisesRegex(ValueError, "SOURCE_RUN_ID_REQUIRED"):
+                mod.create(source, Path(td) / "user", "Test", reports, input_origin="LIVE")
+            with self.assertRaisesRegex(ValueError, "INVALID_SOURCE_RUN_ID"):
+                mod.create(source, Path(td) / "user", "Test", reports,
+                           input_origin="REPLAY", input_run_id="bad")
+
     def test_missing_envinfo_html_does_not_claim_completion(self):
         with tempfile.TemporaryDirectory() as td:
             source, reports = self.fixture(td, "Test")
