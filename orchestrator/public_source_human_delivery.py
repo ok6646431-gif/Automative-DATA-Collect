@@ -269,7 +269,14 @@ def _reports(archive, target, qa, required_report_years=()):
         qa["problems"].append("REPORT_ZIP_UNREADABLE:" + str(exc))
 
 
-def create(root, destination, company, reports_archive=None, required_report_years=()):
+def create(root, destination, company, reports_archive=None, required_report_years=(),
+           *, input_origin="UNKNOWN", input_run_id=""):
+    if input_origin not in {"UNKNOWN", "LIVE", "REPLAY"}:
+        raise ValueError("INVALID_INPUT_ORIGIN")
+    if input_run_id and (not str(input_run_id).isdigit() or int(input_run_id) <= 0):
+        raise ValueError("INVALID_SOURCE_RUN_ID")
+    if input_origin in {"LIVE", "REPLAY"} and not input_run_id:
+        raise ValueError("SOURCE_RUN_ID_REQUIRED_FOR_LIVE_OR_REPLAY")
     root = Path(root).resolve()
     dest = Path(destination).resolve()
     dest.mkdir(parents=True, exist_ok=True)
@@ -279,6 +286,7 @@ def create(root, destination, company, reports_archive=None, required_report_yea
     staging.mkdir()
     qa = {"company": company, "status": "DELIVERY_NOT_READY",
           "problems": [], "limitations": [], "source_checks": {}, "required_sources": list(SOURCES),
+          "input_origin": input_origin, "input_run_id": str(input_run_id),
           "outputs": {}}
     overview = []
     for source in SOURCES:
@@ -322,11 +330,19 @@ def create(root, destination, company, reports_archive=None, required_report_yea
         for flag in ("detail_fail", "attachment_fail"):
             if int(status.get(flag, 0) or 0) > 0:
                 qa["problems"].append(f"COLLECTOR_PARTIAL_DETAIL_FAILURE:{source}:{flag}")
+        provenance = ("검증된 과거 원본 재사용" if snapshot else
+                      "기존 실행 수집본 재포장 (새 수집 아님)" if input_origin == "REPLAY" else
+                      "동일 GitHub 실행에서 수집" if input_origin == "LIVE" else
+                      "원본 수집 시점과 실행 미확인")
+        origin_run = snapshot.get("source_run_id") if snapshot else str(input_run_id)
         qa["source_checks"][source] = {
             "collector_status": state, "counts": counts,
+            "input_origin": ("SNAPSHOT_REUSE" if snapshot else input_origin),
+            "input_run_id": origin_run,
+            "source_capture_date": snapshot.get("source_captured_at", "NOT_RECORDED") if snapshot else "NOT_RECORDED",
             "evidence_present": src.is_dir(),
             "source_url": SOURCE_URLS[source],
-            "retrieval_status": ("검증된 과거 원본 재사용" if snapshot else "이번 실행 수집본"),
+            "retrieval_status": provenance,
             "original_capture_date": snapshot.get("source_captured_at", "") if snapshot else "",
             "original_run_id": snapshot.get("source_run_id", "") if snapshot else "",
         }
@@ -337,9 +353,9 @@ def create(root, destination, company, reports_archive=None, required_report_yea
             "원자료_합계행수": sum(counts.values()),
             "상세내역": "; ".join(f"{k} {v}행" for k, v in counts.items()),
             "공식_출처_URL": SOURCE_URLS[source],
-            "자료취득경로": ("과거 검증본 재사용 (현재 서버 재조회 실패)" if snapshot else "이번 실행에서 원본 수집"),
-            "과거원본수집일시": snapshot.get("source_captured_at", "") if snapshot else "",
-            "과거원본GitHub실행ID": snapshot.get("source_run_id", "") if snapshot else "",
+            "자료취득경로": provenance,
+            "원본자료GitHub실행ID": origin_run,
+            "원본수집일시": snapshot.get("source_captured_at", "미기록") if snapshot else "미기록",
             "주의": ("자료원별 식별자는 서로 다른 체계임. 같은 주소만으로 동일 시설이라고 확정하지 않음."
                    if source != "ENVINFO" else "본문 PDF는 원본 HTML을 재구성한 인쇄본. 공식 원본 PDF와 구별.")
         })
@@ -442,11 +458,14 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--company", required=True)
     p.add_argument("--reports-zip", default="")
+    p.add_argument("--input-origin", choices=["UNKNOWN", "LIVE", "REPLAY"], default="UNKNOWN")
+    p.add_argument("--input-run-id", default="")
     p.add_argument("--required-report-years", default="",
                    help="Comma-separated official annual report years that must be present")
     args = p.parse_args()
     years = tuple(y.strip() for y in args.required_report_years.split(",") if y.strip())
-    result = create(args.output_root, args.out, args.company, args.reports_zip or None, years)
+    result = create(args.output_root, args.out, args.company, args.reports_zip or None, years,
+                    input_origin=args.input_origin, input_run_id=args.input_run_id)
     return 0 if result["status"] in {
         "USER_PDF_EXCEL_ZIP_READY", "USER_PDF_EXCEL_ZIP_READY_WITH_LIMITATIONS"
     } else 2
