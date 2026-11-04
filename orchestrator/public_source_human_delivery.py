@@ -330,7 +330,7 @@ def create(root, destination, company, reports_archive=None, required_report_yea
         for flag in ("detail_fail", "attachment_fail"):
             if int(status.get(flag, 0) or 0) > 0:
                 qa["problems"].append(f"COLLECTOR_PARTIAL_DETAIL_FAILURE:{source}:{flag}")
-        provenance = ("검증된 과거 원본 재사용" if snapshot else
+        provenance = ("과거 검증본 재사용 (원본 수집일시는 별도 증빙)" if snapshot else
                       "기존 실행 수집본 재포장 (새 수집 아님)" if input_origin == "REPLAY" else
                       "동일 GitHub 실행에서 수집" if input_origin == "LIVE" else
                       "원본 수집 시점과 실행 미확인")
