@@ -1,0 +1,164 @@
+name: Kumho Petrochemical partial PDF Excel delivery
+on:
+  push:
+    branches: [run/control-plane]
+    paths: ['.github/workflows/kumho-petrochemical-partial-delivery.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  partial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PYTHONPATH: .:orchestrator
+      PYTHONUNBUFFERED: '1'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PDF tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium-browser || sudo apt-get install -y -qq fonts-noto-cjk fonts-nanum chromium
+          sudo fc-cache -f
+          python -m pip install --disable-pip-version-check requests beautifulsoup4 xlsxwriter pypdf openpyxl Pillow
+      - name: Retrieve authentic November 4 collector outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: collection-only-raw-41819795193
+          repository: ok6646431-gif/Automative-DATA-Collect
+          run-id: 41819795193
+          github-token: ${{ github.token }}
+          path: downloaded
+      - name: Stage and verify original collected source records and official PDF documents
+        run: |
+          python - <<'PY'
+          import csv,json,shutil,zipfile
+          from pathlib import Path
+          from pypdf import PdfReader
+          raw=Path('downloaded')
+          root=next((p for p in (raw,raw/'output') if (p/'ENVINFO/status.json').is_file()),None)
+          if root is None:raise SystemExit('No authentic ENVINFO source folder in artifact')
+          out=Path('input/output');out.mkdir(parents=True,exist_ok=True)
+          expected=['ENVINFO','PRTR','CHEM_STATS','CLEANSYS_AIR','SOOSIRO_WATER','CORP_DOCS']
+          for name in expected:
+              if not (root/name/'status.json').is_file():raise SystemExit('Missing source '+name)
+              shutil.move(str(root/name),str(out/name))
+          st={name:json.loads((out/name/'status.json').read_text()) for name in expected}
+          if not (st['ENVINFO']['status']=='DATA_FOUND' and st['ENVINFO']['rows']==48
+              and st['ENVINFO']['attachment_fail']==29
+              and st['PRTR']['status']=='REMOTE_HOST_UNREACHABLE'
+              and '404' in st['PRTR'].get('preflight_error','')
+              and st['CHEM_STATS']['status']=='DATA_FOUND' and st['CHEM_STATS']['rows']==31
+              and st['CLEANSYS_AIR']['status']=='DATA_FOUND' and st['CLEANSYS_AIR']['annual_rows']==22
+              and st['SOOSIRO_WATER']['status']=='NO_FACILITY_MATCH_CONFIRMED'
+              and st['CORP_DOCS']['status']=='DATA_FOUND' and st['CORP_DOCS']['downloaded']==6):
+              raise SystemExit('Source snapshot is not verified expected Kumho Petrochemical collection')
+          docs=out/'CORP_DOCS'
+          with (docs/'document_index.csv').open(encoding='utf-8-sig',newline='') as h:
+              rows=list(csv.DictReader(h))
+          found=set()
+          with zipfile.ZipFile('official-reports.zip','w') as z:
+              for row in rows:
+                  year=str(row.get('report_year') or '')
+                  if year not in set(map(str,range(2020,2026))) or year in found or row.get('collection_status')!='DOWNLOADED':continue
+                  stored=Path(row.get('stored_path') or '')
+                  src=next((p for p in (Path('input')/stored,docs/'raw_documents'/stored.name) if p.is_file()),None)
+                  if src is None or src.open('rb').read(5)!=b'%PDF-' or len(PdfReader(src).pages)<1:
+                      raise SystemExit('Official report missing or invalid: '+year)
+                  z.write(src,'금호석유화학_지속가능경영보고서_'+year+'.pdf');found.add(year)
+          if found!=set(map(str,range(2020,2026))):raise SystemExit('Missing report year: '+str(found))
+          print('VERIFIED ORIGINALS',json.dumps({x:st[x]['status'] for x in expected}))
+          PY
+      - name: Export Excel and rendered/official PDFs with explicit unaccepted source status
+        run: |
+          python -m orchestrator.public_source_human_delivery \
+            --output-root input/output --out delivery --company '금호석유화학(주)' \
+            --reports-zip official-reports.zip \
+            --required-report-years 2020,2021,2022,2023,2024,2025 \
+            --input-origin REPLAY --input-run-id 41819795193 || test "$?" -eq 2
+      - name: Split partial user deliverables, insert notice, validate real files
+        run: |
+          python - <<'PY'
+          import json,zipfile
+          from pathlib import Path
+          from openpyxl import Workbook
+          q=json.loads(Path('delivery/Internal_Delivery_QA.json').read_text(encoding='utf-8'))
+          assert q['status']=='DELIVERY_REVIEW_REQUIRED',q['status']
+          assert q['source_checks']['PRTR']['collector_status']=='REMOTE_HOST_UNREACHABLE'
+          assert q['envinfo_disclosure_expected']==48
+          assert q['envinfo_disclosure_pdf_created']>=40
+          assert q['envinfo_source_attachments_downloaded']==372
+          assert q['envinfo_attachments_delivered']>0
+          assert q['official_report_pdfs_delivered']==6
+          root=Path('delivery/pdf_excel_files');assert root.is_dir()
+          wb=Workbook();s=wb.active;s.title='수집상태_필독'
+          for row in [
+            ('금호석유화학 2026-11-04 PARTIAL / REVIEW_REQUIRED','전체 자료 수집 완료본이 아닙니다.'),
+            ('원본 수집 GitHub Actions 실행 ID','41819795193'),
+            ('ENV-INFO','상세 48건; 첨부 401건 중 372건 다운로드, 29건 누락'),
+            ('PRTR','HTTP 404 조회 실패. 자료가 없다는 의미가 아님.'),
+            ('화학물질통계','2020/2022/2024년: 31건, 상세표 4507행'),
+            ('CleanSYS 대기 TMS','2020~2025년 22행; 원문 단위와 집계범위 주의'),
+            ('SOOSIRO 수질 TMS','일치 시설을 찾지 못함. 배출량 0이라는 의미가 아님.'),
+            ('공식 지속가능경영보고서','2020~2025년 원본 PDF 6개'),
+            ('ENVINFO 공개정보 PDF','수집 원본 HTML의 인쇄 재구성본. 기관 발행 원본 PDF 아님.'),
+            ('ENVINFO 공식 첨부자료','누락분이 있는 부분자료. 별도 ZIP에 수록'),
+          ]:s.append(row)
+          s.column_dimensions['A'].width=45;s.column_dimensions['B'].width=106
+          wb.save(root/'00_필독_부분수집_미완료.xlsx')
+          core=Path('delivery/금호석유화학_부분수집_핵심PDF_Excel.zip')
+          attach=Path('delivery/금호석유화학_부분수집_ENVINFO_첨부.zip')
+          counts=[0,0]
+          with zipfile.ZipFile(core,'w',compression=zipfile.ZIP_STORED,allowZip64=True) as a,zipfile.ZipFile(attach,'w',compression=zipfile.ZIP_STORED,allowZip64=True) as b:
+              for p in sorted(root.rglob('*')):
+                  if not p.is_file():continue
+                  rel=p.relative_to(root).as_posix()
+                  assert p.suffix.lower() in {'.pdf','.xlsx'},rel
+                  if rel.startswith('ENVINFO_공식첨부자료/'):b.write(p,rel);counts[1]+=1
+                  else:a.write(p,rel);counts[0]+=1
+              b.write(root/'00_필독_부분수집_미완료.xlsx','00_필독_부분수집_미완료.xlsx')
+          assert counts[0]>=50 and counts[1]>0,counts
+          for path in (core,attach):
+              with zipfile.ZipFile(path) as z:
+                  assert z.testzip() is None
+                  assert all(name.endswith(('.pdf','.xlsx')) for name in z.namelist() if not name.endswith('/'))
+          print('PARTIAL_READY_NOT_COMPLETE',counts,'QA ISSUES',q['problems'][:20])
+          PY
+      - name: Publish durable release labelled PARTIAL
+        run: |
+          tag='kumho-petrochemical-partial-2026-11-04'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo 'Release tag already exists; refusing overwrite' >&2
+            exit 1
+          fi
+          cat >release-notes.md <<'EOF'
+          # 금호석유화학 부분 환경자료 (2026-11-04)
+          **PARTIAL / REVIEW_REQUIRED. 전체 수집 완료본이 아닙니다.**
+          원본: https://github.com/ok6646431-gif/Automative-DATA-Collect/actions/runs/41819795193
+          ENV-INFO 상세 48건, 첨부 401건 중 372건 다운로드(29건 누락).
+          CleanSYS 대기 TMS 22행, 화학물질통계 31건·상세 4507행.
+          SOOSIRO 수질 TMS 해당 시설 확인 실패(무배출 또는 비대상 의미 아님).
+          PRTR 공식 조회 HTTP 404 오류로 확보 실패.
+          지속가능경영보고서 원본 PDF 2020~2025년 6개.
+          ZIP 내부는 PDF/Excel만 포함. 누락과 상태는 '00_필독_부분수집_미완료.xlsx' 참고.
+          ENV-INFO 공개정보본문 PDF는 수집한 원본 HTML의 재구성본.
+          EOF
+          gh release create "$tag" \
+            'delivery/금호석유화학_부분수집_핵심PDF_Excel.zip' \
+            'delivery/금호석유화학_부분수집_ENVINFO_첨부.zip' \
+            --target "$GITHUB_SHA" \
+            --title '금호석유화학 2026-11-04 부분 수집 PDF·Excel (미완료)' \
+            --notes-file release-notes.md --latest=false
+      - name: Save independent QA receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kumho-petrochemical-partial-qa
+          path: delivery/Internal_Delivery_QA.json
+          if-no-files-found: warn
+          retention-days: 14
