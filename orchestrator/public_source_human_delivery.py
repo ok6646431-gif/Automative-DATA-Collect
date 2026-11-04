@@ -356,6 +356,9 @@ def create(root, destination, company, reports_archive=None, required_report_yea
             "자료취득경로": provenance,
             "원본자료GitHub실행ID": origin_run,
             "원본수집일시": snapshot.get("source_captured_at", "미기록") if snapshot else "미기록",
+            # Keep original exported column names for existing reader scripts.
+            "과거원본GitHub실행ID": snapshot.get("source_run_id", "") if snapshot else "",
+            "과거원본수집일시": snapshot.get("source_captured_at", "") if snapshot else "",
             "주의": ("자료원별 식별자는 서로 다른 체계임. 같은 주소만으로 동일 시설이라고 확정하지 않음."
                    if source != "ENVINFO" else "본문 PDF는 원본 HTML을 재구성한 인쇄본. 공식 원본 PDF와 구별.")
         })
