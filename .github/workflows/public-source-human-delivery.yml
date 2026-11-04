@@ -74,6 +74,8 @@ jobs:
           --company 'S-OIL(주)'
           --reports-zip official-reports/S-OIL_2020-2025_공식보고서_원본PDF.zip
           --required-report-years 2020,2021,2022,2023,2024,2025
+          --input-origin REPLAY
+          --input-run-id 38417731063
       - name: Prove full source-year coverage and only PDF/XLSX in actual ZIP
         run: |
           python - <<'PY'
