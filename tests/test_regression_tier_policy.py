@@ -91,6 +91,22 @@ class RegressionTierPolicyTest(unittest.TestCase):
             "INFRA_RETRY_REQUIRED",
         )
 
+    def test_http_404_is_external_source_review_not_proven_code_regression(self):
+        self.assertEqual(
+            classify_execution_failure(status="REMOTE_ENDPOINT_NOT_FOUND", text="HTTPError: 404"),
+            "INFRA_RETRY_REQUIRED",
+        )
+        self.assertEqual(
+            classify_execution_failure(status="REMOTE_ACCESS_RESTRICTED", text="HTTPError: 403"),
+            "INFRA_RETRY_REQUIRED",
+        )
+
+    def test_invalid_http_request_is_not_excused_as_external_infra(self):
+        self.assertEqual(
+            classify_execution_failure(status="REMOTE_HTTP_REJECTED", text="HTTPError: 422"),
+            "REGRESSION_FAIL",
+        )
+
     def test_assertion_failure_is_regression_failure(self):
         self.assertEqual(
             classify_execution_failure(status="FAILED", text="AssertionError: expected target ids"),

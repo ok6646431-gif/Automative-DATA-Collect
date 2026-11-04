@@ -93,6 +93,12 @@ NO_RUNTIME_FILES = {
 }
 
 INFRA_PATTERNS = (
+    # HTTP service/endpoint responses are external-source availability reviews,
+    # not demonstrated parser regressions. The exact status remains in the R2
+    # source result; INFRA_RETRY_REQUIRED never counts as a full PASS.
+    r"REMOTE_ENDPOINT_NOT_FOUND",
+    r"REMOTE_ACCESS_RESTRICTED",
+    r"REMOTE_HTTP_UNAVAILABLE",
     r"REMOTE_HOST_UNREACHABLE",
     r"ConnectTimeout",
     r"ReadTimeout",

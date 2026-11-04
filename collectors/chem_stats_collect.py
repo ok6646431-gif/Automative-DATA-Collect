@@ -9,9 +9,11 @@ from urllib3.util.retry import Retry
 try:
     from .name_filter import matching_exclusion
     from .entity_scope_gate import evaluate_candidate
+    from .icis_preflight import classify_preflight_error
 except ImportError:
     from name_filter import matching_exclusion
     from entity_scope_gate import evaluate_candidate
+    from icis_preflight import classify_preflight_error
 
 BASE="https://icis.mcee.go.kr"
 DISCOVERY=BASE+"/iprtr/cdrInfoDetailListJson.do"
@@ -110,7 +112,8 @@ def main(req_path):
         try:
             p=s.post(DISCOVERY,data={"searchYear":str(max(years)),"bplcNm":terms[0],"pageNo":"1"},timeout=(8,20)); p.raise_for_status()
         except Exception as e:
-            status.update({"status":"REMOTE_HOST_UNREACHABLE","preflight_error":f"{type(e).__name__}: {e}","preflight_retry_policy":"session connect/read retry total=2 with exponential backoff"}); (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False)); return 72
+            source_status, http_status = classify_preflight_error(e)
+            status.update({"status":source_status,"preflight_http_status":http_status,"preflight_error":f"{type(e).__name__}: {e}","preflight_retry_policy":"session connect/read retry total=2 with exponential backoff"}); (out/"status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8"); print(json.dumps(status,ensure_ascii=False)); return 72
 
         # 1) Normal source-native name discovery for every disclosed survey round.
         for y in years:
